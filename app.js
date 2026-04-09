@@ -99,6 +99,26 @@ const sentinelImages = [
   },
 ];
 
+const sentinelService = {
+  catalogUrl: "https://stac.dataspace.copernicus.eu/v1",
+  collection: "sentinel-2-l2a",
+  limit: 18,
+  fields: [
+    "id",
+    "geometry",
+    "bbox",
+    "collection",
+    "assets.thumbnail",
+    "properties.datetime",
+    "properties.eo:cloud_cover",
+    "properties.grid:code",
+    "properties.platform",
+    "properties.sat:relative_orbit",
+    "properties.processing:level",
+    "properties.product:timeliness_category",
+  ],
+};
+
 const indexConfig = {
   NDVI: {
     label: "NDVI",
@@ -371,6 +391,11 @@ const state = {
   selectedImageId: null,
   selectedIndex: "NDVI",
   filteredImages: [],
+  sentinelMode: "loading",
+  sentinelError: null,
+  sentinelLoading: false,
+  sentinelRequestId: 0,
+  sentinelQueryScopeLabel: "Canton Mejia",
   activeWizard: "Monitoreo",
   currentPlot: null,
   currentPlotLabel: "Sin seleccionar",
@@ -385,6 +410,7 @@ const mapState = {
   controlGroup: null,
   lotLayer: null,
   sentinelLayer: null,
+  sceneFootprintLayer: null,
   managementLayer: null,
   studyAreaLayer: null,
   currentPlotLayer: null,
@@ -410,6 +436,8 @@ function cacheDom() {
   dom.endDate = document.querySelector("#endDate");
   dom.cloudRange = document.querySelector("#cloudRange");
   dom.cloudValue = document.querySelector("#cloudValue");
+  dom.sentinelSourceStatus = document.querySelector("#sentinelSourceStatus");
+  dom.sentinelSubmitBtn = document.querySelector("#sentinelSubmitBtn");
   dom.sentinelResults = document.querySelector("#sentinelResults");
   dom.indexButtons = document.querySelector("#indexButtons");
   dom.legendCard = document.querySelector("#legendCard");
@@ -563,8 +591,12 @@ function initializeMap() {
 }
 
 function setDefaultDates() {
-  dom.startDate.value = "2026-01-01";
-  dom.endDate.value = "2026-04-09";
+  const endDate = new Date();
+  const startDate = new Date(endDate);
+  startDate.setDate(startDate.getDate() - 365);
+
+  dom.startDate.value = formatDateInput(startDate);
+  dom.endDate.value = formatDateInput(endDate);
   dom.cloudValue.textContent = `${dom.cloudRange.value}%`;
 }
 
@@ -680,31 +712,158 @@ function buildLayerDescription(layerId, properties = {}) {
   return "Capa demostrativa integrada en el visor del geoportal.";
 }
 
-function filterSentinelImages() {
-  const start = dom.startDate.value;
-  const end = dom.endDate.value;
+async function filterSentinelImages() {
+  const requestId = ++state.sentinelRequestId;
+  setSentinelBusy(true);
+
+  try {
+    const images = await fetchRealSentinelImages();
+    if (requestId !== state.sentinelRequestId) {
+      return;
+    }
+
+    state.sentinelMode = "real";
+    state.sentinelError = null;
+    state.filteredImages = images;
+    applySelectedScene();
+  } catch (error) {
+    if (requestId !== state.sentinelRequestId) {
+      return;
+    }
+
+    state.sentinelMode = "demo";
+    state.sentinelError = error instanceof Error ? error.message : "No fue posible conectar con Copernicus STAC.";
+    state.filteredImages = filterDemoSentinelImages();
+    applySelectedScene();
+  } finally {
+    if (requestId === state.sentinelRequestId) {
+      setSentinelBusy(false);
+      renderSentinelSourceStatus();
+      renderSentinelResults();
+      renderLegend();
+      renderSentinelOverlay();
+    }
+  }
+}
+
+async function fetchRealSentinelImages() {
+  const { start, end } = normalizeDateRange(dom.startDate.value, dom.endDate.value);
   const maxCloud = Number(dom.cloudRange.value);
+  const searchArea = getSentinelSearchArea();
+  const bbox = turf.bbox(searchArea).map((value) => Number(value.toFixed(6)));
 
-  state.filteredImages = sentinelImages
-    .filter((image) => (!start || image.date >= start) && (!end || image.date <= end) && image.cloud <= maxCloud)
-    .sort((a, b) => b.date.localeCompare(a.date));
+  state.sentinelQueryScopeLabel = state.currentPlot ? state.currentPlotLabel : "Canton Mejia";
 
-  if (!state.filteredImages.length) {
-    state.selectedImageId = null;
-  } else if (!state.filteredImages.some((image) => image.id === state.selectedImageId)) {
-    state.selectedImageId = state.filteredImages[0].id;
+  const params = new URLSearchParams({
+    collections: sentinelService.collection,
+    limit: String(sentinelService.limit),
+    bbox: bbox.join(","),
+    datetime: `${start}T00:00:00Z/${end}T23:59:59Z`,
+    fields: sentinelService.fields.join(","),
+  });
+
+  const response = await fetch(`${sentinelService.catalogUrl}/search?${params.toString()}`, {
+    headers: {
+      Accept: "application/geo+json",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Copernicus STAC devolvio ${response.status}.`);
   }
 
-  renderSentinelResults();
-  renderLegend();
-  renderSentinelOverlay();
+  const payload = await response.json();
+  const features = Array.isArray(payload.features) ? payload.features : [];
+
+  return features
+    .map(mapStacScene)
+    .filter((image) => Number.isFinite(image.cloud) ? image.cloud <= maxCloud : true)
+    .sort((a, b) => b.datetime.localeCompare(a.datetime));
+}
+
+function mapStacScene(feature) {
+  const properties = feature.properties || {};
+  const platform = formatPlatform(properties.platform);
+  const gridCode = properties["grid:code"] || "Sin grilla";
+  const orbit = properties["sat:relative_orbit"] != null
+    ? `R${String(properties["sat:relative_orbit"]).padStart(3, "0")}`
+    : "Sin orbita";
+  const datetime = properties.datetime || "";
+  const cloud = Number(properties["eo:cloud_cover"]);
+  const level = properties["processing:level"] || "L2";
+  const timeliness = properties["product:timeliness_category"] || "NRT";
+
+  return {
+    id: feature.id,
+    title: `${platform} / ${gridCode}`,
+    date: datetime.slice(0, 10),
+    datetime,
+    cloud: Number.isFinite(cloud) ? Number(cloud.toFixed(2)) : null,
+    orbit,
+    note: `Escena real desde Copernicus STAC. Nivel ${level} y disponibilidad ${timeliness}.`,
+    thumbnail: feature.assets?.thumbnail?.href || null,
+    stacLink: feature.links?.find((link) => link.rel === "self")?.href || null,
+    geometry: feature.geometry || null,
+    bbox: feature.bbox || null,
+    source: "real",
+    baseIndices: deriveBetaIndicesFromScene(feature.id, cloud),
+  };
+}
+
+function filterDemoSentinelImages() {
+  const { start, end } = normalizeDateRange(dom.startDate.value, dom.endDate.value);
+  const maxCloud = Number(dom.cloudRange.value);
+  state.sentinelQueryScopeLabel = "Canton Mejia";
+
+  return sentinelImages
+    .filter((image) => (!start || image.date >= start) && (!end || image.date <= end) && image.cloud <= maxCloud)
+    .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function applySelectedScene() {
+  if (!state.filteredImages.length) {
+    state.selectedImageId = null;
+    return;
+  }
+
+  if (!state.filteredImages.some((image) => image.id === state.selectedImageId)) {
+    state.selectedImageId = state.filteredImages[0].id;
+  }
+}
+
+function renderSentinelSourceStatus() {
+  const areaLabel = state.currentPlot ? state.currentPlotLabel : "Canton Mejia";
+
+  dom.sentinelSourceStatus.className = "service-banner";
+
+  if (state.sentinelLoading) {
+    dom.sentinelSourceStatus.classList.add("loading");
+    dom.sentinelSourceStatus.textContent = `Consultando Copernicus STAC para ${areaLabel}...`;
+    return;
+  }
+
+  if (state.sentinelMode === "real") {
+    dom.sentinelSourceStatus.classList.add("real");
+    dom.sentinelSourceStatus.textContent = `Busqueda en vivo activa por Copernicus STAC. Ambito actual: ${state.sentinelQueryScopeLabel}. La visualizacion directa de indices sobre mapa sigue en integracion beta.`;
+    return;
+  }
+
+  dom.sentinelSourceStatus.classList.add("demo");
+  dom.sentinelSourceStatus.textContent = `Sin conexion operativa con Copernicus STAC. El visor usa escenas demo para no frenar el trabajo. ${state.sentinelError || ""}`.trim();
+}
+
+function setSentinelBusy(isBusy) {
+  state.sentinelLoading = isBusy;
+  dom.sentinelSubmitBtn.disabled = isBusy;
+  dom.sentinelSubmitBtn.textContent = isBusy ? "Buscando..." : "Buscar escenas";
+  renderSentinelSourceStatus();
 }
 
 function renderSentinelResults() {
   if (!state.filteredImages.length) {
     dom.sentinelResults.innerHTML = `
       <div class="empty-state">
-        No hay escenas que cumplan el filtro actual. Amplia fechas o permite mayor nubosidad.
+        No hay escenas que cumplan el filtro actual para ${state.sentinelQueryScopeLabel}. Ajusta fechas o permite mayor nubosidad.
       </div>
     `;
     updateMapSummary();
@@ -714,8 +873,19 @@ function renderSentinelResults() {
   dom.sentinelResults.innerHTML = state.filteredImages
     .map((image) => {
       const activeClass = image.id === state.selectedImageId ? "active" : "";
+      const thumbnailMarkup = image.thumbnail
+        ? `<img class="sentinel-thumb" src="${image.thumbnail}" alt="Previsualizacion de ${image.title}" loading="lazy">`
+        : "";
+      const sourceMarkup = image.source === "real"
+        ? `<span class="source-pill">CDSE STAC</span>`
+        : `<span class="source-pill">Demo local</span>`;
+      const stacLinkMarkup = image.stacLink
+        ? `<a class="text-link" href="${image.stacLink}" target="_blank" rel="noreferrer">Ficha STAC</a>`
+        : "";
+
       return `
         <article class="sentinel-card ${activeClass}" data-image="${image.id}">
+          ${thumbnailMarkup}
           <div class="section-head">
             <div>
               <p class="section-kicker">Escena disponible</p>
@@ -727,10 +897,14 @@ function renderSentinelResults() {
           </div>
           <div class="sentinel-meta">
             <span class="meta-pill">${localeDate.format(new Date(`${image.date}T00:00:00`))}</span>
-            <span class="meta-pill">Nubes ${image.cloud}%</span>
+            <span class="meta-pill">Nubes ${formatCloudValue(image.cloud)}</span>
             <span class="meta-pill">${image.orbit}</span>
+            ${sourceMarkup}
           </div>
           <p>${image.note}</p>
+          <div class="action-row">
+            ${stacLinkMarkup}
+          </div>
         </article>
       `;
     })
@@ -798,6 +972,11 @@ function renderSentinelOverlay() {
     return;
   }
 
+  if (mapState.sceneFootprintLayer) {
+    mapState.map.removeLayer(mapState.sceneFootprintLayer);
+    mapState.sceneFootprintLayer = null;
+  }
+
   if (mapState.sentinelLayer) {
     mapState.map.removeLayer(mapState.sentinelLayer);
     mapState.sentinelLayer = null;
@@ -806,6 +985,14 @@ function renderSentinelOverlay() {
   const image = getSelectedImage();
   if (!image) {
     setStatus("No hay escena activa. Usa el filtro Sentinel-2 para seleccionar una imagen.");
+    return;
+  }
+
+  if (image.source === "real") {
+    renderRealSceneFootprint(image);
+    setStatus(
+      `Escena real ${image.title} cargada desde Copernicus STAC. La capa de ${state.selectedIndex} sobre el mapa sigue en integracion beta.`
+    );
     return;
   }
 
@@ -864,6 +1051,48 @@ function renderSentinelOverlay() {
   );
 }
 
+function renderRealSceneFootprint(image) {
+  if (!image.geometry) {
+    return;
+  }
+
+  const popupThumb = image.thumbnail
+    ? `<img class="sentinel-thumb" src="${image.thumbnail}" alt="Previsualizacion de ${image.title}">`
+    : "";
+
+  mapState.sceneFootprintLayer = L.geoJSON(
+    {
+      type: "Feature",
+      geometry: image.geometry,
+      properties: { title: image.title },
+    },
+    {
+      style: {
+        color: "#3a6f8f",
+        weight: 2.5,
+        fillColor: "#3a6f8f",
+        fillOpacity: 0.08,
+        dashArray: "10 8",
+      },
+    }
+  ).addTo(mapState.map);
+
+  mapState.sceneFootprintLayer.bindPopup(
+    `<div>${popupThumb}<h3 class="popup-title">${image.title}</h3><p class="popup-copy">Escena real consultada desde Copernicus STAC. ${image.note}</p></div>`
+  );
+
+  if (mapState.currentPlotLayer) {
+    mapState.currentPlotLayer.bringToFront();
+  }
+  if (mapState.managementLayer) {
+    mapState.managementLayer.bringToFront();
+  }
+
+  mapState.map.fitBounds(mapState.sceneFootprintLayer.getBounds(), {
+    padding: [36, 36],
+  });
+}
+
 function getSelectedImage() {
   return state.filteredImages.find((image) => image.id === state.selectedImageId) || null;
 }
@@ -872,6 +1101,7 @@ function setCurrentPlot(feature, label) {
   state.currentPlot = feature;
   state.currentPlotLabel = label;
   dom.overlayPlot.textContent = label;
+  renderSentinelSourceStatus();
 
   if (!mapState.map) {
     return;
@@ -902,6 +1132,7 @@ function clearCurrentPlot() {
   state.currentPlot = null;
   state.currentPlotLabel = "Sin seleccionar";
   dom.overlayPlot.textContent = state.currentPlotLabel;
+  renderSentinelSourceStatus();
 
   if (mapState.currentPlotLayer) {
     mapState.map.removeLayer(mapState.currentPlotLayer);
@@ -1178,6 +1409,12 @@ function updateMapSummary() {
     return;
   }
 
+  if (image.source === "real") {
+    dom.mapTitle.textContent = `Escena real ${image.title}`;
+    dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | Nubes ${formatCloudValue(image.cloud)} | La capa ${state.selectedIndex} sigue en integracion beta.`;
+    return;
+  }
+
   dom.mapTitle.textContent = `${state.selectedIndex} sobre ${image.title}`;
   dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | ${image.cloud}% de nubosidad | ${image.note}`;
 }
@@ -1257,6 +1494,60 @@ function cardinalFromAngle(angle) {
   const normalized = ((angle % 360) + 360) % 360;
   const index = Math.round(normalized / 45) % directions.length;
   return directions[index];
+}
+
+function formatDateInput(value) {
+  return value.toISOString().slice(0, 10);
+}
+
+function normalizeDateRange(start, end) {
+  if (!start && !end) {
+    const today = formatDateInput(new Date());
+    return { start: today, end: today };
+  }
+
+  if (!start) {
+    return { start: end, end };
+  }
+
+  if (!end) {
+    return { start, end: start };
+  }
+
+  return start <= end ? { start, end } : { start: end, end: start };
+}
+
+function getSentinelSearchArea() {
+  return state.currentPlot || studyArea;
+}
+
+function formatCloudValue(value) {
+  if (!Number.isFinite(value)) {
+    return "s/d";
+  }
+  return `${Number(value.toFixed(1))}%`;
+}
+
+function formatPlatform(platform) {
+  if (!platform) {
+    return "Sentinel-2";
+  }
+  return platform
+    .replace(/^sentinel-/i, "Sentinel-")
+    .replace(/([0-9])([a-z])/i, (_, number, letter) => `${number}${letter.toUpperCase()}`);
+}
+
+function deriveBetaIndicesFromScene(sceneId, cloudCover) {
+  const cloudPenalty = Number.isFinite(cloudCover) ? cloudCover / 100 : 0.25;
+  const seed = Array.from(sceneId || "scene").reduce((total, char) => total + char.charCodeAt(0), 0);
+  const base = clamp(0.74 - cloudPenalty * 0.22 + pseudoNoise(seed, cloudPenalty, 3) * 0.04, 0.28, 0.82);
+
+  return {
+    NDVI: clamp(base, 0.2, 0.92),
+    NDWI: clamp(0.2 - cloudPenalty * 0.08 + pseudoNoise(seed, cloudPenalty, 5) * 0.05, -0.12, 0.42),
+    NDRE: clamp(base - 0.23 + pseudoNoise(seed, cloudPenalty, 7) * 0.04, 0.12, 0.62),
+    MSAVI: clamp(base - 0.05 + pseudoNoise(seed, cloudPenalty, 11) * 0.04, 0.18, 0.86),
+  };
 }
 
 function layerKey(layerId) {

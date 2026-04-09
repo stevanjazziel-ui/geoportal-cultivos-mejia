@@ -431,6 +431,45 @@ button {
   padding: 18px;
 }
 
+.service-banner,
+.service-note {
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(47, 61, 50, 0.08);
+}
+
+.service-banner {
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.56);
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.service-banner.real {
+  color: var(--leaf-deep);
+  background: rgba(47, 127, 95, 0.12);
+  border-color: rgba(47, 127, 95, 0.16);
+}
+
+.service-banner.demo {
+  color: #7b4e39;
+  background: rgba(203, 148, 64, 0.12);
+  border-color: rgba(203, 148, 64, 0.18);
+}
+
+.service-banner.loading {
+  color: var(--soil);
+  background: rgba(255, 250, 244, 0.72);
+}
+
+.service-note {
+  margin: 0;
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.46);
+  color: var(--muted);
+  font-size: 0.94rem;
+  line-height: 1.6;
+}
+
 .section-block.compact {
   gap: 14px;
 }
@@ -578,6 +617,40 @@ button {
 .sentinel-card {
   gap: 12px;
   padding: 16px;
+}
+
+.sentinel-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 16px;
+  background: rgba(47, 61, 50, 0.08);
+}
+
+.action-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.source-pill {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(58, 111, 143, 0.12);
+  color: var(--sky);
+  font-weight: 700;
+  font-size: 0.82rem;
+}
+
+.text-link {
+  color: var(--leaf-deep);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.text-link:hover {
+  text-decoration: underline;
 }
 
 .sentinel-card.active {
