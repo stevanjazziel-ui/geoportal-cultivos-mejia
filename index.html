@@ -190,12 +190,22 @@
                    </select>
                  </label>
                </div>
-               <div class="action-row analysis-actions">
-                 <button id="toggleSurfaceModeBtn" class="secondary-button" type="button">Ver cambio temporal</button>
-                 <button id="clearCompareBtn" class="ghost-button" type="button">Limpiar comparacion</button>
-               </div>
-               <div id="sceneTimeline" class="scene-timeline"></div>
-             </div>
+                <div class="action-row analysis-actions">
+                  <button id="toggleSurfaceModeBtn" class="secondary-button" type="button">Ver cambio temporal</button>
+                  <button id="clearCompareBtn" class="ghost-button" type="button">Limpiar comparacion</button>
+                </div>
+                <div class="scene-preview-row">
+                  <button id="toggleScenePreviewBtn" class="secondary-button" type="button">Ocultar escena en mapa</button>
+                  <label class="field preview-opacity-field">
+                    <span>Opacidad de escena</span>
+                    <div class="range-wrap">
+                      <input id="scenePreviewOpacity" type="range" min="15" max="100" step="5" value="55">
+                      <strong id="scenePreviewOpacityValue">55%</strong>
+                    </div>
+                  </label>
+                </div>
+                <div id="sceneTimeline" class="scene-timeline"></div>
+              </div>
 
              <div class="section-block compact">
                <div class="section-head">

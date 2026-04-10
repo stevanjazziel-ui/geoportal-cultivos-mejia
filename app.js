@@ -399,6 +399,8 @@ const state = {
   selectedCompareImageId: null,
   selectedIndex: "NDVI",
   surfaceMode: "primary",
+  showScenePreview: true,
+  scenePreviewOpacity: 0.55,
   filteredImages: [],
   sentinelMode: "loading",
   sentinelError: null,
@@ -431,6 +433,7 @@ const mapState = {
   controlGroup: null,
   lotLayer: null,
   sentinelLayer: null,
+  scenePreviewLayer: null,
   sceneFootprintLayer: null,
   managementLayer: null,
   studyAreaLayer: null,
@@ -464,6 +467,9 @@ function cacheDom() {
   dom.compareSceneSelect = document.querySelector("#compareSceneSelect");
   dom.toggleSurfaceModeBtn = document.querySelector("#toggleSurfaceModeBtn");
   dom.clearCompareBtn = document.querySelector("#clearCompareBtn");
+  dom.toggleScenePreviewBtn = document.querySelector("#toggleScenePreviewBtn");
+  dom.scenePreviewOpacity = document.querySelector("#scenePreviewOpacity");
+  dom.scenePreviewOpacityValue = document.querySelector("#scenePreviewOpacityValue");
   dom.sceneTimeline = document.querySelector("#sceneTimeline");
   dom.indexButtons = document.querySelector("#indexButtons");
   dom.legendCard = document.querySelector("#legendCard");
@@ -576,6 +582,24 @@ function bindUI() {
     renderSceneControls();
     renderSentinelResults();
     refreshActiveAnalysis({ silent: true });
+  });
+
+  dom.toggleScenePreviewBtn.addEventListener("click", () => {
+    if (!canRenderScenePreview()) {
+      return;
+    }
+    state.showScenePreview = !state.showScenePreview;
+    renderSceneControls();
+    renderSentinelOverlay();
+    updateMapSummary();
+  });
+
+  dom.scenePreviewOpacity.addEventListener("input", () => {
+    state.scenePreviewOpacity = Number(dom.scenePreviewOpacity.value) / 100;
+    dom.scenePreviewOpacityValue.textContent = `${Math.round(state.scenePreviewOpacity * 100)}%`;
+    if (mapState.scenePreviewLayer) {
+      mapState.scenePreviewLayer.setOpacity(state.scenePreviewOpacity);
+    }
   });
 
   dom.useStudyAreaBtn.addEventListener("click", () => {
@@ -1065,7 +1089,9 @@ function applySelectedScene() {
 }
 
 function renderSceneControls() {
+  const selectedImage = getSelectedImage();
   const compareImage = getCompareImage();
+  const hasScenePreview = canRenderScenePreview(selectedImage);
   const primaryOptions = state.filteredImages.length
     ? state.filteredImages.map((image) => `
         <option value="${image.id}" ${image.id === state.selectedImageId ? "selected" : ""}>
@@ -1092,6 +1118,15 @@ function renderSceneControls() {
   dom.clearCompareBtn.disabled = !compareImage;
   dom.toggleSurfaceModeBtn.disabled = !compareImage;
   dom.toggleSurfaceModeBtn.textContent = state.surfaceMode === "change" ? "Ver escena activa" : "Ver cambio temporal";
+  dom.scenePreviewOpacity.value = Math.round(state.scenePreviewOpacity * 100);
+  dom.scenePreviewOpacityValue.textContent = `${Math.round(state.scenePreviewOpacity * 100)}%`;
+  dom.scenePreviewOpacity.disabled = !hasScenePreview;
+  dom.toggleScenePreviewBtn.disabled = !hasScenePreview;
+  dom.toggleScenePreviewBtn.textContent = !hasScenePreview
+    ? "Escena no disponible en mapa"
+    : state.showScenePreview
+      ? "Ocultar escena en mapa"
+      : "Mostrar escena en mapa";
 
   if (!state.filteredImages.length) {
     dom.sceneTimeline.innerHTML = `<div class="empty-state">Las escenas apareceran aqui ordenadas por fecha.</div>`;
@@ -1919,6 +1954,11 @@ function renderSentinelOverlay() {
     return;
   }
 
+  if (mapState.scenePreviewLayer) {
+    mapState.map.removeLayer(mapState.scenePreviewLayer);
+    mapState.scenePreviewLayer = null;
+  }
+
   if (mapState.sceneFootprintLayer) {
     mapState.map.removeLayer(mapState.sceneFootprintLayer);
     mapState.sceneFootprintLayer = null;
@@ -1939,6 +1979,10 @@ function renderSentinelOverlay() {
   const changeAnalysis = getRenderableChangeAnalysis(image, getCompareImage());
   const surfaceConfig = getSurfaceConfig();
   const surfaceDataset = state.surfaceMode === "change" && changeAnalysis ? changeAnalysis.surface : analysis.surface;
+
+  if (canRenderScenePreview(image) && state.showScenePreview) {
+    renderScenePreview(image);
+  }
 
   if (image.source === "real" && image.geometry) {
     renderRealSceneFootprint(image, !state.currentPlot);
@@ -1980,6 +2024,9 @@ function renderSentinelOverlay() {
   }
   if (mapState.managementLayer) {
     mapState.managementLayer.bringToFront();
+  }
+  if (mapState.scenePreviewLayer) {
+    mapState.scenePreviewLayer.bringToBack();
   }
 
   if (!state.analysisBusy) {
@@ -2040,6 +2087,20 @@ function renderRealSceneFootprint(image, fitBounds = false) {
   }
 }
 
+function renderScenePreview(image) {
+  const bounds = getScenePreviewBounds(image);
+  if (!image?.thumbnail || !bounds) {
+    return;
+  }
+
+  mapState.scenePreviewLayer = L.imageOverlay(image.thumbnail, bounds, {
+    opacity: state.scenePreviewOpacity,
+    interactive: false,
+    className: "scene-preview-overlay",
+    crossOrigin: "anonymous",
+  }).addTo(mapState.map);
+}
+
 function getSelectedImage() {
   return state.filteredImages.find((image) => image.id === state.selectedImageId) || null;
 }
@@ -2075,6 +2136,39 @@ function getRenderableChangeAnalysis(primary = getSelectedImage(), compare = get
   const compareMatch = state.compareAnalysis?.imageId === compare.id;
   const currentTargetKey = getCurrentAnalysisTarget().targetKey;
   return primaryMatch && compareMatch && state.analysisData?.context?.targetKey === currentTargetKey ? state.changeAnalysis : null;
+}
+
+function canRenderScenePreview(image = getSelectedImage()) {
+  return Boolean(image?.thumbnail && getScenePreviewBounds(image));
+}
+
+function getScenePreviewBounds(image) {
+  if (!image) {
+    return null;
+  }
+
+  let bbox = Array.isArray(image.bbox) && image.bbox.length >= 4
+    ? image.bbox
+    : null;
+
+  if (!bbox && image.geometry) {
+    bbox = turf.bbox({
+      type: "Feature",
+      geometry: image.geometry,
+      properties: {},
+    });
+  }
+
+  if (!bbox || bbox.length < 4) {
+    return null;
+  }
+
+  const [west, south, east, north] = bbox.map((value) => Number(value));
+  if (![west, south, east, north].every(Number.isFinite) || south >= north || west >= east) {
+    return null;
+  }
+
+  return [[south, west], [north, east]];
 }
 
 function syncAnalysisDrivenModules() {
@@ -2404,6 +2498,11 @@ function updateMapSummary() {
   const analysis = getRenderableAnalysis(image);
   const compareImage = getCompareImage();
   const changeAnalysis = getRenderableChangeAnalysis(image, compareImage);
+  const previewLabel = canRenderScenePreview(image)
+    ? state.showScenePreview
+      ? "previsualizacion activa"
+      : "previsualizacion oculta"
+    : "sin previsualizacion";
   dom.overlayIndex.textContent = state.selectedIndex;
 
   if (!image) {
@@ -2416,7 +2515,7 @@ function updateMapSummary() {
     if (state.surfaceMode === "change" && changeAnalysis && compareImage) {
       const delta = changeAnalysis.summary[state.selectedIndex];
       dom.mapTitle.textContent = `Cambio ${state.selectedIndex} sobre ${analysis.context.scopeLabel}`;
-      dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} vs ${localeDate.format(new Date(`${compareImage.date}T00:00:00`))} | Delta medio ${formatDelta(delta.mean, indexConfig[state.selectedIndex])} | ${changeAnalysis.direction}`;
+      dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} vs ${localeDate.format(new Date(`${compareImage.date}T00:00:00`))} | Delta medio ${formatDelta(delta.mean, indexConfig[state.selectedIndex])} | ${changeAnalysis.direction} | ${previewLabel}`;
       return;
     }
 
@@ -2429,18 +2528,18 @@ function updateMapSummary() {
           ? "procesamiento local calibrado"
           : "motor demo";
     dom.mapTitle.textContent = `${state.selectedIndex} sobre ${analysis.context.scopeLabel}`;
-    dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | Nubes ${formatCloudValue(image.cloud)} | Media ${formatValue(stats.mean, indexConfig[state.selectedIndex])} | ${modeLabel}`;
+    dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | Nubes ${formatCloudValue(image.cloud)} | Media ${formatValue(stats.mean, indexConfig[state.selectedIndex])} | ${modeLabel} | ${previewLabel}`;
     return;
   }
 
   if (image.source === "real") {
     dom.mapTitle.textContent = `Escena real ${image.title}`;
-    dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | Nubes ${formatCloudValue(image.cloud)} | Preparando AOI operativo.`;
+    dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | Nubes ${formatCloudValue(image.cloud)} | Preparando AOI operativo | ${previewLabel}.`;
     return;
   }
 
   dom.mapTitle.textContent = `${state.selectedIndex} sobre ${image.title}`;
-  dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | ${formatCloudValue(image.cloud)} | ${image.note}`;
+  dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | ${formatCloudValue(image.cloud)} | ${image.note} | ${previewLabel}`;
 }
 
 function setBaseLayer(baseId, initial = false) {

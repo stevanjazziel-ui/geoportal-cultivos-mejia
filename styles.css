@@ -678,6 +678,17 @@ button {
   gap: 10px;
 }
 
+.scene-preview-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.preview-opacity-field {
+  min-width: 0;
+}
+
 .timeline-chip {
   display: grid;
   gap: 8px;
@@ -1153,7 +1164,8 @@ button {
   }
 
   .compare-summary.has-data,
-  .scene-picker-grid {
+  .scene-picker-grid,
+  .scene-preview-row {
     grid-template-columns: 1fr;
   }
 
