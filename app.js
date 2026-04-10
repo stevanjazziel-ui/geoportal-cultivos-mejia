@@ -119,12 +119,20 @@ const sentinelService = {
   ],
 };
 
+const earthSearchService = {
+  catalogUrl: "https://earth-search.aws.element84.com/v1",
+  collection: "sentinel-2-l2a",
+  limit: 6,
+};
+
 const backendService = {
   healthPath: "/api/health",
   searchPath: "/api/stac/search",
   analysisPath: "/api/indices/analyze",
   defaultOrigins: ["http://127.0.0.1:8765", "http://localhost:8765"],
 };
+
+const exactSceneCache = new Map();
 
 const indexConfig = {
   NDVI: {
@@ -401,6 +409,7 @@ const state = {
   surfaceMode: "primary",
   showScenePreview: true,
   scenePreviewOpacity: 0.55,
+  sceneLayerKind: "off",
   filteredImages: [],
   sentinelMode: "loading",
   sentinelError: null,
@@ -433,6 +442,7 @@ const mapState = {
   controlGroup: null,
   lotLayer: null,
   sentinelLayer: null,
+  sceneExactLayer: null,
   scenePreviewLayer: null,
   sceneFootprintLayer: null,
   managementLayer: null,
@@ -585,7 +595,7 @@ function bindUI() {
   });
 
   dom.toggleScenePreviewBtn.addEventListener("click", () => {
-    if (!canRenderScenePreview()) {
+    if (!canRenderSceneLayer()) {
       return;
     }
     state.showScenePreview = !state.showScenePreview;
@@ -597,6 +607,9 @@ function bindUI() {
   dom.scenePreviewOpacity.addEventListener("input", () => {
     state.scenePreviewOpacity = Number(dom.scenePreviewOpacity.value) / 100;
     dom.scenePreviewOpacityValue.textContent = `${Math.round(state.scenePreviewOpacity * 100)}%`;
+    if (mapState.sceneExactLayer?.setOpacity) {
+      mapState.sceneExactLayer.setOpacity(state.scenePreviewOpacity);
+    }
     if (mapState.scenePreviewLayer) {
       mapState.scenePreviewLayer.setOpacity(state.scenePreviewOpacity);
     }
@@ -1020,6 +1033,7 @@ function mapStacScene(feature) {
   return enrichSceneMetadata({
     id: feature.id,
     title: `${platform} / ${gridCode}`,
+    gridCode,
     date: datetime.slice(0, 10),
     datetime,
     cloud: Number.isFinite(cloud) ? Number(cloud.toFixed(2)) : null,
@@ -1091,7 +1105,7 @@ function applySelectedScene() {
 function renderSceneControls() {
   const selectedImage = getSelectedImage();
   const compareImage = getCompareImage();
-  const hasScenePreview = canRenderScenePreview(selectedImage);
+  const hasScenePreview = canRenderSceneLayer(selectedImage);
   const primaryOptions = state.filteredImages.length
     ? state.filteredImages.map((image) => `
         <option value="${image.id}" ${image.id === state.selectedImageId ? "selected" : ""}>
@@ -1122,11 +1136,12 @@ function renderSceneControls() {
   dom.scenePreviewOpacityValue.textContent = `${Math.round(state.scenePreviewOpacity * 100)}%`;
   dom.scenePreviewOpacity.disabled = !hasScenePreview;
   dom.toggleScenePreviewBtn.disabled = !hasScenePreview;
+  const sceneLayerLabel = state.sceneLayerKind === "exact" ? "raster exacto" : "escena en mapa";
   dom.toggleScenePreviewBtn.textContent = !hasScenePreview
     ? "Escena no disponible en mapa"
     : state.showScenePreview
-      ? "Ocultar escena en mapa"
-      : "Mostrar escena en mapa";
+      ? `Ocultar ${sceneLayerLabel}`
+      : `Mostrar ${sceneLayerLabel}`;
 
   if (!state.filteredImages.length) {
     dom.sceneTimeline.innerHTML = `<div class="empty-state">Las escenas apareceran aqui ordenadas por fecha.</div>`;
@@ -1954,6 +1969,11 @@ function renderSentinelOverlay() {
     return;
   }
 
+  if (mapState.sceneExactLayer) {
+    mapState.map.removeLayer(mapState.sceneExactLayer);
+    mapState.sceneExactLayer = null;
+  }
+
   if (mapState.scenePreviewLayer) {
     mapState.map.removeLayer(mapState.scenePreviewLayer);
     mapState.scenePreviewLayer = null;
@@ -1979,9 +1999,11 @@ function renderSentinelOverlay() {
   const changeAnalysis = getRenderableChangeAnalysis(image, getCompareImage());
   const surfaceConfig = getSurfaceConfig();
   const surfaceDataset = state.surfaceMode === "change" && changeAnalysis ? changeAnalysis.surface : analysis.surface;
+  state.sceneLayerKind = state.showScenePreview && canRenderSceneLayer(image) ? "loading" : "off";
+  updateMapSummary();
 
-  if (canRenderScenePreview(image) && state.showScenePreview) {
-    renderScenePreview(image);
+  if (canRenderSceneLayer(image) && state.showScenePreview) {
+    renderSceneLayer(image);
   }
 
   if (image.source === "real" && image.geometry) {
@@ -2024,6 +2046,9 @@ function renderSentinelOverlay() {
   }
   if (mapState.managementLayer) {
     mapState.managementLayer.bringToFront();
+  }
+  if (mapState.sceneExactLayer?.bringToBack) {
+    mapState.sceneExactLayer.bringToBack();
   }
   if (mapState.scenePreviewLayer) {
     mapState.scenePreviewLayer.bringToBack();
@@ -2101,6 +2126,175 @@ function renderScenePreview(image) {
   }).addTo(mapState.map);
 }
 
+async function renderSceneLayer(image) {
+  if (!mapState.map || !state.showScenePreview) {
+    return;
+  }
+
+  state.sceneLayerKind = "loading";
+  updateMapSummary();
+
+  if (image.source === "real") {
+    const exactLayer = await createExactSceneLayer(image);
+    if (exactLayer && image.id === state.selectedImageId && state.showScenePreview) {
+      mapState.sceneExactLayer = exactLayer.addTo(mapState.map);
+      if (mapState.sceneExactLayer.bringToBack) {
+        mapState.sceneExactLayer.bringToBack();
+      }
+      if (mapState.currentPlotLayer) {
+        mapState.currentPlotLayer.bringToFront();
+      }
+      if (mapState.managementLayer) {
+        mapState.managementLayer.bringToFront();
+      }
+      state.sceneLayerKind = "exact";
+      updateMapSummary();
+      return;
+    }
+  }
+
+  if (image.id === state.selectedImageId && state.showScenePreview && canRenderThumbnailPreview(image)) {
+    renderScenePreview(image);
+    state.sceneLayerKind = "preview";
+    updateMapSummary();
+    return;
+  }
+
+  state.sceneLayerKind = "off";
+  updateMapSummary();
+}
+
+async function createExactSceneLayer(image) {
+  const GeoRasterLayerCtor = getGeoRasterLayerCtor();
+  const exactScene = await getExactSceneData(image);
+  if (!exactScene || !GeoRasterLayerCtor) {
+    return null;
+  }
+
+  return new GeoRasterLayerCtor({
+    georaster: exactScene.georaster,
+    opacity: state.scenePreviewOpacity,
+    resolution: 128,
+    updateWhenIdle: true,
+    keepBuffer: 2,
+    mask: {
+      type: "Feature",
+      geometry: exactScene.geometry,
+      properties: {},
+    },
+    mask_strategy: "outside",
+    mask_srs: "EPSG:4326",
+    pixelValuesToColorFn: colorizeVisualPixel,
+  });
+}
+
+async function getExactSceneData(image) {
+  const parseGeorasterFn = getParseGeorasterFn();
+  if (!image || image.source !== "real" || !parseGeorasterFn) {
+    return null;
+  }
+
+  const cacheKey = `${getSceneGridCode(image) || image.id}|${image.date}`;
+  if (!exactSceneCache.has(cacheKey)) {
+    exactSceneCache.set(cacheKey, (async () => {
+      const earthItem = await fetchEarthSearchMatch(image);
+      const visualHref = earthItem?.assets?.visual?.href;
+      if (!visualHref) {
+        return null;
+      }
+
+      const response = await fetch(visualHref);
+      if (!response.ok) {
+        throw new Error(`Earth Search visual devolvio ${response.status}.`);
+      }
+
+      const buffer = await response.arrayBuffer();
+      const georaster = await parseGeorasterFn(buffer);
+      return {
+        georaster,
+        geometry: earthItem.geometry || image.geometry,
+        bbox: earthItem.bbox || image.bbox,
+      };
+    })().catch((error) => {
+      exactSceneCache.delete(cacheKey);
+      console.warn("No se pudo cargar el raster exacto de Earth Search.", error);
+      return null;
+    }));
+  }
+
+  return exactSceneCache.get(cacheKey);
+}
+
+async function fetchEarthSearchMatch(image) {
+  const sceneBounds = Array.isArray(image?.bbox) && image.bbox.length >= 4
+    ? image.bbox
+    : turf.bbox({
+      type: "Feature",
+      geometry: image.geometry || studyArea.geometry,
+      properties: {},
+    });
+  const payload = await fetchJson(`${earthSearchService.catalogUrl}/search`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      collections: [earthSearchService.collection],
+      bbox: sceneBounds,
+      datetime: `${image.date}T00:00:00Z/${image.date}T23:59:59Z`,
+      limit: earthSearchService.limit,
+    }),
+  });
+  const features = Array.isArray(payload.features) ? payload.features : [];
+  const gridCode = getSceneGridCode(image);
+
+  return features.find((feature) => {
+    if (!gridCode) {
+      return true;
+    }
+    return (feature.properties?.["grid:code"] || null) === gridCode;
+  }) || features[0] || null;
+}
+
+function colorizeVisualPixel(values) {
+  if (!Array.isArray(values) || values.length < 3) {
+    return null;
+  }
+
+  const [red, green, blue] = values.map((value) => Number(value));
+  if (![red, green, blue].every(Number.isFinite) || (red === 0 && green === 0 && blue === 0)) {
+    return null;
+  }
+
+  return `rgb(${red}, ${green}, ${blue})`;
+}
+
+function getGeoRasterLayerCtor() {
+  if (typeof GeoRasterLayer === "function") {
+    return GeoRasterLayer;
+  }
+  if (typeof globalThis.GeoRasterLayer === "function") {
+    return globalThis.GeoRasterLayer;
+  }
+  if (globalThis.GeoRasterLayer && typeof globalThis.GeoRasterLayer.default === "function") {
+    return globalThis.GeoRasterLayer.default;
+  }
+  return null;
+}
+
+function getParseGeorasterFn() {
+  if (typeof parseGeoraster === "function") {
+    return parseGeoraster;
+  }
+  if (typeof globalThis.parseGeoraster === "function") {
+    return globalThis.parseGeoraster;
+  }
+  if (typeof globalThis.georaster === "function") {
+    return globalThis.georaster;
+  }
+  return null;
+}
+
 function getSelectedImage() {
   return state.filteredImages.find((image) => image.id === state.selectedImageId) || null;
 }
@@ -2138,7 +2332,19 @@ function getRenderableChangeAnalysis(primary = getSelectedImage(), compare = get
   return primaryMatch && compareMatch && state.analysisData?.context?.targetKey === currentTargetKey ? state.changeAnalysis : null;
 }
 
-function canRenderScenePreview(image = getSelectedImage()) {
+function canRenderSceneLayer(image = getSelectedImage()) {
+  if (!image) {
+    return false;
+  }
+
+  if (image.source === "real" && getSceneGridCode(image)) {
+    return true;
+  }
+
+  return canRenderThumbnailPreview(image);
+}
+
+function canRenderThumbnailPreview(image = getSelectedImage()) {
   return Boolean(image?.thumbnail && getScenePreviewBounds(image));
 }
 
@@ -2169,6 +2375,19 @@ function getScenePreviewBounds(image) {
   }
 
   return [[south, west], [north, east]];
+}
+
+function getSceneGridCode(image) {
+  if (!image) {
+    return null;
+  }
+
+  if (image.gridCode) {
+    return image.gridCode;
+  }
+
+  const titleParts = String(image.title || "").split("/");
+  return titleParts.length > 1 ? titleParts[1].trim() : null;
 }
 
 function syncAnalysisDrivenModules() {
@@ -2498,11 +2717,15 @@ function updateMapSummary() {
   const analysis = getRenderableAnalysis(image);
   const compareImage = getCompareImage();
   const changeAnalysis = getRenderableChangeAnalysis(image, compareImage);
-  const previewLabel = canRenderScenePreview(image)
-    ? state.showScenePreview
-      ? "previsualizacion activa"
-      : "previsualizacion oculta"
-    : "sin previsualizacion";
+  const previewLabel = state.showScenePreview
+    ? state.sceneLayerKind === "exact"
+      ? "raster exacto 10 m"
+      : state.sceneLayerKind === "loading"
+        ? "cargando raster"
+        : state.sceneLayerKind === "preview"
+          ? "preview"
+          : "sin capa"
+    : "capa oculta";
   dom.overlayIndex.textContent = state.selectedIndex;
 
   if (!image) {
@@ -2515,26 +2738,26 @@ function updateMapSummary() {
     if (state.surfaceMode === "change" && changeAnalysis && compareImage) {
       const delta = changeAnalysis.summary[state.selectedIndex];
       dom.mapTitle.textContent = `Cambio ${state.selectedIndex} sobre ${analysis.context.scopeLabel}`;
-      dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} vs ${localeDate.format(new Date(`${compareImage.date}T00:00:00`))} | Delta medio ${formatDelta(delta.mean, indexConfig[state.selectedIndex])} | ${changeAnalysis.direction} | ${previewLabel}`;
+      dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} vs ${localeDate.format(new Date(`${compareImage.date}T00:00:00`))} | Delta ${formatDelta(delta.mean, indexConfig[state.selectedIndex])} | ${previewLabel}`;
       return;
     }
 
     const stats = analysis.summary[state.selectedIndex];
     const modeLabel = compareImage
-      ? `comparando con ${localeDate.format(new Date(`${compareImage.date}T00:00:00`))}`
+      ? `vs ${localeDate.format(new Date(`${compareImage.date}T00:00:00`))}`
       : analysis.processingMode === "backend"
-        ? "proxy local + cache"
+        ? "proxy local"
         : image.source === "real"
-          ? "procesamiento local calibrado"
+          ? "AOI local"
           : "motor demo";
     dom.mapTitle.textContent = `${state.selectedIndex} sobre ${analysis.context.scopeLabel}`;
-    dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | Nubes ${formatCloudValue(image.cloud)} | Media ${formatValue(stats.mean, indexConfig[state.selectedIndex])} | ${modeLabel} | ${previewLabel}`;
+    dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | ${formatCloudValue(image.cloud)} | Media ${formatValue(stats.mean, indexConfig[state.selectedIndex])} | ${modeLabel} | ${previewLabel}`;
     return;
   }
 
   if (image.source === "real") {
     dom.mapTitle.textContent = `Escena real ${image.title}`;
-    dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | Nubes ${formatCloudValue(image.cloud)} | Preparando AOI operativo | ${previewLabel}.`;
+    dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | ${formatCloudValue(image.cloud)} | ${previewLabel}`;
     return;
   }
 

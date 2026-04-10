@@ -14,6 +14,7 @@ Geoportal agronomico navegable orientado al canton Mejia con escenas Sentinel-2,
 - Comparacion entre dos escenas Sentinel-2 con resumen temporal y tarjetas de cambio por indice.
 - Modo de mapa para alternar entre la escena activa y el cambio temporal estimado sobre el AOI.
 - Previsualizacion de la escena real sobre el mapa con control de visibilidad y opacidad.
+- Raster exacto de escena real usando COG publico de Sentinel-2 cuando existe coincidencia para la fecha y mosaico.
 - Analisis intralote con dibujo de poligonos o seleccion de lotes demo.
 - Backend local opcional con proxy STAC, cache en memoria y endpoint de analisis.
 - Estimaciones beta de relieve, clima agricola y asistente guiado por etapa.
