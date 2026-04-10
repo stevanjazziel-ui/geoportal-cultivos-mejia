@@ -10,6 +10,9 @@ Geoportal agronomico navegable orientado al canton Mejia con escenas Sentinel-2,
 - Busqueda real de escenas Sentinel-2 por fecha y nubosidad usando Copernicus STAC.
 - Procesamiento operativo del AOI o lote activo con resumen, cobertura y zonas de manejo.
 - Visualizacion de indices `NDVI`, `NDWI`, `NDRE` y `MSAVI` con leyenda y superficie analitica.
+- Selector temporal para elegir escena base, escena de comparacion y navegar la serie disponible.
+- Comparacion entre dos escenas Sentinel-2 con resumen temporal y tarjetas de cambio por indice.
+- Modo de mapa para alternar entre la escena activa y el cambio temporal estimado sobre el AOI.
 - Analisis intralote con dibujo de poligonos o seleccion de lotes demo.
 - Backend local opcional con proxy STAC, cache en memoria y endpoint de analisis.
 - Estimaciones beta de relieve, clima agricola y asistente guiado por etapa.
@@ -40,10 +43,12 @@ Modo recomendado:
 
 - La pestana `Imagenes Sentinel-2` consulta escenas reales en el catalogo STAC oficial de Copernicus Data Space.
 - La escena seleccionada muestra metadata real, huella real y una superficie operativa sobre el AOI o lote activo.
+- El control temporal permite comparar dos fechas y resaltar deltas de `NDVI`, `NDWI`, `NDRE` y `MSAVI`.
 - El backend local agrega proxy STAC, cache y un endpoint de resumen analitico para mejorar estabilidad del flujo.
 - Si el backend no esta activo, el visor sigue funcionando con calculo local y fallback demo.
 
 ## Notas
 
 - La superficie de indices ya responde al AOI y a la escena activa, pero todavia es un procesamiento operativo calibrado, no raster pixel a pixel.
+- El cambio temporal actual es un analisis operativo comparativo entre escenas; sirve para lectura y priorizacion, no como reemplazo de un raster multitemporal calibrado.
 - Para llevarlo a analitica plenamente productiva, el siguiente salto natural es incorporar un motor geoespacial que calcule indices reales sobre assets Sentinel-2 o servicios raster dedicados.

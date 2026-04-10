@@ -151,10 +151,10 @@
               Verificando conexion con Copernicus STAC...
             </div>
 
-            <form id="sentinelForm" class="stack-form">
-              <label class="field">
-                <span>Fecha inicial</span>
-                <input id="startDate" type="date" name="startDate">
+             <form id="sentinelForm" class="stack-form">
+               <label class="field">
+                 <span>Fecha inicial</span>
+                 <input id="startDate" type="date" name="startDate">
               </label>
               <label class="field">
                 <span>Fecha final</span>
@@ -166,13 +166,40 @@
                   <input id="cloudRange" type="range" name="cloudRange" min="0" max="100" step="5" value="35">
                   <strong id="cloudValue">35%</strong>
                 </div>
-              </label>
-              <button id="sentinelSubmitBtn" class="primary-button" type="submit">Buscar escenas</button>
-            </form>
+               </label>
+               <button id="sentinelSubmitBtn" class="primary-button" type="submit">Buscar escenas</button>
+             </form>
 
-            <div class="section-block compact">
-              <div class="section-head">
-                <div>
+             <div class="section-block compact">
+               <div class="section-head">
+                 <div>
+                   <p class="section-kicker">Control temporal</p>
+                   <h2>Escenas para analisis</h2>
+                 </div>
+                 <span class="beta-badge">1, 2 y cambio</span>
+               </div>
+               <div class="scene-picker-grid">
+                 <label class="field">
+                   <span>Escena activa</span>
+                   <select id="primarySceneSelect"></select>
+                 </label>
+                 <label class="field">
+                   <span>Comparar con</span>
+                   <select id="compareSceneSelect">
+                     <option value="">Sin comparacion</option>
+                   </select>
+                 </label>
+               </div>
+               <div class="action-row analysis-actions">
+                 <button id="toggleSurfaceModeBtn" class="secondary-button" type="button">Ver cambio temporal</button>
+                 <button id="clearCompareBtn" class="ghost-button" type="button">Limpiar comparacion</button>
+               </div>
+               <div id="sceneTimeline" class="scene-timeline"></div>
+             </div>
+
+             <div class="section-block compact">
+               <div class="section-head">
+                 <div>
                   <p class="section-kicker">Indices disponibles</p>
                   <h2>Visualizacion espectral</h2>
                 </div>
@@ -184,6 +211,9 @@
                </div>
                <div id="sceneSummary" class="metrics-grid scene-summary empty-state">
                  Selecciona una escena para generar un resumen operativo del AOI.
+               </div>
+               <div id="compareSummary" class="metrics-grid compare-summary empty-state">
+                 Activa una segunda escena para comparar fechas y cambios del indice.
                </div>
                <div class="action-row analysis-actions">
                  <button id="rerunAnalysisBtn" class="secondary-button" type="button">Reprocesar AOI</button>

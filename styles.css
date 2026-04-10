@@ -44,7 +44,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -520,6 +521,14 @@ button {
   background: rgba(255, 255, 255, 0.74);
 }
 
+.field select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(47, 61, 50, 0.14);
+  background: rgba(255, 255, 255, 0.74);
+}
+
 .range-wrap {
   gap: 14px;
 }
@@ -657,6 +666,69 @@ button {
   gap: 14px;
 }
 
+.scene-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.scene-timeline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.timeline-chip {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(47, 61, 50, 0.1);
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.timeline-chip.primary {
+  border-color: rgba(47, 127, 95, 0.24);
+  box-shadow: 0 10px 24px rgba(24, 84, 65, 0.08);
+}
+
+.timeline-chip.compare {
+  border-color: rgba(58, 111, 143, 0.24);
+}
+
+.chip-main,
+.chip-compare {
+  width: 100%;
+}
+
+.chip-main {
+  display: grid;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+}
+
+.chip-main strong {
+  font-family: var(--font-display);
+  font-size: 0.96rem;
+}
+
+.chip-main span {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.chip-compare {
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px dashed rgba(47, 61, 50, 0.16);
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--muted);
+  font-weight: 700;
+}
+
 .sentinel-card {
   gap: 12px;
   padding: 16px;
@@ -701,6 +773,16 @@ button {
   box-shadow: 0 16px 30px rgba(24, 84, 65, 0.1);
 }
 
+.sentinel-card.compare {
+  border-color: rgba(58, 111, 143, 0.24);
+}
+
+.card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .sentinel-meta {
   display: flex;
   gap: 10px;
@@ -740,6 +822,10 @@ button {
 }
 
 .scene-summary.has-data {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.compare-summary.has-data {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
@@ -1063,6 +1149,11 @@ button {
   }
 
   .scene-summary.has-data {
+    grid-template-columns: 1fr;
+  }
+
+  .compare-summary.has-data,
+  .scene-picker-grid {
     grid-template-columns: 1fr;
   }
 

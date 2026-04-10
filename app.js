@@ -396,7 +396,9 @@ const layerStyles = {
 const state = {
   activeTab: "capas",
   selectedImageId: null,
+  selectedCompareImageId: null,
   selectedIndex: "NDVI",
+  surfaceMode: "primary",
   filteredImages: [],
   sentinelMode: "loading",
   sentinelError: null,
@@ -417,6 +419,8 @@ const state = {
   analysisError: null,
   analysisRequestId: 0,
   analysisData: null,
+  compareAnalysis: null,
+  changeAnalysis: null,
 };
 
 const dom = {};
@@ -456,10 +460,16 @@ function cacheDom() {
   dom.sentinelSourceStatus = document.querySelector("#sentinelSourceStatus");
   dom.sentinelSubmitBtn = document.querySelector("#sentinelSubmitBtn");
   dom.sentinelResults = document.querySelector("#sentinelResults");
+  dom.primarySceneSelect = document.querySelector("#primarySceneSelect");
+  dom.compareSceneSelect = document.querySelector("#compareSceneSelect");
+  dom.toggleSurfaceModeBtn = document.querySelector("#toggleSurfaceModeBtn");
+  dom.clearCompareBtn = document.querySelector("#clearCompareBtn");
+  dom.sceneTimeline = document.querySelector("#sceneTimeline");
   dom.indexButtons = document.querySelector("#indexButtons");
   dom.legendCard = document.querySelector("#legendCard");
   dom.analysisStatus = document.querySelector("#analysisStatus");
   dom.sceneSummary = document.querySelector("#sceneSummary");
+  dom.compareSummary = document.querySelector("#compareSummary");
   dom.rerunAnalysisBtn = document.querySelector("#rerunAnalysisBtn");
   dom.useStudyAreaBtn = document.querySelector("#useStudyAreaBtn");
   dom.mapTitle = document.querySelector("#mapTitle");
@@ -486,8 +496,10 @@ function bootstrapApp() {
   renderIndexButtons();
   renderWizardModes();
   renderWizardSteps();
+  renderSceneControls();
   renderAnalysisStatus();
   renderAnalysisSummary();
+  renderCompareSummary();
   filterSentinelImages();
 }
 
@@ -509,8 +521,61 @@ function bindUI() {
     filterSentinelImages();
   });
 
+  dom.primarySceneSelect.addEventListener("change", () => {
+    const nextId = dom.primarySceneSelect.value || null;
+    if (!nextId || nextId === state.selectedImageId) {
+      return;
+    }
+
+    state.selectedImageId = nextId;
+    if (state.selectedCompareImageId === state.selectedImageId) {
+      state.selectedCompareImageId = null;
+      state.surfaceMode = "primary";
+    }
+    renderSceneControls();
+    renderSentinelResults();
+    refreshActiveAnalysis();
+  });
+
+  dom.compareSceneSelect.addEventListener("change", () => {
+    const nextId = dom.compareSceneSelect.value || null;
+    state.selectedCompareImageId = nextId && nextId !== state.selectedImageId ? nextId : null;
+    if (!state.selectedCompareImageId) {
+      state.surfaceMode = "primary";
+    }
+    renderSceneControls();
+    renderSentinelResults();
+    refreshActiveAnalysis();
+  });
+
   dom.rerunAnalysisBtn.addEventListener("click", () => {
     refreshActiveAnalysis();
+  });
+
+  dom.toggleSurfaceModeBtn.addEventListener("click", () => {
+    if (!getCompareImage()) {
+      state.surfaceMode = "primary";
+      renderSceneControls();
+      return;
+    }
+    state.surfaceMode = state.surfaceMode === "change" ? "primary" : "change";
+    renderSceneControls();
+    renderLegend();
+    renderAnalysisSummary();
+    renderCompareSummary();
+    renderSentinelOverlay();
+    updateMapSummary();
+  });
+
+  dom.clearCompareBtn.addEventListener("click", () => {
+    if (!state.selectedCompareImageId) {
+      return;
+    }
+    state.selectedCompareImageId = null;
+    state.surfaceMode = "primary";
+    renderSceneControls();
+    renderSentinelResults();
+    refreshActiveAnalysis({ silent: true });
   });
 
   dom.useStudyAreaBtn.addEventListener("click", () => {
@@ -773,11 +838,13 @@ async function filterSentinelImages() {
   } finally {
     if (requestId === state.sentinelRequestId) {
       setSentinelBusy(false);
+      renderSceneControls();
       renderSentinelSourceStatus();
       renderSentinelResults();
       renderLegend();
       renderAnalysisStatus();
       renderAnalysisSummary();
+      renderCompareSummary();
       renderSentinelOverlay();
     }
   }
@@ -975,13 +1042,116 @@ function enrichSceneMetadata(image) {
 function applySelectedScene() {
   if (!state.filteredImages.length) {
     state.selectedImageId = null;
+    state.selectedCompareImageId = null;
     state.analysisData = null;
+    state.compareAnalysis = null;
+    state.changeAnalysis = null;
+    state.surfaceMode = "primary";
     return;
   }
 
   if (!state.filteredImages.some((image) => image.id === state.selectedImageId)) {
     state.selectedImageId = state.filteredImages[0].id;
   }
+
+  if (!state.filteredImages.some((image) => image.id === state.selectedCompareImageId)
+    || state.selectedCompareImageId === state.selectedImageId) {
+    state.selectedCompareImageId = null;
+  }
+
+  if (!state.selectedCompareImageId) {
+    state.surfaceMode = "primary";
+  }
+}
+
+function renderSceneControls() {
+  const compareImage = getCompareImage();
+  const primaryOptions = state.filteredImages.length
+    ? state.filteredImages.map((image) => `
+        <option value="${image.id}" ${image.id === state.selectedImageId ? "selected" : ""}>
+          ${formatSceneOption(image)}
+        </option>
+      `).join("")
+    : `<option value="">Sin escenas</option>`;
+
+  const compareOptions = [
+    `<option value="">Sin comparacion</option>`,
+    ...state.filteredImages
+      .filter((image) => image.id !== state.selectedImageId)
+      .map((image) => `
+        <option value="${image.id}" ${image.id === state.selectedCompareImageId ? "selected" : ""}>
+          ${formatSceneOption(image)}
+        </option>
+      `),
+  ].join("");
+
+  dom.primarySceneSelect.innerHTML = primaryOptions;
+  dom.primarySceneSelect.disabled = !state.filteredImages.length;
+  dom.compareSceneSelect.innerHTML = compareOptions;
+  dom.compareSceneSelect.disabled = state.filteredImages.length < 2;
+  dom.clearCompareBtn.disabled = !compareImage;
+  dom.toggleSurfaceModeBtn.disabled = !compareImage;
+  dom.toggleSurfaceModeBtn.textContent = state.surfaceMode === "change" ? "Ver escena activa" : "Ver cambio temporal";
+
+  if (!state.filteredImages.length) {
+    dom.sceneTimeline.innerHTML = `<div class="empty-state">Las escenas apareceran aqui ordenadas por fecha.</div>`;
+    return;
+  }
+
+  dom.sceneTimeline.innerHTML = state.filteredImages
+    .map((image) => {
+      const isPrimary = image.id === state.selectedImageId;
+      const isCompare = image.id === state.selectedCompareImageId;
+      return `
+        <article class="timeline-chip ${isPrimary ? "primary" : ""} ${isCompare ? "compare" : ""}">
+          <button class="chip-main" type="button" data-primary="${image.id}">
+            <strong>${localeDate.format(new Date(`${image.date}T00:00:00`))}</strong>
+            <span>${image.title}</span>
+          </button>
+          <button class="chip-compare" type="button" data-compare="${image.id}" ${isPrimary ? "disabled" : ""}>
+            ${isCompare ? "Comparando" : "Comparar"}
+          </button>
+        </article>
+      `;
+    })
+    .join("");
+
+  dom.sceneTimeline.querySelectorAll("[data-primary]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextId = button.dataset.primary;
+      if (!nextId || nextId === state.selectedImageId) {
+        return;
+      }
+      state.selectedImageId = nextId;
+      if (state.selectedCompareImageId === state.selectedImageId) {
+        state.selectedCompareImageId = null;
+        state.surfaceMode = "primary";
+      }
+      renderSceneControls();
+      renderSentinelResults();
+      refreshActiveAnalysis();
+    });
+  });
+
+  dom.sceneTimeline.querySelectorAll("[data-compare]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextId = button.dataset.compare;
+      if (!nextId || nextId === state.selectedImageId) {
+        return;
+      }
+      state.selectedCompareImageId = state.selectedCompareImageId === nextId ? null : nextId;
+      if (!state.selectedCompareImageId) {
+        state.surfaceMode = "primary";
+      }
+      renderSceneControls();
+      renderSentinelResults();
+      refreshActiveAnalysis({ silent: true });
+    });
+  });
+}
+
+function formatSceneOption(image) {
+  return `${localeDate.format(new Date(`${image.date}T00:00:00`))} | Nubes ${formatCloudValue(image.cloud)} | ${image.title}`;
 }
 
 function renderSentinelSourceStatus() {
@@ -1032,6 +1202,7 @@ function renderSentinelResults() {
   dom.sentinelResults.innerHTML = state.filteredImages
     .map((image) => {
       const activeClass = image.id === state.selectedImageId ? "active" : "";
+      const compareClass = image.id === state.selectedCompareImageId ? "compare" : "";
       const thumbnailMarkup = image.thumbnail
         ? `<img class="sentinel-thumb" src="${image.thumbnail}" alt="Previsualizacion de ${image.title}" loading="lazy">`
         : "";
@@ -1043,16 +1214,21 @@ function renderSentinelResults() {
         : "";
 
       return `
-        <article class="sentinel-card ${activeClass}" data-image="${image.id}">
+        <article class="sentinel-card ${activeClass} ${compareClass}" data-image="${image.id}">
           ${thumbnailMarkup}
           <div class="section-head">
             <div>
               <p class="section-kicker">Escena disponible</p>
               <h2>${image.title}</h2>
             </div>
-            <button class="secondary-button image-select" type="button" data-image="${image.id}">
-              ${image.id === state.selectedImageId ? "Activa" : "Usar escena"}
-            </button>
+            <div class="card-actions">
+              <button class="secondary-button image-select" type="button" data-image="${image.id}">
+                ${image.id === state.selectedImageId ? "Activa" : "Usar escena"}
+              </button>
+              <button class="ghost-button image-compare" type="button" data-compare-image="${image.id}" ${image.id === state.selectedImageId ? "disabled" : ""}>
+                ${image.id === state.selectedCompareImageId ? "Comparando" : "Comparar"}
+              </button>
+            </div>
           </div>
           <div class="sentinel-meta">
             <span class="meta-pill">${localeDate.format(new Date(`${image.date}T00:00:00`))}</span>
@@ -1074,8 +1250,29 @@ function renderSentinelResults() {
   dom.sentinelResults.querySelectorAll(".image-select").forEach((button) => {
     button.addEventListener("click", () => {
       state.selectedImageId = button.dataset.image;
+      if (state.selectedCompareImageId === state.selectedImageId) {
+        state.selectedCompareImageId = null;
+        state.surfaceMode = "primary";
+      }
+      renderSceneControls();
       renderSentinelResults();
       refreshActiveAnalysis();
+    });
+  });
+
+  dom.sentinelResults.querySelectorAll(".image-compare").forEach((button) => {
+    button.addEventListener("click", () => {
+      const nextId = button.dataset.compareImage;
+      if (!nextId || nextId === state.selectedImageId) {
+        return;
+      }
+      state.selectedCompareImageId = state.selectedCompareImageId === nextId ? null : nextId;
+      if (!state.selectedCompareImageId) {
+        state.surfaceMode = "primary";
+      }
+      renderSceneControls();
+      renderSentinelResults();
+      refreshActiveAnalysis({ silent: true });
     });
   });
 
@@ -1103,6 +1300,7 @@ function renderIndexButtons() {
       renderIndexButtons();
       renderLegend();
       renderAnalysisSummary();
+      renderCompareSummary();
       renderSentinelOverlay();
       updateMapSummary();
     });
@@ -1112,14 +1310,16 @@ function renderIndexButtons() {
 }
 
 function renderLegend() {
-  const config = indexConfig[state.selectedIndex];
-  const stats = getRenderableAnalysis()?.summary?.[state.selectedIndex] || null;
+  const config = getSurfaceConfig();
+  const stats = state.surfaceMode === "change"
+    ? getRenderableChangeAnalysis()?.summary?.[state.selectedIndex] || null
+    : getRenderableAnalysis()?.summary?.[state.selectedIndex] || null;
   const statsMarkup = stats
     ? `
       <div class="legend-values compact">
-        <span>Media ${formatValue(stats.mean, config)}</span>
-        <span>P10 ${formatValue(stats.p10, config)}</span>
-        <span>P90 ${formatValue(stats.p90, config)}</span>
+        <span>Media ${formatLegendStat(stats.mean, config)}</span>
+        <span>P10 ${formatLegendStat(stats.p10, config)}</span>
+        <span>P90 ${formatLegendStat(stats.p90, config)}</span>
       </div>
     `
     : "";
@@ -1142,12 +1342,16 @@ function renderLegend() {
 
 async function refreshActiveAnalysis({ silent = false } = {}) {
   const image = getSelectedImage();
+  const compareImage = getCompareImage();
 
   if (!image) {
     state.analysisData = null;
+    state.compareAnalysis = null;
+    state.changeAnalysis = null;
     state.analysisError = null;
     renderAnalysisStatus();
     renderAnalysisSummary();
+    renderCompareSummary();
     renderLegend();
     renderSentinelOverlay();
     updateMapSummary();
@@ -1159,24 +1363,24 @@ async function refreshActiveAnalysis({ silent = false } = {}) {
   state.analysisBusy = true;
   state.analysisError = null;
   state.analysisData = null;
+  state.compareAnalysis = null;
+  state.changeAnalysis = null;
   renderAnalysisStatus();
   renderAnalysisSummary();
+  renderCompareSummary();
   renderLegend();
   updateMapSummary();
 
   try {
-    let analysis;
     const backend = await detectBackend(!state.backendAvailable);
+    const analysis = await computeAnalysisForImage(image, context, backend);
+    let compareAnalysis = null;
+    let changeAnalysis = null;
 
-    if (backend.available) {
-      try {
-        analysis = await fetchBackendAnalysis(image, context);
-      } catch (error) {
-        state.analysisError = error instanceof Error ? error.message : "El backend local no respondio.";
-        analysis = buildLocalAnalysis(image, context);
-      }
-    } else {
-      analysis = buildLocalAnalysis(image, context);
+    if (compareImage && compareImage.id !== image.id) {
+      const compareContext = buildAnalysisContext(compareImage);
+      compareAnalysis = await computeAnalysisForImage(compareImage, compareContext, backend);
+      changeAnalysis = buildChangeAnalysis(analysis, compareAnalysis);
     }
 
     if (requestId !== state.analysisRequestId) {
@@ -1184,13 +1388,18 @@ async function refreshActiveAnalysis({ silent = false } = {}) {
     }
 
     state.analysisData = analysis;
+    state.compareAnalysis = compareAnalysis;
+    state.changeAnalysis = changeAnalysis;
     if (!silent) {
       const sourceLabel = analysis.processingMode === "backend"
         ? "backend local"
         : image.source === "real"
           ? "motor local calibrado"
           : "modo demo";
-      setStatus(`AOI ${analysis.context.scopeLabel} procesado en ${state.selectedIndex} usando ${sourceLabel}.`);
+      const compareLabel = compareAnalysis
+        ? ` y comparado contra ${compareAnalysis.imageId}`
+        : "";
+      setStatus(`AOI ${analysis.context.scopeLabel} procesado en ${state.selectedIndex} usando ${sourceLabel}${compareLabel}.`);
     }
 
     return analysis;
@@ -1207,12 +1416,27 @@ async function refreshActiveAnalysis({ silent = false } = {}) {
       state.analysisBusy = false;
       renderAnalysisStatus();
       renderAnalysisSummary();
+      renderCompareSummary();
       renderLegend();
       renderSentinelOverlay();
       updateMapSummary();
       syncAnalysisDrivenModules();
     }
   }
+}
+
+async function computeAnalysisForImage(image, context, backend = null) {
+  const backendStatus = backend || await detectBackend(!state.backendAvailable);
+
+  if (backendStatus.available) {
+    try {
+      return await fetchBackendAnalysis(image, context);
+    } catch (error) {
+      state.analysisError = error instanceof Error ? error.message : "El backend local no respondio.";
+    }
+  }
+
+  return buildLocalAnalysis(image, context);
 }
 
 async function fetchBackendAnalysis(image, context) {
@@ -1251,6 +1475,7 @@ async function fetchBackendAnalysis(image, context) {
 
   return {
     imageId: image.id,
+    imageDate: image.date,
     context,
     summary,
     quality: {
@@ -1312,6 +1537,7 @@ function buildLocalAnalysis(image, context) {
   const quality = estimateQualityProfile(image, context, summary);
   return {
     imageId: image.id,
+    imageDate: image.date,
     context,
     summary,
     quality,
@@ -1321,6 +1547,47 @@ function buildLocalAnalysis(image, context) {
     processingMode: "local",
     cacheHit: false,
     generatedAt: new Date().toISOString(),
+  };
+}
+
+function buildChangeAnalysis(primaryAnalysis, compareAnalysis) {
+  const summary = {};
+  Object.keys(indexConfig).forEach((indexKey) => {
+    summary[indexKey] = {
+      mean: primaryAnalysis.summary[indexKey].mean - compareAnalysis.summary[indexKey].mean,
+      p10: primaryAnalysis.summary[indexKey].p10 - compareAnalysis.summary[indexKey].p10,
+      p90: primaryAnalysis.summary[indexKey].p90 - compareAnalysis.summary[indexKey].p90,
+      variability: Math.abs(primaryAnalysis.summary[indexKey].variability - compareAnalysis.summary[indexKey].variability),
+    };
+  });
+
+  const primaryFeatures = primaryAnalysis.surface?.features || [];
+  const compareFeatures = compareAnalysis.surface?.features || [];
+  const surface = {
+    type: "FeatureCollection",
+    features: primaryFeatures.map((feature, index) => {
+      const compareFeature = compareFeatures[index];
+      const properties = {};
+      Object.keys(indexConfig).forEach((indexKey) => {
+        properties[indexKey] = feature.properties[indexKey] - (compareFeature?.properties?.[indexKey] ?? 0);
+      });
+      properties.zone = properties.NDVI >= 0.04 ? "improve" : properties.NDVI <= -0.04 ? "decline" : "stable";
+      return {
+        ...feature,
+        properties,
+      };
+    }),
+  };
+
+  const daysBetween = Math.abs(dayDiff(primaryAnalysis.imageDate, compareAnalysis.imageDate));
+  const strongestIndex = getStrongestChangeIndex(summary);
+
+  return {
+    summary,
+    surface,
+    strongestIndex,
+    daysBetween,
+    direction: summary.NDVI.mean >= 0 ? "recuperacion" : "caida",
   };
 }
 
@@ -1488,6 +1755,7 @@ function getRecommendedIndex(summary) {
 
 function renderAnalysisStatus() {
   const image = getSelectedImage();
+  const compareImage = getCompareImage();
   dom.useStudyAreaBtn.disabled = !state.currentPlot;
   dom.rerunAnalysisBtn.disabled = state.analysisBusy || !image;
   dom.analysisStatus.className = "service-banner";
@@ -1507,13 +1775,14 @@ function renderAnalysisStatus() {
   if (state.analysisData) {
     if (state.analysisData.processingMode === "backend") {
       dom.analysisStatus.classList.add("proxy");
-      dom.analysisStatus.textContent = `Procesamiento del AOI via backend local. Cobertura util ${state.analysisData.quality.coveragePct}% y ${state.analysisData.cacheHit ? "respuesta en cache." : "resultado recien calculado."}`;
+      const compareLabel = compareImage ? ` Comparando contra ${localeDate.format(new Date(`${compareImage.date}T00:00:00`))}.` : "";
+      dom.analysisStatus.textContent = `Procesamiento del AOI via backend local. Cobertura util ${state.analysisData.quality.coveragePct}% y ${state.analysisData.cacheHit ? "respuesta en cache." : "resultado recien calculado."}${compareLabel}`;
       return;
     }
 
     dom.analysisStatus.classList.add(image.source === "real" ? "local-processing" : "demo");
     dom.analysisStatus.textContent = image.source === "real"
-      ? "Procesamiento local calibrado por la escena real. Sirve para exploracion operativa del AOI; el pixel-raster real requerira un motor geoespacial adicional."
+      ? `Procesamiento local calibrado por la escena real${compareImage ? " y una segunda escena temporal" : ""}. Sirve para exploracion operativa del AOI; el pixel-raster real requerira un motor geoespacial adicional.`
       : "Procesamiento local en modo demo para mantener el flujo de analisis.";
     return;
   }
@@ -1583,6 +1852,68 @@ function renderAnalysisSummary() {
     .join("");
 }
 
+function renderCompareSummary() {
+  const primary = getSelectedImage();
+  const compare = getCompareImage();
+  const compareAnalysis = getRenderableCompareAnalysis(compare);
+  const change = getRenderableChangeAnalysis(primary, compare);
+
+  if (!primary || !compare || !compareAnalysis || !change) {
+    resetMetricGrid(dom.compareSummary, "Activa una segunda escena para comparar fechas y cambios del indice.");
+    return;
+  }
+
+  const currentDelta = change.summary[state.selectedIndex];
+  const cards = [
+    {
+      label: "Escena comparada",
+      value: localeDate.format(new Date(`${compare.date}T00:00:00`)),
+      copy: `${compare.title} | Nubes ${formatCloudValue(compare.cloud)}.`,
+    },
+    {
+      label: `Cambio ${state.selectedIndex}`,
+      value: formatDelta(currentDelta.mean, indexConfig[state.selectedIndex]),
+      copy: `Rango delta P10 ${formatDelta(currentDelta.p10, indexConfig[state.selectedIndex])} / P90 ${formatDelta(currentDelta.p90, indexConfig[state.selectedIndex])}.`,
+      highlight: true,
+    },
+    {
+      label: "Ventana temporal",
+      value: `${change.daysBetween} dias`,
+      copy: `Comparacion entre ${primary.date} y ${compare.date}.`,
+    },
+    {
+      label: "Lectura dominante",
+      value: change.direction === "recuperacion" ? "Mejora" : "Descenso",
+      copy: `Indice con mayor cambio: ${change.strongestIndex}.`,
+    },
+    {
+      label: "Mapa",
+      value: state.surfaceMode === "change" ? "Cambio temporal" : "Escena activa",
+      copy: "Alterna entre la superficie de la escena activa y la diferencia temporal.",
+    },
+    {
+      label: "Escena base",
+      value: localeDate.format(new Date(`${primary.date}T00:00:00`)),
+      copy: `${primary.title} | Confianza ${primary.qualityScore}/100.`,
+    },
+  ];
+
+  dom.compareSummary.classList.add("compare-summary");
+  dom.compareSummary.classList.remove("empty-state");
+  dom.compareSummary.classList.add("has-data");
+  dom.compareSummary.innerHTML = cards
+    .map(
+      (card) => `
+        <article class="metric-card ${card.highlight ? "highlight" : ""}">
+          <p>${card.label}</p>
+          <strong>${card.value}</strong>
+          <p>${card.copy}</p>
+        </article>
+      `
+    )
+    .join("");
+}
+
 function renderSentinelOverlay() {
   if (!mapState.map) {
     return;
@@ -1605,26 +1936,39 @@ function renderSentinelOverlay() {
   }
 
   const analysis = getRenderableAnalysis(image) || buildLocalAnalysis(image, buildAnalysisContext(image));
+  const changeAnalysis = getRenderableChangeAnalysis(image, getCompareImage());
+  const surfaceConfig = getSurfaceConfig();
+  const surfaceDataset = state.surfaceMode === "change" && changeAnalysis ? changeAnalysis.surface : analysis.surface;
 
   if (image.source === "real" && image.geometry) {
     renderRealSceneFootprint(image, !state.currentPlot);
   }
 
-  if (analysis.surface?.features?.length) {
-    mapState.sentinelLayer = L.geoJSON(analysis.surface, {
+  if (surfaceDataset?.features?.length) {
+    mapState.sentinelLayer = L.geoJSON(surfaceDataset, {
       style: (feature) => ({
         weight: 0,
-        fillOpacity: image.source === "real" ? 0.44 : 0.52,
+        fillOpacity: state.surfaceMode === "change" ? 0.5 : image.source === "real" ? 0.44 : 0.52,
         fillColor: interpolateColor(
           feature.properties[state.selectedIndex],
-          indexConfig[state.selectedIndex].min,
-          indexConfig[state.selectedIndex].max,
-          indexConfig[state.selectedIndex].colors
+          surfaceConfig.min,
+          surfaceConfig.max,
+          surfaceConfig.colors
         ),
       }),
       onEachFeature: (feature, layer) => {
+        const tooltipValue = state.surfaceMode === "change"
+          ? formatDelta(feature.properties[state.selectedIndex], indexConfig[state.selectedIndex])
+          : formatValue(feature.properties[state.selectedIndex], indexConfig[state.selectedIndex]);
+        const zoneLabel = state.surfaceMode === "change"
+          ? feature.properties.zone === "improve"
+            ? "Mejora"
+            : feature.properties.zone === "decline"
+              ? "Descenso"
+              : "Estable"
+          : `Zona ${feature.properties.zone}`;
         layer.bindTooltip(
-          `${state.selectedIndex}: ${formatValue(feature.properties[state.selectedIndex], indexConfig[state.selectedIndex])} | Zona ${feature.properties.zone}`,
+          `${state.selectedIndex}: ${tooltipValue} | ${zoneLabel}`,
           { sticky: true }
         );
       },
@@ -1639,12 +1983,16 @@ function renderSentinelOverlay() {
   }
 
   if (!state.analysisBusy) {
-    const sourceLabel = analysis.processingMode === "backend"
-      ? "backend local"
-      : image.source === "real"
-        ? "motor local calibrado"
-        : "motor demo";
-    setStatus(`Escena ${image.title} activa con ${state.selectedIndex} sobre ${analysis.context.scopeLabel} usando ${sourceLabel}.`);
+    if (state.surfaceMode === "change" && changeAnalysis && getCompareImage()) {
+      setStatus(`Cambio temporal ${state.selectedIndex} entre ${image.date} y ${getCompareImage().date} sobre ${analysis.context.scopeLabel}.`);
+    } else {
+      const sourceLabel = analysis.processingMode === "backend"
+        ? "backend local"
+        : image.source === "real"
+          ? "motor local calibrado"
+          : "motor demo";
+      setStatus(`Escena ${image.title} activa con ${state.selectedIndex} sobre ${analysis.context.scopeLabel} usando ${sourceLabel}.`);
+    }
   }
 }
 
@@ -1696,6 +2044,10 @@ function getSelectedImage() {
   return state.filteredImages.find((image) => image.id === state.selectedImageId) || null;
 }
 
+function getCompareImage() {
+  return state.filteredImages.find((image) => image.id === state.selectedCompareImageId) || null;
+}
+
 function getRenderableAnalysis(image = getSelectedImage()) {
   if (!image || !state.analysisData || state.analysisData.imageId !== image.id) {
     return null;
@@ -1703,6 +2055,26 @@ function getRenderableAnalysis(image = getSelectedImage()) {
 
   const currentTargetKey = getCurrentAnalysisTarget().targetKey;
   return state.analysisData.context?.targetKey === currentTargetKey ? state.analysisData : null;
+}
+
+function getRenderableCompareAnalysis(image = getCompareImage()) {
+  if (!image || !state.compareAnalysis || state.compareAnalysis.imageId !== image.id) {
+    return null;
+  }
+
+  const currentTargetKey = getCurrentAnalysisTarget().targetKey;
+  return state.compareAnalysis.context?.targetKey === currentTargetKey ? state.compareAnalysis : null;
+}
+
+function getRenderableChangeAnalysis(primary = getSelectedImage(), compare = getCompareImage()) {
+  if (!primary || !compare || !state.changeAnalysis) {
+    return null;
+  }
+
+  const primaryMatch = state.analysisData?.imageId === primary.id;
+  const compareMatch = state.compareAnalysis?.imageId === compare.id;
+  const currentTargetKey = getCurrentAnalysisTarget().targetKey;
+  return primaryMatch && compareMatch && state.analysisData?.context?.targetKey === currentTargetKey ? state.changeAnalysis : null;
 }
 
 function syncAnalysisDrivenModules() {
@@ -1783,6 +2155,7 @@ function clearCurrentPlot(triggerRefresh = false) {
   resetMetricGrid(dom.demResults, "Elige un lote o dibuja un poligono para estimar relieve.");
   resetMetricGrid(dom.climateResults, "Ejecuta el modulo para cargar indicadores climaticos.");
   renderAnalysisSummary();
+  renderCompareSummary();
   renderLegend();
   updateMapSummary();
 
@@ -2029,6 +2402,8 @@ function ensurePlot(message, silent = false) {
 function updateMapSummary() {
   const image = getSelectedImage();
   const analysis = getRenderableAnalysis(image);
+  const compareImage = getCompareImage();
+  const changeAnalysis = getRenderableChangeAnalysis(image, compareImage);
   dom.overlayIndex.textContent = state.selectedIndex;
 
   if (!image) {
@@ -2038,12 +2413,21 @@ function updateMapSummary() {
   }
 
   if (analysis) {
+    if (state.surfaceMode === "change" && changeAnalysis && compareImage) {
+      const delta = changeAnalysis.summary[state.selectedIndex];
+      dom.mapTitle.textContent = `Cambio ${state.selectedIndex} sobre ${analysis.context.scopeLabel}`;
+      dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} vs ${localeDate.format(new Date(`${compareImage.date}T00:00:00`))} | Delta medio ${formatDelta(delta.mean, indexConfig[state.selectedIndex])} | ${changeAnalysis.direction}`;
+      return;
+    }
+
     const stats = analysis.summary[state.selectedIndex];
-    const modeLabel = analysis.processingMode === "backend"
-      ? "proxy local + cache"
-      : image.source === "real"
-        ? "procesamiento local calibrado"
-        : "motor demo";
+    const modeLabel = compareImage
+      ? `comparando con ${localeDate.format(new Date(`${compareImage.date}T00:00:00`))}`
+      : analysis.processingMode === "backend"
+        ? "proxy local + cache"
+        : image.source === "real"
+          ? "procesamiento local calibrado"
+          : "motor demo";
     dom.mapTitle.textContent = `${state.selectedIndex} sobre ${analysis.context.scopeLabel}`;
     dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | Nubes ${formatCloudValue(image.cloud)} | Media ${formatValue(stats.mean, indexConfig[state.selectedIndex])} | ${modeLabel}`;
     return;
@@ -2083,6 +2467,55 @@ function setBaseLayer(baseId, initial = false) {
 
 function setStatus(text) {
   dom.statusBar.textContent = text;
+}
+
+function getSurfaceConfig() {
+  if (state.surfaceMode === "change" && getRenderableChangeAnalysis()) {
+    return getChangeConfig(state.selectedIndex);
+  }
+  return indexConfig[state.selectedIndex];
+}
+
+function getChangeConfig(indexKey) {
+  const ranges = {
+    NDVI: 0.28,
+    NDWI: 0.22,
+    NDRE: 0.2,
+    MSAVI: 0.28,
+  };
+  return {
+    label: `Delta ${indexKey}`,
+    min: -ranges[indexKey],
+    max: ranges[indexKey],
+    unit: "",
+    colors: ["#9f4a36", "#d69a64", "#f6f1e7", "#88c2b0", "#1d6b49"],
+    description: `Cambio temporal de ${indexKey} entre la escena activa y la comparada.`,
+  };
+}
+
+function formatLegendStat(value, config) {
+  if (state.surfaceMode === "change" && getRenderableChangeAnalysis()) {
+    return formatDelta(value, config);
+  }
+  return formatValue(value, config);
+}
+
+function formatDelta(value, config) {
+  const digits = Math.abs(config.max) <= 1 ? 2 : 1;
+  const prefix = value > 0 ? "+" : "";
+  return `${prefix}${value.toFixed(digits)}${config.unit || ""}`;
+}
+
+function getStrongestChangeIndex(summary) {
+  return Object.keys(summary)
+    .map((indexKey) => ({ indexKey, score: Math.abs(summary[indexKey].mean) }))
+    .sort((a, b) => b.score - a.score)[0]?.indexKey || "NDVI";
+}
+
+function dayDiff(dateA, dateB) {
+  const first = new Date(`${dateA}T00:00:00Z`);
+  const second = new Date(`${dateB}T00:00:00Z`);
+  return Math.round((first.getTime() - second.getTime()) / 86400000);
 }
 
 function getSceneAgeDays(image) {
