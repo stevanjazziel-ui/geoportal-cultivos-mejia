@@ -24,7 +24,7 @@
     rel="stylesheet"
     href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260409-3">
+  <link rel="stylesheet" href="./styles.css?v=20260409-4">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -140,11 +140,11 @@
                   <p class="section-kicker">Analisis satelital</p>
                   <h2>Busqueda Sentinel-2</h2>
                 </div>
-                <span class="beta-badge">Listo para integracion</span>
+                 <span class="beta-badge">Proxy y AOI</span>
               </div>
-              <p class="section-copy">
-                Filtra imagenes por fecha y nubosidad. Selecciona una escena y explora sus indices espectrales.
-              </p>
+               <p class="section-copy">
+                 Filtra imagenes por fecha y nubosidad. Selecciona una escena y procesa el canton o el lote activo con una superficie operativa.
+               </p>
             </div>
 
             <div id="sentinelSourceStatus" class="service-banner loading">
@@ -177,13 +177,22 @@
                   <h2>Visualizacion espectral</h2>
                 </div>
               </div>
-              <div id="indexButtons" class="index-buttons"></div>
-              <div id="legendCard" class="legend-card"></div>
-              <p class="service-note">
-                Fase actual: busqueda real de escenas via Copernicus STAC. La visualizacion directa de indices sobre mapa
-                sigue en integracion beta.
-              </p>
-            </div>
+               <div id="indexButtons" class="index-buttons"></div>
+               <div id="legendCard" class="legend-card"></div>
+               <div id="analysisStatus" class="service-banner loading">
+                 Preparando el motor de analisis del AOI...
+               </div>
+               <div id="sceneSummary" class="metrics-grid scene-summary empty-state">
+                 Selecciona una escena para generar un resumen operativo del AOI.
+               </div>
+               <div class="action-row analysis-actions">
+                 <button id="rerunAnalysisBtn" class="secondary-button" type="button">Reprocesar AOI</button>
+                 <button id="useStudyAreaBtn" class="ghost-button" type="button">Usar canton completo</button>
+               </div>
+               <p class="service-note">
+                 Modo recomendado: ejecuta <code>powershell -ExecutionPolicy Bypass -File .\server.ps1</code> para activar proxy local, cache STAC y procesamiento asistido del AOI.
+               </p>
+             </div>
 
             <div class="section-block compact">
               <div class="section-head">
@@ -322,6 +331,6 @@
   ></script>
   <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
   <script src="https://unpkg.com/@turf/turf@6.5.0/turf.min.js"></script>
-  <script src="./app.js?v=20260409-3" defer></script>
+  <script src="./app.js?v=20260409-4" defer></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # Geoportal Cultivos Mejia
 
-Primera version navegable de un geoportal agronomico orientado al canton Mejia.
+Geoportal agronomico navegable orientado al canton Mejia con escenas Sentinel-2, analisis operativo por AOI y backend local opcional en PowerShell.
 
 ## Incluye
 
@@ -8,8 +8,10 @@ Primera version navegable de un geoportal agronomico orientado al canton Mejia.
 - Panel lateral con pestanas `Capas`, `Imagenes Sentinel-2` y `Modulos Agricolas`.
 - Visor web responsive con mapa base satelital o de calles.
 - Busqueda real de escenas Sentinel-2 por fecha y nubosidad usando Copernicus STAC.
-- Visualizacion de indices `NDVI`, `NDWI`, `NDRE` y `MSAVI` con leyenda.
+- Procesamiento operativo del AOI o lote activo con resumen, cobertura y zonas de manejo.
+- Visualizacion de indices `NDVI`, `NDWI`, `NDRE` y `MSAVI` con leyenda y superficie analitica.
 - Analisis intralote con dibujo de poligonos o seleccion de lotes demo.
+- Backend local opcional con proxy STAC, cache en memoria y endpoint de analisis.
 - Estimaciones beta de relieve, clima agricola y asistente guiado por etapa.
 
 ## Archivos
@@ -17,25 +19,31 @@ Primera version navegable de un geoportal agronomico orientado al canton Mejia.
 - `index.html`: estructura del geoportal.
 - `styles.css`: identidad visual y comportamiento responsive.
 - `app.js`: logica del visor, capas, escenas e interacciones agronomicas.
+- `server.ps1`: backend local sin dependencias para proxy, cache y resumen analitico.
 
 ## Uso
 
+Modo rapido:
+
 1. Abre `index.html` en el navegador.
 2. Ingresa como `usuario publico`.
-3. Explora las capas del visor, filtra escenas Sentinel-2 y prueba los modulos agricolas.
+3. Explora el visor en modo local.
+
+Modo recomendado:
+
+1. Ejecuta `powershell -ExecutionPolicy Bypass -File .\server.ps1`.
+2. Abre `http://127.0.0.1:8765/` en el navegador.
+3. Ingresa como `usuario publico`.
+4. Filtra escenas, selecciona un lote o dibuja un AOI y reprocesa si hace falta.
 
 ## Sentinel-2 real: fase actual
 
 - La pestana `Imagenes Sentinel-2` consulta escenas reales en el catalogo STAC oficial de Copernicus Data Space.
-- La escena seleccionada muestra metadata real y su huella geografica en el mapa.
-- Los indices espectrales sobre el mapa y los modulos agricolas siguen en fase beta local mientras se integra el procesamiento real.
+- La escena seleccionada muestra metadata real, huella real y una superficie operativa sobre el AOI o lote activo.
+- El backend local agrega proxy STAC, cache y un endpoint de resumen analitico para mejorar estabilidad del flujo.
+- Si el backend no esta activo, el visor sigue funcionando con calculo local y fallback demo.
 
-## Siguiente paso recomendado
+## Notas
 
-Profundizar la integracion real:
-
-- procesamiento real de indices sobre AOI y lote activo;
-- proxy o backend para stats, cache y procesamiento seguro;
-- DEM Copernicus GLO-30;
-- ERA5-Land y MODIS;
-- autenticacion y persistencia de proyectos o lotes.
+- La superficie de indices ya responde al AOI y a la escena activa, pero todavia es un procesamiento operativo calibrado, no raster pixel a pixel.
+- Para llevarlo a analitica plenamente productiva, el siguiente salto natural es incorporar un motor geoespacial que calcule indices reales sobre assets Sentinel-2 o servicios raster dedicados.

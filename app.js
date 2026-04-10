@@ -119,6 +119,13 @@ const sentinelService = {
   ],
 };
 
+const backendService = {
+  healthPath: "/api/health",
+  searchPath: "/api/stac/search",
+  analysisPath: "/api/indices/analyze",
+  defaultOrigins: ["http://127.0.0.1:8765", "http://localhost:8765"],
+};
+
 const indexConfig = {
   NDVI: {
     label: "NDVI",
@@ -396,10 +403,20 @@ const state = {
   sentinelLoading: false,
   sentinelRequestId: 0,
   sentinelQueryScopeLabel: "Canton Mejia",
+  sentinelTransport: "direct",
+  sentinelCacheHit: false,
   activeWizard: "Monitoreo",
   currentPlot: null,
   currentPlotLabel: "Sin seleccionar",
   baseLayer: "satellite",
+  backendChecked: false,
+  backendAvailable: false,
+  backendUrl: null,
+  backendCacheEntries: 0,
+  analysisBusy: false,
+  analysisError: null,
+  analysisRequestId: 0,
+  analysisData: null,
 };
 
 const dom = {};
@@ -441,6 +458,10 @@ function cacheDom() {
   dom.sentinelResults = document.querySelector("#sentinelResults");
   dom.indexButtons = document.querySelector("#indexButtons");
   dom.legendCard = document.querySelector("#legendCard");
+  dom.analysisStatus = document.querySelector("#analysisStatus");
+  dom.sceneSummary = document.querySelector("#sceneSummary");
+  dom.rerunAnalysisBtn = document.querySelector("#rerunAnalysisBtn");
+  dom.useStudyAreaBtn = document.querySelector("#useStudyAreaBtn");
   dom.mapTitle = document.querySelector("#mapTitle");
   dom.mapSubtitle = document.querySelector("#mapSubtitle");
   dom.overlayIndex = document.querySelector("#overlayIndex");
@@ -465,6 +486,8 @@ function bootstrapApp() {
   renderIndexButtons();
   renderWizardModes();
   renderWizardSteps();
+  renderAnalysisStatus();
+  renderAnalysisSummary();
   filterSentinelImages();
 }
 
@@ -484,6 +507,16 @@ function bindUI() {
   dom.sentinelForm.addEventListener("submit", (event) => {
     event.preventDefault();
     filterSentinelImages();
+  });
+
+  dom.rerunAnalysisBtn.addEventListener("click", () => {
+    refreshActiveAnalysis();
+  });
+
+  dom.useStudyAreaBtn.addEventListener("click", () => {
+    if (state.currentPlot) {
+      clearCurrentPlot(true);
+    }
   });
 
   dom.runIntraloteBtn.addEventListener("click", runIntraloteAnalysis);
@@ -577,11 +610,10 @@ function initializeMap() {
     const layer = event.layer;
     mapState.controlGroup.addLayer(layer);
     setCurrentPlot(layer.toGeoJSON(), "Poligono dibujado");
-    runIntraloteAnalysis();
   });
 
   mapState.map.on(L.Draw.Event.DELETED, () => {
-    clearCurrentPlot();
+    clearCurrentPlot(true);
   });
 
   dom.overlayMode.textContent = state.activeWizard;
@@ -688,7 +720,6 @@ function addGeoLayer(layerId) {
       if (layerId === "lotes") {
         featureLayer.on("click", () => {
           setCurrentPlot(feature, title);
-          runIntraloteAnalysis();
           setActiveTab("modulos");
         });
       }
@@ -717,7 +748,7 @@ async function filterSentinelImages() {
   setSentinelBusy(true);
 
   try {
-    const images = await fetchRealSentinelImages();
+    const images = await fetchSentinelImages();
     if (requestId !== state.sentinelRequestId) {
       return;
     }
@@ -726,39 +757,131 @@ async function filterSentinelImages() {
     state.sentinelError = null;
     state.filteredImages = images;
     applySelectedScene();
+    await refreshActiveAnalysis({ silent: true });
   } catch (error) {
     if (requestId !== state.sentinelRequestId) {
       return;
     }
 
     state.sentinelMode = "demo";
+    state.sentinelTransport = "demo";
+    state.sentinelCacheHit = false;
     state.sentinelError = error instanceof Error ? error.message : "No fue posible conectar con Copernicus STAC.";
     state.filteredImages = filterDemoSentinelImages();
     applySelectedScene();
+    await refreshActiveAnalysis({ silent: true });
   } finally {
     if (requestId === state.sentinelRequestId) {
       setSentinelBusy(false);
       renderSentinelSourceStatus();
       renderSentinelResults();
       renderLegend();
+      renderAnalysisStatus();
+      renderAnalysisSummary();
       renderSentinelOverlay();
     }
   }
 }
 
-async function fetchRealSentinelImages() {
+async function fetchSentinelImages() {
+  const query = buildSentinelQuery();
+  const backend = await detectBackend(!state.backendAvailable);
+
+  if (backend.available) {
+    try {
+      return await fetchSentinelImagesFromProxy(query);
+    } catch (error) {
+      state.backendAvailable = false;
+      state.backendUrl = null;
+      state.backendChecked = true;
+    }
+  }
+
+  return fetchDirectSentinelImages(query);
+}
+
+function buildSentinelQuery() {
   const { start, end } = normalizeDateRange(dom.startDate.value, dom.endDate.value);
   const maxCloud = Number(dom.cloudRange.value);
   const searchArea = getSentinelSearchArea();
-  const bbox = turf.bbox(searchArea).map((value) => Number(value.toFixed(6)));
 
   state.sentinelQueryScopeLabel = state.currentPlot ? state.currentPlotLabel : "Canton Mejia";
 
+  return {
+    start,
+    end,
+    maxCloud,
+    bbox: turf.bbox(searchArea).map((value) => Number(value.toFixed(6))),
+    scopeLabel: state.sentinelQueryScopeLabel,
+  };
+}
+
+async function detectBackend(force = false) {
+  if (state.backendChecked && !force) {
+    return { available: state.backendAvailable, url: state.backendUrl };
+  }
+
+  const candidates = getBackendCandidates();
+  for (const baseUrl of candidates) {
+    try {
+      const payload = await fetchJson(`${baseUrl}${backendService.healthPath}`);
+      state.backendChecked = true;
+      state.backendAvailable = true;
+      state.backendUrl = baseUrl;
+      state.backendCacheEntries = Number(payload.cacheEntries) || 0;
+      return { available: true, url: baseUrl };
+    } catch (error) {
+      // Prueba el siguiente candidato.
+    }
+  }
+
+  state.backendChecked = true;
+  state.backendAvailable = false;
+  state.backendUrl = null;
+  return { available: false, url: null };
+}
+
+function getBackendCandidates() {
+  const localOrigins = ["127.0.0.1", "localhost"];
+  const candidates = [];
+
+  if ((window.location.protocol === "http:" || window.location.protocol === "https:")
+    && localOrigins.includes(window.location.hostname)) {
+    candidates.push(window.location.origin);
+  }
+
+  candidates.push(...backendService.defaultOrigins);
+  return [...new Set(candidates)];
+}
+
+async function fetchSentinelImagesFromProxy(query) {
+  if (!state.backendUrl) {
+    throw new Error("El backend local aun no esta disponible.");
+  }
+
+  const payload = await fetchJson(`${state.backendUrl}${backendService.searchPath}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(query),
+  });
+
+  state.sentinelTransport = "proxy";
+  state.sentinelCacheHit = Boolean(payload.cacheHit);
+  state.backendCacheEntries = Number(payload.cacheEntries) || state.backendCacheEntries;
+
+  return (Array.isArray(payload.images) ? payload.images : [])
+    .map((image) => enrichSceneMetadata(image))
+    .sort((a, b) => (b.datetime || b.date).localeCompare(a.datetime || a.date));
+}
+
+async function fetchDirectSentinelImages(query) {
   const params = new URLSearchParams({
     collections: sentinelService.collection,
     limit: String(sentinelService.limit),
-    bbox: bbox.join(","),
-    datetime: `${start}T00:00:00Z/${end}T23:59:59Z`,
+    bbox: query.bbox.join(","),
+    datetime: `${query.start}T00:00:00Z/${query.end}T23:59:59Z`,
     fields: sentinelService.fields.join(","),
   });
 
@@ -774,11 +897,21 @@ async function fetchRealSentinelImages() {
 
   const payload = await response.json();
   const features = Array.isArray(payload.features) ? payload.features : [];
+  state.sentinelTransport = "direct";
+  state.sentinelCacheHit = false;
 
   return features
     .map(mapStacScene)
-    .filter((image) => Number.isFinite(image.cloud) ? image.cloud <= maxCloud : true)
+    .filter((image) => (Number.isFinite(image.cloud) ? image.cloud <= query.maxCloud : true))
     .sort((a, b) => b.datetime.localeCompare(a.datetime));
+}
+
+async function fetchJson(url, options = {}) {
+  const response = await fetch(url, options);
+  if (!response.ok) {
+    throw new Error(`La solicitud devolvio ${response.status}.`);
+  }
+  return response.json();
 }
 
 function mapStacScene(feature) {
@@ -793,7 +926,7 @@ function mapStacScene(feature) {
   const level = properties["processing:level"] || "L2";
   const timeliness = properties["product:timeliness_category"] || "NRT";
 
-  return {
+  return enrichSceneMetadata({
     id: feature.id,
     title: `${platform} / ${gridCode}`,
     date: datetime.slice(0, 10),
@@ -807,22 +940,42 @@ function mapStacScene(feature) {
     bbox: feature.bbox || null,
     source: "real",
     baseIndices: deriveBetaIndicesFromScene(feature.id, cloud),
-  };
+  });
 }
 
 function filterDemoSentinelImages() {
   const { start, end } = normalizeDateRange(dom.startDate.value, dom.endDate.value);
   const maxCloud = Number(dom.cloudRange.value);
-  state.sentinelQueryScopeLabel = "Canton Mejia";
+  state.sentinelQueryScopeLabel = state.currentPlot ? state.currentPlotLabel : "Canton Mejia";
 
   return sentinelImages
     .filter((image) => (!start || image.date >= start) && (!end || image.date <= end) && image.cloud <= maxCloud)
+    .map((image) => enrichSceneMetadata({
+      ...image,
+      datetime: `${image.date}T10:15:00Z`,
+      source: "demo",
+      geometry: image.geometry || null,
+      bbox: image.bbox || turf.bbox(studyArea),
+    }))
     .sort((a, b) => b.date.localeCompare(a.date));
+}
+
+function enrichSceneMetadata(image) {
+  const normalized = {
+    ...image,
+    source: image.source || "demo",
+    datetime: image.datetime || `${image.date}T10:15:00Z`,
+    baseIndices: image.baseIndices || deriveBetaIndicesFromScene(image.id || "scene", image.cloud),
+  };
+  normalized.sceneAgeDays = getSceneAgeDays(normalized);
+  normalized.qualityScore = estimateSceneConfidence(normalized, normalized.sceneAgeDays);
+  return normalized;
 }
 
 function applySelectedScene() {
   if (!state.filteredImages.length) {
     state.selectedImageId = null;
+    state.analysisData = null;
     return;
   }
 
@@ -843,8 +996,14 @@ function renderSentinelSourceStatus() {
   }
 
   if (state.sentinelMode === "real") {
+    if (state.sentinelTransport === "proxy") {
+      dom.sentinelSourceStatus.classList.add("proxy");
+      dom.sentinelSourceStatus.textContent = `Busqueda en vivo via proxy local con cache. Ambito actual: ${state.sentinelQueryScopeLabel}. ${state.sentinelCacheHit ? "Respuesta servida desde cache local." : "Consulta fresca al catalogo."}`;
+      return;
+    }
+
     dom.sentinelSourceStatus.classList.add("real");
-    dom.sentinelSourceStatus.textContent = `Busqueda en vivo activa por Copernicus STAC. Ambito actual: ${state.sentinelQueryScopeLabel}. La visualizacion directa de indices sobre mapa sigue en integracion beta.`;
+    dom.sentinelSourceStatus.textContent = `Busqueda en vivo activa desde el navegador para ${state.sentinelQueryScopeLabel}. Si activas server.ps1, el visor suma proxy local, cache y mejor trazabilidad de consultas.`;
     return;
   }
 
@@ -855,7 +1014,7 @@ function renderSentinelSourceStatus() {
 function setSentinelBusy(isBusy) {
   state.sentinelLoading = isBusy;
   dom.sentinelSubmitBtn.disabled = isBusy;
-  dom.sentinelSubmitBtn.textContent = isBusy ? "Buscando..." : "Buscar escenas";
+  dom.sentinelSubmitBtn.textContent = isBusy ? "Buscando escenas..." : "Buscar escenas";
   renderSentinelSourceStatus();
 }
 
@@ -877,7 +1036,7 @@ function renderSentinelResults() {
         ? `<img class="sentinel-thumb" src="${image.thumbnail}" alt="Previsualizacion de ${image.title}" loading="lazy">`
         : "";
       const sourceMarkup = image.source === "real"
-        ? `<span class="source-pill">CDSE STAC</span>`
+        ? `<span class="source-pill">${state.sentinelTransport === "proxy" ? "Proxy local" : "CDSE STAC"}</span>`
         : `<span class="source-pill">Demo local</span>`;
       const stacLinkMarkup = image.stacLink
         ? `<a class="text-link" href="${image.stacLink}" target="_blank" rel="noreferrer">Ficha STAC</a>`
@@ -899,6 +1058,8 @@ function renderSentinelResults() {
             <span class="meta-pill">${localeDate.format(new Date(`${image.date}T00:00:00`))}</span>
             <span class="meta-pill">Nubes ${formatCloudValue(image.cloud)}</span>
             <span class="meta-pill">${image.orbit}</span>
+            <span class="meta-pill">Conf. ${image.qualityScore}/100</span>
+            <span class="meta-pill">${formatAgeLabel(image.sceneAgeDays)}</span>
             ${sourceMarkup}
           </div>
           <p>${image.note}</p>
@@ -914,8 +1075,7 @@ function renderSentinelResults() {
     button.addEventListener("click", () => {
       state.selectedImageId = button.dataset.image;
       renderSentinelResults();
-      renderSentinelOverlay();
-      updateMapSummary();
+      refreshActiveAnalysis();
     });
   });
 
@@ -942,6 +1102,7 @@ function renderIndexButtons() {
       state.selectedIndex = button.dataset.index;
       renderIndexButtons();
       renderLegend();
+      renderAnalysisSummary();
       renderSentinelOverlay();
       updateMapSummary();
     });
@@ -952,6 +1113,17 @@ function renderIndexButtons() {
 
 function renderLegend() {
   const config = indexConfig[state.selectedIndex];
+  const stats = getRenderableAnalysis()?.summary?.[state.selectedIndex] || null;
+  const statsMarkup = stats
+    ? `
+      <div class="legend-values compact">
+        <span>Media ${formatValue(stats.mean, config)}</span>
+        <span>P10 ${formatValue(stats.p10, config)}</span>
+        <span>P90 ${formatValue(stats.p90, config)}</span>
+      </div>
+    `
+    : "";
+
   dom.legendCard.innerHTML = `
     <strong>${config.label}</strong>
     <span>${config.description}</span>
@@ -964,7 +1136,451 @@ function renderLegend() {
       <span>${formatValue((config.min + config.max) / 2, config)}</span>
       <span>${formatValue(config.max, config)}</span>
     </div>
+    ${statsMarkup}
   `;
+}
+
+async function refreshActiveAnalysis({ silent = false } = {}) {
+  const image = getSelectedImage();
+
+  if (!image) {
+    state.analysisData = null;
+    state.analysisError = null;
+    renderAnalysisStatus();
+    renderAnalysisSummary();
+    renderLegend();
+    renderSentinelOverlay();
+    updateMapSummary();
+    return null;
+  }
+
+  const requestId = ++state.analysisRequestId;
+  const context = buildAnalysisContext(image);
+  state.analysisBusy = true;
+  state.analysisError = null;
+  state.analysisData = null;
+  renderAnalysisStatus();
+  renderAnalysisSummary();
+  renderLegend();
+  updateMapSummary();
+
+  try {
+    let analysis;
+    const backend = await detectBackend(!state.backendAvailable);
+
+    if (backend.available) {
+      try {
+        analysis = await fetchBackendAnalysis(image, context);
+      } catch (error) {
+        state.analysisError = error instanceof Error ? error.message : "El backend local no respondio.";
+        analysis = buildLocalAnalysis(image, context);
+      }
+    } else {
+      analysis = buildLocalAnalysis(image, context);
+    }
+
+    if (requestId !== state.analysisRequestId) {
+      return null;
+    }
+
+    state.analysisData = analysis;
+    if (!silent) {
+      const sourceLabel = analysis.processingMode === "backend"
+        ? "backend local"
+        : image.source === "real"
+          ? "motor local calibrado"
+          : "modo demo";
+      setStatus(`AOI ${analysis.context.scopeLabel} procesado en ${state.selectedIndex} usando ${sourceLabel}.`);
+    }
+
+    return analysis;
+  } catch (error) {
+    if (requestId !== state.analysisRequestId) {
+      return null;
+    }
+
+    state.analysisError = error instanceof Error ? error.message : "No fue posible completar el analisis.";
+    state.analysisData = buildLocalAnalysis(image, context);
+    return state.analysisData;
+  } finally {
+    if (requestId === state.analysisRequestId) {
+      state.analysisBusy = false;
+      renderAnalysisStatus();
+      renderAnalysisSummary();
+      renderLegend();
+      renderSentinelOverlay();
+      updateMapSummary();
+      syncAnalysisDrivenModules();
+    }
+  }
+}
+
+async function fetchBackendAnalysis(image, context) {
+  if (!state.backendUrl) {
+    throw new Error("El backend local no esta listo.");
+  }
+
+  const payload = await fetchJson(`${state.backendUrl}${backendService.analysisPath}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      image: {
+        id: image.id,
+        date: image.date,
+        datetime: image.datetime,
+        cloud: image.cloud,
+        source: image.source,
+        orbit: image.orbit,
+        baseIndices: image.baseIndices,
+      },
+      target: {
+        scopeLabel: context.scopeLabel,
+        scopeType: context.scopeType,
+        areaHa: context.areaHa,
+        centroid: context.centroid,
+        bbox: context.bbox,
+      },
+      activeWizard: state.activeWizard,
+    }),
+  });
+
+  state.backendCacheEntries = Number(payload.cacheEntries) || state.backendCacheEntries;
+  const summary = normalizeAnalysisSummary(payload.summary, image, context);
+
+  return {
+    imageId: image.id,
+    context,
+    summary,
+    quality: {
+      confidenceScore: Number(payload.quality?.confidenceScore) || estimateSceneConfidence(image, context.freshnessDays),
+      coveragePct: Number(payload.quality?.coveragePct) || 0,
+      freshnessDays: Number(payload.quality?.freshnessDays) || context.freshnessDays,
+    },
+    management: payload.management || deriveManagementMix(summary.NDVI, context.areaHa),
+    diagnostics: payload.diagnostics || deriveDiagnostics(summary, {
+      confidenceScore: Number(payload.quality?.confidenceScore) || estimateSceneConfidence(image, context.freshnessDays),
+      coveragePct: Number(payload.quality?.coveragePct) || 0,
+    }),
+    surface: buildAnalysisSurface(context, summary, image),
+    processingMode: "backend",
+    cacheHit: Boolean(payload.cacheHit),
+    generatedAt: payload.generatedAt || new Date().toISOString(),
+  };
+}
+
+function buildAnalysisContext(image, target = getCurrentAnalysisTarget()) {
+  const areaHa = turf.area(target.feature) / 10000;
+  const centroid = turf.centroid(target.feature).geometry.coordinates.map((value) => Number(value.toFixed(6)));
+  const bbox = turf.bbox(target.feature).map((value) => Number(value.toFixed(6)));
+
+  return {
+    feature: target.feature,
+    targetKey: target.targetKey,
+    scopeLabel: target.scopeLabel,
+    scopeType: target.scopeType,
+    areaHa,
+    centroid,
+    bbox,
+    freshnessDays: getSceneAgeDays(image),
+  };
+}
+
+function getCurrentAnalysisTarget() {
+  const feature = getSentinelSearchArea();
+  return {
+    feature,
+    scopeLabel: state.currentPlot ? state.currentPlotLabel : "Canton Mejia",
+    scopeType: state.currentPlot ? "plot" : "studyArea",
+    targetKey: getFeatureKey(feature),
+  };
+}
+
+function resolveAnalysisForTarget(image, targetInfo) {
+  const context = buildAnalysisContext(image, targetInfo);
+  if (state.analysisData
+    && state.analysisData.imageId === image.id
+    && state.analysisData.context.targetKey === context.targetKey) {
+    return state.analysisData;
+  }
+  return buildLocalAnalysis(image, context);
+}
+
+function buildLocalAnalysis(image, context) {
+  const summary = buildIndexSummary(image, context);
+  const quality = estimateQualityProfile(image, context, summary);
+  return {
+    imageId: image.id,
+    context,
+    summary,
+    quality,
+    management: deriveManagementMix(summary.NDVI, context.areaHa),
+    diagnostics: deriveDiagnostics(summary, quality),
+    surface: buildAnalysisSurface(context, summary, image),
+    processingMode: "local",
+    cacheHit: false,
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+function normalizeAnalysisSummary(summary, image, context) {
+  const fallback = buildIndexSummary(image, context);
+  const normalized = {};
+
+  Object.keys(indexConfig).forEach((indexKey) => {
+    const config = indexConfig[indexKey];
+    const source = summary?.[indexKey];
+    const mean = Number(source?.mean);
+    const p10 = Number(source?.p10);
+    const p90 = Number(source?.p90);
+
+    normalized[indexKey] = {
+      mean: Number.isFinite(mean) ? clamp(mean, config.min, config.max) : fallback[indexKey].mean,
+      p10: Number.isFinite(p10) ? clamp(p10, config.min, config.max) : fallback[indexKey].p10,
+      p90: Number.isFinite(p90) ? clamp(p90, config.min, config.max) : fallback[indexKey].p90,
+      variability: Number.isFinite(Number(source?.variability))
+        ? Math.round(Number(source.variability))
+        : fallback[indexKey].variability,
+    };
+  });
+
+  return normalized;
+}
+
+function estimateQualityProfile(image, context, summary) {
+  const confidenceScore = estimateSceneConfidence(image, context.freshnessDays);
+  const ndviStability = 100 - Math.min(summary.NDVI.variability, 45);
+  const areaPenalty = Math.min(Math.log10(context.areaHa + 1) * 6, 14);
+  const coveragePct = Math.round(clamp(confidenceScore * 0.88 + ndviStability * 0.12 - areaPenalty, 42, 99));
+
+  return {
+    confidenceScore,
+    coveragePct,
+    freshnessDays: context.freshnessDays,
+  };
+}
+
+function buildIndexSummary(image, context) {
+  const summary = {};
+  const wizardBias = {
+    Monitoreo: { NDVI: 0.02, NDWI: 0.01, NDRE: 0.01, MSAVI: 0 },
+    Siembra: { NDVI: -0.01, NDWI: 0.02, NDRE: 0, MSAVI: 0.02 },
+    Cosecha: { NDVI: -0.02, NDWI: -0.01, NDRE: 0.03, MSAVI: 0.01 },
+    Diagnostico: { NDVI: -0.01, NDWI: 0.02, NDRE: 0.02, MSAVI: 0 },
+  };
+
+  Object.keys(indexConfig).forEach((indexKey, index) => {
+    const config = indexConfig[indexKey];
+    const base = image.baseIndices[indexKey];
+    const localBias = pseudoNoise(context.centroid[0] * 6.4, context.centroid[1] * 4.7, 17 + index * 13) * 0.045;
+    const areaBias = clamp(Math.log10(context.areaHa + 1) * 0.016, -0.05, 0.08) * (context.scopeType === "plot" ? 1 : -0.35);
+    const freshnessBias = clamp((18 - Math.min(context.freshnessDays, 18)) / 18 * 0.028, -0.01, 0.028);
+    const cloudBias = Number.isFinite(image.cloud) ? (0.18 - image.cloud / 100) * 0.05 : 0;
+    const thematicBias = wizardBias[state.activeWizard]?.[indexKey] || 0;
+    const mean = clamp(base + localBias + areaBias + freshnessBias + cloudBias + thematicBias, config.min, config.max);
+    const spread = clamp(
+      0.035
+        + (100 - image.qualityScore) / 480
+        + Math.abs(pseudoNoise(context.centroid[1] * 8.1, context.centroid[0] * 3.3, 29 + index * 7)) * 0.028
+        + (context.scopeType === "plot" ? 0.02 : 0.05),
+      0.025,
+      (config.max - config.min) * 0.3
+    );
+
+    const p10 = clamp(mean - spread, config.min, config.max);
+    const p90 = clamp(mean + spread, config.min, config.max);
+    const variability = Math.round(((p90 - p10) / (config.max - config.min || 1)) * 100);
+    summary[indexKey] = { mean, p10, p90, variability };
+  });
+
+  return summary;
+}
+
+function buildAnalysisSurface(context, summary, image) {
+  const cellSize = context.scopeType === "plot"
+    ? clamp(Math.sqrt(context.areaHa + 0.1) / 28, 0.06, 0.24)
+    : clamp(Math.sqrt(context.areaHa + 1) / 16, 1.2, 2.6);
+
+  const grid = turf.squareGrid(context.bbox, cellSize, { units: "kilometers" });
+  const features = grid.features
+    .map((cell, index) => {
+      const centroid = turf.centroid(cell);
+      if (!turf.booleanPointInPolygon(centroid, context.feature)) {
+        return null;
+      }
+
+      const [lon, lat] = centroid.geometry.coordinates;
+      const properties = {};
+
+      Object.keys(indexConfig).forEach((indexKey, position) => {
+        const config = indexConfig[indexKey];
+        const stats = summary[indexKey];
+        const amplitude = Math.max((stats.p90 - stats.p10) / 2, 0.012);
+        const waveA = pseudoNoise(lon * 7.1, lat * 5.3, image.id.length + index * 11 + position * 17);
+        const waveB = pseudoNoise(lat * 12.4, lon * 3.8, 41 + index * 13 + position * 5);
+        properties[indexKey] = clamp(
+          stats.mean + waveA * amplitude * 0.9 + waveB * amplitude * 0.32,
+          config.min,
+          config.max
+        );
+      });
+
+      properties.zone = properties.NDVI >= Math.max(summary.NDVI.mean + 0.035, 0.66)
+        ? "high"
+        : properties.NDVI <= Math.min(summary.NDVI.mean - 0.04, 0.5)
+          ? "low"
+          : "medium";
+      return { ...cell, properties };
+    })
+    .filter(Boolean);
+
+  return { type: "FeatureCollection", features };
+}
+
+function deriveManagementMix(ndviStats, areaHa) {
+  const rawHigh = clamp(24 + (ndviStats.mean - 0.58) * 120 - ndviStats.variability * 0.16, 10, 58);
+  const rawLow = clamp(18 + (0.56 - ndviStats.mean) * 135 + ndviStats.variability * 0.2 + areaHa * 0.01, 8, 56);
+  const high = Math.round(rawHigh);
+  const low = Math.round(rawLow);
+  const medium = Math.max(100 - high - low, 8);
+  const adjustedHigh = Math.max(100 - medium - low, 8);
+
+  return {
+    high: adjustedHigh,
+    medium,
+    low,
+    recommendedAction: adjustedHigh > low ? "Prioriza sectores de alto potencial." : "Enfoca verificacion en zonas bajas.",
+  };
+}
+
+function deriveDiagnostics(summary, quality) {
+  const moistureSignal = summary.NDWI.mean < 0.12
+    ? "Deficit hidrico probable"
+    : summary.NDWI.mean > 0.24
+      ? "Humedad alta"
+      : "Humedad equilibrada";
+  const vigorSignal = summary.NDVI.mean < 0.55
+    ? "Vigor irregular"
+    : summary.NDVI.mean > 0.7
+      ? "Vigor alto"
+      : "Vigor medio";
+  const recommendedIndex = getRecommendedIndex(summary);
+  const alertLevel = quality.confidenceScore < 55 || summary.NDVI.variability > 26
+    ? "Seguimiento prioritario"
+    : "Condicion estable";
+
+  return { moistureSignal, vigorSignal, recommendedIndex, alertLevel };
+}
+
+function getRecommendedIndex(summary) {
+  if (summary.NDWI.mean < 0.12) {
+    return "NDWI";
+  }
+  if (summary.NDRE.mean < 0.3) {
+    return "NDRE";
+  }
+  if (summary.NDVI.variability > 24) {
+    return "MSAVI";
+  }
+  return "NDVI";
+}
+
+function renderAnalysisStatus() {
+  const image = getSelectedImage();
+  dom.useStudyAreaBtn.disabled = !state.currentPlot;
+  dom.rerunAnalysisBtn.disabled = state.analysisBusy || !image;
+  dom.analysisStatus.className = "service-banner";
+
+  if (!image) {
+    dom.analysisStatus.classList.add("local-processing");
+    dom.analysisStatus.textContent = "Selecciona una escena para generar el perfil operativo del AOI.";
+    return;
+  }
+
+  if (state.analysisBusy) {
+    dom.analysisStatus.classList.add("loading");
+    dom.analysisStatus.textContent = `Procesando ${state.selectedIndex} para ${state.currentPlot ? state.currentPlotLabel : "Canton Mejia"}...`;
+    return;
+  }
+
+  if (state.analysisData) {
+    if (state.analysisData.processingMode === "backend") {
+      dom.analysisStatus.classList.add("proxy");
+      dom.analysisStatus.textContent = `Procesamiento del AOI via backend local. Cobertura util ${state.analysisData.quality.coveragePct}% y ${state.analysisData.cacheHit ? "respuesta en cache." : "resultado recien calculado."}`;
+      return;
+    }
+
+    dom.analysisStatus.classList.add(image.source === "real" ? "local-processing" : "demo");
+    dom.analysisStatus.textContent = image.source === "real"
+      ? "Procesamiento local calibrado por la escena real. Sirve para exploracion operativa del AOI; el pixel-raster real requerira un motor geoespacial adicional."
+      : "Procesamiento local en modo demo para mantener el flujo de analisis.";
+    return;
+  }
+
+  dom.analysisStatus.classList.add("demo");
+  dom.analysisStatus.textContent = state.analysisError || "No fue posible preparar el analisis del AOI.";
+}
+
+function renderAnalysisSummary() {
+  const image = getSelectedImage();
+  const analysis = getRenderableAnalysis(image);
+
+  if (!image || !analysis) {
+    resetMetricGrid(dom.sceneSummary, "Selecciona una escena para generar un resumen operativo del AOI.");
+    return;
+  }
+
+  const stats = analysis.summary[state.selectedIndex];
+  const managementText = `Alta ${analysis.management.high}% / Media ${analysis.management.medium}% / Baja ${analysis.management.low}%`;
+  const cards = [
+    {
+      label: analysis.context.scopeType === "plot" ? "Lote activo" : "Ambito activo",
+      value: analysis.context.scopeLabel,
+      copy: `${analysis.context.areaHa.toFixed(1)} ha procesadas para el AOI actual.`,
+    },
+    {
+      label: "Confianza escena",
+      value: `${analysis.quality.confidenceScore}/100`,
+      copy: `Nubes ${formatCloudValue(image.cloud)} y antiguedad ${formatAgeLabel(analysis.quality.freshnessDays).toLowerCase()}.`,
+    },
+    {
+      label: state.selectedIndex,
+      value: formatValue(stats.mean, indexConfig[state.selectedIndex]),
+      copy: `Rango operativo P10 ${formatValue(stats.p10, indexConfig[state.selectedIndex])} / P90 ${formatValue(stats.p90, indexConfig[state.selectedIndex])}.`,
+      highlight: true,
+    },
+    {
+      label: "Cobertura util",
+      value: `${analysis.quality.coveragePct}%`,
+      copy: analysis.processingMode === "backend" ? "Resumen calculado y trazado por backend local." : "Resumen calculado en el navegador para no detener el visor.",
+    },
+    {
+      label: "Zonas de manejo",
+      value: managementText,
+      copy: analysis.management.recommendedAction,
+    },
+    {
+      label: "Foco recomendado",
+      value: analysis.diagnostics.recommendedIndex,
+      copy: `${analysis.diagnostics.alertLevel}. ${analysis.diagnostics.moistureSignal}.`,
+    },
+  ];
+
+  dom.sceneSummary.classList.add("scene-summary");
+  dom.sceneSummary.classList.remove("empty-state");
+  dom.sceneSummary.classList.add("has-data");
+  dom.sceneSummary.innerHTML = cards
+    .map(
+      (card) => `
+        <article class="metric-card ${card.highlight ? "highlight" : ""}">
+          <p>${card.label}</p>
+          <strong>${card.value}</strong>
+          <p>${card.copy}</p>
+        </article>
+      `
+    )
+    .join("");
 }
 
 function renderSentinelOverlay() {
@@ -988,43 +1604,19 @@ function renderSentinelOverlay() {
     return;
   }
 
-  if (image.source === "real") {
-    renderRealSceneFootprint(image);
-    setStatus(
-      `Escena real ${image.title} cargada desde Copernicus STAC. La capa de ${state.selectedIndex} sobre el mapa sigue en integracion beta.`
-    );
-    return;
+  const analysis = getRenderableAnalysis(image) || buildLocalAnalysis(image, buildAnalysisContext(image));
+
+  if (image.source === "real" && image.geometry) {
+    renderRealSceneFootprint(image, !state.currentPlot);
   }
 
-  const bbox = turf.bbox(studyArea);
-  const grid = turf.squareGrid(bbox, 2.1, { units: "kilometers" });
-  const features = grid.features
-    .map((cell, index) => {
-      const centroid = turf.centroid(cell);
-      if (!turf.booleanPointInPolygon(centroid, studyArea)) {
-        return null;
-      }
-      const [lon, lat] = centroid.geometry.coordinates;
-      const value = deriveIndexValue({
-        lon,
-        lat,
-        seed: image.id.length + index,
-        base: image.baseIndices[state.selectedIndex],
-        config: indexConfig[state.selectedIndex],
-      });
-      cell.properties = { value };
-      return cell;
-    })
-    .filter(Boolean);
-
-  mapState.sentinelLayer = L.geoJSON(
-    { type: "FeatureCollection", features },
-    {
+  if (analysis.surface?.features?.length) {
+    mapState.sentinelLayer = L.geoJSON(analysis.surface, {
       style: (feature) => ({
         weight: 0,
-        fillOpacity: 0.5,
+        fillOpacity: image.source === "real" ? 0.44 : 0.52,
         fillColor: interpolateColor(
-          feature.properties.value,
+          feature.properties[state.selectedIndex],
           indexConfig[state.selectedIndex].min,
           indexConfig[state.selectedIndex].max,
           indexConfig[state.selectedIndex].colors
@@ -1032,12 +1624,12 @@ function renderSentinelOverlay() {
       }),
       onEachFeature: (feature, layer) => {
         layer.bindTooltip(
-          `${state.selectedIndex}: ${formatValue(feature.properties.value, indexConfig[state.selectedIndex])}`,
+          `${state.selectedIndex}: ${formatValue(feature.properties[state.selectedIndex], indexConfig[state.selectedIndex])} | Zona ${feature.properties.zone}`,
           { sticky: true }
         );
       },
-    }
-  ).addTo(mapState.map);
+    }).addTo(mapState.map);
+  }
 
   if (mapState.currentPlotLayer) {
     mapState.currentPlotLayer.bringToFront();
@@ -1046,12 +1638,17 @@ function renderSentinelOverlay() {
     mapState.managementLayer.bringToFront();
   }
 
-  setStatus(
-    `Escena ${image.title} activa con ${state.selectedIndex} sobre el area de trabajo de Mejia.`
-  );
+  if (!state.analysisBusy) {
+    const sourceLabel = analysis.processingMode === "backend"
+      ? "backend local"
+      : image.source === "real"
+        ? "motor local calibrado"
+        : "motor demo";
+    setStatus(`Escena ${image.title} activa con ${state.selectedIndex} sobre ${analysis.context.scopeLabel} usando ${sourceLabel}.`);
+  }
 }
 
-function renderRealSceneFootprint(image) {
+function renderRealSceneFootprint(image, fitBounds = false) {
   if (!image.geometry) {
     return;
   }
@@ -1088,20 +1685,48 @@ function renderRealSceneFootprint(image) {
     mapState.managementLayer.bringToFront();
   }
 
-  mapState.map.fitBounds(mapState.sceneFootprintLayer.getBounds(), {
-    padding: [36, 36],
-  });
+  if (fitBounds) {
+    mapState.map.fitBounds(mapState.sceneFootprintLayer.getBounds(), {
+      padding: [36, 36],
+    });
+  }
 }
 
 function getSelectedImage() {
   return state.filteredImages.find((image) => image.id === state.selectedImageId) || null;
 }
 
+function getRenderableAnalysis(image = getSelectedImage()) {
+  if (!image || !state.analysisData || state.analysisData.imageId !== image.id) {
+    return null;
+  }
+
+  const currentTargetKey = getCurrentAnalysisTarget().targetKey;
+  return state.analysisData.context?.targetKey === currentTargetKey ? state.analysisData : null;
+}
+
+function syncAnalysisDrivenModules() {
+  if (state.currentPlot) {
+    runIntraloteAnalysis(true);
+    runDemAnalysis(true);
+    if (!(state.activeWizard === "Monitoreo" || state.activeWizard === "Diagnostico")) {
+      runClimateAnalysis(true);
+    }
+    return;
+  }
+
+  if (dom.climateResults.classList.contains("has-data")) {
+    runClimateAnalysis(true);
+  }
+}
+
 function setCurrentPlot(feature, label) {
   state.currentPlot = feature;
   state.currentPlotLabel = label;
+  state.analysisData = null;
   dom.overlayPlot.textContent = label;
   renderSentinelSourceStatus();
+  renderAnalysisStatus();
 
   if (!mapState.map) {
     return;
@@ -1126,13 +1751,19 @@ function setCurrentPlot(feature, label) {
   });
 
   updateMapSummary();
+  runIntraloteAnalysis();
+  runDemAnalysis(true);
+  runClimateAnalysis(true);
+  filterSentinelImages();
 }
 
-function clearCurrentPlot() {
+function clearCurrentPlot(triggerRefresh = false) {
   state.currentPlot = null;
   state.currentPlotLabel = "Sin seleccionar";
+  state.analysisData = null;
   dom.overlayPlot.textContent = state.currentPlotLabel;
   renderSentinelSourceStatus();
+  renderAnalysisStatus();
 
   if (mapState.currentPlotLayer) {
     mapState.map.removeLayer(mapState.currentPlotLayer);
@@ -1144,131 +1775,99 @@ function clearCurrentPlot() {
     mapState.managementLayer = null;
   }
 
+  if (mapState.controlGroup) {
+    mapState.controlGroup.clearLayers();
+  }
+
   resetMetricGrid(dom.intraloteResults, "Dibuja un lote en el mapa para empezar.");
   resetMetricGrid(dom.demResults, "Elige un lote o dibuja un poligono para estimar relieve.");
+  resetMetricGrid(dom.climateResults, "Ejecuta el modulo para cargar indicadores climaticos.");
+  renderAnalysisSummary();
+  renderLegend();
   updateMapSummary();
+
+  if (triggerRefresh) {
+    filterSentinelImages();
+  }
 }
 
-function runIntraloteAnalysis() {
-  if (!ensurePlot("Analisis intralote requiere un lote activo o un poligono dibujado.")) {
+function runIntraloteAnalysis(silent = false) {
+  if (!ensurePlot("Analisis intralote requiere un lote activo o un poligono dibujado.", silent)) {
     return;
   }
 
-  const plot = state.currentPlot;
-  const centroid = turf.centroid(plot).geometry.coordinates;
-  const areaHa = turf.area(plot) / 10000;
-  const image = getSelectedImage() || sentinelImages[0];
-
-  const metrics = Object.keys(indexConfig).map((indexKey, index) => {
-    const config = indexConfig[indexKey];
-    const base = image.baseIndices[indexKey];
-    const value = deriveIndexValue({
-      lon: centroid[0],
-      lat: centroid[1],
-      seed: index + Math.round(areaHa * 10),
-      base,
-      config,
-    });
-    return {
-      label: indexKey,
-      value: formatValue(value, config),
-    };
-  });
-
-  const zoneStats = renderManagementZones(plot, image);
+  const image = getSelectedImage() || enrichSceneMetadata({ ...sentinelImages[0], source: "demo", datetime: `${sentinelImages[0].date}T10:15:00Z` });
+  const plotTarget = {
+    feature: state.currentPlot,
+    scopeLabel: state.currentPlotLabel,
+    scopeType: "plot",
+    targetKey: getFeatureKey(state.currentPlot),
+  };
+  const analysis = resolveAnalysisForTarget(image, plotTarget);
+  const zoneStats = renderManagementZones(analysis);
   const managementText = `Alta ${zoneStats.high}% / Media ${zoneStats.medium}% / Baja ${zoneStats.low}%`;
 
   const cards = [
-    { label: "Superficie", value: `${areaHa.toFixed(1)} ha`, copy: "Calculada sobre el poligono activo." },
-    { label: "Zonas de manejo", value: managementText, copy: "Clasificacion generada sobre una malla interna del lote." },
-    ...metrics.map((metric) => ({
-      label: metric.label,
-      value: metric.value,
-      copy: `Estimacion dinamica del indice ${metric.label} para el lote.`,
+    { label: "Superficie", value: `${analysis.context.areaHa.toFixed(1)} ha`, copy: "Calculada sobre el poligono activo." },
+    { label: "Cobertura util", value: `${analysis.quality.coveragePct}%`, copy: `Confianza ${analysis.quality.confidenceScore}/100 para la escena activa.` },
+    { label: "Zonas de manejo", value: managementText, copy: analysis.management.recommendedAction },
+    ...Object.keys(indexConfig).map((indexKey) => ({
+      label: indexKey,
+      value: formatValue(analysis.summary[indexKey].mean, indexConfig[indexKey]),
+      copy: `Rango P10 ${formatValue(analysis.summary[indexKey].p10, indexConfig[indexKey])} / P90 ${formatValue(analysis.summary[indexKey].p90, indexConfig[indexKey])}.`,
     })),
   ];
 
   paintMetricGrid(dom.intraloteResults, cards);
-  setStatus(
-    `Analisis intralote ejecutado para ${state.currentPlotLabel}. Se generaron zonas de manejo diferenciado.`
-  );
+  if (!silent) {
+    setStatus(
+      `Analisis intralote ejecutado para ${state.currentPlotLabel}. Se actualizaron superficies y zonas de manejo.`
+    );
+  }
 
   if (state.activeWizard === "Monitoreo" || state.activeWizard === "Diagnostico") {
     runClimateAnalysis(true);
   }
 }
 
-function renderManagementZones(plot, image) {
+function renderManagementZones(analysis) {
   if (mapState.managementLayer) {
     mapState.map.removeLayer(mapState.managementLayer);
+    mapState.managementLayer = null;
   }
 
-  const bbox = turf.bbox(plot);
-  const cellSize = Math.max(0.18, Math.min(0.32, Math.sqrt(turf.area(plot) / 1000000) / 6));
-  const grid = turf.squareGrid(bbox, cellSize, { units: "kilometers" });
-  const config = indexConfig.NDVI;
-  let counts = { high: 0, medium: 0, low: 0 };
-
-  const features = grid.features
-    .map((cell, index) => {
-      const centroid = turf.centroid(cell);
-      if (!turf.booleanPointInPolygon(centroid, plot)) {
-        return null;
+  const features = analysis.surface?.features || [];
+  if (features.length && mapState.map) {
+    mapState.managementLayer = L.geoJSON(
+      { type: "FeatureCollection", features },
+      {
+        style: (feature) => ({
+          weight: 0.4,
+          color: "#fff7ef",
+          fillOpacity: 0.58,
+          fillColor:
+            feature.properties.zone === "high"
+              ? "#3f9a60"
+              : feature.properties.zone === "medium"
+                ? "#d2a544"
+                : "#b55a3f",
+        }),
+        onEachFeature: (feature, layer) => {
+          layer.bindTooltip(
+            `Zona ${feature.properties.zone} / NDVI ${feature.properties.NDVI.toFixed(2)}`,
+            { sticky: true }
+          );
+        },
       }
-      const [lon, lat] = centroid.geometry.coordinates;
-      const score = deriveIndexValue({
-        lon,
-        lat,
-        seed: image.id.charCodeAt(0) + index,
-        base: image.baseIndices.NDVI,
-        config,
-      });
-      let zone = "medium";
-      if (score >= 0.68) {
-        zone = "high";
-      } else if (score <= 0.5) {
-        zone = "low";
-      }
-      counts[zone] += 1;
-      cell.properties = { zone, score };
-      return cell;
-    })
-    .filter(Boolean);
+    ).addTo(mapState.map);
 
-  mapState.managementLayer = L.geoJSON(
-    { type: "FeatureCollection", features },
-    {
-      style: (feature) => ({
-        weight: 0.4,
-        color: "#fff7ef",
-        fillOpacity: 0.62,
-        fillColor:
-          feature.properties.zone === "high"
-            ? "#3f9a60"
-            : feature.properties.zone === "medium"
-              ? "#d2a544"
-              : "#b55a3f",
-      }),
-      onEachFeature: (feature, layer) => {
-        layer.bindTooltip(
-          `Zona ${feature.properties.zone} / NDVI ${feature.properties.score.toFixed(2)}`,
-          { sticky: true }
-        );
-      },
+    mapState.managementLayer.bringToFront();
+    if (mapState.currentPlotLayer) {
+      mapState.currentPlotLayer.bringToFront();
     }
-  ).addTo(mapState.map);
-
-  mapState.managementLayer.bringToFront();
-  if (mapState.currentPlotLayer) {
-    mapState.currentPlotLayer.bringToFront();
   }
 
-  const total = Math.max(features.length, 1);
-  return {
-    high: Math.round((counts.high / total) * 100),
-    medium: Math.round((counts.medium / total) * 100),
-    low: Math.round((counts.low / total) * 100),
-  };
+  return analysis.management;
 }
 
 function runDemAnalysis(silent = false) {
@@ -1276,21 +1875,33 @@ function runDemAnalysis(silent = false) {
     return;
   }
 
+  const image = getSelectedImage() || enrichSceneMetadata({ ...sentinelImages[0], source: "demo", datetime: `${sentinelImages[0].date}T10:15:00Z` });
+  const plotTarget = {
+    feature: state.currentPlot,
+    scopeLabel: state.currentPlotLabel,
+    scopeType: "plot",
+    targetKey: getFeatureKey(state.currentPlot),
+  };
+  const analysis = resolveAnalysisForTarget(image, plotTarget);
   const centroid = turf.centroid(state.currentPlot).geometry.coordinates;
   const areaHa = turf.area(state.currentPlot) / 10000;
   const altitude = 2780 + Math.round((pseudoNoise(centroid[0], centroid[1], 11) + 1) * 140);
   const meanSlope = clamp(3 + Math.abs(pseudoNoise(centroid[0], centroid[1], 7)) * 12 + areaHa / 14, 2, 18);
   const maxSlope = clamp(meanSlope + 7 + Math.abs(pseudoNoise(centroid[1], centroid[0], 3)) * 8, 7, 31);
   const aspect = cardinalFromAngle((pseudoNoise(centroid[0], centroid[1], 13) + 1) * 180);
-  const floodRisk = meanSlope < 6 ? "Medio - Alto" : meanSlope < 10 ? "Medio" : "Bajo";
+  const floodRisk = analysis.summary.NDWI.mean > 0.22 && meanSlope < 7
+    ? "Medio - Alto"
+    : meanSlope < 10
+      ? "Medio"
+      : "Bajo";
 
   const cards = [
     { label: "Altitud media", value: `${Math.round(altitude)} msnm`, copy: "Estimacion basada en relieve de referencia Copernicus GLO-30." },
     { label: "Pendiente media", value: `${meanSlope.toFixed(1)}%`, copy: "Promedio de inclinacion del lote." },
     { label: "Pendiente maxima", value: `${maxSlope.toFixed(1)}%`, copy: "Sector de mayor exigencia para mecanizacion." },
     { label: "Orientacion", value: aspect, copy: "Exposicion dominante del relieve del lote." },
-    { label: "Riesgo de anegamiento", value: floodRisk, copy: "Inferido a partir de pendiente y humedad relativa simulada." },
-    { label: "Lectura operativa", value: meanSlope > 10 ? "Manejo cuidadoso" : "Operacion favorable", copy: "Sugerencia rapida para planificacion de campo." },
+    { label: "Riesgo de anegamiento", value: floodRisk, copy: "Cruza pendiente y senal de humedad del AOI." },
+    { label: "Lectura operativa", value: meanSlope > 10 ? "Manejo cuidadoso" : "Operacion favorable", copy: `Variabilidad NDVI ${analysis.summary.NDVI.variability}%.` },
   ];
 
   paintMetricGrid(dom.demResults, cards);
@@ -1301,23 +1912,38 @@ function runDemAnalysis(silent = false) {
 
 function runClimateAnalysis(silent = false) {
   const anchorFeature = state.currentPlot || studyArea;
+  const image = getSelectedImage() || enrichSceneMetadata({ ...sentinelImages[0], source: "demo", datetime: `${sentinelImages[0].date}T10:15:00Z` });
+  const target = state.currentPlot
+    ? {
+      feature: state.currentPlot,
+      scopeLabel: state.currentPlotLabel,
+      scopeType: "plot",
+      targetKey: getFeatureKey(state.currentPlot),
+    }
+    : {
+      feature: studyArea,
+      scopeLabel: "Canton Mejia",
+      scopeType: "studyArea",
+      targetKey: getFeatureKey(studyArea),
+    };
+  const analysis = resolveAnalysisForTarget(image, target);
   const centroid = turf.centroid(anchorFeature).geometry.coordinates;
-  const image = getSelectedImage() || sentinelImages[0];
-  const baseline = image.baseIndices.NDWI;
-  const rainfall = 9 + Math.round(Math.abs(pseudoNoise(centroid[0], centroid[1], 19)) * 32);
+  const baseline = analysis.summary.NDWI.mean;
+  const vigor = analysis.summary.NDVI.mean;
+  const rainfall = 9 + Math.round(Math.abs(pseudoNoise(centroid[0], centroid[1], 19)) * 32 + (0.24 - baseline) * 16);
   const minTemp = 6 + Math.abs(pseudoNoise(centroid[1], centroid[0], 2)) * 3;
-  const maxTemp = 18 + Math.abs(pseudoNoise(centroid[0], centroid[1], 5)) * 7;
+  const maxTemp = 18 + Math.abs(pseudoNoise(centroid[0], centroid[1], 5)) * 7 + (vigor < 0.55 ? 1.2 : 0);
   const soilMoisture = clamp(42 + baseline * 80 + pseudoNoise(centroid[0], centroid[1], 17) * 8, 24, 72);
-  const lst = clamp(20 + Math.abs(pseudoNoise(centroid[0], centroid[1], 23)) * 10, 18, 31);
-  const stress = lst > 27 ? "Atencion" : "Controlado";
+  const lst = clamp(20 + Math.abs(pseudoNoise(centroid[0], centroid[1], 23)) * 10 - baseline * 3, 18, 31);
+  const stress = lst > 27 || vigor < 0.55 ? "Atencion" : "Controlado";
 
   const cards = [
     { label: "Lluvia 7 dias", value: `${rainfall} mm`, copy: "Acumulado de referencia tipo ERA5-Land." },
     { label: "Temperatura aire", value: `${minTemp.toFixed(1)} - ${maxTemp.toFixed(1)} C`, copy: "Rango diario esperado sobre el lote o zona activa." },
-    { label: "Humedad estimada", value: `${soilMoisture.toFixed(0)}%`, copy: "Humedad relativa del suelo como apoyo de riego." },
+    { label: "Humedad estimada", value: `${soilMoisture.toFixed(0)}%`, copy: "Ajustada con la senal NDWI del AOI." },
     { label: "LST MODIS", value: `${lst.toFixed(1)} C`, copy: "Temperatura superficial para seguimiento de estres termico." },
-    { label: "Estado termico", value: stress, copy: "Alerta simple para priorizar seguimiento agronomico." },
-    { label: "Escena base", value: localeDate.format(new Date(`${image.date}T00:00:00`)), copy: "Fecha de referencia de la ultima imagen activa." },
+    { label: "Estado termico", value: stress, copy: `Lectura de vigor: ${analysis.diagnostics.vigorSignal}.` },
+    { label: "Escena base", value: localeDate.format(new Date(`${image.date}T00:00:00`)), copy: `AOI ${analysis.context.scopeLabel}.` },
   ];
 
   paintMetricGrid(dom.climateResults, cards);
@@ -1348,6 +1974,7 @@ function renderWizardModes() {
       renderWizardModes();
       renderWizardSteps();
       setStatus(`Asistente Agricola ajustado al modo ${state.activeWizard}.`);
+      refreshActiveAnalysis({ silent: true });
     });
   });
 }
@@ -1401,6 +2028,7 @@ function ensurePlot(message, silent = false) {
 
 function updateMapSummary() {
   const image = getSelectedImage();
+  const analysis = getRenderableAnalysis(image);
   dom.overlayIndex.textContent = state.selectedIndex;
 
   if (!image) {
@@ -1409,14 +2037,26 @@ function updateMapSummary() {
     return;
   }
 
+  if (analysis) {
+    const stats = analysis.summary[state.selectedIndex];
+    const modeLabel = analysis.processingMode === "backend"
+      ? "proxy local + cache"
+      : image.source === "real"
+        ? "procesamiento local calibrado"
+        : "motor demo";
+    dom.mapTitle.textContent = `${state.selectedIndex} sobre ${analysis.context.scopeLabel}`;
+    dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | Nubes ${formatCloudValue(image.cloud)} | Media ${formatValue(stats.mean, indexConfig[state.selectedIndex])} | ${modeLabel}`;
+    return;
+  }
+
   if (image.source === "real") {
     dom.mapTitle.textContent = `Escena real ${image.title}`;
-    dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | Nubes ${formatCloudValue(image.cloud)} | La capa ${state.selectedIndex} sigue en integracion beta.`;
+    dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | Nubes ${formatCloudValue(image.cloud)} | Preparando AOI operativo.`;
     return;
   }
 
   dom.mapTitle.textContent = `${state.selectedIndex} sobre ${image.title}`;
-  dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | ${image.cloud}% de nubosidad | ${image.note}`;
+  dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | ${formatCloudValue(image.cloud)} | ${image.note}`;
 }
 
 function setBaseLayer(baseId, initial = false) {
@@ -1443,6 +2083,33 @@ function setBaseLayer(baseId, initial = false) {
 
 function setStatus(text) {
   dom.statusBar.textContent = text;
+}
+
+function getSceneAgeDays(image) {
+  const reference = image.datetime || `${image.date}T00:00:00Z`;
+  const milliseconds = Date.now() - new Date(reference).getTime();
+  return Math.max(0, Math.round(milliseconds / 86400000));
+}
+
+function estimateSceneConfidence(image, freshnessDays = getSceneAgeDays(image)) {
+  const cloudPenalty = Number.isFinite(image.cloud) ? image.cloud * 0.55 : 18;
+  const freshnessPenalty = Math.min(freshnessDays * 1.4, 24);
+  const sourceBonus = image.source === "real" ? 12 : 0;
+  return Math.round(clamp(92 - cloudPenalty - freshnessPenalty + sourceBonus, 28, 98));
+}
+
+function formatAgeLabel(days) {
+  if (!Number.isFinite(days) || days <= 0) {
+    return "Hoy";
+  }
+  if (days === 1) {
+    return "Hace 1 d";
+  }
+  return `Hace ${days} d`;
+}
+
+function getFeatureKey(feature) {
+  return JSON.stringify(feature?.geometry || feature || null);
 }
 
 function deriveIndexValue({ lon, lat, seed, base, config }) {
