@@ -489,6 +489,7 @@ function cacheDom() {
   dom.rerunAnalysisBtn = document.querySelector("#rerunAnalysisBtn");
   dom.useStudyAreaBtn = document.querySelector("#useStudyAreaBtn");
   dom.mapTitle = document.querySelector("#mapTitle");
+  dom.mapBadges = document.querySelector("#mapBadges");
   dom.mapSubtitle = document.querySelector("#mapSubtitle");
   dom.overlayIndex = document.querySelector("#overlayIndex");
   dom.overlayPlot = document.querySelector("#overlayPlot");
@@ -2730,15 +2731,18 @@ function updateMapSummary() {
 
   if (!image) {
     dom.mapTitle.textContent = "No hay escena activa";
+    renderMapBadges();
     dom.mapSubtitle.textContent = "Ajusta el filtro Sentinel-2 para cargar una imagen sobre el visor.";
     return;
   }
+
+  renderMapBadges(image, compareImage, previewLabel);
 
   if (analysis) {
     if (state.surfaceMode === "change" && changeAnalysis && compareImage) {
       const delta = changeAnalysis.summary[state.selectedIndex];
       dom.mapTitle.textContent = `Cambio ${state.selectedIndex} sobre ${analysis.context.scopeLabel}`;
-      dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} vs ${localeDate.format(new Date(`${compareImage.date}T00:00:00`))} | Delta ${formatDelta(delta.mean, indexConfig[state.selectedIndex])} | ${previewLabel}`;
+      dom.mapSubtitle.textContent = `Lectura temporal ${changeAnalysis.direction} con delta medio ${formatDelta(delta.mean, indexConfig[state.selectedIndex])}.`;
       return;
     }
 
@@ -2751,18 +2755,62 @@ function updateMapSummary() {
           ? "AOI local"
           : "motor demo";
     dom.mapTitle.textContent = `${state.selectedIndex} sobre ${analysis.context.scopeLabel}`;
-    dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | ${formatCloudValue(image.cloud)} | Media ${formatValue(stats.mean, indexConfig[state.selectedIndex])} | ${modeLabel} | ${previewLabel}`;
+    dom.mapSubtitle.textContent = `Media ${formatValue(stats.mean, indexConfig[state.selectedIndex])} con ${modeLabel}.`;
     return;
   }
 
   if (image.source === "real") {
     dom.mapTitle.textContent = `Escena real ${image.title}`;
-    dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | ${formatCloudValue(image.cloud)} | ${previewLabel}`;
+    dom.mapSubtitle.textContent = "Preparando la capa satelital y el AOI operativo.";
     return;
   }
 
   dom.mapTitle.textContent = `${state.selectedIndex} sobre ${image.title}`;
-  dom.mapSubtitle.textContent = `${localeDate.format(new Date(`${image.date}T00:00:00`))} | ${formatCloudValue(image.cloud)} | ${image.note} | ${previewLabel}`;
+  dom.mapSubtitle.textContent = image.note;
+}
+
+function renderMapBadges(image = null, compareImage = null, previewLabel = "sin capa") {
+  if (!dom.mapBadges) {
+    return;
+  }
+
+  if (!image) {
+    dom.mapBadges.innerHTML = `<span class="map-badge muted">Sin escena</span>`;
+    return;
+  }
+
+  const rasterTone = state.sceneLayerKind === "exact"
+    ? "exact"
+    : state.sceneLayerKind === "loading"
+      ? "loading"
+      : state.sceneLayerKind === "preview"
+        ? "preview"
+        : "muted";
+  const badges = [
+    {
+      tone: "neutral",
+      label: localeDate.format(new Date(`${image.date}T00:00:00`)),
+    },
+    {
+      tone: "neutral",
+      label: `Nubes ${formatCloudValue(image.cloud)}`,
+    },
+    {
+      tone: rasterTone,
+      label: state.showScenePreview ? previewLabel : "capa oculta",
+    },
+  ];
+
+  if (compareImage) {
+    badges.push({
+      tone: "compare",
+      label: `Comp ${localeDate.format(new Date(`${compareImage.date}T00:00:00`))}`,
+    });
+  }
+
+  dom.mapBadges.innerHTML = badges
+    .map((badge) => `<span class="map-badge ${badge.tone}">${badge.label}</span>`)
+    .join("");
 }
 
 function setBaseLayer(baseId, initial = false) {
