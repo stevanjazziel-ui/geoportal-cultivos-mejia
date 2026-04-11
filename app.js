@@ -26,6 +26,21 @@ const layerCatalog = [
     ],
   },
   {
+    group: "Planeamiento territorial",
+    items: [
+      {
+        id: "manchaUrbana",
+        title: "Mancha urbana 2026",
+        description: "Huella urbana sintetica con nodos de crecimiento para el modulo de planificacion.",
+      },
+      {
+        id: "equipamientos",
+        title: "Equipamientos existentes",
+        description: "Escuelas, salud y servicios de apoyo para medir deficit territorial.",
+      },
+    ],
+  },
+  {
     group: "Operacion agricola",
     items: [
       {
@@ -340,7 +355,7 @@ const sensorCatalog = {
       fillOpacity: 0.08,
       dashArray: "10 8",
     },
-    previewFilter: "saturate(1.08) contrast(1.04)",
+    previewFilter: "saturate(1.18) contrast(1.12) brightness(1.05)",
     demoImages: demoImagesBySensor.sentinel2,
     previewAssetKeys: ["thumbnail"],
     supportNote: "Sentinel-2 mantiene el flujo mas completo: NDVI, NDWI, NDRE, MSAVI y raster exacto a 10 m cuando existe COG publico coincidente.",
@@ -371,7 +386,7 @@ const sensorCatalog = {
       fillOpacity: 0.08,
       dashArray: "12 8",
     },
-    previewFilter: "saturate(1.15) contrast(1.08) brightness(1.02)",
+    previewFilter: "saturate(1.22) contrast(1.12) brightness(1.05)",
     demoImages: demoImagesBySensor.landsat,
     previewAssetKeys: ["reduced_resolution_browse", "thumbnail"],
     supportNote: "Landsat 8/9 aporta analisis optico a 30 m con NDVI, NDMI, NDWI y MSAVI. NDRE no aplica porque Landsat no tiene banda red-edge.",
@@ -402,7 +417,7 @@ const sensorCatalog = {
       fillOpacity: 0.08,
       dashArray: "8 6",
     },
-    previewFilter: "grayscale(0.85) contrast(1.22) brightness(1.06)",
+    previewFilter: "grayscale(0.78) contrast(1.28) brightness(1.1)",
     demoImages: demoImagesBySensor.sentinel1,
     previewAssetKeys: ["thumbnail"],
     supportNote: "Sentinel-1 es radar: atraviesa nubes y trabaja con VV, VH, RVI y VH/VV para lectura estructural y de humedad relativa.",
@@ -612,6 +627,111 @@ const geoSources = {
       pointFeature("EMA Tambillo", [-78.52, -0.45], { category: "meteo" }),
     ],
   },
+  manchaUrbana: {
+    type: "FeatureCollection",
+    features: [
+      polygonFeature("Machachi", [
+        [-78.608, -0.495],
+        [-78.584, -0.489],
+        [-78.566, -0.503],
+        [-78.568, -0.523],
+        [-78.589, -0.53],
+        [-78.611, -0.517],
+      ], {
+        category: "urbano",
+        growthRate: 0.91,
+        hierarchy: "primario",
+      }),
+      polygonFeature("Tambillo", [
+        [-78.553, -0.444],
+        [-78.532, -0.441],
+        [-78.521, -0.456],
+        [-78.528, -0.472],
+        [-78.548, -0.474],
+        [-78.559, -0.459],
+      ], {
+        category: "urbano",
+        growthRate: 0.82,
+        hierarchy: "subcentro",
+      }),
+      polygonFeature("Aloag", [
+        [-78.707, -0.425],
+        [-78.688, -0.423],
+        [-78.677, -0.438],
+        [-78.685, -0.454],
+        [-78.704, -0.456],
+        [-78.713, -0.441],
+      ], {
+        category: "urbano",
+        growthRate: 0.74,
+        hierarchy: "subcentro",
+      }),
+      polygonFeature("Aloasi", [
+        [-78.635, -0.535],
+        [-78.618, -0.532],
+        [-78.607, -0.545],
+        [-78.612, -0.561],
+        [-78.629, -0.564],
+        [-78.641, -0.55],
+      ], {
+        category: "urbano",
+        growthRate: 0.68,
+        hierarchy: "barrial",
+      }),
+      polygonFeature("El Chaupi", [
+        [-78.662, -0.57],
+        [-78.645, -0.567],
+        [-78.636, -0.581],
+        [-78.642, -0.595],
+        [-78.658, -0.598],
+        [-78.67, -0.584],
+      ], {
+        category: "urbano",
+        growthRate: 0.62,
+        hierarchy: "barrial",
+      }),
+    ],
+  },
+  equipamientos: {
+    type: "FeatureCollection",
+    features: [
+      pointFeature("Hospital Basico Machachi", [-78.589, -0.507], {
+        category: "equipamiento",
+        serviceType: "hospital",
+        level: "canton",
+      }),
+      pointFeature("Centro de Salud Tambillo", [-78.539, -0.455], {
+        category: "equipamiento",
+        serviceType: "hospital",
+        level: "parroquial",
+      }),
+      pointFeature("Unidad Educativa Mejia", [-78.582, -0.5], {
+        category: "equipamiento",
+        serviceType: "escuela",
+        level: "canton",
+      }),
+      pointFeature("Unidad Educativa Aloag", [-78.693, -0.437], {
+        category: "equipamiento",
+        serviceType: "escuela",
+        level: "parroquial",
+      }),
+      pointFeature("Mercado y servicios Machachi", [-78.577, -0.515], {
+        category: "equipamiento",
+        serviceType: "equipamiento",
+        level: "central",
+      }),
+      pointFeature("Centro barrial El Chaupi", [-78.651, -0.582], {
+        category: "equipamiento",
+        serviceType: "equipamiento",
+        level: "barrial",
+      }),
+      pointFeature("Nodo comunitario Tambillo", [-78.533, -0.463], {
+        category: "equipamiento",
+        serviceType: "equipamiento",
+        level: "barrial",
+      }),
+    ],
+  },
 };
 
 const layerStyles = {
@@ -638,7 +758,170 @@ const layerStyles = {
     fillColor: "#4bb381",
     fillOpacity: 0.18,
   },
+  manchaUrbana: {
+    color: "#a15d42",
+    weight: 1.4,
+    fillColor: "#d7a56a",
+    fillOpacity: 0.18,
+  },
   estaciones: {},
+  equipamientos: {},
+};
+
+const planningProgramCatalog = {
+  vis: {
+    id: "vis",
+    label: "VIS",
+    longLabel: "Vivienda de interes social",
+    targetServiceLabel: "servicios base",
+    markerColor: "#b45d3f",
+    maxSlope: 12,
+    weights: {
+      growth: 0.27,
+      access: 0.19,
+      terrain: 0.14,
+      service: 0.16,
+      resilience: 0.12,
+      agro: 0.12,
+    },
+    urbanDistance: {
+      idealMin: 0.2,
+      idealMax: 1.8,
+      hardMax: 4.8,
+      insideScore: 0.32,
+    },
+    accessDistance: {
+      idealMin: 0.05,
+      idealMax: 0.7,
+      hardMax: 2.2,
+    },
+  },
+  escuela: {
+    id: "escuela",
+    label: "Escuela",
+    longLabel: "Escuela",
+    targetServiceLabel: "cobertura educativa",
+    markerColor: "#cb9440",
+    maxSlope: 11,
+    weights: {
+      growth: 0.22,
+      access: 0.18,
+      terrain: 0.13,
+      service: 0.23,
+      resilience: 0.14,
+      agro: 0.1,
+    },
+    urbanDistance: {
+      idealMin: 0,
+      idealMax: 1.5,
+      hardMax: 4.2,
+      insideScore: 0.72,
+    },
+    accessDistance: {
+      idealMin: 0.05,
+      idealMax: 0.65,
+      hardMax: 1.8,
+    },
+  },
+  hospital: {
+    id: "hospital",
+    label: "Hospital",
+    longLabel: "Hospital",
+    targetServiceLabel: "cobertura de salud",
+    markerColor: "#8f4b60",
+    maxSlope: 9,
+    weights: {
+      growth: 0.18,
+      access: 0.25,
+      terrain: 0.13,
+      service: 0.22,
+      resilience: 0.16,
+      agro: 0.06,
+    },
+    urbanDistance: {
+      idealMin: 0,
+      idealMax: 2.1,
+      hardMax: 5.4,
+      insideScore: 0.84,
+    },
+    accessDistance: {
+      idealMin: 0.03,
+      idealMax: 0.5,
+      hardMax: 1.5,
+    },
+  },
+  equipamiento: {
+    id: "equipamiento",
+    label: "Equipamiento",
+    longLabel: "Equipamiento barrial",
+    targetServiceLabel: "equipamiento barrial",
+    markerColor: "#2f7f5f",
+    maxSlope: 12,
+    weights: {
+      growth: 0.24,
+      access: 0.18,
+      terrain: 0.13,
+      service: 0.21,
+      resilience: 0.12,
+      agro: 0.12,
+    },
+    urbanDistance: {
+      idealMin: 0,
+      idealMax: 1.6,
+      hardMax: 4.4,
+      insideScore: 0.68,
+    },
+    accessDistance: {
+      idealMin: 0.05,
+      idealMax: 0.6,
+      hardMax: 1.9,
+    },
+  },
+};
+
+const planningHorizonCatalog = {
+  corto: {
+    id: "corto",
+    label: "Corto plazo 2026-2028",
+    demandBoost: 0.1,
+    expansionShift: 0.4,
+  },
+  medio: {
+    id: "medio",
+    label: "Mediano plazo 2028-2032",
+    demandBoost: 0.18,
+    expansionShift: 0.9,
+  },
+  largo: {
+    id: "largo",
+    label: "Reserva 2032-2038",
+    demandBoost: 0.27,
+    expansionShift: 1.35,
+  },
+};
+
+const planningScenarioCatalog = {
+  conservador: {
+    id: "conservador",
+    label: "Conservador",
+    growthMultiplier: 0.88,
+    corridorBoost: 0.92,
+    farmlandProtection: 1.18,
+  },
+  balanceado: {
+    id: "balanceado",
+    label: "Balanceado",
+    growthMultiplier: 1,
+    corridorBoost: 1,
+    farmlandProtection: 1,
+  },
+  expansivo: {
+    id: "expansivo",
+    label: "Expansivo",
+    growthMultiplier: 1.14,
+    corridorBoost: 1.1,
+    farmlandProtection: 0.82,
+  },
 };
 
 const state = {
@@ -674,6 +957,11 @@ const state = {
   analysisData: null,
   compareAnalysis: null,
   changeAnalysis: null,
+  planningUseId: "vis",
+  planningHorizonId: "medio",
+  planningGrowthScenarioId: "balanceado",
+  planningData: null,
+  planningHighlightId: null,
 };
 
 const dom = {};
@@ -688,6 +976,8 @@ const mapState = {
   scenePreviewLayer: null,
   sceneFootprintLayer: null,
   managementLayer: null,
+  planningLayer: null,
+  planningCandidatesLayer: null,
   studyAreaLayer: null,
   currentPlotLayer: null,
 };
@@ -698,6 +988,18 @@ function getSensorConfig(sensorId = state.activeSensorId) {
 
 function getActiveSensor() {
   return getSensorConfig(state.activeSensorId);
+}
+
+function getPlanningProgram(programId = state.planningUseId) {
+  return planningProgramCatalog[programId] || planningProgramCatalog.vis;
+}
+
+function getPlanningHorizon(horizonId = state.planningHorizonId) {
+  return planningHorizonCatalog[horizonId] || planningHorizonCatalog.medio;
+}
+
+function getPlanningScenario(scenarioId = state.planningGrowthScenarioId) {
+  return planningScenarioCatalog[scenarioId] || planningScenarioCatalog.balanceado;
 }
 
 function getSensorForImage(image = null) {
@@ -847,9 +1149,18 @@ function cacheDom() {
   dom.runIntraloteBtn = document.querySelector("#runIntraloteBtn");
   dom.runDemBtn = document.querySelector("#runDemBtn");
   dom.runClimateBtn = document.querySelector("#runClimateBtn");
+  dom.runPlanningBtn = document.querySelector("#runPlanningBtn");
+  dom.focusPlanningBtn = document.querySelector("#focusPlanningBtn");
+  dom.clearPlanningBtn = document.querySelector("#clearPlanningBtn");
+  dom.planningUseSelect = document.querySelector("#planningUseSelect");
+  dom.planningHorizonSelect = document.querySelector("#planningHorizonSelect");
+  dom.planningGrowthSelect = document.querySelector("#planningGrowthSelect");
   dom.intraloteResults = document.querySelector("#intraloteResults");
   dom.demResults = document.querySelector("#demResults");
   dom.climateResults = document.querySelector("#climateResults");
+  dom.planningResults = document.querySelector("#planningResults");
+  dom.planningWeights = document.querySelector("#planningWeights");
+  dom.planningCandidates = document.querySelector("#planningCandidates");
   dom.wizardModes = document.querySelector("#wizardModes");
   dom.wizardSteps = document.querySelector("#wizardSteps");
   dom.baseButtons = Array.from(document.querySelectorAll(".base-button"));
@@ -864,6 +1175,7 @@ function bootstrapApp() {
   renderIndexButtons();
   renderWizardModes();
   renderWizardSteps();
+  renderPlanningModule();
   renderSceneControls();
   renderAnalysisStatus();
   renderAnalysisSummary();
@@ -1017,6 +1329,33 @@ function bindUI() {
   dom.runIntraloteBtn.addEventListener("click", runIntraloteAnalysis);
   dom.runDemBtn.addEventListener("click", runDemAnalysis);
   dom.runClimateBtn.addEventListener("click", runClimateAnalysis);
+  dom.runPlanningBtn.addEventListener("click", runPlanningAnalysis);
+  dom.focusPlanningBtn.addEventListener("click", focusPlanningCandidates);
+  dom.clearPlanningBtn.addEventListener("click", clearPlanningAnalysis);
+
+  dom.planningUseSelect.addEventListener("change", () => {
+    state.planningUseId = dom.planningUseSelect.value || "vis";
+    renderPlanningModule();
+    if (state.planningData) {
+      runPlanningAnalysis(true);
+    }
+  });
+
+  dom.planningHorizonSelect.addEventListener("change", () => {
+    state.planningHorizonId = dom.planningHorizonSelect.value || "medio";
+    renderPlanningModule();
+    if (state.planningData) {
+      runPlanningAnalysis(true);
+    }
+  });
+
+  dom.planningGrowthSelect.addEventListener("change", () => {
+    state.planningGrowthScenarioId = dom.planningGrowthSelect.value || "balanceado";
+    renderPlanningModule();
+    if (state.planningData) {
+      runPlanningAnalysis(true);
+    }
+  });
 
   dom.baseButtons.forEach((button) => {
     button.addEventListener("click", () => setBaseLayer(button.dataset.base));
@@ -1142,6 +1481,8 @@ function initializeMap() {
     clearCurrentPlot(true);
   });
 
+  mapState.map.on("zoomend", maybeRefreshScenePreviewQuality);
+
   dom.overlayMode.textContent = state.activeWizard;
   updateLayerVisibility();
   updateMapSummary();
@@ -1230,11 +1571,7 @@ function addGeoLayer(layerId) {
     style: () => layerStyles[layerId],
     pointToLayer: (feature, latlng) =>
       L.circleMarker(latlng, {
-        radius: 7,
-        weight: 2,
-        color: "#1a4f69",
-        fillColor: "#6fc2d6",
-        fillOpacity: 0.9,
+        ...getPointMarkerStyle(layerId, feature),
       }),
     onEachFeature: (feature, featureLayer) => {
       const title = feature.properties?.name || "Elemento";
@@ -1266,7 +1603,52 @@ function buildLayerDescription(layerId, properties = {}) {
   if (layerId === "canales") {
     return "Infraestructura de riego demostrativa para analisis hidrico.";
   }
+  if (layerId === "manchaUrbana") {
+    return `Nodo ${properties.hierarchy || "urbano"} con crecimiento relativo ${(Number(properties.growthRate || 0) * 100).toFixed(0)}%.`;
+  }
+  if (layerId === "equipamientos") {
+    return `${formatFacilityTypeLabel(properties.serviceType)} de escala ${properties.level || "local"} usado para medir cobertura territorial.`;
+  }
   return "Capa demostrativa integrada en el visor del geoportal.";
+}
+
+function getPointMarkerStyle(layerId, feature = null) {
+  if (layerId === "equipamientos") {
+    const serviceType = feature?.properties?.serviceType;
+    if (serviceType === "hospital") {
+      return {
+        radius: 8,
+        weight: 2,
+        color: "#7f3f57",
+        fillColor: "#d97f9d",
+        fillOpacity: 0.92,
+      };
+    }
+    if (serviceType === "escuela") {
+      return {
+        radius: 8,
+        weight: 2,
+        color: "#966b22",
+        fillColor: "#efc36b",
+        fillOpacity: 0.94,
+      };
+    }
+    return {
+      radius: 7,
+      weight: 2,
+      color: "#1f6a50",
+      fillColor: "#69bb8f",
+      fillOpacity: 0.94,
+    };
+  }
+
+  return {
+    radius: 7,
+    weight: 2,
+    color: "#1a4f69",
+    fillColor: "#6fc2d6",
+    fillOpacity: 0.9,
+  };
 }
 
 async function filterSentinelImages() {
@@ -1508,8 +1890,8 @@ function mapStacScene(feature) {
     cloud: Number.isFinite(cloud) ? Number(cloud.toFixed(2)) : null,
     orbit,
     note: `Escena real desde Copernicus STAC. Nivel ${level} y disponibilidad ${timeliness}.`,
-    thumbnail: feature.assets?.thumbnail?.href || null,
-    previewHref: feature.assets?.thumbnail?.href || null,
+    thumbnail: getFeatureThumbnailHref(feature, "sentinel2") || null,
+    previewHref: getFeaturePreviewHref(feature, "sentinel2") || null,
     stacLink: feature.links?.find((link) => link.rel === "self")?.href || null,
     geometry: feature.geometry || null,
     bbox: feature.bbox || null,
@@ -1549,8 +1931,8 @@ function mapLandsatScene(feature) {
     cloud: Number.isFinite(cloud) ? Number(cloud.toFixed(2)) : null,
     orbit: pathRow,
     note: "Escena real Landsat Collection 2 Level-2 desde Earth Search. Ahora se presenta recortada a la huella real de la escena para una lectura espacial mas limpia.",
-    thumbnail: getFeatureThumbnailHref(feature) || null,
-    previewHref: getFeatureThumbnailHref(feature) || null,
+    thumbnail: getFeatureThumbnailHref(feature, "landsat") || null,
+    previewHref: getFeaturePreviewHref(feature, "landsat") || null,
     stacLink: feature.links?.find((link) => link.rel === "self")?.href || null,
     externalSceneLink: feature.links?.find((link) => link.title === "USGS STAC Item")?.href || null,
     geometry: feature.geometry || null,
@@ -1581,8 +1963,8 @@ function mapSentinel1Scene(feature) {
     instrumentMode,
     polarizations,
     note: `Escena radar GRD desde Earth Search con polarizaciones ${polarizations.join("/") || "VV/VH"} y pasada ${formatOrbitState(orbitState).toLowerCase()}.`,
-    thumbnail: getFeatureThumbnailHref(feature) || null,
-    previewHref: getFeatureThumbnailHref(feature) || null,
+    thumbnail: getFeatureThumbnailHref(feature, "sentinel1") || null,
+    previewHref: getFeaturePreviewHref(feature, "sentinel1") || null,
     stacLink: feature.links?.find((link) => link.rel === "self")?.href || null,
     geometry: feature.geometry || null,
     bbox: feature.bbox || null,
@@ -1591,20 +1973,46 @@ function mapSentinel1Scene(feature) {
   });
 }
 
-function getFeatureThumbnailHref(feature) {
+function getFeatureThumbnailHref(feature, sensorId = state.activeSensorId) {
   const thumbLink = feature?.links?.find((link) => link.rel === "thumbnail")?.href || null;
-  if (thumbLink) {
+  if (isBrowserPreviewHref(thumbLink)) {
     return thumbLink;
   }
 
   const assetThumb = feature?.assets?.thumbnail?.href || null;
-  return typeof assetThumb === "string" && /^https?:/i.test(assetThumb) ? assetThumb : null;
+  if (isBrowserPreviewHref(assetThumb)) {
+    return assetThumb;
+  }
+
+  return getFeaturePreviewHref(feature, sensorId);
+}
+
+function getFeaturePreviewHref(feature, sensorId = state.activeSensorId) {
+  const sensor = getSensorConfig(sensorId);
+  const assetPreview = getPreviewAssetHref(feature?.assets, sensor.previewAssetKeys);
+  if (isBrowserPreviewHref(assetPreview)) {
+    return assetPreview;
+  }
+
+  const previewLink = feature?.links?.find((link) => link.rel === "preview" || link.rel === "thumbnail")?.href || null;
+  if (isBrowserPreviewHref(previewLink)) {
+    return previewLink;
+  }
+
+  const assetThumb = feature?.assets?.thumbnail?.href || null;
+  return isBrowserPreviewHref(assetThumb) ? assetThumb : null;
 }
 
 function getPreviewAssetHref(assets = {}, assetKeys = []) {
   return assetKeys
     .map((key) => assets?.[key]?.href || null)
     .find(Boolean) || null;
+}
+
+function isBrowserPreviewHref(href) {
+  return typeof href === "string"
+    && /^https?:/i.test(href)
+    && !/\.(tif|tiff)(?:\?|$)/i.test(href);
 }
 
 function filterDemoSentinelImages() {
@@ -2773,11 +3181,12 @@ function renderScenePreview(image) {
   if (!previewHref || !bounds) {
     return;
   }
+  const sensor = getSensorForImage(image);
 
   mapState.scenePreviewLayer = L.imageOverlay(previewHref, bounds, {
     opacity: state.scenePreviewOpacity,
     interactive: false,
-    className: "scene-preview-overlay",
+    className: `scene-preview-overlay scene-preview-${sensor.id}`,
     crossOrigin: "anonymous",
   }).addTo(mapState.map);
 }
@@ -2943,13 +3352,15 @@ async function createExactSceneLayer(image) {
   if (!exactScene || !GeoRasterLayerCtor) {
     return null;
   }
+  const renderResolution = getExactSceneRenderResolution();
 
-  return new GeoRasterLayerCtor({
+  const layer = new GeoRasterLayerCtor({
     georaster: exactScene.georaster,
     opacity: state.scenePreviewOpacity,
-    resolution: 128,
+    resolution: renderResolution,
     updateWhenIdle: true,
-    keepBuffer: 2,
+    updateWhenZooming: false,
+    keepBuffer: 4,
     mask: {
       type: "Feature",
       geometry: exactScene.geometry,
@@ -2957,8 +3368,11 @@ async function createExactSceneLayer(image) {
     },
     mask_strategy: "outside",
     mask_srs: "EPSG:4326",
+    resampleMethod: "bilinear",
     pixelValuesToColorFn: colorizeVisualPixel,
   });
+  layer.codexResolution = renderResolution;
+  return layer;
 }
 
 async function getExactSceneData(image) {
@@ -3029,6 +3443,17 @@ async function fetchEarthSearchMatch(image) {
   }) || features[0] || null;
 }
 
+function getExactSceneRenderResolution() {
+  const zoom = mapState.map?.getZoom?.() || 11;
+  if (zoom >= 13) {
+    return 256;
+  }
+  if (zoom >= 11) {
+    return 192;
+  }
+  return 160;
+}
+
 function colorizeVisualPixel(values) {
   if (!Array.isArray(values) || values.length < 3) {
     return null;
@@ -3039,7 +3464,19 @@ function colorizeVisualPixel(values) {
     return null;
   }
 
-  return `rgb(${red}, ${green}, ${blue})`;
+  const divisor = Math.max(red, green, blue) > 255 ? 2800 : 255;
+  const channels = [red, green, blue].map((value) => toneMapVisualChannel(value, divisor));
+  if (channels.every((value) => value < 4)) {
+    return null;
+  }
+  return `rgb(${channels[0]}, ${channels[1]}, ${channels[2]})`;
+}
+
+function toneMapVisualChannel(value, divisor = 255) {
+  const normalized = clamp(value / divisor, 0, 1);
+  const lifted = clamp((normalized - 0.03) / 0.9, 0, 1);
+  const gamma = Math.pow(lifted, 0.88);
+  return Math.round(clamp(gamma * 255 * 1.04, 0, 255));
 }
 
 function getAnalysisOverlayOpacity(image) {
@@ -3050,12 +3487,12 @@ function getAnalysisOverlayOpacity(image) {
 
   if (image?.source === "real" && state.showScenePreview) {
     if (state.sceneLayerKind === "exact") {
-      return sensor.id === "sentinel2" ? 0.14 : 0.16;
+      return sensor.id === "sentinel2" ? 0.1 : 0.14;
     }
     if (state.sceneLayerKind === "footprint") {
-      return sensor.id === "sentinel1" ? 0.2 : 0.16;
+      return sensor.id === "sentinel1" ? 0.18 : 0.12;
     }
-    return sensor.id === "sentinel1" ? 0.24 : 0.18;
+    return sensor.id === "sentinel1" ? 0.22 : 0.15;
   }
 
   if (image?.source === "real") {
@@ -3063,6 +3500,24 @@ function getAnalysisOverlayOpacity(image) {
   }
 
   return 0.46;
+}
+
+function maybeRefreshScenePreviewQuality() {
+  if (!mapState.map || state.analysisBusy || state.sceneLayerKind !== "exact" || !state.showScenePreview) {
+    return;
+  }
+
+  const image = getSelectedImage();
+  if (!image || image.source !== "real" || !getSensorForImage(image).exactRaster || !mapState.sceneExactLayer) {
+    return;
+  }
+
+  const nextResolution = getExactSceneRenderResolution();
+  if (mapState.sceneExactLayer.codexResolution === nextResolution) {
+    return;
+  }
+
+  renderSentinelOverlay();
 }
 
 function getGeoRasterLayerCtor() {
@@ -3187,6 +3642,10 @@ function getSceneGridCode(image) {
 }
 
 function syncAnalysisDrivenModules() {
+  if (state.planningData) {
+    runPlanningAnalysis(true);
+  }
+
   if (state.currentPlot) {
     runIntraloteAnalysis(true);
     runDemAnalysis(true);
@@ -3235,6 +3694,9 @@ function setCurrentPlot(feature, label) {
   runIntraloteAnalysis();
   runDemAnalysis(true);
   runClimateAnalysis(true);
+  if (state.planningData) {
+    runPlanningAnalysis(true);
+  }
   filterSentinelImages();
 }
 
@@ -3263,6 +3725,9 @@ function clearCurrentPlot(triggerRefresh = false) {
   resetMetricGrid(dom.intraloteResults, "Dibuja un lote en el mapa para empezar.");
   resetMetricGrid(dom.demResults, "Elige un lote o dibuja un poligono para estimar relieve.");
   resetMetricGrid(dom.climateResults, "Ejecuta el modulo para cargar indicadores climaticos.");
+  if (state.planningData) {
+    runPlanningAnalysis(true);
+  }
   renderAnalysisSummary();
   renderCompareSummary();
   renderLegend();
@@ -3450,6 +3915,725 @@ function runClimateAnalysis(silent = false) {
   }
 }
 
+function renderPlanningModule() {
+  if (dom.planningUseSelect) {
+    dom.planningUseSelect.value = state.planningUseId;
+  }
+  if (dom.planningHorizonSelect) {
+    dom.planningHorizonSelect.value = state.planningHorizonId;
+  }
+  if (dom.planningGrowthSelect) {
+    dom.planningGrowthSelect.value = state.planningGrowthScenarioId;
+  }
+  if (dom.focusPlanningBtn) {
+    dom.focusPlanningBtn.disabled = !(state.planningData?.candidates?.length);
+  }
+  if (dom.clearPlanningBtn) {
+    dom.clearPlanningBtn.disabled = !state.planningData;
+  }
+
+  if (!state.planningData) {
+    resetMetricGrid(dom.planningResults, "Ejecuta el modulo para obtener celdas aptas y candidatos priorizados.");
+    dom.planningWeights.classList.add("empty-state");
+    dom.planningWeights.classList.remove("has-data");
+    dom.planningWeights.textContent = "La ponderacion se ajusta automaticamente segun el tipo de equipamiento y el escenario de crecimiento.";
+    dom.planningCandidates.classList.add("empty-state");
+    dom.planningCandidates.classList.remove("has-data");
+    dom.planningCandidates.textContent = "Aqui apareceran los sectores recomendados para implantacion territorial.";
+  }
+}
+
+function runPlanningAnalysis(silent = false) {
+  const image = getSelectedImage() || getFallbackScene();
+  if (!image) {
+    setStatus("No hay una escena base para calibrar el modulo de planificacion.");
+    return null;
+  }
+
+  const planning = buildPlanningAnalysis(image);
+  state.planningData = planning;
+  state.planningHighlightId = planning.candidates[0]?.id || null;
+
+  const cards = [
+    {
+      label: "Suelo clase A",
+      value: `${planning.summary.priorityAreaHa.toFixed(0)} ha`,
+      copy: "Celdas con puntaje >= 70 y conflicto agricola controlado.",
+    },
+    {
+      label: "Indice multicriterio",
+      value: `${planning.summary.meanScore}/100`,
+      copy: `${planning.program.longLabel} para ${planning.context.scopeLabel}.`,
+    },
+    {
+      label: "Expansion dominante",
+      value: planning.summary.anchorLabel,
+      copy: `Presion urbana media ${planning.summary.growthMean}% en escenario ${planning.scenario.label}.`,
+    },
+    {
+      label: "Cobertura objetivo",
+      value: planning.summary.serviceGapLabel,
+      copy: `Brecha territorial para ${planning.program.targetServiceLabel}.`,
+    },
+    {
+      label: "Riesgo hidrico",
+      value: planning.summary.riskLabel,
+      copy: `Resiliencia ${planning.summary.resilienceMean}% con pendiente media ${planning.summary.meanSlope}%.`,
+    },
+    {
+      label: "Proteccion agricola",
+      value: planning.summary.agroLabel,
+      copy: `Calibrada con ${planning.focusLabel} y proximidad a lotes productivos.`,
+    },
+  ];
+
+  paintMetricGrid(dom.planningResults, cards);
+  renderPlanningWeights(planning);
+  renderPlanningCandidates(planning);
+  renderPlanningOverlay(planning);
+  renderPlanningModule();
+  updateMapSummary();
+
+  if (!silent) {
+    setStatus(
+      `Planificacion ${planning.program.longLabel} lista para ${planning.context.scopeLabel}. Se priorizaron ${planning.candidates.length} sectores.`
+    );
+  }
+
+  return planning;
+}
+
+function clearPlanningAnalysis() {
+  state.planningData = null;
+  state.planningHighlightId = null;
+  clearPlanningOverlay();
+  renderPlanningModule();
+  updateMapSummary();
+  setStatus("Modulo de planificacion limpiado. Puedes lanzar un nuevo escenario territorial.");
+}
+
+function buildPlanningAnalysis(image) {
+  const program = getPlanningProgram();
+  const horizon = getPlanningHorizon();
+  const scenario = getPlanningScenario();
+  const target = getCurrentAnalysisTarget();
+  const analysis = resolveAnalysisForTarget(image, target);
+  const focusKey = getFocusIndexKey(image);
+  const moistureKey = getMoistureIndexKey(image);
+  const focusConfig = indexConfig[focusKey];
+  const moistureConfig = indexConfig[moistureKey];
+  const focusBaseline = normalizeMetricValue(analysis.summary[focusKey].mean, focusConfig);
+  const moistureBaseline = normalizeMetricValue(analysis.summary[moistureKey].mean, moistureConfig);
+  const urbanFeatures = geoSources.manchaUrbana.features;
+  const roadFeatures = geoSources.vias.features;
+  const canalFeatures = geoSources.canales.features;
+  const lotFeatures = geoSources.lotes.features;
+  const facilityFeatures = geoSources.equipamientos.features;
+  const cellSize = target.scopeType === "plot"
+    ? clamp(Math.sqrt(analysis.context.areaHa + 0.4) / 16, 0.12, 0.48)
+    : clamp(0.88 + horizon.expansionShift * 0.18, 0.88, 1.42);
+  const grid = turf.squareGrid(analysis.context.bbox, cellSize, { units: "kilometers" });
+  const features = [];
+
+  grid.features.forEach((cell, index) => {
+    const centroid = turf.centroid(cell);
+    if (!turf.booleanPointInPolygon(centroid, target.feature)) {
+      return;
+    }
+
+    const [lon, lat] = centroid.geometry.coordinates;
+    const nearestUrban = getNearestFeatureMatch(centroid, urbanFeatures);
+    const nearestRoad = getNearestFeatureMatch(centroid, roadFeatures);
+    const nearestCanal = getNearestFeatureMatch(centroid, canalFeatures);
+    const nearestLot = getNearestFeatureMatch(centroid, lotFeatures);
+    const facilityDistances = {
+      escuela: getNearestFeatureMatch(centroid, facilityFeatures, (feature) => feature.properties?.serviceType === "escuela"),
+      hospital: getNearestFeatureMatch(centroid, facilityFeatures, (feature) => feature.properties?.serviceType === "hospital"),
+      equipamiento: getNearestFeatureMatch(centroid, facilityFeatures, (feature) => feature.properties?.serviceType === "equipamiento"),
+    };
+    const insideUrban = urbanFeatures.some((feature) => turf.booleanPointInPolygon(centroid, feature));
+    const growthScore = computePlanningGrowthScore(program, horizon, scenario, nearestUrban, nearestRoad, insideUrban);
+    const accessScore = computePlanningAccessScore(program, scenario, nearestRoad, nearestUrban);
+    const slope = computePlanningSlope(lon, lat, nearestRoad.distanceKm, nearestCanal.distanceKm, insideUrban);
+    const terrainScore = clamp(1 - slope / (program.maxSlope * 1.45), 0, 1);
+    const resilienceScore = computePlanningResilienceScore(slope, nearestCanal.distanceKm, moistureBaseline, insideUrban);
+    const serviceScore = computePlanningServiceScore(program.id, facilityDistances, growthScore, horizon, scenario);
+    const agriculturalSignal = computeAgriculturalProtectionSignal(
+      lon,
+      lat,
+      focusBaseline,
+      moistureBaseline,
+      nearestLot.distanceKm,
+      insideUrban
+    );
+    const agroScore = clamp(1 - agriculturalSignal * scenario.farmlandProtection, 0, 1);
+    const score = Math.round(clamp(
+      (growthScore * program.weights.growth)
+      + (accessScore * program.weights.access)
+      + (terrainScore * program.weights.terrain)
+      + (serviceScore * program.weights.service)
+      + (resilienceScore * program.weights.resilience)
+      + (agroScore * program.weights.agro),
+      0,
+      1
+    ) * 100);
+    const anchorCentroid = nearestUrban.feature
+      ? turf.centroid(nearestUrban.feature).geometry.coordinates
+      : analysis.context.centroid;
+
+    cell.properties = {
+      id: `planning-cell-${index}`,
+      score,
+      classLabel: getPlanningClassLabel(score),
+      anchorName: nearestUrban.feature?.properties?.name || "Nodo urbano",
+      anchorCoords: anchorCentroid,
+      growthScore: Math.round(growthScore * 100),
+      accessScore: Math.round(accessScore * 100),
+      serviceScore: Math.round(serviceScore * 100),
+      resilienceScore: Math.round(resilienceScore * 100),
+      agroScore: Math.round(agroScore * 100),
+      slope: Number(slope.toFixed(1)),
+      urbanDistanceKm: Number(nearestUrban.distanceKm.toFixed(2)),
+      roadDistanceKm: Number(nearestRoad.distanceKm.toFixed(2)),
+      canalDistanceKm: Number(nearestCanal.distanceKm.toFixed(2)),
+      schoolDistanceKm: Number(facilityDistances.escuela.distanceKm.toFixed(2)),
+      hospitalDistanceKm: Number(facilityDistances.hospital.distanceKm.toFixed(2)),
+      equipmentDistanceKm: Number(facilityDistances.equipamiento.distanceKm.toFixed(2)),
+      summary: buildPlanningSectorSummary(program.id, {
+        anchorName: nearestUrban.feature?.properties?.name || "Nodo urbano",
+        roadDistanceKm: nearestRoad.distanceKm,
+        schoolDistanceKm: facilityDistances.escuela.distanceKm,
+        hospitalDistanceKm: facilityDistances.hospital.distanceKm,
+        equipmentDistanceKm: facilityDistances.equipamiento.distanceKm,
+        serviceScore,
+        growthScore,
+      }),
+    };
+    features.push(cell);
+  });
+
+  const candidates = selectPlanningCandidates(features, program, target.scopeType);
+  const summary = summarizePlanningSurface(features, program, scenario);
+
+  return {
+    image,
+    context: target,
+    analysis,
+    program,
+    horizon,
+    scenario,
+    focusLabel: focusConfig.label,
+    surface: {
+      type: "FeatureCollection",
+      features,
+    },
+    candidates,
+    summary,
+  };
+}
+
+function computePlanningGrowthScore(program, horizon, scenario, nearestUrban, nearestRoad, insideUrban) {
+  const urbanDistance = nearestUrban.distanceKm;
+  const growthRate = Number(nearestUrban.feature?.properties?.growthRate) || 0.62;
+  const adjustedUrban = {
+    idealMin: Math.max(0, program.urbanDistance.idealMin - (scenario.id === "expansivo" ? 0.08 : 0)),
+    idealMax: program.urbanDistance.idealMax + horizon.expansionShift * scenario.growthMultiplier,
+    hardMax: program.urbanDistance.hardMax + horizon.expansionShift * 1.8,
+    insideScore: program.urbanDistance.insideScore,
+  };
+  const urbanBand = scoreDistanceBand(urbanDistance, adjustedUrban, insideUrban);
+  const corridorBand = scoreDistanceBand(nearestRoad.distanceKm, {
+    idealMin: 0.04,
+    idealMax: 0.9 * scenario.corridorBoost,
+    hardMax: 2.8,
+    insideScore: 0.64,
+  }, false);
+  return clamp(
+    urbanBand * (0.68 + growthRate * 0.32) * scenario.growthMultiplier
+    + corridorBand * 0.14,
+    0,
+    1
+  );
+}
+
+function computePlanningAccessScore(program, scenario, nearestRoad, nearestUrban) {
+  const roadBand = scoreDistanceBand(nearestRoad.distanceKm, {
+    idealMin: program.accessDistance.idealMin,
+    idealMax: program.accessDistance.idealMax * scenario.corridorBoost,
+    hardMax: program.accessDistance.hardMax,
+    insideScore: 0.82,
+  }, false);
+  const centrality = scoreDistanceBand(nearestUrban.distanceKm, {
+    idealMin: 0,
+    idealMax: 2.4,
+    hardMax: 5.2,
+    insideScore: 0.78,
+  }, nearestUrban.distanceKm === 0);
+  return clamp(roadBand * 0.76 + centrality * 0.24, 0, 1);
+}
+
+function computePlanningSlope(lon, lat, roadDistanceKm, canalDistanceKm, insideUrban) {
+  return clamp(
+    2.4
+    + Math.abs(pseudoNoise(lon * 6.2, lat * 4.7, 71)) * 9.8
+    + Math.abs(pseudoNoise(lat * 11.4, lon * 3.2, 19)) * 4.2
+    + roadDistanceKm * 1.4
+    - (insideUrban ? 1.2 : 0)
+    + Math.max(0, 0.4 - canalDistanceKm) * 4.8,
+    1.2,
+    24
+  );
+}
+
+function computePlanningResilienceScore(slope, canalDistanceKm, moistureBaseline, insideUrban) {
+  const floodPenalty = clamp((0.95 - Math.min(canalDistanceKm, 0.95)) / 0.95, 0, 1);
+  const moisturePenalty = clamp(moistureBaseline * 0.62, 0, 0.62);
+  const slopePenalty = clamp(slope / 20, 0, 1) * 0.26;
+  return clamp(
+    1 - (floodPenalty * 0.52 + moisturePenalty * 0.26 + slopePenalty) + (insideUrban ? 0.05 : 0),
+    0,
+    1
+  );
+}
+
+function computePlanningServiceScore(programId, facilityDistances, growthScore, horizon, scenario) {
+  const demandBoost = clamp(growthScore * (0.78 + horizon.demandBoost) * scenario.growthMultiplier, 0, 1);
+  const schoolDistance = facilityDistances.escuela.distanceKm;
+  const hospitalDistance = facilityDistances.hospital.distanceKm;
+  const equipmentDistance = facilityDistances.equipamiento.distanceKm;
+
+  if (programId === "vis") {
+    const schoolScore = scoreDistanceBand(schoolDistance, { idealMin: 0.3, idealMax: 1.7, hardMax: 4.2, insideScore: 0.72 }, false);
+    const hospitalScore = scoreDistanceBand(hospitalDistance, { idealMin: 0.8, idealMax: 3, hardMax: 5.5, insideScore: 0.66 }, false);
+    const equipmentScore = scoreDistanceBand(equipmentDistance, { idealMin: 0.2, idealMax: 1.4, hardMax: 3.4, insideScore: 0.76 }, false);
+    return clamp((schoolScore + hospitalScore + equipmentScore) / 3 * 0.82 + demandBoost * 0.18, 0, 1);
+  }
+
+  if (programId === "escuela") {
+    const schoolGap = clamp(schoolDistance / 2.4, 0, 1);
+    return clamp(schoolGap * 0.58 + demandBoost * 0.42, 0, 1);
+  }
+
+  if (programId === "hospital") {
+    const hospitalGap = clamp(hospitalDistance / 3.4, 0, 1);
+    const supportAccess = scoreDistanceBand(equipmentDistance, { idealMin: 0.3, idealMax: 1.6, hardMax: 3.6, insideScore: 0.62 }, false);
+    return clamp(hospitalGap * 0.56 + demandBoost * 0.28 + supportAccess * 0.16, 0, 1);
+  }
+
+  const equipmentGap = clamp(equipmentDistance / 1.9, 0, 1);
+  const schoolSupport = scoreDistanceBand(schoolDistance, { idealMin: 0.2, idealMax: 1.2, hardMax: 3, insideScore: 0.68 }, false);
+  return clamp(equipmentGap * 0.54 + demandBoost * 0.3 + schoolSupport * 0.16, 0, 1);
+}
+
+function computeAgriculturalProtectionSignal(lon, lat, focusBaseline, moistureBaseline, lotDistanceKm, insideUrban) {
+  return clamp(
+    0.3
+    + focusBaseline * 0.28
+    + moistureBaseline * 0.12
+    + (lotDistanceKm < 0.45 ? 0.24 : lotDistanceKm < 1.1 ? 0.12 : 0)
+    + pseudoNoise(lon * 8.3, lat * 6.1, 57) * 0.08
+    - (insideUrban ? 0.22 : 0),
+    0,
+    1
+  );
+}
+
+function summarizePlanningSurface(features, program, scenario) {
+  if (!features.length) {
+    return {
+      priorityAreaHa: 0,
+      meanScore: 0,
+      growthMean: 0,
+      resilienceMean: 0,
+      meanSlope: 0,
+      anchorLabel: "Sin lectura",
+      serviceGapLabel: "Sin lectura",
+      riskLabel: "Sin lectura",
+      agroLabel: "Sin lectura",
+    };
+  }
+
+  const totals = features.reduce((accumulator, feature) => {
+    accumulator.score += feature.properties.score;
+    accumulator.growth += feature.properties.growthScore;
+    accumulator.service += feature.properties.serviceScore;
+    accumulator.resilience += feature.properties.resilienceScore;
+    accumulator.agro += feature.properties.agroScore;
+    accumulator.slope += feature.properties.slope;
+    if (feature.properties.score >= 70) {
+      accumulator.priorityAreaHa += turf.area(feature) / 10000;
+    }
+    accumulator.anchors[feature.properties.anchorName] = (accumulator.anchors[feature.properties.anchorName] || 0) + 1;
+    return accumulator;
+  }, {
+    score: 0,
+    growth: 0,
+    service: 0,
+    resilience: 0,
+    agro: 0,
+    slope: 0,
+    priorityAreaHa: 0,
+    anchors: {},
+  });
+  const count = features.length;
+  const anchorLabel = Object.entries(totals.anchors).sort((left, right) => right[1] - left[1])[0]?.[0] || "Sin lectura";
+  const serviceMean = Math.round(totals.service / count);
+  const resilienceMean = Math.round(totals.resilience / count);
+  const agroMean = Math.round(totals.agro / count);
+
+  return {
+    priorityAreaHa: totals.priorityAreaHa,
+    meanScore: Math.round(totals.score / count),
+    growthMean: Math.round(totals.growth / count),
+    resilienceMean,
+    meanSlope: Number((totals.slope / count).toFixed(1)),
+    anchorLabel,
+    serviceGapLabel: serviceMean >= 72
+      ? "Brecha alta"
+      : serviceMean >= 58
+        ? "Brecha media"
+        : "Cobertura relativamente cercana",
+    riskLabel: resilienceMean >= 72
+      ? "Bajo"
+      : resilienceMean >= 56
+        ? "Moderado"
+        : "Atencion",
+    agroLabel: agroMean >= 70
+      ? scenario.id === "conservador"
+        ? "Resguardo alto"
+        : "Conflicto bajo"
+      : agroMean >= 54
+        ? "Balanceado"
+        : program.id === "hospital"
+          ? "Conflicto medio"
+          : "Conflicto alto",
+  };
+}
+
+function selectPlanningCandidates(features, program, scopeType) {
+  const sorted = [...features].sort((left, right) => right.properties.score - left.properties.score);
+  const minimumDistanceKm = scopeType === "plot" ? 0.45 : 1.65;
+  const candidates = [];
+
+  sorted.forEach((feature) => {
+    if (candidates.length >= 5 || feature.properties.score < 64) {
+      return;
+    }
+
+    const centroid = turf.centroid(feature);
+    const centroidCoords = centroid.geometry.coordinates;
+    const isFarEnough = candidates.every((candidate) => {
+      const candidatePoint = turf.point(candidate.centroid);
+      return turf.distance(candidatePoint, centroid, { units: "kilometers" }) >= minimumDistanceKm;
+    });
+
+    if (!isFarEnough) {
+      return;
+    }
+
+    const direction = getRelativeDirectionLabel(feature.properties.anchorCoords, centroidCoords);
+    const candidateId = `candidate-${program.id}-${candidates.length + 1}`;
+    feature.properties.candidateId = candidateId;
+    feature.properties.candidateRank = candidates.length + 1;
+    candidates.push({
+      id: candidateId,
+      title: `Sector ${feature.properties.anchorName} ${direction}`,
+      rank: candidates.length + 1,
+      score: feature.properties.score,
+      centroid: centroidCoords,
+      feature,
+      summary: feature.properties.summary,
+      tags: [
+        `Crecimiento ${feature.properties.growthScore}%`,
+        `Acceso ${feature.properties.accessScore}%`,
+        `Servicio ${feature.properties.serviceScore}%`,
+      ],
+    });
+  });
+
+  return candidates;
+}
+
+function renderPlanningWeights(planning) {
+  dom.planningWeights.classList.remove("empty-state");
+  dom.planningWeights.classList.add("has-data");
+  dom.planningWeights.innerHTML = Object.entries(planning.program.weights)
+    .map(([key, weight]) => `
+      <span class="planning-pill">
+        <strong>${Math.round(weight * 100)}%</strong>
+        ${getPlanningWeightLabel(key)}
+      </span>
+    `)
+    .join("")
+    + `
+      <span class="planning-pill emphasis">${planning.horizon.label}</span>
+      <span class="planning-pill emphasis">${planning.scenario.label}</span>
+    `;
+}
+
+function renderPlanningCandidates(planning) {
+  if (!planning.candidates.length) {
+    dom.planningCandidates.classList.add("empty-state");
+    dom.planningCandidates.classList.remove("has-data");
+    dom.planningCandidates.textContent = "No aparecieron candidatos con puntaje suficiente. Prueba con otro escenario u horizonte.";
+    return;
+  }
+
+  dom.planningCandidates.classList.remove("empty-state");
+  dom.planningCandidates.classList.add("has-data");
+  dom.planningCandidates.innerHTML = planning.candidates
+    .map((candidate) => `
+      <article class="planning-candidate ${candidate.id === state.planningHighlightId ? "active" : ""}">
+        <div class="planning-candidate-head">
+          <div>
+            <p class="candidate-rank">Candidato ${candidate.rank}</p>
+            <h4>${candidate.title}</h4>
+          </div>
+          <span class="planning-score tone-${getPlanningScoreTone(candidate.score)}">${candidate.score}/100</span>
+        </div>
+        <p class="candidate-copy">${candidate.summary}</p>
+        <div class="planning-tags">
+          ${candidate.tags.map((tag) => `<span>${tag}</span>`).join("")}
+        </div>
+        <button class="ghost-button" type="button" data-candidate-id="${candidate.id}">Ver en mapa</button>
+      </article>
+    `)
+    .join("");
+
+  dom.planningCandidates.querySelectorAll("[data-candidate-id]").forEach((button) => {
+    button.addEventListener("click", () => focusPlanningCandidate(button.dataset.candidateId));
+  });
+}
+
+function renderPlanningOverlay(planning) {
+  clearPlanningOverlay();
+  if (!mapState.map) {
+    return;
+  }
+
+  mapState.planningLayer = L.geoJSON(planning.surface, {
+    style: (feature) => ({
+      color: feature.properties.score >= 78 ? "#224d3d" : "#ffffff",
+      weight: feature.properties.score >= 78 ? 0.8 : 0.4,
+      fillColor: interpolateColor(feature.properties.score, 35, 90, ["#7c4834", "#d6a250", "#95be78", "#2f7f5f"]),
+      fillOpacity: feature.properties.score >= 78 ? 0.34 : 0.22,
+    }),
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(
+        `<h3 class="popup-title">${planning.program.longLabel}</h3><p class="popup-copy">${feature.properties.anchorName} / Puntaje ${feature.properties.score}/100 / ${feature.properties.classLabel}. ${feature.properties.summary}</p>`
+      );
+    },
+  }).addTo(mapState.map);
+
+  const candidatePoints = planning.candidates.map((candidate) => pointFeature(candidate.title, candidate.centroid, {
+    candidateId: candidate.id,
+    candidateRank: candidate.rank,
+    score: candidate.score,
+    summary: candidate.summary,
+  }));
+
+  mapState.planningCandidatesLayer = L.geoJSON({
+    type: "FeatureCollection",
+    features: candidatePoints,
+  }, {
+    pointToLayer: (feature, latlng) => {
+      const active = feature.properties?.candidateId === state.planningHighlightId;
+      return L.circleMarker(latlng, {
+        radius: active ? 9 : 7,
+        weight: 2.6,
+        color: active ? "#fff6ea" : "#f7f2e8",
+        fillColor: planning.program.markerColor,
+        fillOpacity: active ? 1 : 0.88,
+      });
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(
+        `<h3 class="popup-title">${feature.properties.name || "Candidato"}</h3><p class="popup-copy">${feature.properties.summary} Puntaje ${feature.properties.score}/100.</p>`
+      );
+    },
+  }).addTo(mapState.map);
+
+  if (mapState.planningLayer.bringToFront) {
+    mapState.planningLayer.bringToFront();
+  }
+  if (mapState.currentPlotLayer) {
+    mapState.currentPlotLayer.bringToFront();
+  }
+  if (mapState.managementLayer) {
+    mapState.managementLayer.bringToFront();
+  }
+  if (mapState.planningCandidatesLayer?.bringToFront) {
+    mapState.planningCandidatesLayer.bringToFront();
+  }
+}
+
+function clearPlanningOverlay() {
+  if (mapState.planningLayer) {
+    mapState.map.removeLayer(mapState.planningLayer);
+    mapState.planningLayer = null;
+  }
+  if (mapState.planningCandidatesLayer) {
+    mapState.map.removeLayer(mapState.planningCandidatesLayer);
+    mapState.planningCandidatesLayer = null;
+  }
+}
+
+function focusPlanningCandidates() {
+  if (!mapState.map || !mapState.planningCandidatesLayer) {
+    return;
+  }
+
+  const bounds = mapState.planningCandidatesLayer.getBounds();
+  if (bounds.isValid()) {
+    mapState.map.fitBounds(bounds, {
+      padding: [48, 48],
+      maxZoom: 13,
+    });
+  }
+}
+
+function focusPlanningCandidate(candidateId) {
+  const candidate = state.planningData?.candidates?.find((item) => item.id === candidateId);
+  if (!candidate || !mapState.map) {
+    return;
+  }
+
+  state.planningHighlightId = candidateId;
+  renderPlanningCandidates(state.planningData);
+  renderPlanningOverlay(state.planningData);
+  const bounds = L.geoJSON(candidate.feature).getBounds();
+  mapState.map.fitBounds(bounds, {
+    padding: [54, 54],
+    maxZoom: 14,
+  });
+  if (mapState.planningCandidatesLayer) {
+    mapState.planningCandidatesLayer.eachLayer((layer) => {
+      if (layer.feature?.properties?.candidateId === candidateId) {
+        layer.openPopup();
+      }
+    });
+  }
+}
+
+function getPlanningWeightLabel(weightKey) {
+  const labels = {
+    growth: "Crecimiento urbano",
+    access: "Accesibilidad",
+    terrain: "Pendiente",
+    service: "Deficit de servicio",
+    resilience: "Riesgo hidrico",
+    agro: "Proteccion agricola",
+  };
+  return labels[weightKey] || weightKey;
+}
+
+function getPlanningClassLabel(score) {
+  if (score >= 80) {
+    return "Muy alta";
+  }
+  if (score >= 70) {
+    return "Alta";
+  }
+  if (score >= 58) {
+    return "Media";
+  }
+  return "Baja";
+}
+
+function getPlanningScoreTone(score) {
+  if (score >= 80) {
+    return "high";
+  }
+  if (score >= 68) {
+    return "mid";
+  }
+  return "low";
+}
+
+function scoreDistanceBand(distanceKm, config, insideBand = false) {
+  if (!Number.isFinite(distanceKm)) {
+    return 0;
+  }
+  if (distanceKm === 0 && insideBand) {
+    return config.insideScore ?? 1;
+  }
+  if (distanceKm < config.idealMin) {
+    return clamp((distanceKm / (config.idealMin || 0.1)) * (config.insideScore ?? 0.85), 0, 1);
+  }
+  if (distanceKm <= config.idealMax) {
+    return 1;
+  }
+  return clamp(1 - ((distanceKm - config.idealMax) / Math.max(config.hardMax - config.idealMax, 0.1)), 0, 1);
+}
+
+function getNearestFeatureMatch(pointFeature, features, predicate = null) {
+  let match = { feature: null, distanceKm: Number.POSITIVE_INFINITY };
+  features.forEach((feature) => {
+    if (predicate && !predicate(feature)) {
+      return;
+    }
+    const distanceKm = distanceToFeatureKm(pointFeature, feature);
+    if (distanceKm < match.distanceKm) {
+      match = { feature, distanceKm };
+    }
+  });
+  return match;
+}
+
+function distanceToFeatureKm(pointFeature, feature) {
+  if (!feature?.geometry) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const type = feature.geometry.type;
+  if (type === "Point") {
+    return turf.distance(pointFeature, feature, { units: "kilometers" });
+  }
+  if (type === "LineString" || type === "MultiLineString") {
+    return turf.pointToLineDistance(pointFeature, feature, { units: "kilometers" });
+  }
+  if (type === "Polygon" || type === "MultiPolygon") {
+    if (turf.booleanPointInPolygon(pointFeature, feature)) {
+      return 0;
+    }
+    return turf.pointToLineDistance(pointFeature, geometryToBoundaryLine(feature.geometry), { units: "kilometers" });
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+function geometryToBoundaryLine(geometry) {
+  if (geometry.type === "Polygon") {
+    return turf.lineString(geometry.coordinates[0]);
+  }
+  if (geometry.type === "MultiPolygon") {
+    return turf.multiLineString(geometry.coordinates.map((polygon) => polygon[0]));
+  }
+  return turf.lineString([]);
+}
+
+function buildPlanningSectorSummary(programId, metrics) {
+  if (programId === "vis") {
+    return `Borde de expansion de ${metrics.anchorName} con acceso vial a ${formatDistanceKm(metrics.roadDistanceKm)} y servicios base en radio funcional.`;
+  }
+  if (programId === "escuela") {
+    return `Sector con demanda residencial alta en ${metrics.anchorName} y vacio educativo relativo de ${formatDistanceKm(metrics.schoolDistanceKm)}.`;
+  }
+  if (programId === "hospital") {
+    return `Nodo accesible de ${metrics.anchorName} con cobertura de salud abierta y soporte territorial para emergencias.`;
+  }
+  return `Refuerza centralidad barrial en ${metrics.anchorName} con brecha de equipamientos y buena conectividad local.`;
+}
+
+function getRelativeDirectionLabel(originCoords, targetCoords) {
+  if (!Array.isArray(originCoords) || !Array.isArray(targetCoords)) {
+    return "Centro";
+  }
+  const deltaLon = targetCoords[0] - originCoords[0];
+  const deltaLat = targetCoords[1] - originCoords[1];
+  const angle = (Math.atan2(deltaLon, deltaLat) * 180 / Math.PI + 360) % 360;
+  return cardinalFromAngle(angle);
+}
+
 function renderWizardModes() {
   dom.wizardModes.innerHTML = Object.keys(wizardConfig)
     .map(
@@ -3584,9 +4768,13 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
 
   if (!image) {
     const sensor = getActiveSensor();
+    const planningBadge = state.planningData
+      ? `<span class="map-badge analysis">Plan ${state.planningData.program.label}</span>`
+      : "";
     dom.mapBadges.innerHTML = `
       <span class="map-badge sensor sensor-${sensor.id}">${sensor.label}</span>
       <span class="map-badge muted">Sin escena</span>
+      ${planningBadge}
     `;
     return;
   }
@@ -3630,6 +4818,13 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
     badges.push({
       tone: "compare",
       label: `Comp ${localeDate.format(new Date(`${compareImage.date}T00:00:00`))}`,
+    });
+  }
+
+  if (state.planningData) {
+    badges.push({
+      tone: "analysis",
+      label: `Plan ${state.planningData.program.label}`,
     });
   }
 
@@ -3836,6 +5031,29 @@ function formatCloudValue(value) {
     return "s/d";
   }
   return `${Number(value.toFixed(1))}%`;
+}
+
+function formatDistanceKm(value) {
+  if (!Number.isFinite(value)) {
+    return "s/d";
+  }
+  if (value < 1) {
+    return `${Math.round(value * 1000)} m`;
+  }
+  return `${value.toFixed(1)} km`;
+}
+
+function formatFacilityTypeLabel(serviceType) {
+  if (serviceType === "escuela") {
+    return "Escuela";
+  }
+  if (serviceType === "hospital") {
+    return "Salud";
+  }
+  if (serviceType === "equipamiento") {
+    return "Equipamiento";
+  }
+  return "Servicio";
 }
 
 function formatPlatform(platform, fallback = getActiveSensor().label) {

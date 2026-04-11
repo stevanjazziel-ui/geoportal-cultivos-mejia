@@ -24,7 +24,7 @@
     rel="stylesheet"
     href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260410-7">
+  <link rel="stylesheet" href="./styles.css?v=20260411-1">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -319,6 +319,61 @@
               </div>
             </article>
 
+            <article class="module-card planning-card">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Planeamiento territorial</p>
+                  <h3>Planificacion multivariable</h3>
+                </div>
+                <button id="runPlanningBtn" class="secondary-button" type="button">Evaluar aptitud</button>
+              </div>
+              <p class="module-copy">
+                Cruza crecimiento de la mancha urbana, accesibilidad, pendiente, riesgo hidrico,
+                deficit de servicios y preservacion agricola para ubicar suelo apto para VIS,
+                escuelas, hospitales y equipamientos barriales.
+              </p>
+              <div class="planning-toolbar">
+                <label class="field">
+                  <span>Programa</span>
+                  <select id="planningUseSelect">
+                    <option value="vis">Vivienda de interes social</option>
+                    <option value="escuela">Escuela</option>
+                    <option value="hospital">Hospital</option>
+                    <option value="equipamiento">Equipamiento barrial</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Horizonte</span>
+                  <select id="planningHorizonSelect">
+                    <option value="corto">Corto plazo 2026-2028</option>
+                    <option value="medio">Mediano plazo 2028-2032</option>
+                    <option value="largo">Reserva 2032-2038</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Escenario</span>
+                  <select id="planningGrowthSelect">
+                    <option value="balanceado">Balanceado</option>
+                    <option value="conservador">Conservador</option>
+                    <option value="expansivo">Expansivo</option>
+                  </select>
+                </label>
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="focusPlanningBtn" class="ghost-button" type="button">Centrar candidatos</button>
+                <button id="clearPlanningBtn" class="ghost-button" type="button">Limpiar analisis</button>
+              </div>
+              <div id="planningResults" class="metrics-grid empty-state">
+                Ejecuta el modulo para obtener celdas aptas y candidatos priorizados.
+              </div>
+              <div id="planningWeights" class="planning-pills empty-state">
+                La ponderacion se ajusta automaticamente segun el tipo de equipamiento y el escenario de crecimiento.
+              </div>
+              <div id="planningCandidates" class="planning-candidates empty-state">
+                Aqui apareceran los sectores recomendados para implantacion territorial.
+              </div>
+            </article>
+
             <article class="module-card wizard-card">
               <div class="module-head">
                 <div>
@@ -389,6 +444,6 @@
   <script src="https://unpkg.com/proj4@2.12.1/dist/proj4.js"></script>
   <script src="https://unpkg.com/georaster/dist/georaster.browser.bundle.min.js"></script>
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
-  <script src="./app.js?v=20260410-11" defer></script>
+  <script src="./app.js?v=20260411-1" defer></script>
 </body>
 </html>

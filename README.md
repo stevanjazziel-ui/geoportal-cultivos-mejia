@@ -21,7 +21,10 @@ Geoportal agronomico navegable orientado al canton Mejia con escenas Sentinel-2,
 - Previsualizacion de la escena real sobre el mapa con control de visibilidad y opacidad.
 - Raster exacto de escena real usando COG publico de Sentinel-2 cuando existe coincidencia para la fecha y mosaico.
 - Landsat 8/9 y Sentinel-1 se muestran como escena recortada a la huella real usando el thumbnail publico del catalogo.
+- El render de escena prioriza previews web mas utiles y mejora el color/contraste del raster exacto para lectura mas limpia en el mapa.
 - Analisis intralote con dibujo de poligonos o seleccion de lotes demo.
+- Modulo de planificacion territorial con calculo multivariable para VIS, escuelas, hospitales y equipamientos.
+- Capas demo de mancha urbana y equipamientos para medir crecimiento, deficit de cobertura y aptitud territorial.
 - Backend local opcional con proxy STAC, cache en memoria y endpoint de analisis.
 - Estimaciones beta de relieve, clima agricola y asistente guiado por etapa.
 
@@ -55,6 +58,7 @@ Modo recomendado:
 - El control temporal permite comparar dos fechas dentro del sensor activo.
 - El backend local agrega proxy STAC, cache y un endpoint de resumen analitico para Sentinel-2.
 - Si el backend no esta activo, el visor sigue funcionando con calculo local y fallback demo para los tres sensores.
+- El modulo de planificacion usa la escena activa como referencia para proteger suelo agricola y ponderar escenarios de crecimiento urbano.
 
 ## Notas
 
@@ -64,3 +68,4 @@ Modo recomendado:
 - Landsat 8/9 no incluye `NDRE` porque no dispone de banda red-edge.
 - Landsat 8/9 ahora ya no cae al rectangulo bruto del `bbox`; se presenta recortado a la huella real de la escena.
 - Sentinel-1 usa metricas radar propias y no indices opticos.
+- El modulo territorial es beta: sintetiza crecimiento urbano, accesibilidad, pendiente, riesgo hidrico, brecha de servicios y preservacion agricola con datos demo calibrados para Mejia.
