@@ -24,7 +24,7 @@
     rel="stylesheet"
     href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260411-1">
+  <link rel="stylesheet" href="./styles.css?v=20260411-2">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -53,17 +53,26 @@
 
       <div class="login-panel">
         <div class="login-panel-inner">
-          <p class="login-kicker">Acceso rapido</p>
-          <h2>Ingresar como usuario publico</h2>
+          <p class="login-kicker">Elegir recorrido</p>
+          <h2>Que quieres abrir primero</h2>
           <p>
-            Esta version inicial funciona como beta temprana con datos de ejemplo listos
-            para evolucionar hacia integraciones productivas.
+            Entra directo al flujo agronomico o al modulo de planificacion territorial
+            sin pasar por una pantalla intermedia.
           </p>
-          <button id="publicAccessBtn" class="primary-button" type="button">
-            Ingresar al visor
-          </button>
+          <div class="entry-options">
+            <button id="openAgronomyBtn" class="entry-option" type="button">
+              <span class="entry-eyebrow">Ruta 1</span>
+              <strong>Agronomia</strong>
+              <span>Abre imagenes satelitales, indices, lotes y diagnostico productivo.</span>
+            </button>
+            <button id="openPlanningBtn" class="entry-option planning" type="button">
+              <span class="entry-eyebrow">Ruta 2</span>
+              <strong>Planificacion territorial</strong>
+              <span>Entra al modulo de aptitud para VIS, escuelas, hospitales y equipamientos.</span>
+            </button>
+          </div>
           <p class="login-note">
-            No requiere instalacion. Se abre directamente desde el navegador.
+            Ambos accesos entran como usuario publico y puedes cambiar de ruta luego dentro del visor.
           </p>
         </div>
       </div>
@@ -100,8 +109,8 @@
 
         <section class="sidebar-header">
           <div>
-            <p class="sidebar-title">Centro de trabajo agronomico</p>
-            <p class="sidebar-subtitle">
+            <p id="sidebarTitle" class="sidebar-title">Centro de trabajo agronomico</p>
+            <p id="sidebarSubtitle" class="sidebar-subtitle">
               Capas de ejemplo, analisis satelital e instrumentos beta para monitoreo de cultivos.
             </p>
           </div>
@@ -319,7 +328,7 @@
               </div>
             </article>
 
-            <article class="module-card planning-card">
+            <article id="planningCard" class="module-card planning-card">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">Planeamiento territorial</p>
@@ -444,6 +453,6 @@
   <script src="https://unpkg.com/proj4@2.12.1/dist/proj4.js"></script>
   <script src="https://unpkg.com/georaster/dist/georaster.browser.bundle.min.js"></script>
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
-  <script src="./app.js?v=20260411-1" defer></script>
+  <script src="./app.js?v=20260411-2" defer></script>
 </body>
 </html>

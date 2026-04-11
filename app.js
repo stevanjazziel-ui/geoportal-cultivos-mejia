@@ -962,6 +962,7 @@ const state = {
   planningGrowthScenarioId: "balanceado",
   planningData: null,
   planningHighlightId: null,
+  entryRoute: "agronomia",
 };
 
 const dom = {};
@@ -1103,12 +1104,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function cacheDom() {
   dom.loginOverlay = document.querySelector("#loginOverlay");
-  dom.publicAccessBtn = document.querySelector("#publicAccessBtn");
+  dom.openAgronomyBtn = document.querySelector("#openAgronomyBtn");
+  dom.openPlanningBtn = document.querySelector("#openPlanningBtn");
   dom.appShell = document.querySelector("#appShell");
   dom.mapStage = document.querySelector(".map-stage");
   dom.sidebar = document.querySelector("#sidebar");
   dom.sidebarToggle = document.querySelector("#sidebarToggle");
   dom.sidebarClose = document.querySelector("#sidebarClose");
+  dom.sidebarTitle = document.querySelector("#sidebarTitle");
+  dom.sidebarSubtitle = document.querySelector("#sidebarSubtitle");
   dom.tabButtons = Array.from(document.querySelectorAll(".tab-button"));
   dom.tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
   dom.layersTree = document.querySelector("#layersTree");
@@ -1161,6 +1165,7 @@ function cacheDom() {
   dom.planningResults = document.querySelector("#planningResults");
   dom.planningWeights = document.querySelector("#planningWeights");
   dom.planningCandidates = document.querySelector("#planningCandidates");
+  dom.planningCard = document.querySelector("#planningCard");
   dom.wizardModes = document.querySelector("#wizardModes");
   dom.wizardSteps = document.querySelector("#wizardSteps");
   dom.baseButtons = Array.from(document.querySelectorAll(".base-button"));
@@ -1184,7 +1189,8 @@ function bootstrapApp() {
 }
 
 function bindUI() {
-  dom.publicAccessBtn.addEventListener("click", enterPublicView);
+  dom.openAgronomyBtn.addEventListener("click", () => enterPublicView("agronomia"));
+  dom.openPlanningBtn.addEventListener("click", () => enterPublicView("planificacion"));
   dom.sidebarToggle.addEventListener("click", () => dom.sidebar.classList.add("open"));
   dom.sidebarClose.addEventListener("click", () => dom.sidebar.classList.remove("open"));
 
@@ -1388,7 +1394,8 @@ function updateSensorControls() {
   }
 }
 
-function enterPublicView() {
+function enterPublicView(route = state.entryRoute || "agronomia") {
+  state.entryRoute = route;
   dom.loginOverlay.classList.add("hidden");
   dom.appShell.classList.remove("hidden");
   if (!mapState.map) {
@@ -1396,7 +1403,59 @@ function enterPublicView() {
   }
   window.setTimeout(() => {
     mapState.map.invalidateSize();
+    applyEntryRoute(route);
   }, 160);
+}
+
+function applyEntryRoute(route = state.entryRoute || "agronomia") {
+  state.entryRoute = route;
+
+  if (route === "planificacion") {
+    setActiveTab("modulos");
+    if (dom.sidebarTitle) {
+      dom.sidebarTitle.textContent = "Centro de planificacion territorial";
+    }
+    if (dom.sidebarSubtitle) {
+      dom.sidebarSubtitle.textContent = "Crecimiento urbano, deficit de servicios, aptitud territorial y candidatos para equipamientos.";
+    }
+    window.setTimeout(() => {
+      focusPlanningModuleCard();
+    }, 120);
+    return;
+  }
+
+  setActiveTab("sentinel");
+  if (dom.sidebarTitle) {
+    dom.sidebarTitle.textContent = "Centro de trabajo agronomico";
+  }
+  if (dom.sidebarSubtitle) {
+    dom.sidebarSubtitle.textContent = "Capas de ejemplo, analisis satelital e instrumentos beta para monitoreo de cultivos.";
+  }
+  clearPlanningModuleFocus();
+}
+
+function focusPlanningModuleCard() {
+  if (!dom.planningCard) {
+    return;
+  }
+
+  dom.planningCard.classList.add("entry-focus");
+  dom.planningCard.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+    inline: "nearest",
+  });
+
+  window.clearTimeout(focusPlanningModuleCard.timeoutId);
+  focusPlanningModuleCard.timeoutId = window.setTimeout(() => {
+    clearPlanningModuleFocus();
+  }, 2200);
+}
+
+function clearPlanningModuleFocus() {
+  if (dom.planningCard) {
+    dom.planningCard.classList.remove("entry-focus");
+  }
 }
 
 function initializeMap() {

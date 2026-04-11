@@ -5,6 +5,7 @@ Geoportal agronomico navegable orientado al canton Mejia con escenas Sentinel-2,
 ## Incluye
 
 - Acceso como usuario publico desde navegador.
+- Pantalla inicial con entrada directa a `Agronomia` o `Planificacion territorial`.
 - Panel lateral con pestanas `Capas`, `Imagenes satelitales` y `Modulos Agricolas`.
 - Visor web responsive con mapa base satelital o de calles.
 - Selector de sensor con `Sentinel-2`, `Landsat 8/9` y `Sentinel-1 GRD`.
