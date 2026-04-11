@@ -408,7 +408,7 @@ const state = {
   selectedIndex: "NDVI",
   surfaceMode: "primary",
   showScenePreview: true,
-  scenePreviewOpacity: 0.55,
+  scenePreviewOpacity: 0.85,
   sceneLayerKind: "off",
   filteredImages: [],
   sentinelMode: "loading",
@@ -2020,7 +2020,7 @@ function renderSentinelOverlay() {
     mapState.sentinelLayer = L.geoJSON(surfaceDataset, {
       style: (feature) => ({
         weight: 0,
-        fillOpacity: state.surfaceMode === "change" ? 0.5 : image.source === "real" ? 0.44 : 0.52,
+        fillOpacity: getAnalysisOverlayOpacity(image),
         fillColor: interpolateColor(
           feature.properties[state.selectedIndex],
           surfaceConfig.min,
@@ -2273,6 +2273,22 @@ function colorizeVisualPixel(values) {
   }
 
   return `rgb(${red}, ${green}, ${blue})`;
+}
+
+function getAnalysisOverlayOpacity(image) {
+  if (state.surfaceMode === "change") {
+    return 0.42;
+  }
+
+  if (image?.source === "real" && state.showScenePreview) {
+    return state.sceneLayerKind === "exact" ? 0.14 : 0.18;
+  }
+
+  if (image?.source === "real") {
+    return 0.32;
+  }
+
+  return 0.46;
 }
 
 function getGeoRasterLayerCtor() {
