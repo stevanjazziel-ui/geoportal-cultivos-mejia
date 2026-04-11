@@ -1790,15 +1790,18 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
     dom.modulesSectionKicker.textContent = isPlanning ? "Planeamiento" : "Herramientas beta";
   }
   if (dom.modulesSectionTitle) {
-    dom.modulesSectionTitle.textContent = isPlanning ? "Planificacion territorial" : "Modulos y herramientas";
+    dom.modulesSectionTitle.textContent = isPlanning ? "Planificacion territorial" : "Modulos Agricolas";
   }
   if (dom.modulesSectionCopy) {
     dom.modulesSectionCopy.textContent = isPlanning
       ? "Motor multicriterio para crecimiento urbano, accesibilidad, riesgo, cobertura de servicios y lectura satelital territorial."
-      : "Nucleo del sistema para agricultura de precision, relieve, clima y planificacion multivariable.";
+      : "Nucleo del sistema para agricultura de precision, relieve, clima y flujos guiados para monitoreo productivo.";
   }
   if (dom.modeFooterPill) {
     dom.modeFooterPill.textContent = isPlanning ? "Territorio inteligente" : "Agronomia digital";
+  }
+  if (dom.planningCard) {
+    dom.planningCard.classList.toggle("hidden", !isPlanning);
   }
   if (Array.isArray(dom.agronomyModuleCards)) {
     dom.agronomyModuleCards.forEach((card) => {

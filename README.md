@@ -7,6 +7,7 @@ Geoportal navegable orientado al canton Mejia con rutas de agronomia y planifica
 - Acceso como usuario publico desde navegador.
 - Pantalla inicial con entrada directa a `Agronomia` o `Planificacion territorial`.
 - Panel lateral con pestanas `Capas`, `Imagenes satelitales` y `Modulos`, con conmutacion de interfaz segun la ruta elegida.
+- La planificacion territorial se muestra solo en su ruta dedicada y no dentro del modulo agricola.
 - Visor web responsive con mapa base satelital o de calles.
 - Selector de sensor con `Sentinel-2`, `Landsat 8/9` y `Sentinel-1 GRD`.
 - Busqueda real de escenas Sentinel-2 por fecha y nubosidad usando Copernicus STAC.
