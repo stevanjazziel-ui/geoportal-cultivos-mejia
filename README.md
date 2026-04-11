@@ -1,12 +1,12 @@
 # Geoportal Cultivos Mejia
 
-Geoportal agronomico navegable orientado al canton Mejia con escenas Sentinel-2, Landsat 8/9 y Sentinel-1, analisis operativo por AOI y backend local opcional en PowerShell.
+Geoportal navegable orientado al canton Mejia con rutas de agronomia y planificacion territorial, escenas Sentinel-2, Landsat 8/9 y Sentinel-1, analisis operativo por AOI y backend local opcional en PowerShell.
 
 ## Incluye
 
 - Acceso como usuario publico desde navegador.
 - Pantalla inicial con entrada directa a `Agronomia` o `Planificacion territorial`.
-- Panel lateral con pestanas `Capas`, `Imagenes satelitales` y `Modulos Agricolas`.
+- Panel lateral con pestanas `Capas`, `Imagenes satelitales` y `Modulos`, con conmutacion de interfaz segun la ruta elegida.
 - Visor web responsive con mapa base satelital o de calles.
 - Selector de sensor con `Sentinel-2`, `Landsat 8/9` y `Sentinel-1 GRD`.
 - Busqueda real de escenas Sentinel-2 por fecha y nubosidad usando Copernicus STAC.
@@ -26,6 +26,7 @@ Geoportal agronomico navegable orientado al canton Mejia con escenas Sentinel-2,
 - Analisis intralote con dibujo de poligonos o seleccion de lotes demo.
 - Modulo de planificacion territorial con calculo multivariable para VIS, escuelas, hospitales y equipamientos.
 - Capas demo de mancha urbana y equipamientos para medir crecimiento, deficit de cobertura y aptitud territorial.
+- Selector territorial de fuente satelital con `Sentinel-2`, `Landsat`, `Sentinel-1` y `VIIRS` segun el objetivo de planificacion.
 - Backend local opcional con proxy STAC, cache en memoria y endpoint de analisis.
 - Estimaciones beta de relieve, clima agricola y asistente guiado por etapa.
 
@@ -33,7 +34,7 @@ Geoportal agronomico navegable orientado al canton Mejia con escenas Sentinel-2,
 
 - `index.html`: estructura del geoportal.
 - `styles.css`: identidad visual y comportamiento responsive.
-- `app.js`: logica del visor, capas, escenas e interacciones agronomicas.
+- `app.js`: logica del visor, capas, escenas, modulos y rutas de trabajo.
 - `server.ps1`: backend local sin dependencias para proxy, cache y resumen analitico.
 
 ## Uso
@@ -59,7 +60,7 @@ Modo recomendado:
 - El control temporal permite comparar dos fechas dentro del sensor activo.
 - El backend local agrega proxy STAC, cache y un endpoint de resumen analitico para Sentinel-2.
 - Si el backend no esta activo, el visor sigue funcionando con calculo local y fallback demo para los tres sensores.
-- El modulo de planificacion usa la escena activa como referencia para proteger suelo agricola y ponderar escenarios de crecimiento urbano.
+- El modulo de planificacion territorial ya no depende de la escena agronomica activa; usa perfiles satelitales propios para ponderar expansion urbana, resiliencia y cobertura de servicios.
 
 ## Notas
 
@@ -69,4 +70,4 @@ Modo recomendado:
 - Landsat 8/9 no incluye `NDRE` porque no dispone de banda red-edge.
 - Landsat 8/9 ahora ya no cae al rectangulo bruto del `bbox`; se presenta recortado a la huella real de la escena.
 - Sentinel-1 usa metricas radar propias y no indices opticos.
-- El modulo territorial es beta: sintetiza crecimiento urbano, accesibilidad, pendiente, riesgo hidrico, brecha de servicios y preservacion agricola con datos demo calibrados para Mejia.
+- El modulo territorial es beta: sintetiza crecimiento urbano, accesibilidad, pendiente, riesgo hidrico, brecha de servicios y compatibilidad de ocupacion con datos demo calibrados para Mejia.

@@ -6,7 +6,7 @@
   <title>Geoportal Cultivos Mejia</title>
   <meta
     name="description"
-    content="Geoportal de cultivos orientado al trabajo agronomico en el canton Mejia con Sentinel-2, Landsat, Sentinel-1, modulos agricolas y analisis intralote."
+    content="Geoportal para analisis agronomico y planificacion territorial en el canton Mejia con imagenes satelitales multifuente, modulos tematicos y analisis por AOI."
   >
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -33,11 +33,11 @@
   <div id="loginOverlay" class="login-overlay">
     <section class="login-card">
       <div class="login-copy">
-        <span class="eyebrow">Geoportal Agronomico</span>
+        <span class="eyebrow">Geoportal Territorial y Agronomico</span>
         <h1>Geoportal de Cultivos para el canton Mejia</h1>
         <p class="lead">
           Visor web listo para PC y celular que combina imagenes satelitales multifuente,
-          analisis agronomico y modulos beta para manejo de lotes.
+          analisis agronomico, lectura territorial y modulos beta para manejo de lotes y equipamientos.
         </p>
         <div class="login-features">
           <article>
@@ -45,8 +45,8 @@
             <p>Sentinel-2, Landsat 8/9 y Sentinel-1 con escenas comparables desde un mismo panel.</p>
           </article>
           <article>
-            <h2>Analitica de lote</h2>
-            <p>Intralote, relieve, clima agricola y asistente guiado por etapa de cultivo.</p>
+            <h2>Analitica aplicada</h2>
+            <p>Intralote, relieve, clima y planificacion multivariable para suelo urbano y equipamientos.</p>
           </article>
         </div>
       </div>
@@ -120,9 +120,9 @@
         </section>
 
         <nav class="tabbar" aria-label="Pestanas del panel lateral">
-          <button class="tab-button active" type="button" data-tab="capas">Capas</button>
-          <button class="tab-button" type="button" data-tab="sentinel">Imagenes satelitales</button>
-          <button class="tab-button" type="button" data-tab="modulos">Modulos Agricolas</button>
+          <button id="tabLayersBtn" class="tab-button active" type="button" data-tab="capas">Capas</button>
+          <button id="tabImageryBtn" class="tab-button" type="button" data-tab="sentinel">Imagenes satelitales</button>
+          <button id="tabModulesBtn" class="tab-button" type="button" data-tab="modulos">Modulos</button>
         </nav>
 
         <div class="tab-panels">
@@ -270,17 +270,17 @@
             <div class="section-block">
               <div class="section-head">
                 <div>
-                  <p class="section-kicker">Herramientas beta</p>
-                  <h2>Modulos Agricolas</h2>
+                  <p id="modulesSectionKicker" class="section-kicker">Herramientas beta</p>
+                  <h2 id="modulesSectionTitle">Modulos y herramientas</h2>
                 </div>
                 <span class="beta-badge">Beta temprana</span>
               </div>
-              <p class="section-copy">
-                Nucleo del sistema para agricultura de precision, relieve, clima y flujos guiados por etapa.
+              <p id="modulesSectionCopy" class="section-copy">
+                Nucleo del sistema para agricultura de precision, relieve, clima y planificacion multivariable.
               </p>
             </div>
 
-            <article class="module-card">
+            <article class="module-card" data-module-track="agronomia">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">Precision</p>
@@ -296,7 +296,7 @@
               </div>
             </article>
 
-            <article class="module-card">
+            <article class="module-card" data-module-track="agronomia">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">Copernicus GLO-30</p>
@@ -312,7 +312,7 @@
               </div>
             </article>
 
-            <article class="module-card">
+            <article class="module-card" data-module-track="agronomia">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">ERA5-Land y MODIS</p>
@@ -328,7 +328,7 @@
               </div>
             </article>
 
-            <article id="planningCard" class="module-card planning-card">
+            <article id="planningCard" class="module-card planning-card" data-module-track="planificacion">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">Planeamiento territorial</p>
@@ -338,10 +338,19 @@
               </div>
               <p class="module-copy">
                 Cruza crecimiento de la mancha urbana, accesibilidad, pendiente, riesgo hidrico,
-                deficit de servicios y preservacion agricola para ubicar suelo apto para VIS,
+                deficit de servicios y compatibilidad de ocupacion para ubicar suelo apto para VIS,
                 escuelas, hospitales y equipamientos barriales.
               </p>
               <div class="planning-toolbar">
+                <label class="field">
+                  <span>Fuente satelital</span>
+                  <select id="planningImagerySelect">
+                    <option value="sentinel2Urban">Sentinel-2 urbano 10 m</option>
+                    <option value="landsatHistoric">Landsat historico 30 m</option>
+                    <option value="sentinel1Urban">Sentinel-1 radar urbano</option>
+                    <option value="viirsNight">VIIRS luces nocturnas</option>
+                  </select>
+                </label>
                 <label class="field">
                   <span>Programa</span>
                   <select id="planningUseSelect">
@@ -368,6 +377,9 @@
                   </select>
                 </label>
               </div>
+              <p id="planningSourceNote" class="service-note">
+                Sentinel-2 urbano es la base recomendada para expansion de mancha urbana y lectura de cobertura a 10 m.
+              </p>
               <div class="action-row analysis-actions">
                 <button id="focusPlanningBtn" class="ghost-button" type="button">Centrar candidatos</button>
                 <button id="clearPlanningBtn" class="ghost-button" type="button">Limpiar analisis</button>
@@ -376,14 +388,14 @@
                 Ejecuta el modulo para obtener celdas aptas y candidatos priorizados.
               </div>
               <div id="planningWeights" class="planning-pills empty-state">
-                La ponderacion se ajusta automaticamente segun el tipo de equipamiento y el escenario de crecimiento.
+                La ponderacion se ajusta automaticamente segun el tipo de equipamiento, la fuente satelital y el escenario de crecimiento.
               </div>
               <div id="planningCandidates" class="planning-candidates empty-state">
                 Aqui apareceran los sectores recomendados para implantacion territorial.
               </div>
             </article>
 
-            <article class="module-card wizard-card">
+            <article class="module-card wizard-card" data-module-track="agronomia">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">Asistente guiado</p>
@@ -436,7 +448,7 @@
           <div class="footer-pills">
             <span class="footer-pill">Responsive</span>
             <span class="footer-pill">Beta temprana</span>
-            <span class="footer-pill">Agronomia digital</span>
+            <span id="modeFooterPill" class="footer-pill">Agronomia digital</span>
           </div>
         </div>
       </section>
@@ -453,6 +465,6 @@
   <script src="https://unpkg.com/proj4@2.12.1/dist/proj4.js"></script>
   <script src="https://unpkg.com/georaster/dist/georaster.browser.bundle.min.js"></script>
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
-  <script src="./app.js?v=20260411-2" defer></script>
+  <script src="./app.js?v=20260411-3" defer></script>
 </body>
 </html>
