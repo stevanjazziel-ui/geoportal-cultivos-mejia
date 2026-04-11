@@ -6,7 +6,7 @@
   <title>Geoportal Cultivos Mejia</title>
   <meta
     name="description"
-    content="Geoportal de cultivos orientado al trabajo agronomico en el canton Mejia con Sentinel-2, modulos agricolas y analisis intralote."
+    content="Geoportal de cultivos orientado al trabajo agronomico en el canton Mejia con Sentinel-2, Landsat, Sentinel-1, modulos agricolas y analisis intralote."
   >
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -36,13 +36,13 @@
         <span class="eyebrow">Geoportal Agronomico</span>
         <h1>Geoportal de Cultivos para el canton Mejia</h1>
         <p class="lead">
-          Visor web listo para PC y celular que combina imagenes satelitales Sentinel-2,
+          Visor web listo para PC y celular que combina imagenes satelitales multifuente,
           analisis agronomico y modulos beta para manejo de lotes.
         </p>
         <div class="login-features">
           <article>
-            <h2>Sentinel-2</h2>
-            <p>Busqueda por fecha y nubosidad con visualizacion de NDVI, NDWI, NDRE y MSAVI.</p>
+            <h2>3 sensores</h2>
+            <p>Sentinel-2, Landsat 8/9 y Sentinel-1 con escenas comparables desde un mismo panel.</p>
           </article>
           <article>
             <h2>Analitica de lote</h2>
@@ -112,7 +112,7 @@
 
         <nav class="tabbar" aria-label="Pestanas del panel lateral">
           <button class="tab-button active" type="button" data-tab="capas">Capas</button>
-          <button class="tab-button" type="button" data-tab="sentinel">Imagenes Sentinel-2</button>
+          <button class="tab-button" type="button" data-tab="sentinel">Imagenes satelitales</button>
           <button class="tab-button" type="button" data-tab="modulos">Modulos Agricolas</button>
         </nav>
 
@@ -138,20 +138,28 @@
               <div class="section-head">
                 <div>
                   <p class="section-kicker">Analisis satelital</p>
-                  <h2>Busqueda Sentinel-2</h2>
+                  <h2>Busqueda de escenas</h2>
                 </div>
-                 <span class="beta-badge">Proxy y AOI</span>
+                 <span class="beta-badge">3 sensores</span>
               </div>
                <p class="section-copy">
-                 Filtra imagenes por fecha y nubosidad. Selecciona una escena y procesa el canton o el lote activo con una superficie operativa.
+                 Filtra imagenes por fecha. Selecciona un sensor, elige una escena y procesa el canton o el lote activo con una superficie operativa.
                </p>
             </div>
 
             <div id="sentinelSourceStatus" class="service-banner loading">
-              Verificando conexion con Copernicus STAC...
+              Verificando catalogo satelital...
             </div>
 
              <form id="sentinelForm" class="stack-form">
+               <label class="field">
+                 <span>Sensor</span>
+                 <select id="sensorSelect" name="sensorSelect">
+                   <option value="sentinel2">Sentinel-2</option>
+                   <option value="landsat">Landsat 8/9</option>
+                   <option value="sentinel1">Sentinel-1 GRD</option>
+                 </select>
+              </label>
                <label class="field">
                  <span>Fecha inicial</span>
                  <input id="startDate" type="date" name="startDate">
@@ -161,7 +169,7 @@
                 <input id="endDate" type="date" name="endDate">
               </label>
               <label class="field">
-                <span>Nubosidad maxima</span>
+                <span id="cloudLabel">Nubosidad maxima</span>
                 <div class="range-wrap">
                   <input id="cloudRange" type="range" name="cloudRange" min="0" max="100" step="5" value="35">
                   <strong id="cloudValue">35%</strong>
@@ -169,6 +177,9 @@
                </label>
                <button id="sentinelSubmitBtn" class="primary-button" type="submit">Buscar escenas</button>
              </form>
+             <p id="sensorSupportNote" class="service-note">
+               Sentinel-2 mantiene el flujo mas completo: NDVI, NDWI, NDRE, MSAVI y raster exacto a 10 m cuando existe COG publico coincidente.
+             </p>
 
              <div class="section-block compact">
                <div class="section-head">
@@ -328,7 +339,7 @@
       <section class="map-stage">
         <div class="map-overlay overlay-left">
           <p class="overlay-kicker">Estado operativo</p>
-          <h2 id="mapTitle">Sentinel-2 listo para exploracion</h2>
+          <h2 id="mapTitle">Sensor listo para exploracion</h2>
           <div id="mapBadges" class="map-badges">
             <span class="map-badge">Sin escena</span>
           </div>
@@ -356,7 +367,7 @@
 
         <div class="map-footer">
           <div id="statusBar" class="status-bar">
-            Dibuja un lote, selecciona una escena Sentinel-2 o activa capas de referencia.
+            Dibuja un lote, selecciona una escena satelital o activa capas de referencia.
           </div>
           <div class="footer-pills">
             <span class="footer-pill">Responsive</span>
@@ -378,6 +389,6 @@
   <script src="https://unpkg.com/proj4@2.12.1/dist/proj4.js"></script>
   <script src="https://unpkg.com/georaster/dist/georaster.browser.bundle.min.js"></script>
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
-  <script src="./app.js?v=20260410-9" defer></script>
+  <script src="./app.js?v=20260410-10" defer></script>
 </body>
 </html>

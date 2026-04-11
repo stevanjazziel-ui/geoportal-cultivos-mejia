@@ -42,62 +42,166 @@ const layerCatalog = [
   },
 ];
 
-const sentinelImages = [
-  {
-    id: "S2A-2026-04-04",
-    title: "Sentinel-2A / Orbita 039",
-    date: "2026-04-04",
-    cloud: 8,
-    orbit: "R039",
-    note: "Ventana limpia para monitoreo vegetativo en el eje Machachi - Aloag.",
-    baseIndices: { NDVI: 0.72, NDWI: 0.23, NDRE: 0.41, MSAVI: 0.67 },
-  },
-  {
-    id: "S2B-2026-03-20",
-    title: "Sentinel-2B / Orbita 132",
-    date: "2026-03-20",
-    cloud: 15,
-    orbit: "R132",
-    note: "Escena util para revisar vigor pos siembra y humedad superficial.",
-    baseIndices: { NDVI: 0.66, NDWI: 0.19, NDRE: 0.37, MSAVI: 0.61 },
-  },
-  {
-    id: "S2A-2026-03-02",
-    title: "Sentinel-2A / Orbita 039",
-    date: "2026-03-02",
-    cloud: 22,
-    orbit: "R039",
-    note: "Nubosidad media con buena lectura sobre la zona central del canton.",
-    baseIndices: { NDVI: 0.61, NDWI: 0.17, NDRE: 0.34, MSAVI: 0.57 },
-  },
-  {
-    id: "S2B-2026-02-14",
-    title: "Sentinel-2B / Orbita 132",
-    date: "2026-02-14",
-    cloud: 31,
-    orbit: "R132",
-    note: "Escena util para comparar recuperacion vegetativa entre lotes.",
-    baseIndices: { NDVI: 0.58, NDWI: 0.11, NDRE: 0.3, MSAVI: 0.52 },
-  },
-  {
-    id: "S2A-2026-01-27",
-    title: "Sentinel-2A / Orbita 039",
-    date: "2026-01-27",
-    cloud: 42,
-    orbit: "R039",
-    note: "Mayor nubosidad; sirve como respaldo para historico.",
-    baseIndices: { NDVI: 0.55, NDWI: 0.14, NDRE: 0.28, MSAVI: 0.48 },
-  },
-  {
-    id: "S2B-2025-12-18",
-    title: "Sentinel-2B / Orbita 132",
-    date: "2025-12-18",
-    cloud: 12,
-    orbit: "R132",
-    note: "Buena referencia para revisar trazas de humedad y drenaje.",
-    baseIndices: { NDVI: 0.64, NDWI: 0.26, NDRE: 0.36, MSAVI: 0.59 },
-  },
-];
+const demoImagesBySensor = {
+  sentinel2: [
+    {
+      id: "S2A-2026-04-04",
+      sensorId: "sentinel2",
+      title: "Sentinel-2A / Orbita 039",
+      date: "2026-04-04",
+      cloud: 8,
+      orbit: "R039",
+      note: "Ventana limpia para monitoreo vegetativo en el eje Machachi - Aloag.",
+      baseIndices: { NDVI: 0.72, NDWI: 0.23, NDRE: 0.41, MSAVI: 0.67 },
+    },
+    {
+      id: "S2B-2026-03-20",
+      sensorId: "sentinel2",
+      title: "Sentinel-2B / Orbita 132",
+      date: "2026-03-20",
+      cloud: 15,
+      orbit: "R132",
+      note: "Escena util para revisar vigor pos siembra y humedad superficial.",
+      baseIndices: { NDVI: 0.66, NDWI: 0.19, NDRE: 0.37, MSAVI: 0.61 },
+    },
+    {
+      id: "S2A-2026-03-02",
+      sensorId: "sentinel2",
+      title: "Sentinel-2A / Orbita 039",
+      date: "2026-03-02",
+      cloud: 22,
+      orbit: "R039",
+      note: "Nubosidad media con buena lectura sobre la zona central del canton.",
+      baseIndices: { NDVI: 0.61, NDWI: 0.17, NDRE: 0.34, MSAVI: 0.57 },
+    },
+    {
+      id: "S2B-2026-02-14",
+      sensorId: "sentinel2",
+      title: "Sentinel-2B / Orbita 132",
+      date: "2026-02-14",
+      cloud: 31,
+      orbit: "R132",
+      note: "Escena util para comparar recuperacion vegetativa entre lotes.",
+      baseIndices: { NDVI: 0.58, NDWI: 0.11, NDRE: 0.3, MSAVI: 0.52 },
+    },
+    {
+      id: "S2A-2026-01-27",
+      sensorId: "sentinel2",
+      title: "Sentinel-2A / Orbita 039",
+      date: "2026-01-27",
+      cloud: 42,
+      orbit: "R039",
+      note: "Mayor nubosidad; sirve como respaldo para historico.",
+      baseIndices: { NDVI: 0.55, NDWI: 0.14, NDRE: 0.28, MSAVI: 0.48 },
+    },
+    {
+      id: "S2B-2025-12-18",
+      sensorId: "sentinel2",
+      title: "Sentinel-2B / Orbita 132",
+      date: "2025-12-18",
+      cloud: 12,
+      orbit: "R132",
+      note: "Buena referencia para revisar trazas de humedad y drenaje.",
+      baseIndices: { NDVI: 0.64, NDWI: 0.26, NDRE: 0.36, MSAVI: 0.59 },
+    },
+  ],
+  landsat: [
+    {
+      id: "L9-2026-04-02",
+      sensorId: "landsat",
+      title: "Landsat 9 / Path 010 Row 061",
+      date: "2026-04-02",
+      cloud: 18,
+      orbit: "P010 R061",
+      note: "Optica de 30 m para contraste regional de vigor, humedad y cobertura.",
+      baseIndices: { NDVI: 0.67, NDMI: 0.18, NDWI: 0.11, MSAVI: 0.6 },
+    },
+    {
+      id: "L8-2026-03-17",
+      sensorId: "landsat",
+      title: "Landsat 8 / Path 010 Row 061",
+      date: "2026-03-17",
+      cloud: 24,
+      orbit: "P010 R061",
+      note: "Escena util para seguir humedad estructural y respuesta vegetativa de fondo.",
+      baseIndices: { NDVI: 0.62, NDMI: 0.15, NDWI: 0.08, MSAVI: 0.55 },
+    },
+    {
+      id: "L9-2026-02-25",
+      sensorId: "landsat",
+      title: "Landsat 9 / Path 010 Row 061",
+      date: "2026-02-25",
+      cloud: 33,
+      orbit: "P010 R061",
+      note: "Lectura de soporte para ventana humeda con comparacion multitemporal.",
+      baseIndices: { NDVI: 0.58, NDMI: 0.12, NDWI: 0.06, MSAVI: 0.52 },
+    },
+    {
+      id: "L8-2026-01-12",
+      sensorId: "landsat",
+      title: "Landsat 8 / Path 010 Row 061",
+      date: "2026-01-12",
+      cloud: 27,
+      orbit: "P010 R061",
+      note: "Historico optico para revisar recuperacion y homogeneidad del cultivo.",
+      baseIndices: { NDVI: 0.56, NDMI: 0.1, NDWI: 0.05, MSAVI: 0.49 },
+    },
+  ],
+  sentinel1: [
+    {
+      id: "S1C-2026-04-09",
+      sensorId: "sentinel1",
+      title: "Sentinel-1C / IW Descendente",
+      date: "2026-04-09",
+      cloud: null,
+      orbit: "DESC",
+      orbitState: "descending",
+      instrumentMode: "IW",
+      polarizations: ["VV", "VH"],
+      note: "Radar de paso descendente para lectura estructural aun con nubes.",
+      baseIndices: { RVI: 0.56, VH_VV: 0.44, VV: -10.8, VH: -17.2 },
+    },
+    {
+      id: "S1C-2026-03-28",
+      sensorId: "sentinel1",
+      title: "Sentinel-1C / IW Ascendente",
+      date: "2026-03-28",
+      cloud: null,
+      orbit: "ASC",
+      orbitState: "ascending",
+      instrumentMode: "IW",
+      polarizations: ["VV", "VH"],
+      note: "Radar de apoyo para comparar textura, humedad relativa y estructura del dosel.",
+      baseIndices: { RVI: 0.51, VH_VV: 0.41, VV: -11.6, VH: -18.4 },
+    },
+    {
+      id: "S1A-2026-03-16",
+      sensorId: "sentinel1",
+      title: "Sentinel-1A / IW Descendente",
+      date: "2026-03-16",
+      cloud: null,
+      orbit: "DESC",
+      orbitState: "descending",
+      instrumentMode: "IW",
+      polarizations: ["VV", "VH"],
+      note: "Escena radar de contraste para seguimiento estructural multitemporal.",
+      baseIndices: { RVI: 0.47, VH_VV: 0.38, VV: -12.2, VH: -19.3 },
+    },
+    {
+      id: "S1A-2026-02-27",
+      sensorId: "sentinel1",
+      title: "Sentinel-1A / IW Ascendente",
+      date: "2026-02-27",
+      cloud: null,
+      orbit: "ASC",
+      orbitState: "ascending",
+      instrumentMode: "IW",
+      polarizations: ["VV", "VH"],
+      note: "Historico radar para detectar persistencia de humedad y cambios de cobertura.",
+      baseIndices: { RVI: 0.43, VH_VV: 0.35, VV: -12.9, VH: -20.1 },
+    },
+  ],
+};
 
 const sentinelService = {
   catalogUrl: "https://stac.dataspace.copernicus.eu/v1",
@@ -121,8 +225,7 @@ const sentinelService = {
 
 const earthSearchService = {
   catalogUrl: "https://earth-search.aws.element84.com/v1",
-  collection: "sentinel-2-l2a",
-  limit: 6,
+  limit: 18,
 };
 
 const backendService = {
@@ -151,6 +254,14 @@ const indexConfig = {
     colors: ["#6d4526", "#d1b256", "#77c8d8", "#16647a"],
     description: "Humedad del dosel y condiciones de agua superficial.",
   },
+  NDMI: {
+    label: "NDMI",
+    min: -0.2,
+    max: 0.6,
+    unit: "",
+    colors: ["#7f4f2b", "#d1aa5d", "#74b9a6", "#1b5e55"],
+    description: "Humedad foliar y retencion de agua usando NIR y SWIR.",
+  },
   NDRE: {
     label: "NDRE",
     min: 0,
@@ -167,6 +278,108 @@ const indexConfig = {
     colors: ["#834529", "#d2953a", "#9bbb5b", "#2c6d46"],
     description: "Cobertura de suelo y vigor con reduccion del efecto del fondo.",
   },
+  VV: {
+    label: "VV",
+    min: -22,
+    max: -5,
+    unit: " dB",
+    colors: ["#0d2744", "#335f8b", "#75a9c6", "#e4f3fa"],
+    description: "Retrodispersion radar co-polarizada sensible a estructura y rugosidad.",
+  },
+  VH: {
+    label: "VH",
+    min: -30,
+    max: -10,
+    unit: " dB",
+    colors: ["#1b203f", "#4b5f8b", "#86a5c7", "#eef6fc"],
+    description: "Retrodispersion cruzada asociada a volumen vegetal y humedad.",
+  },
+  RVI: {
+    label: "RVI",
+    min: 0,
+    max: 1,
+    unit: "",
+    colors: ["#5d2d2a", "#c26f58", "#9ebc7a", "#2a6c50"],
+    description: "Radar Vegetation Index para estructura y cobertura del cultivo.",
+  },
+  VH_VV: {
+    label: "VH/VV",
+    min: 0.1,
+    max: 0.8,
+    unit: "",
+    colors: ["#412f56", "#8072ab", "#84b9b0", "#1b6a63"],
+    description: "Relacion cruzada/co-polarizada util para humedad y densidad estructural.",
+  },
+};
+
+const sensorCatalog = {
+  sentinel2: {
+    id: "sentinel2",
+    label: "Sentinel-2",
+    longLabel: "Sentinel-2 MSI",
+    providerLabel: "Copernicus STAC",
+    directProviderLabel: "CDSE STAC",
+    searchProvider: "copernicus",
+    collection: "sentinel-2-l2a",
+    earthSearchCollection: "sentinel-2-l2a",
+    limit: 18,
+    indices: ["NDVI", "NDWI", "NDRE", "MSAVI"],
+    defaultIndex: "NDVI",
+    focusIndex: "NDVI",
+    moistureIndex: "NDWI",
+    zoneIndex: "NDVI",
+    directionIndex: "NDVI",
+    cloudEnabled: true,
+    backendEligible: true,
+    exactRaster: true,
+    demoImages: demoImagesBySensor.sentinel2,
+    previewAssetKeys: ["thumbnail"],
+    supportNote: "Sentinel-2 mantiene el flujo mas completo: NDVI, NDWI, NDRE, MSAVI y raster exacto a 10 m cuando existe COG publico coincidente.",
+  },
+  landsat: {
+    id: "landsat",
+    label: "Landsat 8/9",
+    longLabel: "Landsat Collection 2 Level-2",
+    providerLabel: "Earth Search",
+    directProviderLabel: "Earth Search",
+    searchProvider: "earth-search",
+    collection: "landsat-c2-l2",
+    limit: 18,
+    indices: ["NDVI", "NDMI", "NDWI", "MSAVI"],
+    defaultIndex: "NDVI",
+    focusIndex: "NDVI",
+    moistureIndex: "NDMI",
+    zoneIndex: "NDVI",
+    directionIndex: "NDVI",
+    cloudEnabled: true,
+    backendEligible: false,
+    exactRaster: false,
+    demoImages: demoImagesBySensor.landsat,
+    previewAssetKeys: ["reduced_resolution_browse", "thumbnail"],
+    supportNote: "Landsat 8/9 aporta analisis optico a 30 m con NDVI, NDMI, NDWI y MSAVI. NDRE no aplica porque Landsat no tiene banda red-edge.",
+  },
+  sentinel1: {
+    id: "sentinel1",
+    label: "Sentinel-1 GRD",
+    longLabel: "Sentinel-1 GRD SAR",
+    providerLabel: "Earth Search",
+    directProviderLabel: "Earth Search",
+    searchProvider: "earth-search",
+    collection: "sentinel-1-grd",
+    limit: 18,
+    indices: ["RVI", "VH_VV", "VV", "VH"],
+    defaultIndex: "RVI",
+    focusIndex: "RVI",
+    moistureIndex: "VH_VV",
+    zoneIndex: "RVI",
+    directionIndex: "RVI",
+    cloudEnabled: false,
+    backendEligible: false,
+    exactRaster: false,
+    demoImages: demoImagesBySensor.sentinel1,
+    previewAssetKeys: ["thumbnail"],
+    supportNote: "Sentinel-1 es radar: atraviesa nubes y trabaja con VV, VH, RVI y VH/VV para lectura estructural y de humedad relativa.",
+  },
 };
 
 const wizardConfig = {
@@ -177,7 +390,7 @@ const wizardConfig = {
     },
     {
       title: "Cruzar humedad y temperatura",
-      body: "Consulta NDWI, lluvia acumulada y temperatura superficial para decidir ventana de siembra.",
+      body: "Consulta el indice de humedad disponible, lluvia acumulada y temperatura superficial para decidir ventana de siembra.",
     },
     {
       title: "Definir zonas de manejo",
@@ -191,7 +404,7 @@ const wizardConfig = {
   Monitoreo: [
     {
       title: "Buscar la escena mas reciente",
-      body: "Filtra Sentinel-2 por baja nubosidad y selecciona el indice mas util para el estado fenologico actual.",
+      body: "Filtra la escena mas reciente y selecciona el indice o metrica mas util para el estado fenologico actual.",
     },
     {
       title: "Localizar alertas intralote",
@@ -213,7 +426,7 @@ const wizardConfig = {
     },
     {
       title: "Revisar madurez heterogenea",
-      body: "Usa NDRE y MSAVI para ubicar diferencias de desarrollo que puedan requerir cosecha escalonada.",
+      body: "Usa las metricas disponibles para ubicar diferencias de desarrollo que puedan requerir cosecha escalonada.",
     },
     {
       title: "Cruzar clima de corto plazo",
@@ -403,6 +616,7 @@ const layerStyles = {
 
 const state = {
   activeTab: "capas",
+  activeSensorId: "sentinel2",
   selectedImageId: null,
   selectedCompareImageId: null,
   selectedIndex: "NDVI",
@@ -451,6 +665,84 @@ const mapState = {
   currentPlotLayer: null,
 };
 
+function getSensorConfig(sensorId = state.activeSensorId) {
+  return sensorCatalog[sensorId] || sensorCatalog.sentinel2;
+}
+
+function getActiveSensor() {
+  return getSensorConfig(state.activeSensorId);
+}
+
+function getSensorForImage(image = null) {
+  return getSensorConfig(image?.sensorId || state.activeSensorId);
+}
+
+function getSupportedIndexKeys(subject = null) {
+  if (!subject) {
+    return [...getActiveSensor().indices];
+  }
+  if (typeof subject === "string") {
+    return [...getSensorConfig(subject).indices];
+  }
+  return [...getSensorForImage(subject).indices];
+}
+
+function getFocusIndexKey(subject = null) {
+  if (!subject) {
+    return getActiveSensor().focusIndex;
+  }
+  if (typeof subject === "string") {
+    return getSensorConfig(subject).focusIndex;
+  }
+  return getSensorForImage(subject).focusIndex;
+}
+
+function getMoistureIndexKey(subject = null) {
+  if (!subject) {
+    return getActiveSensor().moistureIndex;
+  }
+  if (typeof subject === "string") {
+    return getSensorConfig(subject).moistureIndex;
+  }
+  return getSensorForImage(subject).moistureIndex;
+}
+
+function getFallbackScene() {
+  const fallback = getActiveSensor().demoImages[0];
+  if (!fallback) {
+    return null;
+  }
+  return enrichSceneMetadata({
+    ...fallback,
+    source: "demo",
+    datetime: `${fallback.date}T10:15:00Z`,
+  });
+}
+
+function ensureSelectedIndex() {
+  const supported = getSupportedIndexKeys();
+  if (!supported.includes(state.selectedIndex)) {
+    state.selectedIndex = getActiveSensor().defaultIndex;
+  }
+}
+
+function normalizeMetricValue(value, config) {
+  return clamp((value - config.min) / (config.max - config.min || 1), 0, 1);
+}
+
+function getSceneMetaLabel(image) {
+  if (Number.isFinite(image?.cloud)) {
+    return `Nubes ${formatCloudValue(image.cloud)}`;
+  }
+  if (Array.isArray(image?.polarizations) && image.polarizations.length) {
+    return image.polarizations.join("/");
+  }
+  if (image?.orbitState) {
+    return formatOrbitState(image.orbitState);
+  }
+  return getSensorForImage(image).label;
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   cacheDom();
   bootstrapApp();
@@ -466,10 +758,13 @@ function cacheDom() {
   dom.tabButtons = Array.from(document.querySelectorAll(".tab-button"));
   dom.tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
   dom.layersTree = document.querySelector("#layersTree");
+  dom.sensorSelect = document.querySelector("#sensorSelect");
+  dom.sensorSupportNote = document.querySelector("#sensorSupportNote");
   dom.sentinelForm = document.querySelector("#sentinelForm");
   dom.startDate = document.querySelector("#startDate");
   dom.endDate = document.querySelector("#endDate");
   dom.cloudRange = document.querySelector("#cloudRange");
+  dom.cloudLabel = document.querySelector("#cloudLabel");
   dom.cloudValue = document.querySelector("#cloudValue");
   dom.sentinelSourceStatus = document.querySelector("#sentinelSourceStatus");
   dom.sentinelSubmitBtn = document.querySelector("#sentinelSubmitBtn");
@@ -511,6 +806,8 @@ function cacheDom() {
 function bootstrapApp() {
   setDefaultDates();
   bindUI();
+  ensureSelectedIndex();
+  updateSensorControls();
   renderLayerTree();
   renderIndexButtons();
   renderWizardModes();
@@ -527,12 +824,43 @@ function bindUI() {
   dom.sidebarToggle.addEventListener("click", () => dom.sidebar.classList.add("open"));
   dom.sidebarClose.addEventListener("click", () => dom.sidebar.classList.remove("open"));
 
+  if (dom.sensorSelect) {
+    dom.sensorSelect.addEventListener("change", () => {
+      state.activeSensorId = dom.sensorSelect.value || "sentinel2";
+      state.selectedImageId = null;
+      state.selectedCompareImageId = null;
+      state.filteredImages = [];
+      state.surfaceMode = "primary";
+      state.sceneLayerKind = "off";
+      state.sentinelMode = "loading";
+      state.sentinelTransport = "direct";
+      state.sentinelError = null;
+      state.sentinelCacheHit = false;
+      state.analysisData = null;
+      state.compareAnalysis = null;
+      state.changeAnalysis = null;
+      state.analysisError = null;
+      ensureSelectedIndex();
+      updateSensorControls();
+      renderIndexButtons();
+      renderSceneControls();
+      renderSentinelSourceStatus();
+      renderSentinelResults();
+      renderAnalysisStatus();
+      renderAnalysisSummary();
+      renderCompareSummary();
+      renderSentinelOverlay();
+      updateMapSummary();
+      filterSentinelImages();
+    });
+  }
+
   dom.tabButtons.forEach((button) => {
     button.addEventListener("click", () => setActiveTab(button.dataset.tab));
   });
 
   dom.cloudRange.addEventListener("input", () => {
-    dom.cloudValue.textContent = `${dom.cloudRange.value}%`;
+    dom.cloudValue.textContent = getActiveSensor().cloudEnabled ? `${dom.cloudRange.value}%` : "No aplica";
   });
 
   dom.sentinelForm.addEventListener("submit", (event) => {
@@ -641,6 +969,32 @@ function bindUI() {
   dom.baseButtons.forEach((button) => {
     button.addEventListener("click", () => setBaseLayer(button.dataset.base));
   });
+}
+
+function updateSensorControls() {
+  const sensor = getActiveSensor();
+
+  if (dom.sensorSelect) {
+    dom.sensorSelect.value = sensor.id;
+  }
+
+  if (dom.cloudLabel) {
+    dom.cloudLabel.textContent = sensor.cloudEnabled ? "Nubosidad maxima" : "Filtro meteorologico";
+  }
+
+  if (dom.cloudRange) {
+    dom.cloudRange.disabled = !sensor.cloudEnabled;
+  }
+
+  if (dom.cloudValue) {
+    dom.cloudValue.textContent = sensor.cloudEnabled ? `${dom.cloudRange.value}%` : "No aplica";
+  }
+
+  if (dom.sensorSupportNote) {
+    dom.sensorSupportNote.textContent = sensor.backendEligible
+      ? `${sensor.supportNote} Si activas server.ps1, ${sensor.label} puede sumar proxy local, cache STAC y trazabilidad extra.`
+      : `${sensor.supportNote} Este sensor consulta directo Earth Search y usa analisis local en el navegador.`;
+  }
 }
 
 function enterPublicView() {
@@ -883,10 +1237,11 @@ async function filterSentinelImages() {
       return;
     }
 
+    const sensor = getActiveSensor();
     state.sentinelMode = "demo";
     state.sentinelTransport = "demo";
     state.sentinelCacheHit = false;
-    state.sentinelError = error instanceof Error ? error.message : "No fue posible conectar con Copernicus STAC.";
+    state.sentinelError = error instanceof Error ? error.message : `No fue posible conectar con ${sensor.providerLabel}.`;
     state.filteredImages = filterDemoSentinelImages();
     applySelectedScene();
     await refreshActiveAnalysis({ silent: true });
@@ -906,8 +1261,11 @@ async function filterSentinelImages() {
 }
 
 async function fetchSentinelImages() {
+  const sensor = getActiveSensor();
   const query = buildSentinelQuery();
-  const backend = await detectBackend(!state.backendAvailable);
+  const backend = sensor.backendEligible
+    ? await detectBackend(!state.backendAvailable)
+    : { available: false, url: null };
 
   if (backend.available) {
     try {
@@ -919,17 +1277,19 @@ async function fetchSentinelImages() {
     }
   }
 
-  return fetchDirectSentinelImages(query);
+  return fetchDirectSensorImages(query);
 }
 
 function buildSentinelQuery() {
   const { start, end } = normalizeDateRange(dom.startDate.value, dom.endDate.value);
   const maxCloud = Number(dom.cloudRange.value);
-  const searchArea = getSentinelSearchArea();
+  const searchArea = getSearchArea();
 
   state.sentinelQueryScopeLabel = state.currentPlot ? state.currentPlotLabel : "Canton Mejia";
 
   return {
+    sensorId: state.activeSensorId,
+    collection: getActiveSensor().collection,
     start,
     end,
     maxCloud,
@@ -998,10 +1358,18 @@ async function fetchSentinelImagesFromProxy(query) {
     .sort((a, b) => (b.datetime || b.date).localeCompare(a.datetime || a.date));
 }
 
-async function fetchDirectSentinelImages(query) {
+async function fetchDirectSensorImages(query) {
+  const sensor = getSensorConfig(query.sensorId);
+  if (sensor.searchProvider === "copernicus") {
+    return fetchDirectSentinelImages(query, sensor);
+  }
+  return fetchEarthSearchImages(query, sensor);
+}
+
+async function fetchDirectSentinelImages(query, sensor = getActiveSensor()) {
   const params = new URLSearchParams({
-    collections: sentinelService.collection,
-    limit: String(sentinelService.limit),
+    collections: sensor.collection || sentinelService.collection,
+    limit: String(sensor.limit || sentinelService.limit),
     bbox: query.bbox.join(","),
     datetime: `${query.start}T00:00:00Z/${query.end}T23:59:59Z`,
     fields: sentinelService.fields.join(","),
@@ -1028,6 +1396,36 @@ async function fetchDirectSentinelImages(query) {
     .sort((a, b) => b.datetime.localeCompare(a.datetime));
 }
 
+async function fetchEarthSearchImages(query, sensor = getActiveSensor()) {
+  const response = await fetch(`${earthSearchService.catalogUrl}/search`, {
+    method: "POST",
+    headers: {
+      Accept: "application/geo+json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      collections: [sensor.collection],
+      bbox: query.bbox,
+      datetime: `${query.start}T00:00:00Z/${query.end}T23:59:59Z`,
+      limit: sensor.limit || earthSearchService.limit,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Earth Search devolvio ${response.status}.`);
+  }
+
+  const payload = await response.json();
+  const features = Array.isArray(payload.features) ? payload.features : [];
+  state.sentinelTransport = "direct";
+  state.sentinelCacheHit = false;
+
+  return features
+    .map((feature) => mapEarthSearchScene(feature, sensor))
+    .filter((image) => (!sensor.cloudEnabled || !Number.isFinite(image.cloud) || image.cloud <= query.maxCloud))
+    .sort((a, b) => (b.datetime || b.date).localeCompare(a.datetime || a.date));
+}
+
 async function fetchJson(url, options = {}) {
   const response = await fetch(url, options);
   if (!response.ok) {
@@ -1038,7 +1436,7 @@ async function fetchJson(url, options = {}) {
 
 function mapStacScene(feature) {
   const properties = feature.properties || {};
-  const platform = formatPlatform(properties.platform);
+  const platform = formatPlatform(properties.platform, "Sentinel-2");
   const gridCode = properties["grid:code"] || "Sin grilla";
   const orbit = properties["sat:relative_orbit"] != null
     ? `R${String(properties["sat:relative_orbit"]).padStart(3, "0")}`
@@ -1050,6 +1448,7 @@ function mapStacScene(feature) {
 
   return enrichSceneMetadata({
     id: feature.id,
+    sensorId: "sentinel2",
     title: `${platform} / ${gridCode}`,
     gridCode,
     date: datetime.slice(0, 10),
@@ -1058,21 +1457,105 @@ function mapStacScene(feature) {
     orbit,
     note: `Escena real desde Copernicus STAC. Nivel ${level} y disponibilidad ${timeliness}.`,
     thumbnail: feature.assets?.thumbnail?.href || null,
+    previewHref: feature.assets?.thumbnail?.href || null,
     stacLink: feature.links?.find((link) => link.rel === "self")?.href || null,
     geometry: feature.geometry || null,
     bbox: feature.bbox || null,
     source: "real",
-    baseIndices: deriveBetaIndicesFromScene(feature.id, cloud),
+    baseIndices: deriveBetaIndicesFromScene(feature.id, cloud, "sentinel2"),
   });
+}
+
+function mapEarthSearchScene(feature, sensor = getActiveSensor()) {
+  if (sensor.id === "landsat") {
+    return mapLandsatScene(feature);
+  }
+  if (sensor.id === "sentinel1") {
+    return mapSentinel1Scene(feature);
+  }
+  return mapStacScene(feature);
+}
+
+function mapLandsatScene(feature) {
+  const properties = feature.properties || {};
+  const datetime = properties.datetime || "";
+  const platform = formatPlatform(properties.platform, "Landsat 8/9");
+  const cloud = Number(properties["eo:cloud_cover"]);
+  const wrsPath = Number(properties["landsat:wrs_path"]);
+  const wrsRow = Number(properties["landsat:wrs_row"]);
+  const pathRow = Number.isFinite(wrsPath) && Number.isFinite(wrsRow)
+    ? `P${String(wrsPath).padStart(3, "0")} R${String(wrsRow).padStart(3, "0")}`
+    : properties["landsat:scene_id"] || "Sin trayecto";
+
+  return enrichSceneMetadata({
+    id: feature.id,
+    sensorId: "landsat",
+    title: `${platform} / ${pathRow}`,
+    gridCode: pathRow,
+    date: datetime.slice(0, 10),
+    datetime,
+    cloud: Number.isFinite(cloud) ? Number(cloud.toFixed(2)) : null,
+    orbit: pathRow,
+    note: "Escena real Landsat Collection 2 Level-2 desde Earth Search. Resolucion nominal de 30 m para lectura optica operativa.",
+    thumbnail: feature.assets?.thumbnail?.href || null,
+    previewHref: getPreviewAssetHref(feature.assets, sensorCatalog.landsat.previewAssetKeys),
+    stacLink: feature.links?.find((link) => link.rel === "self")?.href || null,
+    geometry: feature.geometry || null,
+    bbox: feature.bbox || null,
+    source: "real",
+    baseIndices: deriveBetaIndicesFromScene(feature.id, cloud, "landsat"),
+  });
+}
+
+function mapSentinel1Scene(feature) {
+  const properties = feature.properties || {};
+  const datetime = properties.datetime || "";
+  const platform = formatPlatform(properties.platform, "Sentinel-1");
+  const orbitState = properties["sat:orbit_state"] || null;
+  const instrumentMode = properties["sar:instrument_mode"] || "IW";
+  const polarizations = Array.isArray(properties["sar:polarizations"]) ? properties["sar:polarizations"] : [];
+  const orbitLabel = orbitState === "ascending" ? "ASC" : orbitState === "descending" ? "DESC" : "SAR";
+
+  return enrichSceneMetadata({
+    id: feature.id,
+    sensorId: "sentinel1",
+    title: `${platform} / ${instrumentMode} ${formatOrbitState(orbitState)}`,
+    date: datetime.slice(0, 10),
+    datetime,
+    cloud: null,
+    orbit: orbitLabel,
+    orbitState,
+    instrumentMode,
+    polarizations,
+    note: `Escena radar GRD desde Earth Search con polarizaciones ${polarizations.join("/") || "VV/VH"} y pasada ${formatOrbitState(orbitState).toLowerCase()}.`,
+    thumbnail: feature.assets?.thumbnail?.href || null,
+    previewHref: getPreviewAssetHref(feature.assets, sensorCatalog.sentinel1.previewAssetKeys),
+    stacLink: feature.links?.find((link) => link.rel === "self")?.href || null,
+    geometry: feature.geometry || null,
+    bbox: feature.bbox || null,
+    source: "real",
+    baseIndices: deriveBetaIndicesFromScene(feature.id, null, "sentinel1"),
+  });
+}
+
+function getPreviewAssetHref(assets = {}, assetKeys = []) {
+  return assetKeys
+    .map((key) => assets?.[key]?.href || null)
+    .find(Boolean) || null;
 }
 
 function filterDemoSentinelImages() {
   const { start, end } = normalizeDateRange(dom.startDate.value, dom.endDate.value);
   const maxCloud = Number(dom.cloudRange.value);
+  const sensor = getActiveSensor();
   state.sentinelQueryScopeLabel = state.currentPlot ? state.currentPlotLabel : "Canton Mejia";
 
-  return sentinelImages
-    .filter((image) => (!start || image.date >= start) && (!end || image.date <= end) && image.cloud <= maxCloud)
+  return sensor.demoImages
+    .filter((image) => {
+      const passesDate = (!start || image.date >= start) && (!end || image.date <= end);
+      const passesCloud = !sensor.cloudEnabled || !Number.isFinite(image.cloud) || image.cloud <= maxCloud;
+      return passesDate && passesCloud;
+    })
     .map((image) => enrichSceneMetadata({
       ...image,
       datetime: `${image.date}T10:15:00Z`,
@@ -1084,11 +1567,14 @@ function filterDemoSentinelImages() {
 }
 
 function enrichSceneMetadata(image) {
+  const sensorId = image.sensorId || state.activeSensorId;
   const normalized = {
     ...image,
+    sensorId,
     source: image.source || "demo",
     datetime: image.datetime || `${image.date}T10:15:00Z`,
-    baseIndices: image.baseIndices || deriveBetaIndicesFromScene(image.id || "scene", image.cloud),
+    previewHref: image.previewHref || image.thumbnail || null,
+    baseIndices: image.baseIndices || deriveBetaIndicesFromScene(image.id || "scene", image.cloud, sensorId),
   };
   normalized.sceneAgeDays = getSceneAgeDays(normalized);
   normalized.qualityScore = estimateSceneConfidence(normalized, normalized.sceneAgeDays);
@@ -1096,6 +1582,7 @@ function enrichSceneMetadata(image) {
 }
 
 function applySelectedScene() {
+  ensureSelectedIndex();
   if (!state.filteredImages.length) {
     state.selectedImageId = null;
     state.selectedCompareImageId = null;
@@ -1121,6 +1608,7 @@ function applySelectedScene() {
 }
 
 function renderSceneControls() {
+  const sensor = getActiveSensor();
   const selectedImage = getSelectedImage();
   const compareImage = getCompareImage();
   const hasScenePreview = canRenderSceneLayer(selectedImage);
@@ -1164,7 +1652,7 @@ function renderSceneControls() {
       : `Mostrar ${sceneLayerLabel}`;
 
   if (!state.filteredImages.length) {
-    dom.sceneTimeline.innerHTML = `<div class="empty-state">Las escenas apareceran aqui ordenadas por fecha.</div>`;
+    dom.sceneTimeline.innerHTML = `<div class="empty-state">Las escenas de ${sensor.label} apareceran aqui ordenadas por fecha.</div>`;
     return;
   }
 
@@ -1221,34 +1709,36 @@ function renderSceneControls() {
 }
 
 function formatSceneOption(image) {
-  return `${localeDate.format(new Date(`${image.date}T00:00:00`))} | Nubes ${formatCloudValue(image.cloud)} | ${image.title}`;
+  return `${localeDate.format(new Date(`${image.date}T00:00:00`))} | ${getSceneMetaLabel(image)} | ${image.title}`;
 }
 
 function renderSentinelSourceStatus() {
-  const areaLabel = state.currentPlot ? state.currentPlotLabel : "Canton Mejia";
+  const sensor = getActiveSensor();
 
   dom.sentinelSourceStatus.className = "service-banner";
 
   if (state.sentinelLoading) {
     dom.sentinelSourceStatus.classList.add("loading");
-    dom.sentinelSourceStatus.textContent = `Consultando Copernicus STAC para ${areaLabel}...`;
+    dom.sentinelSourceStatus.textContent = `Consultando ${sensor.providerLabel} para ${sensor.label} en ${state.sentinelQueryScopeLabel}...`;
     return;
   }
 
   if (state.sentinelMode === "real") {
     if (state.sentinelTransport === "proxy") {
       dom.sentinelSourceStatus.classList.add("proxy");
-      dom.sentinelSourceStatus.textContent = `Busqueda en vivo via proxy local con cache. Ambito actual: ${state.sentinelQueryScopeLabel}. ${state.sentinelCacheHit ? "Respuesta servida desde cache local." : "Consulta fresca al catalogo."}`;
+      dom.sentinelSourceStatus.textContent = `Busqueda en vivo de ${sensor.label} via proxy local con cache. Ambito actual: ${state.sentinelQueryScopeLabel}. ${state.sentinelCacheHit ? "Respuesta servida desde cache local." : "Consulta fresca al catalogo."}`;
       return;
     }
 
     dom.sentinelSourceStatus.classList.add("real");
-    dom.sentinelSourceStatus.textContent = `Busqueda en vivo activa desde el navegador para ${state.sentinelQueryScopeLabel}. Si activas server.ps1, el visor suma proxy local, cache y mejor trazabilidad de consultas.`;
+    dom.sentinelSourceStatus.textContent = sensor.backendEligible
+      ? `Busqueda en vivo activa de ${sensor.label} desde ${sensor.directProviderLabel} para ${state.sentinelQueryScopeLabel}. Si activas server.ps1, el visor suma proxy local, cache y mejor trazabilidad.`
+      : `Busqueda en vivo activa de ${sensor.label} desde ${sensor.directProviderLabel} para ${state.sentinelQueryScopeLabel}. Este sensor opera directo en el navegador sin proxy local.`;
     return;
   }
 
   dom.sentinelSourceStatus.classList.add("demo");
-  dom.sentinelSourceStatus.textContent = `Sin conexion operativa con Copernicus STAC. El visor usa escenas demo para no frenar el trabajo. ${state.sentinelError || ""}`.trim();
+  dom.sentinelSourceStatus.textContent = `Sin conexion operativa con ${sensor.providerLabel} para ${sensor.label}. El visor usa escenas demo para no frenar el trabajo. ${state.sentinelError || ""}`.trim();
 }
 
 function setSentinelBusy(isBusy) {
@@ -1259,10 +1749,11 @@ function setSentinelBusy(isBusy) {
 }
 
 function renderSentinelResults() {
+  const sensor = getActiveSensor();
   if (!state.filteredImages.length) {
     dom.sentinelResults.innerHTML = `
       <div class="empty-state">
-        No hay escenas que cumplan el filtro actual para ${state.sentinelQueryScopeLabel}. Ajusta fechas o permite mayor nubosidad.
+        No hay escenas de ${sensor.label} que cumplan el filtro actual para ${state.sentinelQueryScopeLabel}. ${sensor.cloudEnabled ? "Ajusta fechas o permite mayor nubosidad." : "Ajusta fechas para abrir otra ventana temporal."}
       </div>
     `;
     updateMapSummary();
@@ -1277,18 +1768,27 @@ function renderSentinelResults() {
         ? `<img class="sentinel-thumb" src="${image.thumbnail}" alt="Previsualizacion de ${image.title}" loading="lazy">`
         : "";
       const sourceMarkup = image.source === "real"
-        ? `<span class="source-pill">${state.sentinelTransport === "proxy" ? "Proxy local" : "CDSE STAC"}</span>`
+        ? `<span class="source-pill">${state.sentinelTransport === "proxy" ? "Proxy local" : sensor.directProviderLabel}</span>`
         : `<span class="source-pill">Demo local</span>`;
       const stacLinkMarkup = image.stacLink
         ? `<a class="text-link" href="${image.stacLink}" target="_blank" rel="noreferrer">Ficha STAC</a>`
         : "";
+      const metaPills = [
+        `<span class="meta-pill">${localeDate.format(new Date(`${image.date}T00:00:00`))}</span>`,
+        `<span class="meta-pill">${getSceneMetaLabel(image)}</span>`,
+        image.orbit ? `<span class="meta-pill">${image.orbit}</span>` : "",
+        image.instrumentMode ? `<span class="meta-pill">${image.instrumentMode}</span>` : "",
+        `<span class="meta-pill">Conf. ${image.qualityScore}/100</span>`,
+        `<span class="meta-pill">${formatAgeLabel(image.sceneAgeDays)}</span>`,
+        sourceMarkup,
+      ].filter(Boolean).join("");
 
       return `
         <article class="sentinel-card ${activeClass} ${compareClass}" data-image="${image.id}">
           ${thumbnailMarkup}
           <div class="section-head">
             <div>
-              <p class="section-kicker">Escena disponible</p>
+              <p class="section-kicker">${sensor.label}</p>
               <h2>${image.title}</h2>
             </div>
             <div class="card-actions">
@@ -1301,12 +1801,7 @@ function renderSentinelResults() {
             </div>
           </div>
           <div class="sentinel-meta">
-            <span class="meta-pill">${localeDate.format(new Date(`${image.date}T00:00:00`))}</span>
-            <span class="meta-pill">Nubes ${formatCloudValue(image.cloud)}</span>
-            <span class="meta-pill">${image.orbit}</span>
-            <span class="meta-pill">Conf. ${image.qualityScore}/100</span>
-            <span class="meta-pill">${formatAgeLabel(image.sceneAgeDays)}</span>
-            ${sourceMarkup}
+            ${metaPills}
           </div>
           <p>${image.note}</p>
           <div class="action-row">
@@ -1350,15 +1845,16 @@ function renderSentinelResults() {
 }
 
 function renderIndexButtons() {
-  dom.indexButtons.innerHTML = Object.values(indexConfig)
+  ensureSelectedIndex();
+  dom.indexButtons.innerHTML = getSupportedIndexKeys()
     .map(
-      (index) => `
+      (indexKey) => `
         <button
-          class="index-button ${index.label === state.selectedIndex ? "active" : ""}"
+          class="index-button ${indexKey === state.selectedIndex ? "active" : ""}"
           type="button"
-          data-index="${index.label}"
+          data-index="${indexKey}"
         >
-          ${index.label}
+          ${indexConfig[indexKey].label}
         </button>
       `
     )
@@ -1442,7 +1938,9 @@ async function refreshActiveAnalysis({ silent = false } = {}) {
   updateMapSummary();
 
   try {
-    const backend = await detectBackend(!state.backendAvailable);
+    const backend = getSensorForImage(image).backendEligible
+      ? await detectBackend(!state.backendAvailable)
+      : { available: false, url: null };
     const analysis = await computeAnalysisForImage(image, context, backend);
     let compareAnalysis = null;
     let changeAnalysis = null;
@@ -1469,7 +1967,7 @@ async function refreshActiveAnalysis({ silent = false } = {}) {
       const compareLabel = compareAnalysis
         ? ` y comparado contra ${compareAnalysis.imageId}`
         : "";
-      setStatus(`AOI ${analysis.context.scopeLabel} procesado en ${state.selectedIndex} usando ${sourceLabel}${compareLabel}.`);
+      setStatus(`AOI ${analysis.context.scopeLabel} procesado en ${indexConfig[state.selectedIndex].label} usando ${sourceLabel}${compareLabel}.`);
     }
 
     return analysis;
@@ -1496,7 +1994,10 @@ async function refreshActiveAnalysis({ silent = false } = {}) {
 }
 
 async function computeAnalysisForImage(image, context, backend = null) {
-  const backendStatus = backend || await detectBackend(!state.backendAvailable);
+  const sensor = getSensorForImage(image);
+  const backendStatus = sensor.backendEligible
+    ? backend || await detectBackend(!state.backendAvailable)
+    : { available: false, url: null };
 
   if (backendStatus.available) {
     try {
@@ -1525,10 +2026,11 @@ async function fetchBackendAnalysis(image, context) {
         date: image.date,
         datetime: image.datetime,
         cloud: image.cloud,
-        source: image.source,
-        orbit: image.orbit,
-        baseIndices: image.baseIndices,
-      },
+      source: image.source,
+      orbit: image.orbit,
+      sensorId: image.sensorId,
+      baseIndices: image.baseIndices,
+    },
       target: {
         scopeLabel: context.scopeLabel,
         scopeType: context.scopeType,
@@ -1546,6 +2048,7 @@ async function fetchBackendAnalysis(image, context) {
   return {
     imageId: image.id,
     imageDate: image.date,
+    sensorId: image.sensorId,
     context,
     summary,
     quality: {
@@ -1553,11 +2056,11 @@ async function fetchBackendAnalysis(image, context) {
       coveragePct: Number(payload.quality?.coveragePct) || 0,
       freshnessDays: Number(payload.quality?.freshnessDays) || context.freshnessDays,
     },
-    management: payload.management || deriveManagementMix(summary.NDVI, context.areaHa),
+    management: payload.management || deriveManagementMix(summary[getFocusIndexKey(image)], context.areaHa, image),
     diagnostics: payload.diagnostics || deriveDiagnostics(summary, {
       confidenceScore: Number(payload.quality?.confidenceScore) || estimateSceneConfidence(image, context.freshnessDays),
       coveragePct: Number(payload.quality?.coveragePct) || 0,
-    }),
+    }, image),
     surface: buildAnalysisSurface(context, summary, image),
     processingMode: "backend",
     cacheHit: Boolean(payload.cacheHit),
@@ -1583,7 +2086,7 @@ function buildAnalysisContext(image, target = getCurrentAnalysisTarget()) {
 }
 
 function getCurrentAnalysisTarget() {
-  const feature = getSentinelSearchArea();
+  const feature = getSearchArea();
   return {
     feature,
     scopeLabel: state.currentPlot ? state.currentPlotLabel : "Canton Mejia",
@@ -1608,11 +2111,12 @@ function buildLocalAnalysis(image, context) {
   return {
     imageId: image.id,
     imageDate: image.date,
+    sensorId: image.sensorId,
     context,
     summary,
     quality,
-    management: deriveManagementMix(summary.NDVI, context.areaHa),
-    diagnostics: deriveDiagnostics(summary, quality),
+    management: deriveManagementMix(summary[getFocusIndexKey(image)], context.areaHa, image),
+    diagnostics: deriveDiagnostics(summary, quality, image),
     surface: buildAnalysisSurface(context, summary, image),
     processingMode: "local",
     cacheHit: false,
@@ -1621,8 +2125,12 @@ function buildLocalAnalysis(image, context) {
 }
 
 function buildChangeAnalysis(primaryAnalysis, compareAnalysis) {
+  const supportedIndexKeys = getSupportedIndexKeys(primaryAnalysis.sensorId);
+  const directionKey = getSensorConfig(primaryAnalysis.sensorId).directionIndex;
+  const zoneKey = getSensorConfig(primaryAnalysis.sensorId).zoneIndex;
+  const zoneThreshold = getZoneDeltaThreshold(zoneKey);
   const summary = {};
-  Object.keys(indexConfig).forEach((indexKey) => {
+  supportedIndexKeys.forEach((indexKey) => {
     summary[indexKey] = {
       mean: primaryAnalysis.summary[indexKey].mean - compareAnalysis.summary[indexKey].mean,
       p10: primaryAnalysis.summary[indexKey].p10 - compareAnalysis.summary[indexKey].p10,
@@ -1638,10 +2146,14 @@ function buildChangeAnalysis(primaryAnalysis, compareAnalysis) {
     features: primaryFeatures.map((feature, index) => {
       const compareFeature = compareFeatures[index];
       const properties = {};
-      Object.keys(indexConfig).forEach((indexKey) => {
+      supportedIndexKeys.forEach((indexKey) => {
         properties[indexKey] = feature.properties[indexKey] - (compareFeature?.properties?.[indexKey] ?? 0);
       });
-      properties.zone = properties.NDVI >= 0.04 ? "improve" : properties.NDVI <= -0.04 ? "decline" : "stable";
+      properties.zone = properties[zoneKey] >= zoneThreshold
+        ? "improve"
+        : properties[zoneKey] <= -zoneThreshold
+          ? "decline"
+          : "stable";
       return {
         ...feature,
         properties,
@@ -1653,11 +2165,12 @@ function buildChangeAnalysis(primaryAnalysis, compareAnalysis) {
   const strongestIndex = getStrongestChangeIndex(summary);
 
   return {
+    sensorId: primaryAnalysis.sensorId,
     summary,
     surface,
     strongestIndex,
     daysBetween,
-    direction: summary.NDVI.mean >= 0 ? "recuperacion" : "caida",
+    direction: summary[directionKey].mean >= 0 ? "recuperacion" : "caida",
   };
 }
 
@@ -1665,7 +2178,7 @@ function normalizeAnalysisSummary(summary, image, context) {
   const fallback = buildIndexSummary(image, context);
   const normalized = {};
 
-  Object.keys(indexConfig).forEach((indexKey) => {
+  getSupportedIndexKeys(image).forEach((indexKey) => {
     const config = indexConfig[indexKey];
     const source = summary?.[indexKey];
     const mean = Number(source?.mean);
@@ -1686,10 +2199,11 @@ function normalizeAnalysisSummary(summary, image, context) {
 }
 
 function estimateQualityProfile(image, context, summary) {
+  const focusKey = getFocusIndexKey(image);
   const confidenceScore = estimateSceneConfidence(image, context.freshnessDays);
-  const ndviStability = 100 - Math.min(summary.NDVI.variability, 45);
+  const focusStability = 100 - Math.min(summary[focusKey].variability, 45);
   const areaPenalty = Math.min(Math.log10(context.areaHa + 1) * 6, 14);
-  const coveragePct = Math.round(clamp(confidenceScore * 0.88 + ndviStability * 0.12 - areaPenalty, 42, 99));
+  const coveragePct = Math.round(clamp(confidenceScore * 0.88 + focusStability * 0.12 - areaPenalty, 42, 99));
 
   return {
     confidenceScore,
@@ -1699,15 +2213,11 @@ function estimateQualityProfile(image, context, summary) {
 }
 
 function buildIndexSummary(image, context) {
+  const sensor = getSensorForImage(image);
   const summary = {};
-  const wizardBias = {
-    Monitoreo: { NDVI: 0.02, NDWI: 0.01, NDRE: 0.01, MSAVI: 0 },
-    Siembra: { NDVI: -0.01, NDWI: 0.02, NDRE: 0, MSAVI: 0.02 },
-    Cosecha: { NDVI: -0.02, NDWI: -0.01, NDRE: 0.03, MSAVI: 0.01 },
-    Diagnostico: { NDVI: -0.01, NDWI: 0.02, NDRE: 0.02, MSAVI: 0 },
-  };
+  const wizardBias = getWizardBiasBySensor(sensor.id);
 
-  Object.keys(indexConfig).forEach((indexKey, index) => {
+  sensor.indices.forEach((indexKey, index) => {
     const config = indexConfig[indexKey];
     const base = image.baseIndices[indexKey];
     const localBias = pseudoNoise(context.centroid[0] * 6.4, context.centroid[1] * 4.7, 17 + index * 13) * 0.045;
@@ -1735,6 +2245,10 @@ function buildIndexSummary(image, context) {
 }
 
 function buildAnalysisSurface(context, summary, image) {
+  const sensor = getSensorForImage(image);
+  const zoneKey = sensor.zoneIndex;
+  const zoneConfig = indexConfig[zoneKey];
+  const zoneRange = zoneConfig.max - zoneConfig.min || 1;
   const cellSize = context.scopeType === "plot"
     ? clamp(Math.sqrt(context.areaHa + 0.1) / 28, 0.06, 0.24)
     : clamp(Math.sqrt(context.areaHa + 1) / 16, 1.2, 2.6);
@@ -1750,7 +2264,7 @@ function buildAnalysisSurface(context, summary, image) {
       const [lon, lat] = centroid.geometry.coordinates;
       const properties = {};
 
-      Object.keys(indexConfig).forEach((indexKey, position) => {
+      sensor.indices.forEach((indexKey, position) => {
         const config = indexConfig[indexKey];
         const stats = summary[indexKey];
         const amplitude = Math.max((stats.p90 - stats.p10) / 2, 0.012);
@@ -1763,9 +2277,9 @@ function buildAnalysisSurface(context, summary, image) {
         );
       });
 
-      properties.zone = properties.NDVI >= Math.max(summary.NDVI.mean + 0.035, 0.66)
+      properties.zone = properties[zoneKey] >= summary[zoneKey].mean + zoneRange * 0.035
         ? "high"
-        : properties.NDVI <= Math.min(summary.NDVI.mean - 0.04, 0.5)
+        : properties[zoneKey] <= summary[zoneKey].mean - zoneRange * 0.04
           ? "low"
           : "medium";
       return { ...cell, properties };
@@ -1775,9 +2289,14 @@ function buildAnalysisSurface(context, summary, image) {
   return { type: "FeatureCollection", features };
 }
 
-function deriveManagementMix(ndviStats, areaHa) {
-  const rawHigh = clamp(24 + (ndviStats.mean - 0.58) * 120 - ndviStats.variability * 0.16, 10, 58);
-  const rawLow = clamp(18 + (0.56 - ndviStats.mean) * 135 + ndviStats.variability * 0.2 + areaHa * 0.01, 8, 56);
+function deriveManagementMix(focusStats, areaHa, imageOrSensor = null) {
+  const sensor = typeof imageOrSensor === "string"
+    ? getSensorConfig(imageOrSensor)
+    : getSensorForImage(imageOrSensor);
+  const focusConfig = indexConfig[sensor.focusIndex];
+  const normalizedMean = normalizeMetricValue(focusStats.mean, focusConfig);
+  const rawHigh = clamp(18 + normalizedMean * 42 - focusStats.variability * 0.16, 10, 58);
+  const rawLow = clamp(14 + (1 - normalizedMean) * 40 + focusStats.variability * 0.2 + areaHa * 0.01, 8, 56);
   const high = Math.round(rawHigh);
   const low = Math.round(rawLow);
   const medium = Math.max(100 - high - low, 8);
@@ -1787,30 +2306,79 @@ function deriveManagementMix(ndviStats, areaHa) {
     high: adjustedHigh,
     medium,
     low,
-    recommendedAction: adjustedHigh > low ? "Prioriza sectores de alto potencial." : "Enfoca verificacion en zonas bajas.",
+    recommendedAction: adjustedHigh > low
+      ? `Prioriza sectores con ${focusConfig.label} alto.`
+      : `Enfoca verificacion en zonas con ${focusConfig.label} bajo.`,
   };
 }
 
-function deriveDiagnostics(summary, quality) {
-  const moistureSignal = summary.NDWI.mean < 0.12
-    ? "Deficit hidrico probable"
-    : summary.NDWI.mean > 0.24
-      ? "Humedad alta"
-      : "Humedad equilibrada";
-  const vigorSignal = summary.NDVI.mean < 0.55
-    ? "Vigor irregular"
-    : summary.NDVI.mean > 0.7
-      ? "Vigor alto"
-      : "Vigor medio";
-  const recommendedIndex = getRecommendedIndex(summary);
-  const alertLevel = quality.confidenceScore < 55 || summary.NDVI.variability > 26
+function deriveDiagnostics(summary, quality, image = null) {
+  const sensor = getSensorForImage(image);
+  const moistureKey = sensor.moistureIndex;
+  const focusKey = sensor.focusIndex;
+  const moistureConfig = indexConfig[moistureKey];
+  const focusConfig = indexConfig[focusKey];
+  const moistureNormalized = normalizeMetricValue(summary[moistureKey].mean, moistureConfig);
+  const focusNormalized = normalizeMetricValue(summary[focusKey].mean, focusConfig);
+  const moistureSignal = sensor.id === "sentinel1"
+    ? moistureNormalized < 0.34
+      ? "Retrodispersion humeda baja"
+      : moistureNormalized > 0.64
+        ? "Retrodispersion humeda alta"
+        : "Retrodispersion equilibrada"
+    : moistureNormalized < 0.34
+      ? "Deficit hidrico probable"
+      : moistureNormalized > 0.64
+        ? "Humedad alta"
+        : "Humedad equilibrada";
+  const vigorSignal = sensor.id === "sentinel1"
+    ? focusNormalized < 0.4
+      ? "Cobertura estructural irregular"
+      : focusNormalized > 0.68
+        ? "Cobertura estructural alta"
+        : "Cobertura estructural media"
+    : focusNormalized < 0.45
+      ? "Vigor irregular"
+      : focusNormalized > 0.7
+        ? "Vigor alto"
+        : "Vigor medio";
+  const recommendedIndex = getRecommendedIndex(summary, image);
+  const alertLevel = quality.confidenceScore < 55 || summary[focusKey].variability > 26
     ? "Seguimiento prioritario"
     : "Condicion estable";
 
   return { moistureSignal, vigorSignal, recommendedIndex, alertLevel };
 }
 
-function getRecommendedIndex(summary) {
+function getRecommendedIndex(summary, image = null) {
+  const sensor = getSensorForImage(image);
+
+  if (sensor.id === "landsat") {
+    if (summary.NDMI.mean < 0.11) {
+      return "NDMI";
+    }
+    if (summary.NDVI.variability > 24) {
+      return "MSAVI";
+    }
+    if (summary.NDWI.mean > 0.18) {
+      return "NDWI";
+    }
+    return "NDVI";
+  }
+
+  if (sensor.id === "sentinel1") {
+    if (summary.RVI.mean < 0.38) {
+      return "RVI";
+    }
+    if (summary.VH_VV.mean > 0.54) {
+      return "VH_VV";
+    }
+    if (summary.RVI.variability > 22) {
+      return "VV";
+    }
+    return "RVI";
+  }
+
   if (summary.NDWI.mean < 0.12) {
     return "NDWI";
   }
@@ -1826,19 +2394,20 @@ function getRecommendedIndex(summary) {
 function renderAnalysisStatus() {
   const image = getSelectedImage();
   const compareImage = getCompareImage();
+  const sensor = image ? getSensorForImage(image) : getActiveSensor();
   dom.useStudyAreaBtn.disabled = !state.currentPlot;
   dom.rerunAnalysisBtn.disabled = state.analysisBusy || !image;
   dom.analysisStatus.className = "service-banner";
 
   if (!image) {
     dom.analysisStatus.classList.add("local-processing");
-    dom.analysisStatus.textContent = "Selecciona una escena para generar el perfil operativo del AOI.";
+    dom.analysisStatus.textContent = `Selecciona una escena de ${sensor.label} para generar el perfil operativo del AOI.`;
     return;
   }
 
   if (state.analysisBusy) {
     dom.analysisStatus.classList.add("loading");
-    dom.analysisStatus.textContent = `Procesando ${state.selectedIndex} para ${state.currentPlot ? state.currentPlotLabel : "Canton Mejia"}...`;
+    dom.analysisStatus.textContent = `Procesando ${indexConfig[state.selectedIndex].label} para ${state.currentPlot ? state.currentPlotLabel : "Canton Mejia"}...`;
     return;
   }
 
@@ -1852,7 +2421,7 @@ function renderAnalysisStatus() {
 
     dom.analysisStatus.classList.add(image.source === "real" ? "local-processing" : "demo");
     dom.analysisStatus.textContent = image.source === "real"
-      ? `Procesamiento local calibrado por la escena real${compareImage ? " y una segunda escena temporal" : ""}. Sirve para exploracion operativa del AOI; el pixel-raster real requerira un motor geoespacial adicional.`
+      ? `Procesamiento local calibrado para ${sensor.label}${compareImage ? " y una segunda escena temporal" : ""}. Sirve para exploracion operativa del AOI; el pixel-raster real requerira un motor geoespacial adicional.`
       : "Procesamiento local en modo demo para mantener el flujo de analisis.";
     return;
   }
@@ -1884,7 +2453,7 @@ function renderAnalysisSummary() {
       copy: `Nubes ${formatCloudValue(image.cloud)} y antiguedad ${formatAgeLabel(analysis.quality.freshnessDays).toLowerCase()}.`,
     },
     {
-      label: state.selectedIndex,
+      label: indexConfig[state.selectedIndex].label,
       value: formatValue(stats.mean, indexConfig[state.selectedIndex]),
       copy: `Rango operativo P10 ${formatValue(stats.p10, indexConfig[state.selectedIndex])} / P90 ${formatValue(stats.p90, indexConfig[state.selectedIndex])}.`,
       highlight: true,
@@ -1941,7 +2510,7 @@ function renderCompareSummary() {
       copy: `${compare.title} | Nubes ${formatCloudValue(compare.cloud)}.`,
     },
     {
-      label: `Cambio ${state.selectedIndex}`,
+      label: `Cambio ${indexConfig[state.selectedIndex].label}`,
       value: formatDelta(currentDelta.mean, indexConfig[state.selectedIndex]),
       copy: `Rango delta P10 ${formatDelta(currentDelta.p10, indexConfig[state.selectedIndex])} / P90 ${formatDelta(currentDelta.p90, indexConfig[state.selectedIndex])}.`,
       highlight: true,
@@ -1954,7 +2523,7 @@ function renderCompareSummary() {
     {
       label: "Lectura dominante",
       value: change.direction === "recuperacion" ? "Mejora" : "Descenso",
-      copy: `Indice con mayor cambio: ${change.strongestIndex}.`,
+      copy: `Indice con mayor cambio: ${indexConfig[change.strongestIndex].label}.`,
     },
     {
       label: "Mapa",
@@ -2011,7 +2580,7 @@ function renderSentinelOverlay() {
 
   const image = getSelectedImage();
   if (!image) {
-    setStatus("No hay escena activa. Usa el filtro Sentinel-2 para seleccionar una imagen.");
+    setStatus(`No hay escena activa. Usa el filtro de ${getActiveSensor().label} para seleccionar una imagen.`);
     return;
   }
 
@@ -2054,7 +2623,7 @@ function renderSentinelOverlay() {
               : "Estable"
           : `Zona ${feature.properties.zone}`;
         layer.bindTooltip(
-          `${state.selectedIndex}: ${tooltipValue} | ${zoneLabel}`,
+          `${indexConfig[state.selectedIndex].label}: ${tooltipValue} | ${zoneLabel}`,
           { sticky: true }
         );
       },
@@ -2076,14 +2645,14 @@ function renderSentinelOverlay() {
 
   if (!state.analysisBusy) {
     if (state.surfaceMode === "change" && changeAnalysis && getCompareImage()) {
-      setStatus(`Cambio temporal ${state.selectedIndex} entre ${image.date} y ${getCompareImage().date} sobre ${analysis.context.scopeLabel}.`);
+      setStatus(`Cambio temporal ${indexConfig[state.selectedIndex].label} entre ${image.date} y ${getCompareImage().date} sobre ${analysis.context.scopeLabel}.`);
     } else {
       const sourceLabel = analysis.processingMode === "backend"
         ? "backend local"
         : image.source === "real"
           ? "motor local calibrado"
           : "motor demo";
-      setStatus(`Escena ${image.title} activa con ${state.selectedIndex} sobre ${analysis.context.scopeLabel} usando ${sourceLabel}.`);
+      setStatus(`Escena ${image.title} activa con ${indexConfig[state.selectedIndex].label} sobre ${analysis.context.scopeLabel} usando ${sourceLabel}.`);
     }
   }
 }
@@ -2115,7 +2684,7 @@ function renderRealSceneFootprint(image, fitBounds = false) {
   ).addTo(mapState.map);
 
   mapState.sceneFootprintLayer.bindPopup(
-    `<div>${popupThumb}<h3 class="popup-title">${image.title}</h3><p class="popup-copy">Escena real consultada desde Copernicus STAC. ${image.note}</p></div>`
+    `<div>${popupThumb}<h3 class="popup-title">${image.title}</h3><p class="popup-copy">Escena real consultada desde ${getSensorForImage(image).providerLabel}. ${image.note}</p></div>`
   );
 
   if (mapState.currentPlotLayer) {
@@ -2134,11 +2703,12 @@ function renderRealSceneFootprint(image, fitBounds = false) {
 
 function renderScenePreview(image) {
   const bounds = getScenePreviewBounds(image);
-  if (!image?.thumbnail || !bounds) {
+  const previewHref = image?.previewHref || image?.thumbnail;
+  if (!previewHref || !bounds) {
     return;
   }
 
-  mapState.scenePreviewLayer = L.imageOverlay(image.thumbnail, bounds, {
+  mapState.scenePreviewLayer = L.imageOverlay(previewHref, bounds, {
     opacity: state.scenePreviewOpacity,
     interactive: false,
     className: "scene-preview-overlay",
@@ -2154,7 +2724,7 @@ async function renderSceneLayer(image) {
   state.sceneLayerKind = "loading";
   updateMapSummary();
 
-  if (image.source === "real") {
+  if (image.source === "real" && getSensorForImage(image).exactRaster) {
     const exactLayer = await createExactSceneLayer(image);
     if (exactLayer && image.id === state.selectedImageId && state.showScenePreview) {
       mapState.sceneExactLayer = exactLayer.addTo(mapState.map);
@@ -2210,7 +2780,7 @@ async function createExactSceneLayer(image) {
 
 async function getExactSceneData(image) {
   const parseGeorasterFn = getParseGeorasterFn();
-  if (!image || image.source !== "real" || !parseGeorasterFn) {
+  if (!image || image.source !== "real" || !parseGeorasterFn || !getSensorForImage(image).exactRaster) {
     return null;
   }
 
@@ -2259,7 +2829,7 @@ async function fetchEarthSearchMatch(image) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      collections: [earthSearchService.collection],
+      collections: [sensorCatalog.sentinel2.earthSearchCollection],
       bbox: sceneBounds,
       datetime: `${image.date}T00:00:00Z/${image.date}T23:59:59Z`,
       limit: earthSearchService.limit,
@@ -2373,7 +2943,7 @@ function canRenderSceneLayer(image = getSelectedImage()) {
     return false;
   }
 
-  if (image.source === "real" && getSceneGridCode(image)) {
+  if (getSensorForImage(image).exactRaster && image.source === "real" && getSceneGridCode(image)) {
     return true;
   }
 
@@ -2381,7 +2951,7 @@ function canRenderSceneLayer(image = getSelectedImage()) {
 }
 
 function canRenderThumbnailPreview(image = getSelectedImage()) {
-  return Boolean(image?.thumbnail && getScenePreviewBounds(image));
+  return Boolean((image?.previewHref || image?.thumbnail) && getScenePreviewBounds(image));
 }
 
 function getScenePreviewBounds(image) {
@@ -2518,7 +3088,10 @@ function runIntraloteAnalysis(silent = false) {
     return;
   }
 
-  const image = getSelectedImage() || enrichSceneMetadata({ ...sentinelImages[0], source: "demo", datetime: `${sentinelImages[0].date}T10:15:00Z` });
+  const image = getSelectedImage() || getFallbackScene();
+  if (!image) {
+    return;
+  }
   const plotTarget = {
     feature: state.currentPlot,
     scopeLabel: state.currentPlotLabel,
@@ -2533,8 +3106,8 @@ function runIntraloteAnalysis(silent = false) {
     { label: "Superficie", value: `${analysis.context.areaHa.toFixed(1)} ha`, copy: "Calculada sobre el poligono activo." },
     { label: "Cobertura util", value: `${analysis.quality.coveragePct}%`, copy: `Confianza ${analysis.quality.confidenceScore}/100 para la escena activa.` },
     { label: "Zonas de manejo", value: managementText, copy: analysis.management.recommendedAction },
-    ...Object.keys(indexConfig).map((indexKey) => ({
-      label: indexKey,
+    ...getSupportedIndexKeys(image).map((indexKey) => ({
+      label: indexConfig[indexKey].label,
       value: formatValue(analysis.summary[indexKey].mean, indexConfig[indexKey]),
       copy: `Rango P10 ${formatValue(analysis.summary[indexKey].p10, indexConfig[indexKey])} / P90 ${formatValue(analysis.summary[indexKey].p90, indexConfig[indexKey])}.`,
     })),
@@ -2553,6 +3126,8 @@ function runIntraloteAnalysis(silent = false) {
 }
 
 function renderManagementZones(analysis) {
+  const focusKey = getFocusIndexKey(analysis.sensorId);
+  const focusLabel = indexConfig[focusKey].label;
   if (mapState.managementLayer) {
     mapState.map.removeLayer(mapState.managementLayer);
     mapState.managementLayer = null;
@@ -2576,7 +3151,7 @@ function renderManagementZones(analysis) {
         }),
         onEachFeature: (feature, layer) => {
           layer.bindTooltip(
-            `Zona ${feature.properties.zone} / NDVI ${feature.properties.NDVI.toFixed(2)}`,
+            `Zona ${feature.properties.zone} / ${focusLabel} ${formatValue(feature.properties[focusKey], indexConfig[focusKey])}`,
             { sticky: true }
           );
         },
@@ -2597,7 +3172,10 @@ function runDemAnalysis(silent = false) {
     return;
   }
 
-  const image = getSelectedImage() || enrichSceneMetadata({ ...sentinelImages[0], source: "demo", datetime: `${sentinelImages[0].date}T10:15:00Z` });
+  const image = getSelectedImage() || getFallbackScene();
+  if (!image) {
+    return;
+  }
   const plotTarget = {
     feature: state.currentPlot,
     scopeLabel: state.currentPlotLabel,
@@ -2611,7 +3189,10 @@ function runDemAnalysis(silent = false) {
   const meanSlope = clamp(3 + Math.abs(pseudoNoise(centroid[0], centroid[1], 7)) * 12 + areaHa / 14, 2, 18);
   const maxSlope = clamp(meanSlope + 7 + Math.abs(pseudoNoise(centroid[1], centroid[0], 3)) * 8, 7, 31);
   const aspect = cardinalFromAngle((pseudoNoise(centroid[0], centroid[1], 13) + 1) * 180);
-  const floodRisk = analysis.summary.NDWI.mean > 0.22 && meanSlope < 7
+  const moistureKey = getMoistureIndexKey(image);
+  const focusKey = getFocusIndexKey(image);
+  const moistureNormalized = normalizeMetricValue(analysis.summary[moistureKey].mean, indexConfig[moistureKey]);
+  const floodRisk = moistureNormalized > 0.58 && meanSlope < 7
     ? "Medio - Alto"
     : meanSlope < 10
       ? "Medio"
@@ -2623,7 +3204,7 @@ function runDemAnalysis(silent = false) {
     { label: "Pendiente maxima", value: `${maxSlope.toFixed(1)}%`, copy: "Sector de mayor exigencia para mecanizacion." },
     { label: "Orientacion", value: aspect, copy: "Exposicion dominante del relieve del lote." },
     { label: "Riesgo de anegamiento", value: floodRisk, copy: "Cruza pendiente y senal de humedad del AOI." },
-    { label: "Lectura operativa", value: meanSlope > 10 ? "Manejo cuidadoso" : "Operacion favorable", copy: `Variabilidad NDVI ${analysis.summary.NDVI.variability}%.` },
+    { label: "Lectura operativa", value: meanSlope > 10 ? "Manejo cuidadoso" : "Operacion favorable", copy: `Variabilidad ${indexConfig[focusKey].label} ${analysis.summary[focusKey].variability}%.` },
   ];
 
   paintMetricGrid(dom.demResults, cards);
@@ -2634,7 +3215,10 @@ function runDemAnalysis(silent = false) {
 
 function runClimateAnalysis(silent = false) {
   const anchorFeature = state.currentPlot || studyArea;
-  const image = getSelectedImage() || enrichSceneMetadata({ ...sentinelImages[0], source: "demo", datetime: `${sentinelImages[0].date}T10:15:00Z` });
+  const image = getSelectedImage() || getFallbackScene();
+  if (!image) {
+    return;
+  }
   const target = state.currentPlot
     ? {
       feature: state.currentPlot,
@@ -2650,19 +3234,21 @@ function runClimateAnalysis(silent = false) {
     };
   const analysis = resolveAnalysisForTarget(image, target);
   const centroid = turf.centroid(anchorFeature).geometry.coordinates;
-  const baseline = analysis.summary.NDWI.mean;
-  const vigor = analysis.summary.NDVI.mean;
-  const rainfall = 9 + Math.round(Math.abs(pseudoNoise(centroid[0], centroid[1], 19)) * 32 + (0.24 - baseline) * 16);
+  const moistureKey = getMoistureIndexKey(image);
+  const focusKey = getFocusIndexKey(image);
+  const baseline = normalizeMetricValue(analysis.summary[moistureKey].mean, indexConfig[moistureKey]);
+  const vigor = normalizeMetricValue(analysis.summary[focusKey].mean, indexConfig[focusKey]);
+  const rainfall = 9 + Math.round(Math.abs(pseudoNoise(centroid[0], centroid[1], 19)) * 32 + (0.55 - baseline) * 16);
   const minTemp = 6 + Math.abs(pseudoNoise(centroid[1], centroid[0], 2)) * 3;
-  const maxTemp = 18 + Math.abs(pseudoNoise(centroid[0], centroid[1], 5)) * 7 + (vigor < 0.55 ? 1.2 : 0);
-  const soilMoisture = clamp(42 + baseline * 80 + pseudoNoise(centroid[0], centroid[1], 17) * 8, 24, 72);
+  const maxTemp = 18 + Math.abs(pseudoNoise(centroid[0], centroid[1], 5)) * 7 + (vigor < 0.45 ? 1.2 : 0);
+  const soilMoisture = clamp(24 + baseline * 48 + pseudoNoise(centroid[0], centroid[1], 17) * 8, 24, 72);
   const lst = clamp(20 + Math.abs(pseudoNoise(centroid[0], centroid[1], 23)) * 10 - baseline * 3, 18, 31);
-  const stress = lst > 27 || vigor < 0.55 ? "Atencion" : "Controlado";
+  const stress = lst > 27 || vigor < 0.45 ? "Atencion" : "Controlado";
 
   const cards = [
     { label: "Lluvia 7 dias", value: `${rainfall} mm`, copy: "Acumulado de referencia tipo ERA5-Land." },
     { label: "Temperatura aire", value: `${minTemp.toFixed(1)} - ${maxTemp.toFixed(1)} C`, copy: "Rango diario esperado sobre el lote o zona activa." },
-    { label: "Humedad estimada", value: `${soilMoisture.toFixed(0)}%`, copy: "Ajustada con la senal NDWI del AOI." },
+    { label: "Humedad estimada", value: `${soilMoisture.toFixed(0)}%`, copy: `Ajustada con la senal ${indexConfig[moistureKey].label} del AOI.` },
     { label: "LST MODIS", value: `${lst.toFixed(1)} C`, copy: "Temperatura superficial para seguimiento de estres termico." },
     { label: "Estado termico", value: stress, copy: `Lectura de vigor: ${analysis.diagnostics.vigorSignal}.` },
     { label: "Escena base", value: localeDate.format(new Date(`${image.date}T00:00:00`)), copy: `AOI ${analysis.context.scopeLabel}.` },
@@ -2750,6 +3336,7 @@ function ensurePlot(message, silent = false) {
 
 function updateMapSummary() {
   const image = getSelectedImage();
+  const sensor = image ? getSensorForImage(image) : getActiveSensor();
   const analysis = getRenderableAnalysis(image);
   const compareImage = getCompareImage();
   const changeAnalysis = getRenderableChangeAnalysis(image, compareImage);
@@ -2762,12 +3349,12 @@ function updateMapSummary() {
           ? "preview"
           : "sin capa"
     : "capa oculta";
-  dom.overlayIndex.textContent = state.selectedIndex;
+  dom.overlayIndex.textContent = indexConfig[state.selectedIndex].label;
 
   if (!image) {
     dom.mapTitle.textContent = "No hay escena activa";
     renderMapBadges();
-    dom.mapSubtitle.textContent = "Ajusta el filtro Sentinel-2 para cargar una imagen sobre el visor.";
+    dom.mapSubtitle.textContent = `Ajusta el filtro de ${sensor.label} para cargar una imagen sobre el visor.`;
     return;
   }
 
@@ -2776,7 +3363,7 @@ function updateMapSummary() {
   if (analysis) {
     if (state.surfaceMode === "change" && changeAnalysis && compareImage) {
       const delta = changeAnalysis.summary[state.selectedIndex];
-      dom.mapTitle.textContent = `Cambio ${state.selectedIndex} sobre ${analysis.context.scopeLabel}`;
+      dom.mapTitle.textContent = `Cambio ${indexConfig[state.selectedIndex].label} sobre ${analysis.context.scopeLabel}`;
       dom.mapSubtitle.textContent = `Lectura temporal ${changeAnalysis.direction} con delta medio ${formatDelta(delta.mean, indexConfig[state.selectedIndex])}.`;
       return;
     }
@@ -2789,7 +3376,7 @@ function updateMapSummary() {
         : image.source === "real"
           ? "AOI local"
           : "motor demo";
-    dom.mapTitle.textContent = `${state.selectedIndex} sobre ${analysis.context.scopeLabel}`;
+    dom.mapTitle.textContent = `${indexConfig[state.selectedIndex].label} sobre ${analysis.context.scopeLabel}`;
     dom.mapSubtitle.textContent = `Media ${formatValue(stats.mean, indexConfig[state.selectedIndex])} con ${modeLabel}.`;
     return;
   }
@@ -2800,7 +3387,7 @@ function updateMapSummary() {
     return;
   }
 
-  dom.mapTitle.textContent = `${state.selectedIndex} sobre ${image.title}`;
+  dom.mapTitle.textContent = `${indexConfig[state.selectedIndex].label} sobre ${image.title}`;
   dom.mapSubtitle.textContent = image.note;
 }
 
@@ -2824,11 +3411,15 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
   const badges = [
     {
       tone: "neutral",
+      label: getSensorForImage(image).label,
+    },
+    {
+      tone: "neutral",
       label: localeDate.format(new Date(`${image.date}T00:00:00`)),
     },
     {
       tone: "neutral",
-      label: `Nubes ${formatCloudValue(image.cloud)}`,
+      label: getSceneMetaLabel(image),
     },
     {
       tone: rasterTone,
@@ -2889,16 +3480,21 @@ function getChangeConfig(indexKey) {
   const ranges = {
     NDVI: 0.28,
     NDWI: 0.22,
+    NDMI: 0.22,
     NDRE: 0.2,
     MSAVI: 0.28,
+    VV: 3.2,
+    VH: 3.6,
+    RVI: 0.24,
+    VH_VV: 0.18,
   };
   return {
-    label: `Delta ${indexKey}`,
-    min: -ranges[indexKey],
-    max: ranges[indexKey],
+    label: `Delta ${indexConfig[indexKey].label}`,
+    min: -(ranges[indexKey] || 0.2),
+    max: ranges[indexKey] || 0.2,
     unit: "",
     colors: ["#9f4a36", "#d69a64", "#f6f1e7", "#88c2b0", "#1d6b49"],
-    description: `Cambio temporal de ${indexKey} entre la escena activa y la comparada.`,
+    description: `Cambio temporal de ${indexConfig[indexKey].label} entre la escena activa y la comparada.`,
   };
 }
 
@@ -2918,7 +3514,7 @@ function formatDelta(value, config) {
 function getStrongestChangeIndex(summary) {
   return Object.keys(summary)
     .map((indexKey) => ({ indexKey, score: Math.abs(summary[indexKey].mean) }))
-    .sort((a, b) => b.score - a.score)[0]?.indexKey || "NDVI";
+    .sort((a, b) => b.score - a.score)[0]?.indexKey || getActiveSensor().defaultIndex;
 }
 
 function dayDiff(dateA, dateB) {
@@ -2934,10 +3530,16 @@ function getSceneAgeDays(image) {
 }
 
 function estimateSceneConfidence(image, freshnessDays = getSceneAgeDays(image)) {
-  const cloudPenalty = Number.isFinite(image.cloud) ? image.cloud * 0.55 : 18;
-  const freshnessPenalty = Math.min(freshnessDays * 1.4, 24);
+  const sensor = getSensorForImage(image);
+  const cloudPenalty = sensor.cloudEnabled
+    ? Number.isFinite(image.cloud)
+      ? image.cloud * 0.55
+      : 18
+    : 6;
+  const freshnessPenalty = Math.min(freshnessDays * (sensor.id === "sentinel1" ? 1.1 : 1.4), sensor.id === "sentinel1" ? 18 : 24);
   const sourceBonus = image.source === "real" ? 12 : 0;
-  return Math.round(clamp(92 - cloudPenalty - freshnessPenalty + sourceBonus, 28, 98));
+  const sensorBonus = sensor.id === "sentinel1" ? 4 : sensor.id === "landsat" ? 2 : 0;
+  return Math.round(clamp(92 - cloudPenalty - freshnessPenalty + sourceBonus + sensorBonus, 28, 98));
 }
 
 function formatAgeLabel(days) {
@@ -3026,8 +3628,12 @@ function normalizeDateRange(start, end) {
   return start <= end ? { start, end } : { start: end, end: start };
 }
 
-function getSentinelSearchArea() {
+function getSearchArea() {
   return state.currentPlot || studyArea;
+}
+
+function getSentinelSearchArea() {
+  return getSearchArea();
 }
 
 function formatCloudValue(value) {
@@ -3037,18 +3643,100 @@ function formatCloudValue(value) {
   return `${Number(value.toFixed(1))}%`;
 }
 
-function formatPlatform(platform) {
+function formatPlatform(platform, fallback = getActiveSensor().label) {
   if (!platform) {
-    return "Sentinel-2";
+    return fallback;
   }
+
+  if (/^landsat-/i.test(platform)) {
+    return platform.replace(/^landsat-(\d+)/i, "Landsat $1");
+  }
+
   return platform
     .replace(/^sentinel-/i, "Sentinel-")
     .replace(/([0-9])([a-z])/i, (_, number, letter) => `${number}${letter.toUpperCase()}`);
 }
 
-function deriveBetaIndicesFromScene(sceneId, cloudCover) {
+function formatOrbitState(orbitState) {
+  if (!orbitState) {
+    return "Orbita s/d";
+  }
+  return orbitState === "ascending"
+    ? "Ascendente"
+    : orbitState === "descending"
+      ? "Descendente"
+      : orbitState;
+}
+
+function getWizardBiasBySensor(sensorId) {
+  if (sensorId === "landsat") {
+    return {
+      Monitoreo: { NDVI: 0.02, NDMI: 0.015, NDWI: 0.01, MSAVI: 0 },
+      Siembra: { NDVI: -0.01, NDMI: 0.02, NDWI: 0.01, MSAVI: 0.02 },
+      Cosecha: { NDVI: -0.02, NDMI: -0.01, NDWI: -0.01, MSAVI: 0.02 },
+      Diagnostico: { NDVI: -0.01, NDMI: 0.02, NDWI: 0.02, MSAVI: 0.01 },
+    };
+  }
+
+  if (sensorId === "sentinel1") {
+    return {
+      Monitoreo: { RVI: 0.03, VH_VV: 0.02, VV: 0.5, VH: 0.3 },
+      Siembra: { RVI: -0.01, VH_VV: 0.03, VV: 0.2, VH: 0.2 },
+      Cosecha: { RVI: -0.03, VH_VV: -0.01, VV: -0.4, VH: -0.5 },
+      Diagnostico: { RVI: -0.02, VH_VV: 0.04, VV: 0.6, VH: 0.5 },
+    };
+  }
+
+  return {
+    Monitoreo: { NDVI: 0.02, NDWI: 0.01, NDRE: 0.01, MSAVI: 0 },
+    Siembra: { NDVI: -0.01, NDWI: 0.02, NDRE: 0, MSAVI: 0.02 },
+    Cosecha: { NDVI: -0.02, NDWI: -0.01, NDRE: 0.03, MSAVI: 0.01 },
+    Diagnostico: { NDVI: -0.01, NDWI: 0.02, NDRE: 0.02, MSAVI: 0 },
+  };
+}
+
+function getZoneDeltaThreshold(indexKey) {
+  const thresholdMap = {
+    NDVI: 0.04,
+    NDWI: 0.035,
+    NDMI: 0.035,
+    NDRE: 0.03,
+    MSAVI: 0.04,
+    VV: 0.8,
+    VH: 0.9,
+    RVI: 0.05,
+    VH_VV: 0.04,
+  };
+  return thresholdMap[indexKey] || 0.04;
+}
+
+function deriveBetaIndicesFromScene(sceneId, cloudCover, sensorId = state.activeSensorId) {
   const cloudPenalty = Number.isFinite(cloudCover) ? cloudCover / 100 : 0.25;
   const seed = Array.from(sceneId || "scene").reduce((total, char) => total + char.charCodeAt(0), 0);
+
+  if (sensorId === "landsat") {
+    const base = clamp(0.68 - cloudPenalty * 0.18 + pseudoNoise(seed, cloudPenalty, 13) * 0.05, 0.24, 0.82);
+    return {
+      NDVI: clamp(base, 0.18, 0.9),
+      NDMI: clamp(0.16 - cloudPenalty * 0.1 + pseudoNoise(seed, cloudPenalty, 17) * 0.05, -0.08, 0.42),
+      NDWI: clamp(0.1 - cloudPenalty * 0.08 + pseudoNoise(seed, cloudPenalty, 19) * 0.04, -0.12, 0.32),
+      MSAVI: clamp(base - 0.07 + pseudoNoise(seed, cloudPenalty, 23) * 0.04, 0.16, 0.82),
+    };
+  }
+
+  if (sensorId === "sentinel1") {
+    const rvi = clamp(0.5 + pseudoNoise(seed, cloudPenalty, 29) * 0.12 + pseudoNoise(seed, cloudPenalty, 31) * 0.05, 0.18, 0.86);
+    const ratio = clamp(0.42 + pseudoNoise(seed, cloudPenalty, 37) * 0.09, 0.14, 0.76);
+    const vv = clamp(-11.4 + pseudoNoise(seed, cloudPenalty, 41) * 2.4 - ratio * 1.6, -20.8, -6.2);
+    const vh = clamp(vv - 6.2 + pseudoNoise(seed, cloudPenalty, 43) * 1.7, -27.8, -11.4);
+    return {
+      RVI: rvi,
+      VH_VV: ratio,
+      VV: vv,
+      VH: vh,
+    };
+  }
+
   const base = clamp(0.74 - cloudPenalty * 0.22 + pseudoNoise(seed, cloudPenalty, 3) * 0.04, 0.28, 0.82);
 
   return {
