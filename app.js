@@ -408,6 +408,7 @@ const state = {
   selectedIndex: "NDVI",
   surfaceMode: "primary",
   showScenePreview: true,
+  showAnalysisOverlay: true,
   scenePreviewOpacity: 0.85,
   sceneLayerKind: "off",
   filteredImages: [],
@@ -477,6 +478,7 @@ function cacheDom() {
   dom.compareSceneSelect = document.querySelector("#compareSceneSelect");
   dom.toggleSurfaceModeBtn = document.querySelector("#toggleSurfaceModeBtn");
   dom.clearCompareBtn = document.querySelector("#clearCompareBtn");
+  dom.toggleAnalysisOverlayBtn = document.querySelector("#toggleAnalysisOverlayBtn");
   dom.toggleScenePreviewBtn = document.querySelector("#toggleScenePreviewBtn");
   dom.scenePreviewOpacity = document.querySelector("#scenePreviewOpacity");
   dom.scenePreviewOpacityValue = document.querySelector("#scenePreviewOpacityValue");
@@ -593,6 +595,16 @@ function bindUI() {
     renderSceneControls();
     renderSentinelResults();
     refreshActiveAnalysis({ silent: true });
+  });
+
+  dom.toggleAnalysisOverlayBtn.addEventListener("click", () => {
+    if (!getSelectedImage()) {
+      return;
+    }
+    state.showAnalysisOverlay = !state.showAnalysisOverlay;
+    renderSceneControls();
+    renderSentinelOverlay();
+    updateMapSummary();
   });
 
   dom.toggleScenePreviewBtn.addEventListener("click", () => {
@@ -1137,7 +1149,9 @@ function renderSceneControls() {
   dom.compareSceneSelect.disabled = state.filteredImages.length < 2;
   dom.clearCompareBtn.disabled = !compareImage;
   dom.toggleSurfaceModeBtn.disabled = !compareImage;
+  dom.toggleAnalysisOverlayBtn.disabled = !selectedImage;
   dom.toggleSurfaceModeBtn.textContent = state.surfaceMode === "change" ? "Ver escena activa" : "Ver cambio temporal";
+  dom.toggleAnalysisOverlayBtn.textContent = state.showAnalysisOverlay ? "Ver solo escena" : "Ver escena + analisis";
   dom.scenePreviewOpacity.value = Math.round(state.scenePreviewOpacity * 100);
   dom.scenePreviewOpacityValue.textContent = `${Math.round(state.scenePreviewOpacity * 100)}%`;
   dom.scenePreviewOpacity.disabled = !hasScenePreview;
@@ -2016,7 +2030,7 @@ function renderSentinelOverlay() {
     renderRealSceneFootprint(image, !state.currentPlot);
   }
 
-  if (surfaceDataset?.features?.length) {
+  if (state.showAnalysisOverlay && surfaceDataset?.features?.length) {
     mapState.sentinelLayer = L.geoJSON(surfaceDataset, {
       style: (feature) => ({
         weight: 0,
@@ -2819,6 +2833,10 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
     {
       tone: rasterTone,
       label: state.showScenePreview ? previewLabel : "capa oculta",
+    },
+    {
+      tone: state.showAnalysisOverlay ? "analysis" : "muted",
+      label: state.showAnalysisOverlay ? "analisis visible" : "solo escena",
     },
   ];
 

@@ -1023,6 +1023,12 @@ button {
   color: var(--berry);
 }
 
+.map-badge.analysis {
+  background: rgba(47, 127, 95, 0.12);
+  border-color: rgba(47, 127, 95, 0.18);
+  color: var(--leaf-deep);
+}
+
 .map-badge.muted {
   background: rgba(255, 255, 255, 0.54);
   color: var(--muted);
