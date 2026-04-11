@@ -868,26 +868,54 @@ button {
 }
 
 .module-card {
-  gap: 14px;
+  gap: 16px;
+  padding: 20px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(248, 244, 237, 0.72)),
+    radial-gradient(circle at top right, rgba(203, 148, 64, 0.08), transparent 42%);
+  overflow: hidden;
+}
+
+.module-card > * {
+  min-width: 0;
 }
 
 .module-head {
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
-  gap: 10px;
+  gap: 14px;
+}
+
+.module-head > div {
+  min-width: 0;
 }
 
 .module-head h3 {
   font-size: 1.2rem;
+  line-height: 1.1;
+}
+
+.module-head .secondary-button,
+.module-head .ghost-button {
+  justify-self: end;
+  align-self: start;
+  white-space: nowrap;
+}
+
+.module-copy {
+  max-width: 64ch;
 }
 
 .metrics-grid {
   gap: 10px;
+  min-width: 0;
 }
 
 .metrics-grid.has-data {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  align-items: stretch;
 }
 
 .scene-summary.has-data {
@@ -900,6 +928,8 @@ button {
 
 .metric-card {
   padding: 14px;
+  height: 100%;
+  min-height: 136px;
 }
 
 .metric-card.highlight {
@@ -935,6 +965,7 @@ button {
   border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.45);
   color: var(--muted);
+  min-width: 0;
 }
 
 .wizard-steps {
@@ -976,7 +1007,7 @@ button {
 
 .planning-toolbar {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
@@ -998,7 +1029,7 @@ button {
 
 .planning-variable-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
 }
 
@@ -1007,6 +1038,7 @@ button {
   flex-direction: column;
   gap: 10px;
   padding: 14px;
+  min-height: 168px;
   border-radius: var(--radius-md);
   border: 1px solid rgba(47, 61, 50, 0.1);
   background: rgba(255, 255, 255, 0.72);
@@ -1123,6 +1155,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
 }
 
 .planning-candidates.has-data {
@@ -1136,6 +1169,7 @@ button {
   flex-direction: column;
   gap: 12px;
   padding: 16px;
+  min-width: 0;
   border-radius: var(--radius-md);
   border: 1px solid rgba(47, 61, 50, 0.1);
   background: rgba(255, 255, 255, 0.62);
@@ -1156,6 +1190,7 @@ button {
 .planning-candidate-head h4 {
   margin: 0;
   font-family: var(--font-display);
+  line-height: 1.2;
 }
 
 .candidate-rank,
@@ -1172,6 +1207,21 @@ button {
   font-size: 0.73rem;
   font-weight: 700;
   color: var(--leaf-deep);
+}
+
+.planning-card .analysis-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.planning-card .analysis-actions > * {
+  width: 100%;
+}
+
+.planning-card .ghost-button,
+.planning-card .secondary-button {
+  justify-content: center;
 }
 
 .planning-score {
@@ -1619,9 +1669,19 @@ button {
     justify-content: space-between;
   }
 
-  .module-head,
+  .module-head {
+    grid-template-columns: 1fr;
+  }
+
   .section-head {
     flex-direction: column;
+  }
+
+  .module-head .secondary-button,
+  .module-head .ghost-button {
+    justify-self: stretch;
+    width: 100%;
+    white-space: normal;
   }
 
   .metrics-grid.has-data {
@@ -1637,6 +1697,10 @@ button {
   .scene-preview-row,
   .planning-variable-grid,
   .planning-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .planning-card .analysis-actions {
     grid-template-columns: 1fr;
   }
 
