@@ -251,6 +251,7 @@ const backendService = {
 };
 
 const exactSceneCache = new Map();
+const exactSceneMatchCache = new Map();
 
 const indexConfig = {
   NDVI: {
@@ -3721,8 +3722,11 @@ async function renderSceneLayer(image) {
   state.sceneLayerKind = "loading";
   updateMapSummary();
 
+  let exactMatch = null;
+
   if (image.source === "real" && getSensorForImage(image).exactRaster) {
-    const exactLayer = await createExactSceneLayer(image);
+    exactMatch = await fetchEarthSearchMatch(image);
+    const exactLayer = await createExactSceneLayer(image, exactMatch);
     if (exactLayer && image.id === state.selectedImageId && state.showScenePreview) {
       mapState.sceneExactLayer = exactLayer.addTo(mapState.map);
       if (mapState.sceneExactLayer.bringToBack) {
@@ -3740,14 +3744,16 @@ async function renderSceneLayer(image) {
     }
   }
 
-  if (image.id === state.selectedImageId && state.showScenePreview && image.source === "real" && renderFootprintScenePreview(image)) {
+  const previewImage = getRenderableScenePreviewImage(image, exactMatch);
+
+  if (previewImage.id === state.selectedImageId && state.showScenePreview && previewImage.source === "real" && renderFootprintScenePreview(previewImage)) {
     state.sceneLayerKind = "footprint";
     updateMapSummary();
     return;
   }
 
-  if (image.id === state.selectedImageId && state.showScenePreview && canRenderThumbnailPreview(image)) {
-    renderScenePreview(image);
+  if (previewImage.id === state.selectedImageId && state.showScenePreview && canRenderThumbnailPreview(previewImage)) {
+    renderScenePreview(previewImage);
     state.sceneLayerKind = "preview";
     updateMapSummary();
     return;
@@ -3757,9 +3763,9 @@ async function renderSceneLayer(image) {
   updateMapSummary();
 }
 
-async function createExactSceneLayer(image) {
+async function createExactSceneLayer(image, earthItem = null) {
   const GeoRasterLayerCtor = getGeoRasterLayerCtor();
-  const exactScene = await getExactSceneData(image);
+  const exactScene = await getExactSceneData(image, earthItem);
   if (!exactScene || !GeoRasterLayerCtor) {
     return null;
   }
@@ -3786,17 +3792,17 @@ async function createExactSceneLayer(image) {
   return layer;
 }
 
-async function getExactSceneData(image) {
+async function getExactSceneData(image, earthItem = null) {
   const parseGeorasterFn = getParseGeorasterFn();
   if (!image || image.source !== "real" || !parseGeorasterFn || !getSensorForImage(image).exactRaster) {
     return null;
   }
 
-  const cacheKey = `${getSceneGridCode(image) || image.id}|${image.date}`;
+  const cacheKey = getExactSceneCacheKey(image);
   if (!exactSceneCache.has(cacheKey)) {
     exactSceneCache.set(cacheKey, (async () => {
-      const earthItem = await fetchEarthSearchMatch(image);
-      const visualHref = earthItem?.assets?.visual?.href;
+      const matchedEarthItem = earthItem || await fetchEarthSearchMatch(image);
+      const visualHref = matchedEarthItem?.assets?.visual?.href;
       if (!visualHref) {
         return null;
       }
@@ -3810,8 +3816,8 @@ async function getExactSceneData(image) {
       const georaster = await parseGeorasterFn(buffer);
       return {
         georaster,
-        geometry: earthItem.geometry || image.geometry,
-        bbox: earthItem.bbox || image.bbox,
+        geometry: matchedEarthItem.geometry || image.geometry,
+        bbox: matchedEarthItem.bbox || image.bbox,
       };
     })().catch((error) => {
       exactSceneCache.delete(cacheKey);
@@ -3824,34 +3830,67 @@ async function getExactSceneData(image) {
 }
 
 async function fetchEarthSearchMatch(image) {
-  const sceneBounds = Array.isArray(image?.bbox) && image.bbox.length >= 4
-    ? image.bbox
-    : turf.bbox({
-      type: "Feature",
-      geometry: image.geometry || studyArea.geometry,
-      properties: {},
-    });
-  const payload = await fetchJson(`${earthSearchService.catalogUrl}/search`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      collections: [sensorCatalog.sentinel2.earthSearchCollection],
-      bbox: sceneBounds,
-      datetime: `${image.date}T00:00:00Z/${image.date}T23:59:59Z`,
-      limit: earthSearchService.limit,
-    }),
-  });
-  const features = Array.isArray(payload.features) ? payload.features : [];
-  const gridCode = getSceneGridCode(image);
+  const cacheKey = getExactSceneCacheKey(image);
+  if (!exactSceneMatchCache.has(cacheKey)) {
+    exactSceneMatchCache.set(cacheKey, (async () => {
+      const sceneBounds = Array.isArray(image?.bbox) && image.bbox.length >= 4
+        ? image.bbox
+        : turf.bbox({
+        type: "Feature",
+        geometry: image.geometry || studyArea.geometry,
+          properties: {},
+        });
+      const payload = await fetchJson(`${earthSearchService.catalogUrl}/search`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          collections: [sensorCatalog.sentinel2.earthSearchCollection],
+          bbox: sceneBounds,
+          datetime: `${image.date}T00:00:00Z/${image.date}T23:59:59Z`,
+          limit: earthSearchService.limit,
+        }),
+      });
+      const features = Array.isArray(payload.features) ? payload.features : [];
+      const gridCode = getSceneGridCode(image);
 
-  return features.find((feature) => {
-    if (!gridCode) {
-      return true;
-    }
-    return (feature.properties?.["grid:code"] || null) === gridCode;
-  }) || features[0] || null;
+      return features.find((feature) => {
+        if (!gridCode) {
+          return true;
+        }
+        return (feature.properties?.["grid:code"] || null) === gridCode;
+      }) || features[0] || null;
+    })().catch((error) => {
+      exactSceneMatchCache.delete(cacheKey);
+      console.warn("No se pudo resolver la escena equivalente en Earth Search.", error);
+      return null;
+    }));
+  }
+  return exactSceneMatchCache.get(cacheKey);
+}
+
+function getExactSceneCacheKey(image) {
+  return `${getSceneGridCode(image) || image?.id || "scene"}|${image?.date || "sin-fecha"}`;
+}
+
+function getRenderableScenePreviewImage(image, earthItem = null) {
+  if (!image || getSensorForImage(image).id !== "sentinel2") {
+    return image;
+  }
+
+  const earthPreviewHref = earthItem ? getFeaturePreviewHref(earthItem, "sentinel2") : null;
+  const earthThumbnailHref = earthItem ? getFeatureThumbnailHref(earthItem, "sentinel2") : null;
+  if (!earthPreviewHref && !earthThumbnailHref) {
+    return image;
+  }
+
+  return {
+    ...image,
+    previewHref: earthPreviewHref || image.previewHref,
+    thumbnail: earthThumbnailHref || earthPreviewHref || image.thumbnail,
+    note: `${image.note} Fallback visual desde Earth Search cuando el preview de Copernicus no esta disponible.`,
+  };
 }
 
 function getExactSceneRenderResolution() {
