@@ -646,6 +646,7 @@ function initializeMap() {
   mapState.map = L.map("map", {
     zoomControl: false,
     attributionControl: true,
+    maxZoom: 22,
   }).setView([-0.503, -78.59], 11);
 
   L.control.zoom({ position: "bottomright" }).addTo(mapState.map);
@@ -654,7 +655,10 @@ function initializeMap() {
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     {
       attribution: "Esri World Imagery",
-      maxZoom: 19,
+      // Overzoom the last stable Esri tiles to avoid the "Map data not yet available"
+      // placeholders that appear in some areas at the deepest native levels.
+      maxNativeZoom: 18,
+      maxZoom: 22,
     }
   );
 
@@ -662,7 +666,8 @@ function initializeMap() {
     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     {
       attribution: "OpenStreetMap",
-      maxZoom: 19,
+      maxNativeZoom: 19,
+      maxZoom: 22,
     }
   );
 
