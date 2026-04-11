@@ -24,7 +24,11 @@
     rel="stylesheet"
     href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260411-4">
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
+  >
+  <link rel="stylesheet" href="./styles.css?v=20260411-5">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -380,6 +384,23 @@
               <p id="planningSourceNote" class="service-note">
                 Sentinel-2 urbano es la base recomendada para expansion de mancha urbana y lectura de cobertura a 10 m.
               </p>
+              <section class="planning-3d-entry">
+                <div class="planning-3d-copy">
+                  <p class="section-kicker">Visualizador urbano</p>
+                  <h4>Visor 3D de construcciones y catastro</h4>
+                  <p>
+                    Usa los shapes reales cargados en esta carpeta para levantar edificaciones 3D,
+                    revisar huellas catastrales y dejar lista la integracion futura de fachadas georreferenciadas.
+                  </p>
+                </div>
+                <div id="planning3dAvailability" class="planning-3d-availability empty-state">
+                  Verificando disponibilidad de shapes y metadata 3D...
+                </div>
+                <div class="action-row analysis-actions">
+                  <button id="openPlanning3dBtn" class="secondary-button" type="button">Abrir visor 3D</button>
+                  <button id="reloadPlanning3dBtn" class="ghost-button" type="button">Actualizar shapes</button>
+                </div>
+              </section>
               <div id="planningVariableMatrix" class="planning-variable-matrix">
                 Aqui apareceran las variables territoriales que aporta la fuente satelital seleccionada.
               </div>
@@ -458,6 +479,63 @@
     </main>
   </div>
 
+  <div id="planning3dModal" class="planning-3d-modal hidden" aria-hidden="true">
+    <div id="planning3dBackdrop" class="planning-3d-backdrop"></div>
+    <section class="planning-3d-shell" role="dialog" aria-modal="true" aria-labelledby="planning3dTitle">
+      <header class="planning-3d-header">
+        <div>
+          <p class="overlay-kicker">Planificacion territorial</p>
+          <h2 id="planning3dTitle">Visualizador 3D urbano</h2>
+          <p id="planning3dSubtitle" class="planning-3d-subtitle">
+            Extrusion de construcciones, soporte catastral y lectura espacial para implantacion de equipamientos.
+          </p>
+        </div>
+        <div class="planning-3d-header-actions">
+          <button id="planning3dResetViewBtn" class="ghost-button" type="button">Vista general</button>
+          <button id="planning3dCloseBtn" class="secondary-button" type="button">Cerrar</button>
+        </div>
+      </header>
+
+      <div class="planning-3d-toolbar">
+        <div class="planning-3d-switch" role="group" aria-label="Mapa base 3D">
+          <button id="planning3dSatelliteBtn" class="base-button active" type="button" data-planning-base="satellite">Satelite</button>
+          <button id="planning3dLightBtn" class="base-button" type="button" data-planning-base="light">Claro</button>
+        </div>
+        <label class="planning-3d-check">
+          <input id="planning3dBuildingsToggle" type="checkbox" checked>
+          <span>Construcciones 3D</span>
+        </label>
+        <label class="planning-3d-check">
+          <input id="planning3dParcelsToggle" type="checkbox">
+          <span>Catastro</span>
+        </label>
+        <label class="field planning-3d-range">
+          <span>Escala de altura</span>
+          <div class="range-wrap">
+            <input id="planning3dHeightScale" type="range" min="0.7" max="2.4" step="0.1" value="1">
+            <strong id="planning3dHeightScaleValue">1.0x</strong>
+          </div>
+        </label>
+      </div>
+
+      <div id="planning3dStatus" class="service-banner loading">
+        Preparando datasets 3D...
+      </div>
+
+      <div class="planning-3d-layout">
+        <div id="planning3dMap" class="planning-3d-map" aria-label="Mapa 3D de construcciones"></div>
+        <aside class="planning-3d-panel">
+          <div id="planning3dSummary" class="planning-3d-summary empty-state">
+            Aqui veras el estado de carga, el conteo de construcciones y la altura media disponible.
+          </div>
+          <div id="planning3dSelection" class="planning-3d-selection empty-state">
+            Selecciona una construccion en el visor 3D para revisar altura, bloque y huella.
+          </div>
+        </aside>
+      </div>
+    </section>
+  </div>
+
   <script
     src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
@@ -468,6 +546,8 @@
   <script src="https://unpkg.com/proj4@2.12.1/dist/proj4.js"></script>
   <script src="https://unpkg.com/georaster/dist/georaster.browser.bundle.min.js"></script>
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
-  <script src="./app.js?v=20260411-5" defer></script>
+  <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
+  <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
+  <script src="./app.js?v=20260411-6" defer></script>
 </body>
 </html>

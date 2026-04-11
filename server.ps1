@@ -5,6 +5,7 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Root = Split-Path -Parent $MyInvocation.MyCommand.Path
+$RootPath = [System.IO.Path]::GetFullPath($Root)
 $Cache = @{}
 $StaticFiles = @{
   "/" = "index.html"
@@ -12,6 +13,24 @@ $StaticFiles = @{
   "/styles.css" = "styles.css"
   "/app.js" = "app.js"
   "/.nojekyll" = ".nojekyll"
+}
+
+$Planning3dDatasets = @{
+  buildings = @{
+    label = "Construcciones"
+    baseRelativePath = "construcciones 31/construcciones_31oct"
+    shpPath = Join-Path $Root "construcciones 31\construcciones_31oct.shp"
+    dbfPath = Join-Path $Root "construcciones 31\construcciones_31oct.dbf"
+    prjPath = Join-Path $Root "construcciones 31\construcciones_31oct.prj"
+    floorsField = "n_piso"
+  }
+  parcels = @{
+    label = "Catastro"
+    baseRelativePath = "CATASTRO 2026/CATASTRO_2026"
+    shpPath = Join-Path $Root "CATASTRO 2026\CATASTRO_2026.shp"
+    dbfPath = Join-Path $Root "CATASTRO 2026\CATASTRO_2026.dbf"
+    prjPath = Join-Path $Root "CATASTRO 2026\CATASTRO_2026.prj"
+  }
 }
 
 function Clamp([double]$Value, [double]$Min, [double]$Max) {
@@ -57,6 +76,309 @@ function Get-Cached($Key, [int]$TtlSeconds) {
 
 function Set-Cached($Key, $Payload) {
   $script:Cache[$Key] = @{ Timestamp = Get-Date; Payload = $Payload }
+}
+
+function Get-ContentType([string]$FilePath) {
+  switch ([System.IO.Path]::GetExtension($FilePath).ToLowerInvariant()) {
+    ".html" { return "text/html; charset=utf-8" }
+    ".css" { return "text/css; charset=utf-8" }
+    ".js" { return "application/javascript; charset=utf-8" }
+    ".json" { return "application/json; charset=utf-8" }
+    ".geojson" { return "application/geo+json; charset=utf-8" }
+    ".svg" { return "image/svg+xml" }
+    ".png" { return "image/png" }
+    ".jpg" { return "image/jpeg" }
+    ".jpeg" { return "image/jpeg" }
+    ".webp" { return "image/webp" }
+    ".shp" { return "application/octet-stream" }
+    ".shx" { return "application/octet-stream" }
+    ".dbf" { return "application/octet-stream" }
+    ".prj" { return "text/plain; charset=utf-8" }
+    ".cpg" { return "text/plain; charset=utf-8" }
+    ".tif" { return "image/tiff" }
+    ".tiff" { return "image/tiff" }
+    default { return "application/octet-stream" }
+  }
+}
+
+function Convert-ToUrlPath([string]$RelativePath) {
+  if ([string]::IsNullOrWhiteSpace($RelativePath)) {
+    return "/"
+  }
+
+  $segments = $RelativePath -split "[\\/]+" | Where-Object { $_ }
+  return "/" + (($segments | ForEach-Object { [System.Uri]::EscapeDataString($_) }) -join "/")
+}
+
+function Resolve-ProjectFile([string]$RequestPath) {
+  if ([string]::IsNullOrWhiteSpace($RequestPath) -or $RequestPath -eq "/") {
+    return $null
+  }
+
+  $decodedPath = [System.Uri]::UnescapeDataString($RequestPath.TrimStart("/"))
+  if ([string]::IsNullOrWhiteSpace($decodedPath)) {
+    return $null
+  }
+  if ($decodedPath -match "(^|[\\/])\.git([\\/]|$)") {
+    return $null
+  }
+
+  $candidate = [System.IO.Path]::GetFullPath((Join-Path $RootPath $decodedPath))
+  $rootWithSeparator = $RootPath.TrimEnd("\/") + [System.IO.Path]::DirectorySeparatorChar
+  if (-not $candidate.StartsWith($rootWithSeparator, [System.StringComparison]::OrdinalIgnoreCase)) {
+    return $null
+  }
+  $allowedExtensions = @(
+    ".html", ".css", ".js", ".json", ".geojson",
+    ".svg", ".png", ".jpg", ".jpeg", ".webp",
+    ".shp", ".shx", ".dbf", ".prj", ".cpg", ".tif", ".tiff"
+  )
+  if ($allowedExtensions -notcontains [System.IO.Path]::GetExtension($candidate).ToLowerInvariant()) {
+    return $null
+  }
+
+  if (-not [System.IO.File]::Exists($candidate)) {
+    return $null
+  }
+
+  return $candidate
+}
+
+function Get-Planning3dDatasetInfo([string]$DatasetKey) {
+  if (-not $Planning3dDatasets.ContainsKey($DatasetKey)) {
+    return $null
+  }
+  return $Planning3dDatasets[$DatasetKey]
+}
+
+function Get-ShapefileBounds([string]$Path) {
+  if (-not [System.IO.File]::Exists($Path)) {
+    return $null
+  }
+
+  $fs = [System.IO.File]::OpenRead($Path)
+  try {
+    $br = [System.IO.BinaryReader]::new($fs)
+    $fs.Position = 36
+    return @{
+      xmin = [Math]::Round($br.ReadDouble(), 4)
+      ymin = [Math]::Round($br.ReadDouble(), 4)
+      xmax = [Math]::Round($br.ReadDouble(), 4)
+      ymax = [Math]::Round($br.ReadDouble(), 4)
+    }
+  } finally {
+    $fs.Dispose()
+  }
+}
+
+function Get-DbfSchema([string]$Path) {
+  if (-not [System.IO.File]::Exists($Path)) {
+    return $null
+  }
+
+  $fs = [System.IO.File]::OpenRead($Path)
+  try {
+    $br = [System.IO.BinaryReader]::new($fs)
+    $null = $br.ReadBytes(4)
+    $recordCount = $br.ReadInt32()
+    $headerLength = $br.ReadInt16()
+    $recordLength = $br.ReadInt16()
+    $fs.Position = 32
+    $fields = @()
+
+    while ($fs.Position -lt ($headerLength - 1)) {
+      $nameBytes = $br.ReadBytes(11)
+      if ($nameBytes.Length -lt 11 -or $nameBytes[0] -eq 0x0D) {
+        break
+      }
+
+      $name = ([System.Text.Encoding]::ASCII.GetString($nameBytes)).Trim([char]0x00).Trim()
+      $type = [char]$br.ReadByte()
+      $null = $br.ReadBytes(4)
+      $length = $br.ReadByte()
+      $decimals = $br.ReadByte()
+      $null = $br.ReadBytes(14)
+
+      $fields += [pscustomobject]@{
+        Name = $name
+        Type = $type
+        Length = $length
+        Decimals = $decimals
+      }
+    }
+
+    $offset = 1
+    foreach ($field in $fields) {
+      $field | Add-Member -NotePropertyName Offset -NotePropertyValue $offset
+      $offset += $field.Length
+    }
+
+    return @{
+      RecordCount = $recordCount
+      HeaderLength = $headerLength
+      RecordLength = $recordLength
+      Fields = $fields
+    }
+  } finally {
+    $fs.Dispose()
+  }
+}
+
+function Get-DbfValue([byte[]]$RecordBytes, $Field) {
+  if (-not $Field) {
+    return ""
+  }
+
+  return ([System.Text.Encoding]::ASCII.GetString($RecordBytes, $Field.Offset, $Field.Length)).Trim()
+}
+
+function Convert-FloorCodeToInt([string]$Value) {
+  if ([string]::IsNullOrWhiteSpace($Value)) {
+    return 0
+  }
+
+  $match = [System.Text.RegularExpressions.Regex]::Match($Value, "\d+")
+  if (-not $match.Success) {
+    return 0
+  }
+
+  return [int]$match.Value
+}
+
+function Get-Building3dMetadata() {
+  $cacheKey = "planning3d|building-meta"
+  $cached = Get-Cached $cacheKey 3600
+  if ($cached) {
+    return $cached
+  }
+
+  $dataset = Get-Planning3dDatasetInfo "buildings"
+  if (-not $dataset -or -not [System.IO.File]::Exists($dataset.dbfPath)) {
+    return @{ available = $false; message = "No se encontro el DBF de construcciones." }
+  }
+
+  $schema = Get-DbfSchema $dataset.dbfPath
+  $fieldLookup = @{}
+  foreach ($field in $schema.Fields) {
+    $fieldLookup[$field.Name] = $field
+  }
+
+  $idField = $fieldLookup["id"]
+  $blockField = $fieldLookup["bloque_id"]
+  $floorsField = $fieldLookup[$dataset.floorsField]
+
+  $ids = [System.Collections.Generic.List[int]]::new()
+  $blockIds = [System.Collections.Generic.List[int]]::new()
+  $floors = [System.Collections.Generic.List[int]]::new()
+  $heights = [System.Collections.Generic.List[double]]::new()
+
+  $knownFloorCount = 0
+  $estimatedFloorCount = 0
+  $floorTotal = 0.0
+  $heightTotal = 0.0
+  $minFloors = [int]::MaxValue
+  $maxFloors = 0
+
+  $fs = [System.IO.File]::OpenRead($dataset.dbfPath)
+  try {
+    $br = [System.IO.BinaryReader]::new($fs)
+    for ($index = 0; $index -lt $schema.RecordCount; $index++) {
+      $fs.Position = $schema.HeaderLength + ($index * $schema.RecordLength)
+      $recordBytes = $br.ReadBytes($schema.RecordLength)
+      if ($recordBytes.Length -lt $schema.RecordLength) {
+        break
+      }
+
+      $buildingIdRaw = Get-DbfValue $recordBytes $idField
+      $blockIdRaw = Get-DbfValue $recordBytes $blockField
+      $floorCode = Get-DbfValue $recordBytes $floorsField
+      $floorCount = Convert-FloorCodeToInt $floorCode
+
+      if ($floorCount -gt 0) {
+        $knownFloorCount++
+      } else {
+        $estimatedFloorCount++
+        $floorCount = 1
+      }
+
+      $heightM = [Math]::Round(1.2 + ($floorCount * 3.05), 1)
+      $buildingId = if ([string]::IsNullOrWhiteSpace($buildingIdRaw)) { 0 } else { [int]$buildingIdRaw }
+      $blockId = if ([string]::IsNullOrWhiteSpace($blockIdRaw)) { 0 } else { [int]$blockIdRaw }
+
+      $ids.Add($buildingId)
+      $blockIds.Add($blockId)
+      $floors.Add($floorCount)
+      $heights.Add($heightM)
+
+      $floorTotal += $floorCount
+      $heightTotal += $heightM
+      $minFloors = [Math]::Min($minFloors, $floorCount)
+      $maxFloors = [Math]::Max($maxFloors, $floorCount)
+    }
+  } finally {
+    $fs.Dispose()
+  }
+
+  $recordCount = $floors.Count
+  $payload = @{
+    available = $true
+    projection = "EPSG:32717"
+    recordCount = $recordCount
+    ids = $ids.ToArray()
+    blockIds = $blockIds.ToArray()
+    floors = $floors.ToArray()
+    heights = $heights.ToArray()
+    stats = @{
+      knownFloorCount = $knownFloorCount
+      estimatedFloorCount = $estimatedFloorCount
+      minFloors = if ($recordCount -gt 0) { $minFloors } else { 0 }
+      maxFloors = $maxFloors
+      meanFloors = if ($recordCount -gt 0) { [Math]::Round($floorTotal / $recordCount, 2) } else { 0 }
+      meanHeightM = if ($recordCount -gt 0) { [Math]::Round($heightTotal / $recordCount, 2) } else { 0 }
+    }
+  }
+
+  Set-Cached $cacheKey $payload
+  return $payload
+}
+
+function Get-Planning3dManifest() {
+  $cacheKey = "planning3d|manifest"
+  $cached = Get-Cached $cacheKey 3600
+  if ($cached) {
+    return $cached
+  }
+
+  $buildings = Get-Planning3dDatasetInfo "buildings"
+  $parcels = Get-Planning3dDatasetInfo "parcels"
+  $buildingSchema = if ($buildings) { Get-DbfSchema $buildings.dbfPath } else { $null }
+  $parcelSchema = if ($parcels) { Get-DbfSchema $parcels.dbfPath } else { $null }
+  $buildingMeta = if ($buildings) { Get-Building3dMetadata } else { $null }
+
+  $payload = @{
+    ok = $true
+    projection = "EPSG:32717"
+    planning3dReady = [bool]($buildings -and $parcels)
+    buildings = @{
+      available = [bool]($buildings -and [System.IO.File]::Exists($buildings.shpPath))
+      label = $buildings.label
+      basePath = Convert-ToUrlPath $buildings.baseRelativePath
+      bounds = if ($buildings) { Get-ShapefileBounds $buildings.shpPath } else { $null }
+      recordCount = if ($buildingSchema) { $buildingSchema.RecordCount } else { 0 }
+      floorsField = $buildings.floorsField
+      stats = if ($buildingMeta) { $buildingMeta.stats } else { $null }
+    }
+    parcels = @{
+      available = [bool]($parcels -and [System.IO.File]::Exists($parcels.shpPath))
+      label = $parcels.label
+      basePath = Convert-ToUrlPath $parcels.baseRelativePath
+      bounds = if ($parcels) { Get-ShapefileBounds $parcels.shpPath } else { $null }
+      recordCount = if ($parcelSchema) { $parcelSchema.RecordCount } else { 0 }
+    }
+  }
+
+  Set-Cached $cacheKey $payload
+  return $payload
 }
 
 function Invoke-StacSearch($Body) {
@@ -200,15 +522,24 @@ try {
         $result = Invoke-Analysis ($request.Body | ConvertFrom-Json); Set-Cached $key $result
         Write-Json $stream 200 @{ summary = $result.summary; quality = $result.quality; management = $result.management; diagnostics = $result.diagnostics; generatedAt = $result.generatedAt; cacheHit = $false; cacheEntries = $Cache.Count }; continue
       }
+      if ($request.Path -eq "/api/planning/3d/manifest") {
+        $result = Get-Planning3dManifest
+        Write-Json $stream 200 $result
+        continue
+      }
+      if ($request.Path -eq "/api/planning/3d/building-meta") {
+        $result = Get-Building3dMetadata
+        Write-Json $stream 200 $result
+        continue
+      }
       if ($StaticFiles.ContainsKey($request.Path)) {
         $filePath = Join-Path $Root $StaticFiles[$request.Path]
-        $contentType = switch ([System.IO.Path]::GetExtension($filePath).ToLowerInvariant()) {
-          ".html" { "text/html; charset=utf-8" }
-          ".css" { "text/css; charset=utf-8" }
-          ".js" { "application/javascript; charset=utf-8" }
-          default { "text/plain; charset=utf-8" }
-        }
-        Write-Response $stream 200 $contentType ([System.IO.File]::ReadAllBytes($filePath))
+        Write-Response $stream 200 (Get-ContentType $filePath) ([System.IO.File]::ReadAllBytes($filePath))
+        continue
+      }
+      $projectFile = Resolve-ProjectFile $request.Path
+      if ($projectFile) {
+        Write-Response $stream 200 (Get-ContentType $projectFile) ([System.IO.File]::ReadAllBytes($projectFile))
         continue
       }
       Write-Json $stream 404 @{ error = "Ruta no encontrada."; path = $request.Path }

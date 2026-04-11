@@ -1549,6 +1549,277 @@ button {
   color: var(--muted);
 }
 
+.planning-3d-entry {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid rgba(47, 61, 50, 0.14);
+  border-radius: 20px;
+  background:
+    linear-gradient(160deg, rgba(255, 252, 247, 0.94), rgba(243, 246, 242, 0.76)),
+    radial-gradient(circle at top right, rgba(58, 111, 143, 0.14), transparent 38%);
+}
+
+.planning-3d-entry h4 {
+  margin: 4px 0 8px;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+
+.planning-3d-entry p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.planning-3d-availability {
+  display: grid;
+  gap: 10px;
+}
+
+.planning-3d-availability.has-data {
+  padding: 14px 16px;
+  border: 1px solid rgba(47, 61, 50, 0.12);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.66);
+}
+
+.planning-3d-availability-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.planning-3d-stat {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(249, 248, 243, 0.92);
+  border: 1px solid rgba(47, 61, 50, 0.08);
+}
+
+.planning-3d-stat span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.planning-3d-stat strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+}
+
+.planning-3d-meta {
+  margin-top: 10px;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.planning-3d-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+}
+
+.planning-3d-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(14, 21, 17, 0.52);
+  backdrop-filter: blur(12px);
+}
+
+.planning-3d-shell {
+  position: relative;
+  display: grid;
+  gap: 16px;
+  width: min(1440px, 100%);
+  height: min(92vh, 980px);
+  padding: 18px;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background:
+    linear-gradient(155deg, rgba(253, 251, 247, 0.96), rgba(241, 244, 240, 0.9)),
+    radial-gradient(circle at top right, rgba(58, 111, 143, 0.14), transparent 32%);
+  box-shadow: 0 30px 90px rgba(16, 24, 20, 0.28);
+  overflow: hidden;
+}
+
+.planning-3d-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.planning-3d-header h2 {
+  margin: 4px 0 6px;
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 2vw, 2rem);
+}
+
+.planning-3d-subtitle {
+  margin: 0;
+  max-width: 680px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.planning-3d-header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.planning-3d-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.68);
+  border: 1px solid rgba(47, 61, 50, 0.1);
+}
+
+.planning-3d-switch {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.planning-3d-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 999px;
+  background: rgba(246, 243, 236, 0.94);
+  border: 1px solid rgba(47, 61, 50, 0.09);
+  color: var(--ink);
+}
+
+.planning-3d-check input {
+  accent-color: var(--leaf);
+}
+
+.planning-3d-range {
+  min-width: 230px;
+  margin-left: auto;
+}
+
+.planning-3d-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.55fr);
+  gap: 16px;
+  min-height: 0;
+  flex: 1;
+}
+
+.planning-3d-map {
+  min-height: 0;
+  height: 100%;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(47, 61, 50, 0.1);
+  background:
+    linear-gradient(180deg, rgba(229, 237, 240, 0.92), rgba(239, 241, 235, 0.88));
+}
+
+.planning-3d-panel {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 14px;
+  min-height: 0;
+}
+
+.planning-3d-summary,
+.planning-3d-selection {
+  padding: 16px;
+  border-radius: 22px;
+  border: 1px solid rgba(47, 61, 50, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.planning-3d-summary.has-data,
+.planning-3d-selection.has-data {
+  display: grid;
+  gap: 12px;
+}
+
+.planning-3d-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.planning-3d-chip {
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(246, 243, 236, 0.9);
+  border: 1px solid rgba(47, 61, 50, 0.08);
+}
+
+.planning-3d-chip span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.planning-3d-chip strong {
+  font-size: 1.02rem;
+  font-family: var(--font-display);
+}
+
+.planning-3d-copy-small {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.planning-3d-selection h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+}
+
+.planning-3d-selection-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.planning-3d-note {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 16px;
+  background: rgba(241, 246, 242, 0.92);
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.planning-3d-map .maplibregl-popup-content {
+  border-radius: 16px;
+  font-family: var(--font-body);
+}
+
+.planning-3d-map .maplibregl-popup-close-button {
+  font-size: 1rem;
+  color: var(--muted);
+}
+
+.planning-3d-map .maplibregl-ctrl-bottom-left,
+.planning-3d-map .maplibregl-ctrl-bottom-right {
+  display: none;
+}
+
 .mobile-only {
   display: none;
 }
@@ -1635,6 +1906,21 @@ button {
   .status-bar {
     max-width: none;
   }
+
+  .planning-3d-shell {
+    height: min(94vh, 1040px);
+    padding: 16px;
+  }
+
+  .planning-3d-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(320px, 54vh) auto;
+  }
+
+  .planning-3d-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: none;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1702,6 +1988,30 @@ button {
 
   .planning-card .analysis-actions {
     grid-template-columns: 1fr;
+  }
+
+  .planning-3d-header,
+  .planning-3d-header-actions,
+  .planning-3d-toolbar,
+  .planning-3d-panel {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .planning-3d-range {
+    min-width: 0;
+    margin-left: 0;
+  }
+
+  .planning-3d-shell {
+    height: min(96vh, 1200px);
+    padding: 14px;
+    border-radius: 22px;
+  }
+
+  .planning-3d-layout {
+    grid-template-rows: minmax(280px, 48vh) auto;
   }
 
   .overlay-left {
