@@ -20,7 +20,7 @@ Geoportal agronomico navegable orientado al canton Mejia con escenas Sentinel-2,
 - Modo de mapa para alternar entre la escena activa y el cambio temporal estimado sobre el AOI.
 - Previsualizacion de la escena real sobre el mapa con control de visibilidad y opacidad.
 - Raster exacto de escena real usando COG publico de Sentinel-2 cuando existe coincidencia para la fecha y mosaico.
-- Landsat 8/9 y Sentinel-1 se muestran como escena georreferenciada aproximada sobre su `bbox`.
+- Landsat 8/9 y Sentinel-1 se muestran como escena recortada a la huella real usando el thumbnail publico del catalogo.
 - Analisis intralote con dibujo de poligonos o seleccion de lotes demo.
 - Backend local opcional con proxy STAC, cache en memoria y endpoint de analisis.
 - Estimaciones beta de relieve, clima agricola y asistente guiado por etapa.
@@ -62,4 +62,5 @@ Modo recomendado:
 - El cambio temporal actual es un analisis operativo comparativo entre escenas; sirve para lectura y priorizacion, no como reemplazo de un raster multitemporal calibrado.
 - Sentinel-2 es el flujo mas completo porque conserva `NDRE` y soporte de raster exacto.
 - Landsat 8/9 no incluye `NDRE` porque no dispone de banda red-edge.
+- Landsat 8/9 ahora ya no cae al rectangulo bruto del `bbox`; se presenta recortado a la huella real de la escena.
 - Sentinel-1 usa metricas radar propias y no indices opticos.

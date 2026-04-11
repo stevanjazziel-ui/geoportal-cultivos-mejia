@@ -332,6 +332,15 @@ const sensorCatalog = {
     cloudEnabled: true,
     backendEligible: true,
     exactRaster: true,
+    sceneResolutionLabel: "10 m",
+    sensorTone: "sentinel2",
+    footprintStyle: {
+      color: "#3a6f8f",
+      fillColor: "#3a6f8f",
+      fillOpacity: 0.08,
+      dashArray: "10 8",
+    },
+    previewFilter: "saturate(1.08) contrast(1.04)",
     demoImages: demoImagesBySensor.sentinel2,
     previewAssetKeys: ["thumbnail"],
     supportNote: "Sentinel-2 mantiene el flujo mas completo: NDVI, NDWI, NDRE, MSAVI y raster exacto a 10 m cuando existe COG publico coincidente.",
@@ -354,6 +363,15 @@ const sensorCatalog = {
     cloudEnabled: true,
     backendEligible: false,
     exactRaster: false,
+    sceneResolutionLabel: "30 m",
+    sensorTone: "landsat",
+    footprintStyle: {
+      color: "#9f7135",
+      fillColor: "#c69344",
+      fillOpacity: 0.08,
+      dashArray: "12 8",
+    },
+    previewFilter: "saturate(1.15) contrast(1.08) brightness(1.02)",
     demoImages: demoImagesBySensor.landsat,
     previewAssetKeys: ["reduced_resolution_browse", "thumbnail"],
     supportNote: "Landsat 8/9 aporta analisis optico a 30 m con NDVI, NDMI, NDWI y MSAVI. NDRE no aplica porque Landsat no tiene banda red-edge.",
@@ -376,6 +394,15 @@ const sensorCatalog = {
     cloudEnabled: false,
     backendEligible: false,
     exactRaster: false,
+    sceneResolutionLabel: "SAR",
+    sensorTone: "sentinel1",
+    footprintStyle: {
+      color: "#4a6f96",
+      fillColor: "#4a6f96",
+      fillOpacity: 0.08,
+      dashArray: "8 6",
+    },
+    previewFilter: "grayscale(0.85) contrast(1.22) brightness(1.06)",
     demoImages: demoImagesBySensor.sentinel1,
     previewAssetKeys: ["thumbnail"],
     supportNote: "Sentinel-1 es radar: atraviesa nubes y trabaja con VV, VH, RVI y VH/VV para lectura estructural y de humedad relativa.",
@@ -743,6 +770,30 @@ function getSceneMetaLabel(image) {
   return getSensorForImage(image).label;
 }
 
+function getSceneLayerStatusLabel(imageOrSensor = null, layerKind = state.sceneLayerKind) {
+  const sensor = typeof imageOrSensor === "string"
+    ? getSensorConfig(imageOrSensor)
+    : getSensorForImage(imageOrSensor);
+  if (!state.showScenePreview) {
+    return "capa oculta";
+  }
+  if (layerKind === "exact") {
+    return `raster exacto ${sensor.sceneResolutionLabel}`;
+  }
+  if (layerKind === "footprint") {
+    return sensor.id === "sentinel1"
+      ? "preview radar recortado"
+      : "escena recortada";
+  }
+  if (layerKind === "loading") {
+    return sensor.exactRaster ? "cargando raster" : "preparando escena";
+  }
+  if (layerKind === "preview") {
+    return "preview bbox";
+  }
+  return "sin capa";
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   cacheDom();
   bootstrapApp();
@@ -752,6 +803,7 @@ function cacheDom() {
   dom.loginOverlay = document.querySelector("#loginOverlay");
   dom.publicAccessBtn = document.querySelector("#publicAccessBtn");
   dom.appShell = document.querySelector("#appShell");
+  dom.mapStage = document.querySelector(".map-stage");
   dom.sidebar = document.querySelector("#sidebar");
   dom.sidebarToggle = document.querySelector("#sidebarToggle");
   dom.sidebarClose = document.querySelector("#sidebarClose");
@@ -1496,10 +1548,11 @@ function mapLandsatScene(feature) {
     datetime,
     cloud: Number.isFinite(cloud) ? Number(cloud.toFixed(2)) : null,
     orbit: pathRow,
-    note: "Escena real Landsat Collection 2 Level-2 desde Earth Search. Resolucion nominal de 30 m para lectura optica operativa.",
-    thumbnail: feature.assets?.thumbnail?.href || null,
-    previewHref: getPreviewAssetHref(feature.assets, sensorCatalog.landsat.previewAssetKeys),
+    note: "Escena real Landsat Collection 2 Level-2 desde Earth Search. Ahora se presenta recortada a la huella real de la escena para una lectura espacial mas limpia.",
+    thumbnail: getFeatureThumbnailHref(feature) || null,
+    previewHref: getFeatureThumbnailHref(feature) || null,
     stacLink: feature.links?.find((link) => link.rel === "self")?.href || null,
+    externalSceneLink: feature.links?.find((link) => link.title === "USGS STAC Item")?.href || null,
     geometry: feature.geometry || null,
     bbox: feature.bbox || null,
     source: "real",
@@ -1528,14 +1581,24 @@ function mapSentinel1Scene(feature) {
     instrumentMode,
     polarizations,
     note: `Escena radar GRD desde Earth Search con polarizaciones ${polarizations.join("/") || "VV/VH"} y pasada ${formatOrbitState(orbitState).toLowerCase()}.`,
-    thumbnail: feature.assets?.thumbnail?.href || null,
-    previewHref: getPreviewAssetHref(feature.assets, sensorCatalog.sentinel1.previewAssetKeys),
+    thumbnail: getFeatureThumbnailHref(feature) || null,
+    previewHref: getFeatureThumbnailHref(feature) || null,
     stacLink: feature.links?.find((link) => link.rel === "self")?.href || null,
     geometry: feature.geometry || null,
     bbox: feature.bbox || null,
     source: "real",
     baseIndices: deriveBetaIndicesFromScene(feature.id, null, "sentinel1"),
   });
+}
+
+function getFeatureThumbnailHref(feature) {
+  const thumbLink = feature?.links?.find((link) => link.rel === "thumbnail")?.href || null;
+  if (thumbLink) {
+    return thumbLink;
+  }
+
+  const assetThumb = feature?.assets?.thumbnail?.href || null;
+  return typeof assetThumb === "string" && /^https?:/i.test(assetThumb) ? assetThumb : null;
 }
 
 function getPreviewAssetHref(assets = {}, assetKeys = []) {
@@ -1644,7 +1707,7 @@ function renderSceneControls() {
   dom.scenePreviewOpacityValue.textContent = `${Math.round(state.scenePreviewOpacity * 100)}%`;
   dom.scenePreviewOpacity.disabled = !hasScenePreview;
   dom.toggleScenePreviewBtn.disabled = !hasScenePreview;
-  const sceneLayerLabel = state.sceneLayerKind === "exact" ? "raster exacto" : "escena en mapa";
+  const sceneLayerLabel = selectedImage ? getSceneLayerStatusLabel(selectedImage, state.sceneLayerKind) : "escena en mapa";
   dom.toggleScenePreviewBtn.textContent = !hasScenePreview
     ? "Escena no disponible en mapa"
     : state.showScenePreview
@@ -2662,6 +2725,9 @@ function renderRealSceneFootprint(image, fitBounds = false) {
     return;
   }
 
+  const sensor = getSensorForImage(image);
+  const footprintStyle = sensor.footprintStyle || sensorCatalog.sentinel2.footprintStyle;
+
   const popupThumb = image.thumbnail
     ? `<img class="sentinel-thumb" src="${image.thumbnail}" alt="Previsualizacion de ${image.title}">`
     : "";
@@ -2674,11 +2740,11 @@ function renderRealSceneFootprint(image, fitBounds = false) {
     },
     {
       style: {
-        color: "#3a6f8f",
+        color: footprintStyle.color,
         weight: 2.5,
-        fillColor: "#3a6f8f",
-        fillOpacity: 0.08,
-        dashArray: "10 8",
+        fillColor: footprintStyle.fillColor,
+        fillOpacity: footprintStyle.fillOpacity,
+        dashArray: footprintStyle.dashArray,
       },
     }
   ).addTo(mapState.map);
@@ -2716,6 +2782,117 @@ function renderScenePreview(image) {
   }).addTo(mapState.map);
 }
 
+function renderFootprintScenePreview(image) {
+  const bounds = getScenePreviewBounds(image);
+  const previewHref = image?.previewHref || image?.thumbnail;
+  if (!image?.geometry || !previewHref || !bounds) {
+    return false;
+  }
+
+  const bbox = Array.isArray(image.bbox) && image.bbox.length >= 4
+    ? image.bbox.map((value) => Number(value))
+    : turf.bbox({ type: "Feature", geometry: image.geometry, properties: {} });
+  const pathData = buildGeometryClipPath(image.geometry, bbox);
+  if (!pathData) {
+    return false;
+  }
+
+  const sensor = getSensorForImage(image);
+  const clipId = `scene-clip-${String(image.id || "scene").replace(/[^a-z0-9_-]/gi, "-")}`;
+  const svgNs = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(svgNs, "svg");
+  svg.setAttribute("xmlns", svgNs);
+  svg.setAttribute("viewBox", "0 0 1000 1000");
+  svg.setAttribute("preserveAspectRatio", "none");
+  svg.classList.add("scene-footprint-preview");
+  svg.dataset.sensor = sensor.id;
+
+  const defs = document.createElementNS(svgNs, "defs");
+  const clipPath = document.createElementNS(svgNs, "clipPath");
+  clipPath.setAttribute("id", clipId);
+  clipPath.setAttribute("clipPathUnits", "userSpaceOnUse");
+
+  const path = document.createElementNS(svgNs, "path");
+  path.setAttribute("d", pathData);
+  path.setAttribute("fill-rule", "evenodd");
+  clipPath.appendChild(path);
+  defs.appendChild(clipPath);
+  svg.appendChild(defs);
+
+  const imageNode = document.createElementNS(svgNs, "image");
+  imageNode.setAttributeNS("http://www.w3.org/1999/xlink", "href", previewHref);
+  imageNode.setAttribute("href", previewHref);
+  imageNode.setAttribute("x", "0");
+  imageNode.setAttribute("y", "0");
+  imageNode.setAttribute("width", "1000");
+  imageNode.setAttribute("height", "1000");
+  imageNode.setAttribute("preserveAspectRatio", "none");
+  imageNode.setAttribute("clip-path", `url(#${clipId})`);
+  imageNode.setAttribute("class", `scene-footprint-preview-image is-${sensor.id}`);
+  imageNode.style.filter = sensor.previewFilter || "none";
+  svg.appendChild(imageNode);
+
+  const shadowPath = document.createElementNS(svgNs, "path");
+  shadowPath.setAttribute("d", pathData);
+  shadowPath.setAttribute("fill", "none");
+  shadowPath.setAttribute("stroke", sensor.footprintStyle?.color || "#3a6f8f");
+  shadowPath.setAttribute("stroke-opacity", "0.38");
+  shadowPath.setAttribute("stroke-width", sensor.id === "landsat" ? "1.4" : "1.2");
+  shadowPath.setAttribute("stroke-dasharray", sensor.id === "sentinel1" ? "5 4" : "7 5");
+  shadowPath.setAttribute("vector-effect", "non-scaling-stroke");
+  svg.appendChild(shadowPath);
+
+  mapState.scenePreviewLayer = L.svgOverlay(svg, bounds, {
+    opacity: state.scenePreviewOpacity,
+    interactive: false,
+    className: `scene-preview-overlay scene-preview-${sensor.id}`,
+  }).addTo(mapState.map);
+  if (mapState.scenePreviewLayer?.bringToBack) {
+    mapState.scenePreviewLayer.bringToBack();
+  }
+  if (mapState.currentPlotLayer) {
+    mapState.currentPlotLayer.bringToFront();
+  }
+  if (mapState.managementLayer) {
+    mapState.managementLayer.bringToFront();
+  }
+  return true;
+}
+
+function buildGeometryClipPath(geometry, bbox) {
+  if (!geometry || !bbox || bbox.length < 4) {
+    return "";
+  }
+
+  const [west, south, east, north] = bbox.map((value) => Number(value));
+  if (![west, south, east, north].every(Number.isFinite) || west >= east || south >= north) {
+    return "";
+  }
+
+  const projectPoint = ([lon, lat]) => {
+    const x = clamp(((lon - west) / (east - west)) * 1000, 0, 1000);
+    const y = clamp(((north - lat) / (north - south)) * 1000, 0, 1000);
+    return `${x.toFixed(2)} ${y.toFixed(2)}`;
+  };
+
+  const ringToPath = (ring = []) => ring.length
+    ? `${ring.map((coord, index) => `${index === 0 ? "M" : "L"} ${projectPoint(coord)}`).join(" ")} Z`
+    : "";
+
+  if (geometry.type === "Polygon") {
+    return geometry.coordinates.map((ring) => ringToPath(ring)).filter(Boolean).join(" ");
+  }
+
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates
+      .flatMap((polygon) => polygon.map((ring) => ringToPath(ring)))
+      .filter(Boolean)
+      .join(" ");
+  }
+
+  return "";
+}
+
 async function renderSceneLayer(image) {
   if (!mapState.map || !state.showScenePreview) {
     return;
@@ -2741,6 +2918,12 @@ async function renderSceneLayer(image) {
       updateMapSummary();
       return;
     }
+  }
+
+  if (image.id === state.selectedImageId && state.showScenePreview && image.source === "real" && renderFootprintScenePreview(image)) {
+    state.sceneLayerKind = "footprint";
+    updateMapSummary();
+    return;
   }
 
   if (image.id === state.selectedImageId && state.showScenePreview && canRenderThumbnailPreview(image)) {
@@ -2860,16 +3043,23 @@ function colorizeVisualPixel(values) {
 }
 
 function getAnalysisOverlayOpacity(image) {
+  const sensor = getSensorForImage(image);
   if (state.surfaceMode === "change") {
     return 0.42;
   }
 
   if (image?.source === "real" && state.showScenePreview) {
-    return state.sceneLayerKind === "exact" ? 0.14 : 0.18;
+    if (state.sceneLayerKind === "exact") {
+      return sensor.id === "sentinel2" ? 0.14 : 0.16;
+    }
+    if (state.sceneLayerKind === "footprint") {
+      return sensor.id === "sentinel1" ? 0.2 : 0.16;
+    }
+    return sensor.id === "sentinel1" ? 0.24 : 0.18;
   }
 
   if (image?.source === "real") {
-    return 0.32;
+    return sensor.id === "sentinel1" ? 0.34 : 0.32;
   }
 
   return 0.46;
@@ -3340,16 +3530,12 @@ function updateMapSummary() {
   const analysis = getRenderableAnalysis(image);
   const compareImage = getCompareImage();
   const changeAnalysis = getRenderableChangeAnalysis(image, compareImage);
-  const previewLabel = state.showScenePreview
-    ? state.sceneLayerKind === "exact"
-      ? "raster exacto 10 m"
-      : state.sceneLayerKind === "loading"
-        ? "cargando raster"
-        : state.sceneLayerKind === "preview"
-          ? "preview"
-          : "sin capa"
-    : "capa oculta";
+  const previewLabel = getSceneLayerStatusLabel(image || sensor.id, state.sceneLayerKind);
   dom.overlayIndex.textContent = indexConfig[state.selectedIndex].label;
+
+  if (dom.mapStage) {
+    dom.mapStage.dataset.sensor = sensor.id;
+  }
 
   if (!image) {
     dom.mapTitle.textContent = "No hay escena activa";
@@ -3397,7 +3583,11 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
   }
 
   if (!image) {
-    dom.mapBadges.innerHTML = `<span class="map-badge muted">Sin escena</span>`;
+    const sensor = getActiveSensor();
+    dom.mapBadges.innerHTML = `
+      <span class="map-badge sensor sensor-${sensor.id}">${sensor.label}</span>
+      <span class="map-badge muted">Sin escena</span>
+    `;
     return;
   }
 
@@ -3405,13 +3595,18 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
     ? "exact"
     : state.sceneLayerKind === "loading"
       ? "loading"
-      : state.sceneLayerKind === "preview"
+      : state.sceneLayerKind === "preview" || state.sceneLayerKind === "footprint"
         ? "preview"
         : "muted";
+  const sensor = getSensorForImage(image);
   const badges = [
     {
+      tone: `sensor sensor-${sensor.id}`,
+      label: sensor.label,
+    },
+    {
       tone: "neutral",
-      label: getSensorForImage(image).label,
+      label: sensor.sceneResolutionLabel,
     },
     {
       tone: "neutral",

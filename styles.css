@@ -923,7 +923,32 @@ button {
   box-shadow: var(--shadow);
 }
 
+.map-stage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 14% 18%, rgba(255, 247, 232, 0.34), transparent 28%),
+    linear-gradient(180deg, rgba(10, 18, 16, 0.02), rgba(10, 18, 16, 0.18));
+}
+
+.map-stage[data-sensor="landsat"]::before {
+  background:
+    radial-gradient(circle at 18% 14%, rgba(245, 209, 142, 0.28), transparent 32%),
+    linear-gradient(180deg, rgba(93, 63, 24, 0.04), rgba(93, 63, 24, 0.18));
+}
+
+.map-stage[data-sensor="sentinel1"]::before {
+  background:
+    radial-gradient(circle at 16% 14%, rgba(112, 167, 202, 0.22), transparent 30%),
+    linear-gradient(180deg, rgba(20, 34, 48, 0.08), rgba(20, 34, 48, 0.22));
+}
+
 .map-canvas {
+  position: relative;
+  z-index: 1;
   height: 100%;
   min-height: 0;
 }
@@ -949,6 +974,16 @@ button {
   max-width: min(290px, calc(100% - 28px));
   background: rgba(255, 252, 248, 0.46);
   border: 1px solid rgba(255, 255, 255, 0.32);
+}
+
+.map-stage[data-sensor="landsat"] .overlay-left {
+  background: rgba(255, 248, 236, 0.5);
+  border-color: rgba(188, 139, 63, 0.22);
+}
+
+.map-stage[data-sensor="sentinel1"] .overlay-left {
+  background: rgba(240, 247, 252, 0.46);
+  border-color: rgba(92, 138, 176, 0.22);
 }
 
 .overlay-right {
@@ -997,6 +1032,25 @@ button {
 
 .map-badge.neutral {
   background: rgba(255, 255, 255, 0.7);
+}
+
+.map-badge.sensor {
+  color: #fffaf2;
+}
+
+.map-badge.sensor-sentinel2 {
+  background: linear-gradient(135deg, #2c6d46, #4c8d6c);
+  border-color: rgba(30, 84, 56, 0.28);
+}
+
+.map-badge.sensor-landsat {
+  background: linear-gradient(135deg, #8a5d2f, #c08b43);
+  border-color: rgba(115, 75, 26, 0.28);
+}
+
+.map-badge.sensor-sentinel1 {
+  background: linear-gradient(135deg, #32546f, #5d87a8);
+  border-color: rgba(43, 70, 92, 0.28);
 }
 
 .map-badge.exact {
@@ -1069,6 +1123,14 @@ button {
   line-height: 1.35;
 }
 
+.map-stage[data-sensor="landsat"] .status-bar {
+  background: rgba(255, 247, 235, 0.58);
+}
+
+.map-stage[data-sensor="sentinel1"] .status-bar {
+  background: rgba(242, 248, 252, 0.56);
+}
+
 .footer-pills {
   gap: 8px;
   flex-wrap: wrap;
@@ -1100,6 +1162,14 @@ button {
 .leaflet-popup-content-wrapper {
   border-radius: 18px;
   box-shadow: 0 16px 28px rgba(32, 40, 34, 0.14);
+}
+
+.scene-footprint-preview {
+  overflow: visible;
+}
+
+.scene-footprint-preview-image {
+  image-rendering: auto;
 }
 
 .popup-title {
