@@ -924,6 +924,81 @@ const planningScenarioCatalog = {
   },
 };
 
+const planningVariableCatalog = {
+  urbanFootprint: {
+    id: "urbanFootprint",
+    label: "Huella urbana",
+    role: "Crecimiento",
+    copy: "Lee continuidad construida, vacios urbanos y consolidacion del borde.",
+    tone: "growth",
+    emphasis: "Alta",
+  },
+  periurbanTransition: {
+    id: "periurbanTransition",
+    label: "Borde periurbano",
+    role: "Expansion",
+    copy: "Ubica franjas de transicion aptas para crecimiento controlado.",
+    tone: "growth",
+    emphasis: "Alta",
+  },
+  historicalExpansion: {
+    id: "historicalExpansion",
+    label: "Trayectoria historica",
+    role: "Cambio",
+    copy: "Resume direccion y persistencia de la expansion urbana en el tiempo.",
+    tone: "growth",
+    emphasis: "Alta",
+  },
+  floodSafety: {
+    id: "floodSafety",
+    label: "Seguridad hidrica",
+    role: "Resiliencia",
+    copy: "Reduce penalizacion por anegamiento, drenaje y cercania a cauces.",
+    tone: "resilience",
+    emphasis: "Media",
+  },
+  serviceCentrality: {
+    id: "serviceCentrality",
+    label: "Centralidad de servicios",
+    role: "Cobertura",
+    copy: "Acerca la decision a nodos funcionales con equipamientos y demanda.",
+    tone: "service",
+    emphasis: "Media",
+  },
+  corridorAccessibility: {
+    id: "corridorAccessibility",
+    label: "Accesibilidad vial",
+    role: "Acceso",
+    copy: "Favorece conexiones con corredores, avenidas y ejes urbanos.",
+    tone: "access",
+    emphasis: "Alta",
+  },
+  reserveCompatibility: {
+    id: "reserveCompatibility",
+    label: "Compatibilidad de ocupacion",
+    role: "Reserva",
+    copy: "Favorece implantacion controlada con menor conflicto territorial.",
+    tone: "land",
+    emphasis: "Alta",
+  },
+  structuralContinuity: {
+    id: "structuralContinuity",
+    label: "Continuidad estructural",
+    role: "Ocupacion",
+    copy: "Lee textura construida y continuidad del tejido aun con nubosidad.",
+    tone: "growth",
+    emphasis: "Alta",
+  },
+  nightActivity: {
+    id: "nightActivity",
+    label: "Actividad nocturna",
+    role: "Centralidad",
+    copy: "Revela intensidad urbana, corredores activos y deficit funcional.",
+    tone: "service",
+    emphasis: "Media",
+  },
+};
+
 const planningImageryCatalog = {
   sentinel2Urban: {
     id: "sentinel2Urban",
@@ -937,6 +1012,42 @@ const planningImageryCatalog = {
     serviceBias: 0.96,
     resilienceBias: 0.94,
     reserveBias: 1,
+    variables: [
+      "urbanFootprint",
+      "periurbanTransition",
+      "corridorAccessibility",
+      "floodSafety",
+      "reserveCompatibility",
+    ],
+    signalMix: {
+      growth: {
+        urbanFootprint: 0.34,
+        periurbanTransition: 0.4,
+        corridorAccessibility: 0.12,
+        reserveCompatibility: 0.14,
+      },
+      access: {
+        corridorAccessibility: 0.52,
+        urbanFootprint: 0.2,
+        periurbanTransition: 0.28,
+      },
+      service: {
+        urbanFootprint: 0.2,
+        periurbanTransition: 0.24,
+        corridorAccessibility: 0.26,
+        reserveCompatibility: 0.3,
+      },
+      resilience: {
+        floodSafety: 0.58,
+        reserveCompatibility: 0.24,
+        periurbanTransition: 0.18,
+      },
+      land: {
+        reserveCompatibility: 0.46,
+        floodSafety: 0.26,
+        periurbanTransition: 0.28,
+      },
+    },
   },
   landsatHistoric: {
     id: "landsatHistoric",
@@ -950,6 +1061,44 @@ const planningImageryCatalog = {
     serviceBias: 0.9,
     resilienceBias: 0.92,
     reserveBias: 1.08,
+    variables: [
+      "historicalExpansion",
+      "periurbanTransition",
+      "corridorAccessibility",
+      "floodSafety",
+      "reserveCompatibility",
+    ],
+    signalMix: {
+      growth: {
+        historicalExpansion: 0.48,
+        periurbanTransition: 0.26,
+        corridorAccessibility: 0.14,
+        reserveCompatibility: 0.12,
+      },
+      access: {
+        corridorAccessibility: 0.46,
+        periurbanTransition: 0.2,
+        historicalExpansion: 0.2,
+        reserveCompatibility: 0.14,
+      },
+      service: {
+        historicalExpansion: 0.28,
+        corridorAccessibility: 0.32,
+        reserveCompatibility: 0.16,
+        floodSafety: 0.24,
+      },
+      resilience: {
+        floodSafety: 0.54,
+        reserveCompatibility: 0.22,
+        historicalExpansion: 0.24,
+      },
+      land: {
+        reserveCompatibility: 0.44,
+        historicalExpansion: 0.24,
+        floodSafety: 0.14,
+        periurbanTransition: 0.18,
+      },
+    },
   },
   sentinel1Urban: {
     id: "sentinel1Urban",
@@ -963,6 +1112,42 @@ const planningImageryCatalog = {
     serviceBias: 0.88,
     resilienceBias: 1.18,
     reserveBias: 0.96,
+    variables: [
+      "structuralContinuity",
+      "corridorAccessibility",
+      "floodSafety",
+      "reserveCompatibility",
+      "serviceCentrality",
+    ],
+    signalMix: {
+      growth: {
+        structuralContinuity: 0.42,
+        corridorAccessibility: 0.24,
+        reserveCompatibility: 0.18,
+        floodSafety: 0.16,
+      },
+      access: {
+        corridorAccessibility: 0.48,
+        structuralContinuity: 0.28,
+        reserveCompatibility: 0.24,
+      },
+      service: {
+        structuralContinuity: 0.26,
+        corridorAccessibility: 0.3,
+        reserveCompatibility: 0.22,
+        serviceCentrality: 0.22,
+      },
+      resilience: {
+        floodSafety: 0.64,
+        reserveCompatibility: 0.18,
+        structuralContinuity: 0.18,
+      },
+      land: {
+        reserveCompatibility: 0.42,
+        floodSafety: 0.36,
+        structuralContinuity: 0.22,
+      },
+    },
   },
   viirsNight: {
     id: "viirsNight",
@@ -976,6 +1161,40 @@ const planningImageryCatalog = {
     serviceBias: 1.18,
     resilienceBias: 0.82,
     reserveBias: 0.9,
+    variables: [
+      "nightActivity",
+      "serviceCentrality",
+      "corridorAccessibility",
+      "reserveCompatibility",
+    ],
+    signalMix: {
+      growth: {
+        nightActivity: 0.38,
+        corridorAccessibility: 0.24,
+        serviceCentrality: 0.22,
+        reserveCompatibility: 0.16,
+      },
+      access: {
+        corridorAccessibility: 0.46,
+        nightActivity: 0.32,
+        serviceCentrality: 0.22,
+      },
+      service: {
+        serviceCentrality: 0.42,
+        nightActivity: 0.38,
+        corridorAccessibility: 0.2,
+      },
+      resilience: {
+        reserveCompatibility: 0.56,
+        corridorAccessibility: 0.18,
+        nightActivity: 0.26,
+      },
+      land: {
+        reserveCompatibility: 0.52,
+        corridorAccessibility: 0.16,
+        nightActivity: 0.32,
+      },
+    },
   },
 };
 
@@ -1053,6 +1272,17 @@ function getPlanningProgram(programId = state.planningUseId) {
 
 function getPlanningImageryProfile(imageryId = state.planningImageryId) {
   return planningImageryCatalog[imageryId] || planningImageryCatalog.sentinel2Urban;
+}
+
+function getPlanningVariableDefinition(variableId) {
+  return planningVariableCatalog[variableId] || {
+    id: variableId,
+    label: variableId,
+    role: "Variable",
+    copy: "Variable territorial sin definicion detallada.",
+    tone: "neutral",
+    emphasis: "Media",
+  };
 }
 
 function getPlanningHorizon(horizonId = state.planningHorizonId) {
@@ -1229,6 +1459,7 @@ function cacheDom() {
   dom.planningWeights = document.querySelector("#planningWeights");
   dom.planningCandidates = document.querySelector("#planningCandidates");
   dom.planningSourceNote = document.querySelector("#planningSourceNote");
+  dom.planningVariableMatrix = document.querySelector("#planningVariableMatrix");
   dom.planningCard = document.querySelector("#planningCard");
   dom.modulesSectionKicker = document.querySelector("#modulesSectionKicker");
   dom.modulesSectionTitle = document.querySelector("#modulesSectionTitle");
@@ -4090,6 +4321,7 @@ function runClimateAnalysis(silent = false) {
 
 function renderPlanningModule() {
   const imageryProfile = getPlanningImageryProfile();
+  renderPlanningVariableMatrix();
   if (dom.planningImagerySelect) {
     dom.planningImagerySelect.value = state.planningImageryId;
   }
@@ -4124,6 +4356,52 @@ function renderPlanningModule() {
     dom.planningCandidates.classList.remove("has-data");
     dom.planningCandidates.textContent = "Aqui apareceran los sectores recomendados para implantacion territorial.";
   }
+}
+
+function renderPlanningVariableMatrix() {
+  if (!dom.planningVariableMatrix) {
+    return;
+  }
+
+  const planning = state.planningData?.imageryProfile?.id === state.planningImageryId
+    ? state.planningData
+    : null;
+  const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
+  const items = planning?.imagerySummary?.items
+    || imageryProfile.variables.map((variableId) => {
+      const definition = getPlanningVariableDefinition(variableId);
+      return {
+        ...definition,
+        mean: null,
+        strengthLabel: definition.emphasis,
+      };
+    });
+  const summaryCopy = planning?.imagerySummary?.copy
+    || `Esta fuente aporta ${items.length} variables territoriales para modular crecimiento, acceso, servicios, resiliencia y compatibilidad de ocupacion.`;
+
+  dom.planningVariableMatrix.classList.remove("empty-state");
+  dom.planningVariableMatrix.innerHTML = `
+    <p class="planning-variable-summary">${summaryCopy}</p>
+    <div class="planning-variable-grid">
+      ${items.map((item) => `
+        <article class="planning-variable-card tone-${item.tone || "neutral"}">
+          <div class="planning-variable-head">
+            <div>
+              <p class="planning-variable-role">${item.role}</p>
+              <h4>${item.label}</h4>
+            </div>
+            <span class="planning-variable-score">${item.mean == null ? item.strengthLabel : `${item.mean}%`}</span>
+          </div>
+          <p class="planning-variable-copy">${item.copy}</p>
+          ${item.mean == null ? "" : `
+            <div class="planning-variable-bar">
+              <span style="width: ${item.mean}%"></span>
+            </div>
+          `}
+        </article>
+      `).join("")}
+    </div>
+  `;
 }
 
 function runPlanningAnalysis(silent = false) {
@@ -4166,6 +4444,11 @@ function runPlanningAnalysis(silent = false) {
       label: "Fuente satelital",
       value: planning.imageryProfile.shortLabel,
       copy: `${planning.imageryProfile.providerLabel} / ${planning.imageryProfile.spatialLabel}.`,
+    },
+    {
+      label: "Variables satelitales",
+      value: planning.imagerySummary.headline,
+      copy: planning.imagerySummary.copy,
     },
   ];
 
@@ -4227,22 +4510,42 @@ function buildPlanningAnalysis() {
       equipamiento: getNearestFeatureMatch(centroid, facilityFeatures, (feature) => feature.properties?.serviceType === "equipamiento"),
     };
     const insideUrban = urbanFeatures.some((feature) => turf.booleanPointInPolygon(centroid, feature));
-    const growthScore = computePlanningGrowthScore(program, horizon, scenario, nearestUrban, nearestRoad, insideUrban);
-    const accessScore = computePlanningAccessScore(program, scenario, nearestRoad, nearestUrban);
-    const urbanSignal = computePlanningUrbanSignal(imageryProfile, lon, lat, nearestUrban, nearestRoad, insideUrban);
     const slope = computePlanningSlope(lon, lat, nearestRoad.distanceKm, nearestCanal.distanceKm, insideUrban);
+    const variableScores = computePlanningBaseVariableScores(
+      lon,
+      lat,
+      nearestUrban,
+      nearestRoad,
+      nearestCanal,
+      insideUrban,
+      slope
+    );
+    const imageryEvidence = computePlanningImageryEvidence(imageryProfile, variableScores);
+    const growthScore = clamp(
+      computePlanningGrowthScore(program, horizon, scenario, nearestUrban, nearestRoad, insideUrban) * 0.72
+      + imageryEvidence.growth * 0.28,
+      0,
+      1
+    );
+    const accessScore = clamp(
+      computePlanningAccessScore(program, scenario, nearestRoad, nearestUrban) * 0.76
+      + imageryEvidence.access * 0.24,
+      0,
+      1
+    );
+    const urbanSignal = imageryEvidence.growth;
     const terrainScore = clamp(1 - slope / (program.maxSlope * 1.45), 0, 1);
-    const resilienceScore = computePlanningResilienceScore(slope, nearestCanal.distanceKm, urbanSignal, insideUrban, imageryProfile);
-    const serviceScore = computePlanningServiceScore(program.id, facilityDistances, growthScore, horizon, scenario, imageryProfile);
+    const resilienceScore = computePlanningResilienceScore(slope, nearestCanal.distanceKm, imageryEvidence.resilience, insideUrban);
+    const serviceScore = computePlanningServiceScore(program.id, facilityDistances, growthScore, horizon, scenario, imageryEvidence.service);
     const landScore = computePlanningLandReserveScore(
       program,
-      imageryProfile,
       scenario,
       nearestUrban.distanceKm,
       nearestRoad.distanceKm,
       insideUrban,
       slope,
-      nearestCanal.distanceKm
+      nearestCanal.distanceKm,
+      imageryEvidence.land
     );
     const score = Math.round(clamp(
       (clamp((growthScore + urbanSignal) / 2, 0, 1) * program.weights.growth)
@@ -4270,6 +4573,11 @@ function buildPlanningAnalysis() {
       resilienceScore: Math.round(resilienceScore * 100),
       landScore: Math.round(landScore * 100),
       urbanSignal: Math.round(urbanSignal * 100),
+      primaryVariableLabel: imageryEvidence.variables[0]?.label || imageryProfile.shortLabel,
+      primaryVariableScore: imageryEvidence.variables[0]?.score || Math.round(urbanSignal * 100),
+      secondaryVariableLabel: imageryEvidence.variables[1]?.label || "Soporte territorial",
+      secondaryVariableScore: imageryEvidence.variables[1]?.score || Math.round(accessScore * 100),
+      variableScores: imageryEvidence.variableScoreMap,
       slope: Number(slope.toFixed(1)),
       urbanDistanceKm: Number(nearestUrban.distanceKm.toFixed(2)),
       roadDistanceKm: Number(nearestRoad.distanceKm.toFixed(2)),
@@ -4290,6 +4598,7 @@ function buildPlanningAnalysis() {
 
   const candidates = selectPlanningCandidates(features, program, imageryProfile, target.scopeType);
   const summary = summarizePlanningSurface(features, program, scenario);
+  const imagerySummary = summarizePlanningImageryVariables(features, imageryProfile);
 
   return {
     context: target,
@@ -4302,6 +4611,7 @@ function buildPlanningAnalysis() {
       features,
     },
     candidates,
+    imagerySummary,
     summary,
   };
 }
@@ -4346,17 +4656,138 @@ function computePlanningAccessScore(program, scenario, nearestRoad, nearestUrban
   return clamp(roadBand * 0.76 + centrality * 0.24, 0, 1);
 }
 
-function computePlanningUrbanSignal(imageryProfile, lon, lat, nearestUrban, nearestRoad, insideUrban) {
-  const coreSignal = clamp(
-    0.42
+function computePlanningBaseVariableScores(lon, lat, nearestUrban, nearestRoad, nearestCanal, insideUrban, slope) {
+  const growthRate = Number(nearestUrban.feature?.properties?.growthRate) || 0.62;
+  const corridorAccessibility = scoreDistanceBand(nearestRoad.distanceKm, {
+    idealMin: 0.04,
+    idealMax: 0.82,
+    hardMax: 2.7,
+    insideScore: 0.76,
+  }, false);
+  const urbanFootprint = clamp(
+    0.32
     + (insideUrban ? 0.28 : 0)
-    + Math.max(0, 1 - nearestUrban.distanceKm / 3.6) * 0.2
-    + Math.max(0, 1 - nearestRoad.distanceKm / 1.8) * 0.08
+    + Math.max(0, 1 - nearestUrban.distanceKm / 3.4) * 0.2
+    + corridorAccessibility * 0.12
     + pseudoNoise(lon * 7.4, lat * 5.6, 91) * 0.08,
     0,
     1
   );
-  return clamp(coreSignal * imageryProfile.growthBias, 0, 1);
+  const periurbanTransition = clamp(
+    scoreDistanceBand(nearestUrban.distanceKm, {
+      idealMin: 0.12,
+      idealMax: 1.55,
+      hardMax: 3.6,
+      insideScore: 0.44,
+    }, insideUrban) * 0.72
+    + corridorAccessibility * 0.16
+    + growthRate * 0.12,
+    0,
+    1
+  );
+  const historicalExpansion = clamp(
+    0.24
+    + growthRate * 0.5
+    + periurbanTransition * 0.18
+    + corridorAccessibility * 0.08
+    + pseudoNoise(lat * 8.8, lon * 4.2, 17) * 0.08,
+    0,
+    1
+  );
+  const floodExposure = clamp(
+    ((0.95 - Math.min(nearestCanal.distanceKm, 0.95)) / 0.95) * 0.58
+    + clamp((8 - slope) / 8, 0, 1) * 0.22
+    + pseudoNoise(lon * 4.3, lat * 6.2, 55) * 0.08,
+    0,
+    1
+  );
+  const floodSafety = clamp(
+    1 - floodExposure * 0.86 + clamp(slope / 18, 0, 1) * 0.12,
+    0,
+    1
+  );
+  const serviceCentrality = clamp(
+    scoreDistanceBand(nearestUrban.distanceKm, {
+      idealMin: 0,
+      idealMax: 2.2,
+      hardMax: 5.4,
+      insideScore: 0.82,
+    }, insideUrban) * 0.58
+    + corridorAccessibility * 0.28
+    + growthRate * 0.14,
+    0,
+    1
+  );
+  const reserveCompatibility = clamp(
+    periurbanTransition * 0.36
+    + floodSafety * 0.22
+    + corridorAccessibility * 0.14
+    + clamp(1 - Math.abs(urbanFootprint - 0.58) / 0.58, 0, 1) * 0.28,
+    0,
+    1
+  );
+  const structuralContinuity = clamp(
+    urbanFootprint * 0.56
+    + corridorAccessibility * 0.18
+    + (insideUrban ? 0.16 : 0)
+    + pseudoNoise(lon * 5.2, lat * 6.9, 73) * 0.1,
+    0,
+    1
+  );
+  const nightActivity = clamp(
+    serviceCentrality * 0.46
+    + corridorAccessibility * 0.18
+    + historicalExpansion * 0.18
+    + (insideUrban ? 0.1 : 0)
+    + pseudoNoise(lon * 2.8, lat * 9.1, 14) * 0.08,
+    0,
+    1
+  );
+
+  return {
+    urbanFootprint,
+    periurbanTransition,
+    historicalExpansion,
+    floodSafety,
+    serviceCentrality,
+    corridorAccessibility,
+    reserveCompatibility,
+    structuralContinuity,
+    nightActivity,
+  };
+}
+
+function blendPlanningSignalMix(signalMix, variableScores) {
+  const entries = Object.entries(signalMix || {});
+  if (!entries.length) {
+    return 0;
+  }
+  const totalWeight = entries.reduce((sum, [, weight]) => sum + weight, 0) || 1;
+  return entries.reduce((sum, [variableId, weight]) => sum + (variableScores[variableId] || 0) * weight, 0) / totalWeight;
+}
+
+function computePlanningImageryEvidence(imageryProfile, variableScores) {
+  const variables = imageryProfile.variables
+    .map((variableId) => {
+      const definition = getPlanningVariableDefinition(variableId);
+      return {
+        ...definition,
+        score: Math.round((variableScores[variableId] || 0) * 100),
+      };
+    })
+    .sort((left, right) => right.score - left.score);
+
+  return {
+    growth: clamp(blendPlanningSignalMix(imageryProfile.signalMix?.growth, variableScores) * imageryProfile.growthBias, 0, 1),
+    access: clamp(blendPlanningSignalMix(imageryProfile.signalMix?.access, variableScores), 0, 1),
+    service: clamp(blendPlanningSignalMix(imageryProfile.signalMix?.service, variableScores) * imageryProfile.serviceBias, 0, 1),
+    resilience: clamp(blendPlanningSignalMix(imageryProfile.signalMix?.resilience, variableScores) * imageryProfile.resilienceBias, 0, 1),
+    land: clamp(blendPlanningSignalMix(imageryProfile.signalMix?.land, variableScores) * imageryProfile.reserveBias, 0, 1),
+    variables,
+    variableScoreMap: Object.fromEntries(
+      Object.entries(variableScores).map(([variableId, value]) => [variableId, Math.round(value * 100)])
+    ),
+  };
 }
 
 function computePlanningSlope(lon, lat, roadDistanceKm, canalDistanceKm, insideUrban) {
@@ -4372,18 +4803,18 @@ function computePlanningSlope(lon, lat, roadDistanceKm, canalDistanceKm, insideU
   );
 }
 
-function computePlanningResilienceScore(slope, canalDistanceKm, urbanSignal, insideUrban, imageryProfile) {
+function computePlanningResilienceScore(slope, canalDistanceKm, resilienceSignal, insideUrban) {
   const floodPenalty = clamp((0.95 - Math.min(canalDistanceKm, 0.95)) / 0.95, 0, 1);
-  const drainagePenalty = clamp((urbanSignal - 0.45) * 0.28, 0, 0.22);
   const slopePenalty = clamp(slope / 20, 0, 1) * 0.26;
+  const resilienceBoost = clamp((resilienceSignal - 0.5) * 0.24, -0.08, 0.14);
   return clamp(
-    (1 - (floodPenalty * 0.52 + drainagePenalty + slopePenalty) + (insideUrban ? 0.05 : 0)) * imageryProfile.resilienceBias,
+    1 - (floodPenalty * 0.52 + slopePenalty) + resilienceBoost + (insideUrban ? 0.05 : 0),
     0,
     1
   );
 }
 
-function computePlanningServiceScore(programId, facilityDistances, growthScore, horizon, scenario, imageryProfile) {
+function computePlanningServiceScore(programId, facilityDistances, growthScore, horizon, scenario, serviceSupport) {
   const demandBoost = clamp(growthScore * (0.78 + horizon.demandBoost) * scenario.growthMultiplier, 0, 1);
   const schoolDistance = facilityDistances.escuela.distanceKm;
   const hospitalDistance = facilityDistances.hospital.distanceKm;
@@ -4393,26 +4824,30 @@ function computePlanningServiceScore(programId, facilityDistances, growthScore, 
     const schoolScore = scoreDistanceBand(schoolDistance, { idealMin: 0.3, idealMax: 1.7, hardMax: 4.2, insideScore: 0.72 }, false);
     const hospitalScore = scoreDistanceBand(hospitalDistance, { idealMin: 0.8, idealMax: 3, hardMax: 5.5, insideScore: 0.66 }, false);
     const equipmentScore = scoreDistanceBand(equipmentDistance, { idealMin: 0.2, idealMax: 1.4, hardMax: 3.4, insideScore: 0.76 }, false);
-    return clamp(((schoolScore + hospitalScore + equipmentScore) / 3 * 0.82 + demandBoost * 0.18) * imageryProfile.serviceBias, 0, 1);
+    const baseScore = ((schoolScore + hospitalScore + equipmentScore) / 3 * 0.82) + demandBoost * 0.18;
+    return clamp(baseScore * 0.76 + serviceSupport * 0.24, 0, 1);
   }
 
   if (programId === "escuela") {
     const schoolGap = clamp(schoolDistance / 2.4, 0, 1);
-    return clamp((schoolGap * 0.58 + demandBoost * 0.42) * imageryProfile.serviceBias, 0, 1);
+    const baseScore = schoolGap * 0.58 + demandBoost * 0.42;
+    return clamp(baseScore * 0.74 + serviceSupport * 0.26, 0, 1);
   }
 
   if (programId === "hospital") {
     const hospitalGap = clamp(hospitalDistance / 3.4, 0, 1);
     const supportAccess = scoreDistanceBand(equipmentDistance, { idealMin: 0.3, idealMax: 1.6, hardMax: 3.6, insideScore: 0.62 }, false);
-    return clamp((hospitalGap * 0.56 + demandBoost * 0.28 + supportAccess * 0.16) * imageryProfile.serviceBias, 0, 1);
+    const baseScore = hospitalGap * 0.56 + demandBoost * 0.28 + supportAccess * 0.16;
+    return clamp(baseScore * 0.74 + serviceSupport * 0.26, 0, 1);
   }
 
   const equipmentGap = clamp(equipmentDistance / 1.9, 0, 1);
   const schoolSupport = scoreDistanceBand(schoolDistance, { idealMin: 0.2, idealMax: 1.2, hardMax: 3, insideScore: 0.68 }, false);
-  return clamp((equipmentGap * 0.54 + demandBoost * 0.3 + schoolSupport * 0.16) * imageryProfile.serviceBias, 0, 1);
+  const baseScore = equipmentGap * 0.54 + demandBoost * 0.3 + schoolSupport * 0.16;
+  return clamp(baseScore * 0.74 + serviceSupport * 0.26, 0, 1);
 }
 
-function computePlanningLandReserveScore(program, imageryProfile, scenario, urbanDistanceKm, roadDistanceKm, insideUrban, slope, canalDistanceKm) {
+function computePlanningLandReserveScore(program, scenario, urbanDistanceKm, roadDistanceKm, insideUrban, slope, canalDistanceKm, landSupport) {
   const urbanBand = scoreDistanceBand(urbanDistanceKm, {
     idealMin: program.id === "hospital" ? 0 : 0.1,
     idealMax: program.id === "vis" ? 2.2 : 1.8,
@@ -4427,10 +4862,13 @@ function computePlanningLandReserveScore(program, imageryProfile, scenario, urba
   }, false);
   const floodPenalty = clamp((0.7 - Math.min(canalDistanceKm, 0.7)) / 0.7, 0, 1) * 0.24;
   const slopePenalty = clamp((slope - program.maxSlope) / Math.max(program.maxSlope, 1), 0, 1) * 0.22;
+  const baseScore = clamp(
+    (urbanBand * 0.62 + corridorBand * 0.38 - floodPenalty - slopePenalty) * scenario.reserveSensitivity,
+    0,
+    1
+  );
   return clamp(
-    (urbanBand * 0.62 + corridorBand * 0.38 - floodPenalty - slopePenalty)
-    * imageryProfile.reserveBias
-    * scenario.reserveSensitivity,
+    baseScore * 0.74 + landSupport * 0.26,
     0,
     1
   );
@@ -4514,6 +4952,33 @@ function summarizePlanningSurface(features, program, scenario) {
   };
 }
 
+function summarizePlanningImageryVariables(features, imageryProfile) {
+  const items = imageryProfile.variables.map((variableId) => {
+    const definition = getPlanningVariableDefinition(variableId);
+    const mean = features.length
+      ? Math.round(features.reduce((sum, feature) => sum + (feature.properties.variableScores?.[variableId] || 0), 0) / features.length)
+      : 0;
+    return {
+      ...definition,
+      mean,
+      strengthLabel: getPlanningVariableStrengthLabel(mean),
+    };
+  });
+  const ranked = [...items].sort((left, right) => right.mean - left.mean);
+  const primary = ranked[0];
+  const secondary = ranked[1];
+
+  return {
+    items,
+    headline: primary && secondary
+      ? `${primary.label} + ${secondary.label}`
+      : primary?.label || "Sin lectura",
+    copy: primary
+      ? `${imageryProfile.shortLabel} esta empujando la decision sobre todo con ${primary.label.toLowerCase()}${secondary ? ` y ${secondary.label.toLowerCase()}` : ""}.`
+      : `La fuente ${imageryProfile.shortLabel} aun no genero lectura territorial.`,
+  };
+}
+
 function selectPlanningCandidates(features, program, imageryProfile, scopeType) {
   const sorted = [...features].sort((left, right) => right.properties.score - left.properties.score);
   const minimumDistanceKm = scopeType === "plot" ? 0.45 : 1.65;
@@ -4548,15 +5013,25 @@ function selectPlanningCandidates(features, program, imageryProfile, scopeType) 
       feature,
       summary: feature.properties.summary,
       tags: [
-        `${imageryProfile.shortLabel} ${feature.properties.urbanSignal}%`,
+        `${imageryProfile.shortLabel} ${feature.properties.primaryVariableLabel} ${feature.properties.primaryVariableScore}%`,
         `Crecimiento ${feature.properties.growthScore}%`,
-        `Acceso ${feature.properties.accessScore}%`,
         `Servicio ${feature.properties.serviceScore}%`,
+        `Resiliencia ${feature.properties.resilienceScore}%`,
       ],
     });
   });
 
   return candidates;
+}
+
+function getPlanningVariableStrengthLabel(score) {
+  if (score >= 72) {
+    return "Alta";
+  }
+  if (score >= 56) {
+    return "Media";
+  }
+  return "Base";
 }
 
 function renderPlanningWeights(planning) {
@@ -4572,6 +5047,7 @@ function renderPlanningWeights(planning) {
     .join("")
     + `
       <span class="planning-pill emphasis">${planning.imageryProfile.shortLabel}</span>
+      <span class="planning-pill emphasis">${planning.imagerySummary.headline}</span>
       <span class="planning-pill emphasis">${planning.horizon.label}</span>
       <span class="planning-pill emphasis">${planning.scenario.label}</span>
     `;

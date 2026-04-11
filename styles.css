@@ -980,6 +980,112 @@ button {
   gap: 12px;
 }
 
+.planning-variable-matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(47, 61, 50, 0.08);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.planning-variable-summary {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.planning-variable-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.planning-variable-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(47, 61, 50, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.planning-variable-card.tone-growth {
+  border-color: rgba(47, 127, 95, 0.18);
+}
+
+.planning-variable-card.tone-access {
+  border-color: rgba(58, 111, 143, 0.18);
+}
+
+.planning-variable-card.tone-service {
+  border-color: rgba(203, 148, 64, 0.18);
+}
+
+.planning-variable-card.tone-resilience {
+  border-color: rgba(144, 63, 93, 0.18);
+}
+
+.planning-variable-card.tone-land {
+  border-color: rgba(105, 65, 47, 0.18);
+}
+
+.planning-variable-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.planning-variable-role {
+  margin: 0 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--leaf-deep);
+}
+
+.planning-variable-head h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.planning-variable-score {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(47, 61, 50, 0.08);
+  font-weight: 700;
+  color: var(--leaf-deep);
+}
+
+.planning-variable-copy {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.planning-variable-bar {
+  position: relative;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(47, 61, 50, 0.08);
+}
+
+.planning-variable-bar span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: inherit;
+  background: linear-gradient(135deg, var(--leaf), var(--gold));
+}
+
 .planning-pills,
 .planning-tags {
   display: flex;
@@ -1529,6 +1635,7 @@ button {
   .compare-summary.has-data,
   .scene-picker-grid,
   .scene-preview-row,
+  .planning-variable-grid,
   .planning-toolbar {
     grid-template-columns: 1fr;
   }

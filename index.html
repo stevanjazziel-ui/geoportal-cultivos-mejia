@@ -24,7 +24,7 @@
     rel="stylesheet"
     href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260411-2">
+  <link rel="stylesheet" href="./styles.css?v=20260411-3">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -380,6 +380,9 @@
               <p id="planningSourceNote" class="service-note">
                 Sentinel-2 urbano es la base recomendada para expansion de mancha urbana y lectura de cobertura a 10 m.
               </p>
+              <div id="planningVariableMatrix" class="planning-variable-matrix">
+                Aqui apareceran las variables territoriales que aporta la fuente satelital seleccionada.
+              </div>
               <div class="action-row analysis-actions">
                 <button id="focusPlanningBtn" class="ghost-button" type="button">Centrar candidatos</button>
                 <button id="clearPlanningBtn" class="ghost-button" type="button">Limpiar analisis</button>
@@ -465,6 +468,6 @@
   <script src="https://unpkg.com/proj4@2.12.1/dist/proj4.js"></script>
   <script src="https://unpkg.com/georaster/dist/georaster.browser.bundle.min.js"></script>
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
-  <script src="./app.js?v=20260411-3" defer></script>
+  <script src="./app.js?v=20260411-4" defer></script>
 </body>
 </html>

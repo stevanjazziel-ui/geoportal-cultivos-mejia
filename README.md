@@ -27,6 +27,7 @@ Geoportal navegable orientado al canton Mejia con rutas de agronomia y planifica
 - Modulo de planificacion territorial con calculo multivariable para VIS, escuelas, hospitales y equipamientos.
 - Capas demo de mancha urbana y equipamientos para medir crecimiento, deficit de cobertura y aptitud territorial.
 - Selector territorial de fuente satelital con `Sentinel-2`, `Landsat`, `Sentinel-1` y `VIIRS` segun el objetivo de planificacion.
+- Matriz visible de variables territoriales por fuente satelital y ponderacion integrada al puntaje multicriterio.
 - Backend local opcional con proxy STAC, cache en memoria y endpoint de analisis.
 - Estimaciones beta de relieve, clima agricola y asistente guiado por etapa.
 
