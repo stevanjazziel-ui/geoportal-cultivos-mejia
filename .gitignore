@@ -2,3 +2,6 @@ CATASTRO 2026/
 construcciones 31/
 server_stdout.log
 server_stderr.log
+chrome-headless/
+*_dom.html
+debug_runner.html

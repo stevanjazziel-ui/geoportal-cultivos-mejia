@@ -1576,6 +1576,7 @@ function bootstrapApp() {
   renderCompareSummary();
   filterSentinelImages();
   hydratePlanning3dManifest();
+  applyRouteFromUrl();
 }
 
 function bindUI() {
@@ -1841,6 +1842,25 @@ function enterPublicView(route = state.entryRoute || "agronomia") {
     mapState.map.invalidateSize();
     applyEntryRoute(route);
   }, 160);
+}
+
+function applyRouteFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const routeParam = params.get("route");
+  const tabParam = params.get("tab");
+  const route = routeParam === "planificacion" ? "planificacion" : routeParam === "agronomia" ? "agronomia" : null;
+  if (!route) {
+    return;
+  }
+
+  enterPublicView(route);
+  if (tabParam) {
+    window.setTimeout(() => {
+      if (["capas", "sentinel", "modulos"].includes(tabParam)) {
+        setActiveTab(tabParam);
+      }
+    }, 260);
+  }
 }
 
 function applyEntryRoute(route = state.entryRoute || "agronomia") {
