@@ -33,6 +33,10 @@ $Planning3dDatasets = @{
   }
 }
 
+$Planning3dPhotoRoot = "E:\FOTOS MACHACHI"
+$Planning3dPhotoIndexPath = Join-Path $Root "planning3d_photo_index.json"
+$script:Planning3dPhotoIndexJob = $null
+
 function Clamp([double]$Value, [double]$Min, [double]$Max) {
   return [Math]::Min([Math]::Max($Value, $Min), $Max)
 }
@@ -149,6 +153,259 @@ function Get-Planning3dDatasetInfo([string]$DatasetKey) {
     return $null
   }
   return $Planning3dDatasets[$DatasetKey]
+}
+
+function Convert-ToPhotoToken([string]$RelativePath) {
+  if ([string]::IsNullOrWhiteSpace($RelativePath)) {
+    return ""
+  }
+
+  $bytes = [System.Text.Encoding]::UTF8.GetBytes($RelativePath)
+  return [Convert]::ToBase64String($bytes).TrimEnd("=").Replace("+", "-").Replace("/", "_")
+}
+
+function Convert-FromPhotoToken([string]$PhotoToken) {
+  if ([string]::IsNullOrWhiteSpace($PhotoToken)) {
+    return $null
+  }
+
+  try {
+    $base64 = $PhotoToken.Replace("-", "+").Replace("_", "/")
+    switch ($base64.Length % 4) {
+      2 { $base64 += "==" }
+      3 { $base64 += "=" }
+    }
+    return [System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($base64))
+  } catch {
+    return $null
+  }
+}
+
+function Resolve-PlanningPhotoFile([string]$PhotoToken) {
+  if (-not (Test-Path -LiteralPath $Planning3dPhotoRoot)) {
+    return $null
+  }
+
+  $relativePath = Convert-FromPhotoToken $PhotoToken
+  if ([string]::IsNullOrWhiteSpace($relativePath)) {
+    return $null
+  }
+
+  $rootPath = [System.IO.Path]::GetFullPath($Planning3dPhotoRoot)
+  $candidate = [System.IO.Path]::GetFullPath((Join-Path $rootPath $relativePath))
+  $rootWithSeparator = $rootPath.TrimEnd("\/") + [System.IO.Path]::DirectorySeparatorChar
+  if (-not $candidate.StartsWith($rootWithSeparator, [System.StringComparison]::OrdinalIgnoreCase)) {
+    return $null
+  }
+
+  $allowedExtensions = @(".jpg", ".jpeg", ".png", ".webp", ".tif", ".tiff")
+  if ($allowedExtensions -notcontains [System.IO.Path]::GetExtension($candidate).ToLowerInvariant()) {
+    return $null
+  }
+
+  if (-not [System.IO.File]::Exists($candidate)) {
+    return $null
+  }
+
+  return $candidate
+}
+
+function Get-PhotoGpsDecimal($Image, [int]$RefId, [int]$CoordId) {
+  $reference = $Image.PropertyItems | Where-Object Id -eq $RefId | Select-Object -First 1
+  $coordinate = $Image.PropertyItems | Where-Object Id -eq $CoordId | Select-Object -First 1
+  if (-not $reference -or -not $coordinate -or $coordinate.Value.Length -lt 24) {
+    return $null
+  }
+
+  $parts = @()
+  for ($index = 0; $index -lt 3; $index++) {
+    $numerator = [BitConverter]::ToUInt32($coordinate.Value, $index * 8)
+    $denominator = [BitConverter]::ToUInt32($coordinate.Value, $index * 8 + 4)
+    if ($denominator -eq 0) {
+      return $null
+    }
+    $parts += ($numerator / $denominator)
+  }
+
+  $decimal = $parts[0] + ($parts[1] / 60.0) + ($parts[2] / 3600.0)
+  $referenceText = ([System.Text.Encoding]::ASCII.GetString($reference.Value)).Trim([char]0)
+  if ($referenceText -in @("S", "W")) {
+    $decimal *= -1
+  }
+
+  return [Math]::Round($decimal, 7)
+}
+
+function Get-HaversineMeters([double]$Lat1, [double]$Lon1, [double]$Lat2, [double]$Lon2) {
+  $rad = [Math]::PI / 180.0
+  $deltaLat = ($Lat2 - $Lat1) * $rad
+  $deltaLon = ($Lon2 - $Lon1) * $rad
+  $lat1Rad = $Lat1 * $rad
+  $lat2Rad = $Lat2 * $rad
+  $a = [Math]::Sin($deltaLat / 2) * [Math]::Sin($deltaLat / 2) +
+    [Math]::Cos($lat1Rad) * [Math]::Cos($lat2Rad) *
+    [Math]::Sin($deltaLon / 2) * [Math]::Sin($deltaLon / 2)
+  $c = 2 * [Math]::Atan2([Math]::Sqrt($a), [Math]::Sqrt(1 - $a))
+  return 6371000 * $c
+}
+
+function Get-PlanningPhotoIndexJobInfo() {
+  if (-not $script:Planning3dPhotoIndexJob) {
+    return @{
+      state = "idle"
+      error = $null
+    }
+  }
+
+  if ($script:Planning3dPhotoIndexJob.State -in @("Completed", "Failed", "Stopped")) {
+    $errorText = $null
+    try {
+      $jobOutput = Receive-Job $script:Planning3dPhotoIndexJob -Keep -ErrorAction SilentlyContinue | Out-String
+      if ($script:Planning3dPhotoIndexJob.State -ne "Completed") {
+        $errorText = $jobOutput.Trim()
+      }
+    } catch {
+      $errorText = $_.Exception.Message
+    }
+    Remove-Job $script:Planning3dPhotoIndexJob -Force -ErrorAction SilentlyContinue
+    $state = $script:Planning3dPhotoIndexJob.State.ToLowerInvariant()
+    $script:Planning3dPhotoIndexJob = $null
+    return @{
+      state = $state
+      error = $errorText
+    }
+  }
+
+  return @{
+    state = $script:Planning3dPhotoIndexJob.State.ToLowerInvariant()
+    error = $null
+  }
+}
+
+function Start-PlanningPhotoIndexJob() {
+  $jobInfo = Get-PlanningPhotoIndexJobInfo
+  if ($jobInfo.state -in @("running", "notstarted")) {
+    return $jobInfo
+  }
+
+  if (-not (Test-Path -LiteralPath $Planning3dPhotoRoot)) {
+    return @{
+      state = "missing"
+      error = "No se encontro la carpeta local de fotos."
+    }
+  }
+
+  $script:Planning3dPhotoIndexJob = Start-Job -ArgumentList $Planning3dPhotoRoot, $Planning3dPhotoIndexPath -ScriptBlock {
+    param($photoRoot, $indexPath)
+    $ErrorActionPreference = "Stop"
+    Add-Type -AssemblyName System.Drawing | Out-Null
+
+    function Convert-ToPhotoToken([string]$RelativePath) {
+      $bytes = [System.Text.Encoding]::UTF8.GetBytes($RelativePath)
+      return [Convert]::ToBase64String($bytes).TrimEnd("=").Replace("+", "-").Replace("/", "_")
+    }
+
+    function Get-PhotoGpsDecimal($Image, [int]$RefId, [int]$CoordId) {
+      $reference = $Image.PropertyItems | Where-Object Id -eq $RefId | Select-Object -First 1
+      $coordinate = $Image.PropertyItems | Where-Object Id -eq $CoordId | Select-Object -First 1
+      if (-not $reference -or -not $coordinate -or $coordinate.Value.Length -lt 24) {
+        return $null
+      }
+
+      $parts = @()
+      for ($index = 0; $index -lt 3; $index++) {
+        $numerator = [BitConverter]::ToUInt32($coordinate.Value, $index * 8)
+        $denominator = [BitConverter]::ToUInt32($coordinate.Value, $index * 8 + 4)
+        if ($denominator -eq 0) {
+          return $null
+        }
+        $parts += ($numerator / $denominator)
+      }
+
+      $decimal = $parts[0] + ($parts[1] / 60.0) + ($parts[2] / 3600.0)
+      $referenceText = ([System.Text.Encoding]::ASCII.GetString($reference.Value)).Trim([char]0)
+      if ($referenceText -in @("S", "W")) {
+        $decimal *= -1
+      }
+
+      return [Math]::Round($decimal, 7)
+    }
+
+    $files = Get-ChildItem -LiteralPath $photoRoot -File -Recurse -ErrorAction SilentlyContinue |
+      Where-Object { $_.Extension -match '^(?i)\.(jpg|jpeg)$' }
+    $photos = [System.Collections.Generic.List[object]]::new()
+    $folders = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+    $rootPath = [System.IO.Path]::GetFullPath($photoRoot)
+    $scanStartedAt = Get-Date
+
+    foreach ($file in $files) {
+      $image = $null
+      try {
+        $image = [System.Drawing.Image]::FromFile($file.FullName)
+        $lat = Get-PhotoGpsDecimal $image 1 2
+        $lon = Get-PhotoGpsDecimal $image 3 4
+        if ($null -eq $lat -or $null -eq $lon) {
+          continue
+        }
+
+        $relativePath = $file.FullName.Substring($rootPath.Length).TrimStart("\/")
+        $folderLabel = (Split-Path $relativePath -Parent)
+        if ([string]::IsNullOrWhiteSpace($folderLabel)) {
+          $folderLabel = "Raiz"
+        }
+        [void]$folders.Add($folderLabel)
+        $token = Convert-ToPhotoToken $relativePath
+
+        $photos.Add([pscustomobject]@{
+          id = $token
+          fileName = $file.Name
+          folder = $folderLabel
+          relativePath = $relativePath
+          lat = $lat
+          lon = $lon
+          width = $image.Width
+          height = $image.Height
+          modifiedAt = $file.LastWriteTime.ToString("o")
+          url = "/api/planning/3d/photo/$token"
+        })
+      } finally {
+        if ($image) {
+          $image.Dispose()
+        }
+      }
+    }
+
+    $payload = @{
+      available = $true
+      rootPath = $photoRoot
+      totalFiles = $files.Count
+      geotaggedCount = $photos.Count
+      sampleFolders = @($folders | Select-Object -First 18)
+      indexedAt = (Get-Date).ToString("o")
+      indexedSeconds = [Math]::Round(((Get-Date) - $scanStartedAt).TotalSeconds, 2)
+      photos = $photos.ToArray()
+    }
+
+    $payload | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $indexPath -Encoding UTF8
+  }
+
+  return @{
+    state = "running"
+    error = $null
+  }
+}
+
+function Read-PlanningPhotoIndexFile() {
+  if (-not (Test-Path -LiteralPath $Planning3dPhotoIndexPath)) {
+    return $null
+  }
+
+  try {
+    return Get-Content -LiteralPath $Planning3dPhotoIndexPath -Raw | ConvertFrom-Json
+  } catch {
+    Remove-Item -LiteralPath $Planning3dPhotoIndexPath -Force -ErrorAction SilentlyContinue
+    return $null
+  }
 }
 
 function Get-ShapefileBounds([string]$Path) {
@@ -381,6 +638,125 @@ function Get-Planning3dManifest() {
   return $payload
 }
 
+function Get-PlanningPhotoIndex() {
+  $cacheKey = "planning3d|photo-index"
+  $cached = Get-Cached $cacheKey 21600
+  if ($cached) {
+    return $cached
+  }
+
+  $jobInfo = Get-PlanningPhotoIndexJobInfo
+  $fileIndex = Read-PlanningPhotoIndexFile
+  if ($fileIndex) {
+    Set-Cached $cacheKey $fileIndex
+    return $fileIndex
+  }
+
+  if ($jobInfo.state -notin @("running", "notstarted")) {
+    [void](Start-PlanningPhotoIndexJob)
+  }
+
+  return $null
+}
+
+function Get-PlanningPhotoStatus() {
+  $index = Get-PlanningPhotoIndex
+  $jobInfo = Get-PlanningPhotoIndexJobInfo
+  if (-not $index) {
+    return @{
+      available = [bool](Test-Path -LiteralPath $Planning3dPhotoRoot)
+      rootPath = $Planning3dPhotoRoot
+      totalFiles = 0
+      geotaggedCount = 0
+      sampleFolders = @()
+      indexedAt = $null
+      indexedSeconds = $null
+      indexing = [bool]($jobInfo.state -in @("running", "notstarted"))
+      jobState = $jobInfo.state
+      message = if (-not (Test-Path -LiteralPath $Planning3dPhotoRoot)) {
+        "No se encontro la carpeta local de fotos."
+      } elseif ($jobInfo.state -eq "failed") {
+        "Fallo la indexacion inicial de fotos."
+      } else {
+        "Indexando fotos georreferenciadas en segundo plano. La primera pasada puede tardar."
+      }
+      error = $jobInfo.error
+    }
+  }
+
+  return @{
+    available = $index.available
+    rootPath = $index.rootPath
+    totalFiles = $index.totalFiles
+    geotaggedCount = $index.geotaggedCount
+    sampleFolders = $index.sampleFolders
+    indexedAt = $index.indexedAt
+    indexedSeconds = $index.indexedSeconds
+    indexing = $false
+    jobState = "ready"
+    message = $index.message
+  }
+}
+
+function Find-NearbyPlanningPhotos($Body) {
+  $index = Get-PlanningPhotoIndex
+  $jobInfo = Get-PlanningPhotoIndexJobInfo
+  if (-not $index -or -not $index.available) {
+    return @{
+      available = [bool](Test-Path -LiteralPath $Planning3dPhotoRoot)
+      indexing = [bool]($jobInfo.state -in @("running", "notstarted"))
+      rootPath = $Planning3dPhotoRoot
+      matches = @()
+      totalFiles = 0
+      geotaggedCount = 0
+      message = if (-not (Test-Path -LiteralPath $Planning3dPhotoRoot)) {
+        "No se encontro la carpeta local de fotos."
+      } elseif ($jobInfo.state -eq "failed") {
+        "Fallo la indexacion de fotos."
+      } else {
+        "Las fotos se estan indexando en segundo plano. Vuelve a intentar en un momento."
+      }
+      error = $jobInfo.error
+    }
+  }
+
+  $lat = [double]$Body.lat
+  $lon = [double]$Body.lon
+  $radiusM = if ($null -ne $Body.radiusM) { Clamp ([double]$Body.radiusM) 15 250 } else { 70 }
+  $limit = if ($null -ne $Body.limit) { [Math]::Min([Math]::Max([int]$Body.limit, 1), 12) } else { 6 }
+
+  $matches = @(
+    foreach ($photo in $index.photos) {
+      $distanceM = [Math]::Round((Get-HaversineMeters $lat $lon ([double]$photo.lat) ([double]$photo.lon)), 1)
+      [pscustomobject]@{
+        id = $photo.id
+        fileName = $photo.fileName
+        folder = $photo.folder
+        lat = $photo.lat
+        lon = $photo.lon
+        width = $photo.width
+        height = $photo.height
+        modifiedAt = $photo.modifiedAt
+        url = $photo.url
+        distanceM = $distanceM
+        withinRadius = [bool]($distanceM -le $radiusM)
+      }
+    }
+  ) | Sort-Object distanceM | Select-Object -First $limit
+
+  return @{
+    available = $true
+    indexing = $false
+    rootPath = $index.rootPath
+    totalFiles = $index.totalFiles
+    geotaggedCount = $index.geotaggedCount
+    radiusM = $radiusM
+    nearbyCount = @($matches | Where-Object withinRadius).Count
+    matches = @($matches)
+    indexedAt = $index.indexedAt
+  }
+}
+
 function Invoke-StacSearch($Body) {
   $bbox = ($Body.bbox | ForEach-Object { [string]$_ }) -join ","
   $fields = "id,geometry,bbox,collection,assets.thumbnail,properties.datetime,properties.eo:cloud_cover,properties.grid:code,properties.platform,properties.sat:relative_orbit,properties.processing:level,properties.product:timeliness_category"
@@ -530,6 +906,26 @@ try {
       if ($request.Path -eq "/api/planning/3d/building-meta") {
         $result = Get-Building3dMetadata
         Write-Json $stream 200 $result
+        continue
+      }
+      if ($request.Path -eq "/api/planning/3d/photo-status") {
+        $result = Get-PlanningPhotoStatus
+        Write-Json $stream 200 $result
+        continue
+      }
+      if ($request.Path -eq "/api/planning/3d/photos/nearby" -and $request.Method -eq "POST") {
+        $result = Find-NearbyPlanningPhotos ($request.Body | ConvertFrom-Json)
+        Write-Json $stream 200 $result
+        continue
+      }
+      if ($request.Path.StartsWith("/api/planning/3d/photo/")) {
+        $photoToken = $request.Path.Substring("/api/planning/3d/photo/".Length)
+        $photoPath = Resolve-PlanningPhotoFile $photoToken
+        if ($photoPath) {
+          Write-Response $stream 200 (Get-ContentType $photoPath) ([System.IO.File]::ReadAllBytes($photoPath))
+        } else {
+          Write-Json $stream 404 @{ error = "Foto no encontrada."; path = $request.Path }
+        }
         continue
       }
       if ($StaticFiles.ContainsKey($request.Path)) {

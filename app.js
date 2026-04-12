@@ -1282,10 +1282,14 @@ const planning3dState = {
   modalOpen: false,
   currentBase: "satellite",
   manifest: null,
+  photoStatus: null,
   backendMode: "unknown",
   manifestLoading: false,
   manifestPromise: null,
+  photoStatusPromise: null,
   dataLoading: false,
+  loadingPhotos: false,
+  photoQueryMessage: null,
   buildingsVisible: true,
   parcelsVisible: false,
   heightScale: 1,
@@ -1295,6 +1299,7 @@ const planning3dState = {
   popup: null,
   selectedFeatureId: null,
   selectedBuilding: null,
+  selectedPhotos: [],
   sourceData: {
     buildings: null,
     parcels: null,
@@ -4637,6 +4642,51 @@ async function hydratePlanning3dManifest(force = false) {
   return request;
 }
 
+async function hydratePlanning3dPhotoStatus(force = false) {
+  if (planning3dState.photoStatusPromise && !force) {
+    return planning3dState.photoStatusPromise;
+  }
+
+  const request = (async () => {
+    try {
+      const response = await fetch("./api/planning/3d/photo-status", {
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) {
+        throw new Error(`Servicio local de fotos no disponible (${response.status}).`);
+      }
+      planning3dState.photoStatus = await response.json();
+      return planning3dState.photoStatus;
+    } catch (error) {
+      planning3dState.photoStatus = {
+        available: false,
+        totalFiles: 0,
+        geotaggedCount: 0,
+        sampleFolders: [],
+        message: "Las fotos locales requieren server.ps1 activo y acceso a la carpeta externa.",
+      };
+      return planning3dState.photoStatus;
+    } finally {
+      planning3dState.photoStatusPromise = null;
+      renderPlanning3dSummary();
+      renderPlanning3dSelection();
+    }
+  })();
+
+  planning3dState.photoStatusPromise = request;
+  return request;
+}
+
+function formatPlanning3dDistance(distanceM) {
+  if (!Number.isFinite(distanceM)) {
+    return "Sin distancia";
+  }
+  if (distanceM >= 1000) {
+    return `${(distanceM / 1000).toFixed(2)} km`;
+  }
+  return `${Math.round(distanceM)} m`;
+}
+
 function createPlanning3dStyle(baseId = planning3dState.currentBase) {
   const isSatellite = baseId === "satellite";
   const rasterTiles = isSatellite
@@ -5127,6 +5177,7 @@ function renderPlanning3dSummary() {
 
   const buildings = planning3dState.sourceData.buildings;
   const manifest = getPlanning3dManifest();
+  const photoStatus = planning3dState.photoStatus;
   if (!buildings?.features?.length) {
     dom.planning3dSummary.classList.add("empty-state");
     dom.planning3dSummary.classList.remove("has-data");
@@ -5139,6 +5190,7 @@ function renderPlanning3dSummary() {
   const heightMean = Number((buildings.features.reduce((sum, feature) => sum + (Number(feature.properties?.heightM) || 4.2), 0) / buildingCount).toFixed(1));
   const parcelCount = planning3dState.sourceData.parcels?.features?.length || manifest.parcels?.recordCount || null;
   const candidateCount = state.planningData?.candidates?.length || 0;
+  const photoCount = photoStatus?.available ? photoStatus.geotaggedCount : null;
 
   dom.planning3dSummary.classList.remove("empty-state");
   dom.planning3dSummary.classList.add("has-data");
@@ -5160,11 +5212,22 @@ function renderPlanning3dSummary() {
         <span>Catastro</span>
         <strong>${formatPlanning3dCount(parcelCount, planning3dState.parcelsVisible ? "Cargando" : "Listo")}</strong>
       </article>
+      <article class="planning-3d-chip">
+        <span>Fotos GPS</span>
+        <strong>${photoStatus ? (photoStatus.indexing ? "Indexando" : (photoStatus.available ? formatPlanning3dCount(photoCount) : "Sin indice")) : "Pendiente"}</strong>
+      </article>
     </div>
     <p class="planning-3d-copy-small">
       ${manifest.viaBackend
         ? "El backend local esta usando el campo n_piso para definir alturas y mejorar la extrusion del tejido urbano."
         : "Estas alturas son aproximadas para no depender del backend local; al correr server.ps1 el visor usa el campo real n_piso."}
+      ${photoStatus
+        ? (photoStatus.indexing
+          ? ` ${photoStatus.message || "Las fotos se estan indexando en segundo plano para habilitar la galeria local."}`
+          : (photoStatus.available
+          ? ` El servicio local encontro ${formatPlanning3dCount(photoStatus.totalFiles)} fotos, con ${formatPlanning3dCount(photoStatus.geotaggedCount)} georreferenciadas.`
+          : ` ${photoStatus.message || "Sin acceso a fotos locales por ahora."}`))
+        : ""}
       ${candidateCount ? ` Hay ${candidateCount} sectores priorizados del analisis territorial visibles como nodos amarillos.` : ""}
     </p>
   `;
@@ -5184,6 +5247,40 @@ function renderPlanning3dSelection() {
   }
 
   const props = feature.properties || {};
+  const photoStatus = planning3dState.photoStatus;
+  const photos = planning3dState.selectedPhotos || [];
+  const photoStateMarkup = planning3dState.loadingPhotos
+    ? `
+      <div class="planning-3d-photo-state loading">
+        Buscando fotos georreferenciadas cercanas a esta construccion...
+      </div>
+    `
+    : photos.length
+      ? `
+        <div class="planning-3d-photo-grid">
+          ${photos.map((photo) => `
+            <a class="planning-3d-photo-card" href="${photo.url}" target="_blank" rel="noopener noreferrer">
+              <img src="${photo.url}" alt="${photo.fileName}">
+              <div class="planning-3d-photo-meta">
+                <strong>${photo.fileName}</strong>
+                <span>${photo.folder}</span>
+                <span>${formatPlanning3dDistance(photo.distanceM)}</span>
+              </div>
+            </a>
+          `).join("")}
+        </div>
+      `
+      : `
+        <div class="planning-3d-photo-state ${photoStatus?.indexing ? "loading" : (photoStatus?.available ? "empty" : "warning")}">
+          ${planning3dState.photoQueryMessage
+            || (photoStatus?.indexing
+              ? (photoStatus.message || "Indexando fotos georreferenciadas. Esta primera pasada puede tardar varios minutos.")
+              : (photoStatus?.available
+                ? "No encontre fotos cercanas a este edificio dentro del indice local. Intentare las mas proximas cuando haya mejor enlace fachada-edificio."
+                : (photoStatus?.message || "El servicio local de fotos no esta activo en este momento.")))}
+        </div>
+      `;
+
   dom.planning3dSelection.classList.remove("empty-state");
   dom.planning3dSelection.classList.add("has-data");
   dom.planning3dSelection.innerHTML = `
@@ -5208,9 +5305,97 @@ function renderPlanning3dSelection() {
     </div>
     <p class="planning-3d-note">
       Fuente de altura: ${props.heightSource === "dbf" ? "campo n_piso del shape de construcciones" : "estimacion geometrica local"}.
-      La conexion de fachadas con fotos georreferenciadas queda lista para una segunda pasada sobre este mismo visor.
+      Las fotos se buscan por cercania al centroide del edificio usando el indice GPS local.
     </p>
+    <section class="planning-3d-photo-section">
+      <div class="planning-3d-photo-head">
+        <h5>Fachadas cercanas</h5>
+        <span>${photoStatus?.indexing ? "Indexando" : (photoStatus?.available ? `${photos.length} visibles` : "Servicio local")}</span>
+      </div>
+      ${photoStateMarkup}
+    </section>
   `;
+}
+
+async function loadPlanning3dNearbyPhotos(feature) {
+  if (!feature) {
+    planning3dState.selectedPhotos = [];
+    planning3dState.loadingPhotos = false;
+    renderPlanning3dSelection();
+    return [];
+  }
+
+  planning3dState.loadingPhotos = true;
+  planning3dState.photoQueryMessage = null;
+  renderPlanning3dSelection();
+
+  const activeFeatureId = feature.id;
+  const [lon, lat] = feature.properties?.centroid || turf.centroid(feature).geometry.coordinates;
+  await hydratePlanning3dPhotoStatus();
+
+  if (!planning3dState.photoStatus?.available) {
+    planning3dState.selectedPhotos = [];
+    planning3dState.loadingPhotos = false;
+    planning3dState.photoQueryMessage = planning3dState.photoStatus?.message || null;
+    renderPlanning3dSelection();
+    return [];
+  }
+
+  try {
+    const response = await fetch("./api/planning/3d/photos/nearby", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        lat,
+        lon,
+        radiusM: 80,
+        limit: 8,
+      }),
+    });
+    if (!response.ok) {
+      throw new Error(`No se pudieron consultar fotos cercanas (${response.status}).`);
+    }
+
+    const payload = await response.json();
+    if (planning3dState.selectedFeatureId !== activeFeatureId) {
+      return [];
+    }
+    planning3dState.photoQueryMessage = payload.message || null;
+    if (payload.indexing) {
+      planning3dState.selectedPhotos = [];
+      planning3dState.photoStatus = {
+        ...(planning3dState.photoStatus || {}),
+        indexing: true,
+        message: payload.message || "Indexando fotos georreferenciadas en segundo plano.",
+      };
+      return [];
+    }
+    planning3dState.selectedPhotos = Array.isArray(payload.matches)
+      ? payload.matches.filter((item) => item.withinRadius).concat(
+        payload.matches.filter((item) => !item.withinRadius)
+      ).slice(0, 8)
+      : [];
+    return planning3dState.selectedPhotos;
+  } catch (error) {
+    if (planning3dState.selectedFeatureId !== activeFeatureId) {
+      return [];
+    }
+    planning3dState.selectedPhotos = [];
+    planning3dState.photoStatus = {
+      ...(planning3dState.photoStatus || {}),
+      available: false,
+      message: error.message,
+    };
+    return [];
+  } finally {
+    if (planning3dState.selectedFeatureId === activeFeatureId) {
+      planning3dState.loadingPhotos = false;
+      renderPlanning3dSelection();
+    }
+  }
 }
 
 function clearPlanning3dSelection() {
@@ -5222,12 +5407,15 @@ function clearPlanning3dSelection() {
   }
   planning3dState.selectedFeatureId = null;
   planning3dState.selectedBuilding = null;
+  planning3dState.selectedPhotos = [];
+  planning3dState.loadingPhotos = false;
+  planning3dState.photoQueryMessage = null;
   planning3dState.popup?.remove();
   planning3dState.popup = null;
   renderPlanning3dSelection();
 }
 
-function selectPlanning3dBuilding(feature, lngLat = null) {
+async function selectPlanning3dBuilding(feature, lngLat = null) {
   if (!planning3dState.map) {
     return;
   }
@@ -5245,6 +5433,8 @@ function selectPlanning3dBuilding(feature, lngLat = null) {
     { source: "planning3d-buildings", id: feature.id },
     { selected: true }
   );
+  planning3dState.selectedPhotos = [];
+  planning3dState.loadingPhotos = true;
   renderPlanning3dSelection();
 
   if (!lngLat) {
@@ -5263,6 +5453,8 @@ function selectPlanning3dBuilding(feature, lngLat = null) {
       <p class="popup-copy">${feature.properties?.floors || 1} pisos | ${feature.properties?.heightM || 4.2} m | huella aprox. ${feature.properties?.footprintM2 || 0} m2</p>
     `)
     .addTo(planning3dState.map);
+
+  await loadPlanning3dNearbyPhotos(feature);
 }
 
 function getPlanning3dCandidateCollection() {
@@ -5358,6 +5550,7 @@ async function openPlanning3dViewer() {
     await initializePlanning3dMap();
     planning3dState.map.resize();
     await ensurePlanning3dDataset("buildings");
+    hydratePlanning3dPhotoStatus();
     if (planning3dState.parcelsVisible) {
       await ensurePlanning3dDataset("parcels");
     }
@@ -5384,6 +5577,8 @@ function closePlanning3dViewer(silent = false) {
 async function reloadPlanning3dData() {
   planning3dState.manifest = null;
   planning3dState.manifestPromise = null;
+  planning3dState.photoStatus = null;
+  planning3dState.photoStatusPromise = null;
   planning3dState.sourceData.buildings = null;
   planning3dState.sourceData.parcels = null;
   planning3dState.sourceData.candidates = getPlanning3dEmptyCollection();

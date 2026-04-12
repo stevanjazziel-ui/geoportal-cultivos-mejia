@@ -5,3 +5,4 @@ server_stderr.log
 chrome-headless/
 *_dom.html
 debug_runner.html
+planning3d_photo_index.json

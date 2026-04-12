@@ -30,6 +30,7 @@ Geoportal navegable orientado al canton Mejia con rutas de agronomia y planifica
 - Selector territorial de fuente satelital con `Sentinel-2`, `Landsat`, `Sentinel-1` y `VIIRS` segun el objetivo de planificacion.
 - Matriz visible de variables territoriales por fuente satelital y ponderacion integrada al puntaje multicriterio.
 - Visualizador 3D urbano en el modulo territorial con extrusiones de construcciones reales y soporte catastral desde los shapes cargados en el proyecto.
+- Integracion local de fotos georreferenciadas para el visor 3D, con consulta por cercania desde una carpeta externa.
 - Backend local opcional con proxy STAC, cache en memoria y endpoint de analisis.
 - Estimaciones beta de relieve, clima agricola y asistente guiado por etapa.
 
@@ -57,6 +58,7 @@ Modo recomendado:
 3. Ingresa como `usuario publico`.
 4. Filtra escenas, selecciona un lote o dibuja un AOI y reprocesa si hace falta.
 5. En `Planificacion territorial`, abre el `Visualizador 3D urbano` para cargar construcciones y catastro.
+6. Si tienes fotos en una carpeta local externa, `server.ps1` puede indexarlas para mostrar fachadas cercanas dentro del panel 3D.
 
 ## Sensores: fase actual
 
@@ -66,6 +68,7 @@ Modo recomendado:
 - El control temporal permite comparar dos fechas dentro del sensor activo.
 - El backend local agrega proxy STAC, cache y un endpoint de resumen analitico para Sentinel-2.
 - El visualizador 3D funciona directo con los shapes; si el backend local esta activo tambien usa `n_piso` del DBF para calcular alturas mas realistas.
+- El backend local puede indexar fotos georreferenciadas desde `E:\FOTOS MACHACHI`; la primera pasada corre en segundo plano y puede tardar varios minutos si el lote es grande.
 - Si el backend no esta activo, el visor sigue funcionando con calculo local y fallback demo para los tres sensores.
 - El modulo de planificacion territorial ya no depende de la escena agronomica activa; usa perfiles satelitales propios para ponderar expansion urbana, resiliencia y cobertura de servicios.
 
@@ -79,3 +82,4 @@ Modo recomendado:
 - Sentinel-1 usa metricas radar propias y no indices opticos.
 - El modulo territorial es beta: sintetiza crecimiento urbano, accesibilidad, pendiente, riesgo hidrico, brecha de servicios y compatibilidad de ocupacion con datos demo calibrados para Mejia.
 - El visor 3D actual ya muestra construcciones y catastro; la vinculacion de fotos de fachadas por coordenadas queda lista para una siguiente iteracion.
+- La galeria de fotos del visor 3D es local: las imagenes no se empujan al repo ni a GitHub Pages, se sirven unicamente desde tu maquina mediante `server.ps1`.
