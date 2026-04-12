@@ -1525,6 +1525,138 @@ function getPlanning3dDemoGeometries(datasetKey) {
   }));
 }
 
+function getPlanning3dRingCenter(ring) {
+  if (!Array.isArray(ring) || !ring.length) {
+    return [-78.59, -0.503];
+  }
+
+  const uniqueVertices = ring.length > 1
+    && ring[0]?.[0] === ring[ring.length - 1]?.[0]
+    && ring[0]?.[1] === ring[ring.length - 1]?.[1]
+    ? ring.slice(0, -1)
+    : ring;
+
+  const totals = uniqueVertices.reduce((accumulator, point) => {
+    return {
+      lon: accumulator.lon + (Number(point?.[0]) || 0),
+      lat: accumulator.lat + (Number(point?.[1]) || 0),
+    };
+  }, { lon: 0, lat: 0 });
+
+  return [
+    totals.lon / Math.max(uniqueVertices.length, 1),
+    totals.lat / Math.max(uniqueVertices.length, 1),
+  ];
+}
+
+function translatePlanning3dRing(ring, lonOffset = 0, latOffset = 0, scale = 1) {
+  const [centerLon, centerLat] = getPlanning3dRingCenter(ring);
+  return ring.map((point) => {
+    const lon = Number(point?.[0]) || centerLon;
+    const lat = Number(point?.[1]) || centerLat;
+    return [
+      Number((centerLon + ((lon - centerLon) * scale) + lonOffset).toFixed(6)),
+      Number((centerLat + ((lat - centerLat) * scale) + latOffset).toFixed(6)),
+    ];
+  });
+}
+
+function buildPlanning3dLiteGeometries(datasetKey) {
+  const rings = planning3dDemoData[datasetKey];
+  if (!Array.isArray(rings) || !rings.length) {
+    return [];
+  }
+
+  const config = datasetKey === "buildings"
+    ? {
+      rows: 7,
+      cols: 8,
+      lonStep: 0.00102,
+      latStep: 0.00082,
+      scaleBase: 0.96,
+      scaleStep: 0.03,
+      skipMod: 9,
+    }
+    : {
+      rows: 4,
+      cols: 5,
+      lonStep: 0.00128,
+      latStep: 0.00104,
+      scaleBase: 1,
+      scaleStep: 0.02,
+      skipMod: 7,
+    };
+
+  const geometries = [];
+  for (let row = 0; row < config.rows; row += 1) {
+    for (let col = 0; col < config.cols; col += 1) {
+      const lonOffsetBase = (col - ((config.cols - 1) / 2)) * config.lonStep;
+      const latOffsetBase = (((config.rows - 1) / 2) - row) * config.latStep;
+
+      rings.forEach((ring, ringIndex) => {
+        const seed = (row * 37) + (col * 19) + (ringIndex * 11);
+        if (datasetKey === "buildings" && seed % config.skipMod === 0) {
+          return;
+        }
+        if (datasetKey === "parcels" && seed % config.skipMod === 0 && ringIndex > 1) {
+          return;
+        }
+
+        const jitterLon = (((seed % 5) - 2) * 0.000018);
+        const jitterLat = ((((seed + 3) % 5) - 2) * 0.000014);
+        const scale = config.scaleBase + ((seed % 4) * config.scaleStep);
+        geometries.push({
+          type: "Polygon",
+          coordinates: [
+            translatePlanning3dRing(
+              ring,
+              lonOffsetBase + jitterLon,
+              latOffsetBase + jitterLat,
+              scale
+            ),
+          ],
+        });
+      });
+    }
+  }
+
+  return geometries;
+}
+
+function buildPlanning3dLiteCollection(datasetKey) {
+  const geometries = buildPlanning3dLiteGeometries(datasetKey);
+  return datasetKey === "buildings"
+    ? buildPlanning3dBuildingsCollection(geometries)
+    : buildPlanning3dParcelsCollection(geometries);
+}
+
+function primePlanning3dLiteDataset(datasetKey, manifest = getPlanning3dManifest()) {
+  const collection = buildPlanning3dLiteCollection(datasetKey);
+  planning3dState.sourceData[datasetKey] = collection;
+  syncPlanning3dSource(datasetKey);
+
+  const total = manifest?.[datasetKey]?.recordCount || collection.features.length;
+  setPlanning3dDatasetStatus(datasetKey, {
+    phase: manifest?.viaBackend ? "preview" : "demo",
+    loaded: collection.features.length,
+    total,
+    previewCount: collection.features.length,
+  });
+  renderPlanning3dSummary();
+  renderPlanning3dSelection();
+
+  if (!manifest?.viaBackend) {
+    setPlanning3dStatus(
+      datasetKey === "buildings"
+        ? `Vista publicada ligera lista: ${formatPlanning3dCount(collection.features.length)} construcciones 3D para navegacion inmediata.`
+        : `Catastro ligero publicado listo: ${formatPlanning3dCount(collection.features.length)} predios de referencia.`,
+      "demo"
+    );
+  }
+
+  return collection;
+}
+
 function waitForPlanning3dYield() {
   return new Promise((resolve) => {
     if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
@@ -5540,6 +5672,18 @@ async function ensurePlanning3dDataset(datasetKey, force = false) {
   );
 
   try {
+    if (!manifest.viaBackend) {
+      return primePlanning3dLiteDataset(datasetKey, manifest);
+    }
+
+    if (datasetKey === "buildings" && !planning3dState.sourceData[datasetKey]) {
+      primePlanning3dLiteDataset(datasetKey, manifest);
+      setPlanning3dStatus(
+        `Vista rapida inicial lista: ${formatPlanning3dCount(planning3dState.sourceData[datasetKey]?.features?.length)} construcciones. Completando shape real en segundo plano...`,
+        "loading"
+      );
+    }
+
     const metadata = datasetKey === "buildings"
       ? await loadPlanning3dBuildingMetadata()
       : null;
