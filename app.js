@@ -1218,6 +1218,90 @@ const planning3dCatalog = {
   },
 };
 
+const planning3dDemoData = {
+  buildings: [
+    [
+      [-78.59318, -0.50688],
+      [-78.59304, -0.50688],
+      [-78.59304, -0.50672],
+      [-78.59318, -0.50672],
+      [-78.59318, -0.50688],
+    ],
+    [
+      [-78.59298, -0.50688],
+      [-78.59279, -0.50688],
+      [-78.59279, -0.50667],
+      [-78.59298, -0.50667],
+      [-78.59298, -0.50688],
+    ],
+    [
+      [-78.5927, -0.50684],
+      [-78.59251, -0.50684],
+      [-78.59251, -0.50662],
+      [-78.5927, -0.50662],
+      [-78.5927, -0.50684],
+    ],
+    [
+      [-78.59314, -0.50658],
+      [-78.59299, -0.50658],
+      [-78.59299, -0.50641],
+      [-78.59314, -0.50641],
+      [-78.59314, -0.50658],
+    ],
+    [
+      [-78.59294, -0.50656],
+      [-78.59276, -0.50656],
+      [-78.59276, -0.50634],
+      [-78.59294, -0.50634],
+      [-78.59294, -0.50656],
+    ],
+    [
+      [-78.59266, -0.50654],
+      [-78.59246, -0.50654],
+      [-78.59246, -0.5063],
+      [-78.59266, -0.5063],
+      [-78.59266, -0.50654],
+    ],
+  ],
+  parcels: [
+    [
+      [-78.59328, -0.50702],
+      [-78.59298, -0.50702],
+      [-78.59298, -0.50658],
+      [-78.59328, -0.50658],
+      [-78.59328, -0.50702],
+    ],
+    [
+      [-78.59302, -0.50702],
+      [-78.5927, -0.50702],
+      [-78.5927, -0.50658],
+      [-78.59302, -0.50658],
+      [-78.59302, -0.50702],
+    ],
+    [
+      [-78.59274, -0.50702],
+      [-78.59238, -0.50702],
+      [-78.59238, -0.50656],
+      [-78.59274, -0.50656],
+      [-78.59274, -0.50702],
+    ],
+    [
+      [-78.59324, -0.50656],
+      [-78.5929, -0.50656],
+      [-78.5929, -0.50618],
+      [-78.59324, -0.50618],
+      [-78.59324, -0.50656],
+    ],
+    [
+      [-78.59294, -0.50656],
+      [-78.59238, -0.50656],
+      [-78.59238, -0.50616],
+      [-78.59294, -0.50616],
+      [-78.59294, -0.50656],
+    ],
+  ],
+};
+
 const state = {
   activeTab: "capas",
   activeSensorId: "sentinel2",
@@ -1366,6 +1450,18 @@ function getPlanning3dFallbackManifest() {
 
 function getPlanning3dManifest() {
   return planning3dState.manifest || getPlanning3dFallbackManifest();
+}
+
+function getPlanning3dDemoGeometries(datasetKey) {
+  const rings = planning3dDemoData[datasetKey];
+  if (!Array.isArray(rings)) {
+    return [];
+  }
+
+  return rings.map((ring) => ({
+    type: "Polygon",
+    coordinates: [ring],
+  }));
 }
 
 function getSensorForImage(image = null) {
@@ -1536,6 +1632,7 @@ function cacheDom() {
   dom.planningSourceNote = document.querySelector("#planningSourceNote");
   dom.planningVariableMatrix = document.querySelector("#planningVariableMatrix");
   dom.planningCard = document.querySelector("#planningCard");
+  dom.planningModuleCards = Array.from(document.querySelectorAll('[data-module-track="planificacion"]'));
   dom.planning3dAvailability = document.querySelector("#planning3dAvailability");
   dom.openPlanning3dBtn = document.querySelector("#openPlanning3dBtn");
   dom.reloadPlanning3dBtn = document.querySelector("#reloadPlanning3dBtn");
@@ -1891,7 +1988,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     return;
   }
 
-  setActiveTab("sentinel");
+  setActiveTab("modulos");
   closePlanning3dViewer(true);
   if (dom.sidebarTitle) {
     dom.sidebarTitle.textContent = "Centro de trabajo agronomico";
@@ -1939,7 +2036,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
     dom.tabImageryBtn.classList.toggle("hidden", isPlanning);
   }
   if (dom.tabModulesBtn) {
-    dom.tabModulesBtn.textContent = isPlanning ? "Planificacion" : "Modulos Agricolas";
+    dom.tabModulesBtn.textContent = isPlanning ? "Modulos territoriales" : "Modulos Agricolas";
   }
   if (dom.modulesSectionKicker) {
     dom.modulesSectionKicker.textContent = isPlanning ? "Planeamiento" : "Herramientas beta";
@@ -1949,14 +2046,16 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   }
   if (dom.modulesSectionCopy) {
     dom.modulesSectionCopy.textContent = isPlanning
-      ? "Motor multicriterio para crecimiento urbano, accesibilidad, riesgo, cobertura de servicios y lectura satelital territorial."
+      ? "Ruta territorial con modulos de aptitud, priorizacion de candidatos y visor 3D urbano."
       : "Nucleo del sistema para agricultura de precision, relieve, clima y flujos guiados para monitoreo productivo.";
   }
   if (dom.modeFooterPill) {
     dom.modeFooterPill.textContent = isPlanning ? "Territorio inteligente" : "Agronomia digital";
   }
-  if (dom.planningCard) {
-    dom.planningCard.classList.toggle("hidden", !isPlanning);
+  if (Array.isArray(dom.planningModuleCards)) {
+    dom.planningModuleCards.forEach((card) => {
+      card.classList.toggle("hidden", !isPlanning);
+    });
   }
   if (Array.isArray(dom.agronomyModuleCards)) {
     dom.agronomyModuleCards.forEach((card) => {
@@ -4556,7 +4655,7 @@ function renderPlanning3dPanel() {
   const stats = manifest.buildings?.stats || null;
   const backendCopy = manifest.viaBackend
     ? "Backend local activo: pisos y alturas reales leidos desde el DBF de construcciones."
-    : "Modo estatico: si no activas server.ps1 el visor estima alturas para no bloquear la carga.";
+    : "Modo publicado: si no activas server.ps1 el visor usa alturas estimadas y, si hace falta, una muestra 3D ligera para no bloquear la carga.";
 
   dom.planning3dAvailability.classList.remove("empty-state");
   dom.planning3dAvailability.classList.add("has-data");
@@ -5112,6 +5211,29 @@ async function ensurePlanning3dDataset(datasetKey, force = false) {
         ? `Construcciones 3D listas: ${formatPlanning3dCount(collection.features.length)} edificaciones extruidas.`
         : `Catastro listo: ${formatPlanning3dCount(collection.features.length)} predios de apoyo cargados.`,
       datasetKey === "buildings" && manifest.viaBackend ? "real" : "demo"
+    );
+
+    return collection;
+  } catch (error) {
+    const demoGeometries = getPlanning3dDemoGeometries(datasetKey);
+    if (!demoGeometries.length) {
+      throw error;
+    }
+
+    const collection = datasetKey === "buildings"
+      ? buildPlanning3dBuildingsCollection(demoGeometries)
+      : buildPlanning3dParcelsCollection(demoGeometries);
+
+    planning3dState.sourceData[datasetKey] = collection;
+    syncPlanning3dSource(datasetKey);
+    renderPlanning3dSummary();
+    renderPlanning3dSelection();
+
+    setPlanning3dStatus(
+      datasetKey === "buildings"
+        ? "Visor 3D publicado con muestra ligera de construcciones. Activa server.ps1 para usar los shapes completos."
+        : "Catastro demo cargado para mantener operativo el visor 3D publicado.",
+      "demo"
     );
 
     return collection;
