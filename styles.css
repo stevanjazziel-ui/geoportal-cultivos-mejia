@@ -990,6 +990,10 @@ button {
   gap: 12px;
 }
 
+.wizard-actions {
+  justify-content: flex-start;
+}
+
 .wizard-step {
   position: relative;
   padding: 16px 18px 16px 22px;
@@ -1004,6 +1008,25 @@ button {
   background: linear-gradient(180deg, var(--gold), var(--leaf));
 }
 
+.wizard-step.is-done::before {
+  background: linear-gradient(180deg, var(--leaf), var(--leaf-deep));
+}
+
+.wizard-step.is-running::before {
+  background: linear-gradient(180deg, var(--gold), var(--soil));
+}
+
+.wizard-step.is-blocked::before {
+  background: linear-gradient(180deg, var(--danger), #7f3d29);
+}
+
+.wizard-step-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .wizard-step h4 {
   margin: 0;
   font-family: var(--font-display);
@@ -1012,6 +1035,115 @@ button {
 .wizard-step p {
   margin: 8px 0 0;
   line-height: 1.6;
+}
+
+.wizard-step-state,
+.wizard-summary-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(47, 61, 50, 0.1);
+  background: rgba(255, 255, 255, 0.86);
+  font-size: 0.86rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.wizard-step-state.tone-done {
+  color: var(--leaf-deep);
+  background: rgba(47, 127, 95, 0.12);
+  border-color: rgba(47, 127, 95, 0.18);
+}
+
+.wizard-step-state.tone-running {
+  color: var(--soil);
+  background: rgba(203, 148, 64, 0.14);
+  border-color: rgba(203, 148, 64, 0.22);
+}
+
+.wizard-step-state.tone-blocked {
+  color: var(--danger);
+  background: rgba(182, 78, 58, 0.12);
+  border-color: rgba(182, 78, 58, 0.18);
+}
+
+.wizard-step-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.wizard-step-note {
+  flex: 1 1 220px;
+  margin: 0;
+  font-size: 0.94rem;
+  color: var(--muted);
+}
+
+.wizard-summary:not(.empty-state) {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(47, 61, 50, 0.08);
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.wizard-summary-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wizard-summary-head h4 {
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.wizard-summary-copy {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.wizard-summary-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.wizard-summary-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(47, 61, 50, 0.08);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.wizard-summary-metric span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.wizard-summary-metric strong {
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.wizard-summary-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
 }
 
 .planning-card {

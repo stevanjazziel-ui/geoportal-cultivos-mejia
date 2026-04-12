@@ -430,72 +430,104 @@ const wizardConfig = {
     {
       title: "Preparar el lote",
       body: "Revisa relieve, pendientes y sectores con mayor riesgo de anegamiento antes de definir mecanizacion y drenajes.",
+      action: "dem",
+      buttonLabel: "Preparar lote",
     },
     {
       title: "Cruzar humedad y temperatura",
       body: "Consulta el indice de humedad disponible, lluvia acumulada y temperatura superficial para decidir ventana de siembra.",
+      action: "climate",
+      buttonLabel: "Cruzar clima",
     },
     {
       title: "Definir zonas de manejo",
       body: "Segmenta el lote para dosificar densidad, fertilizacion de arranque y riego segun variabilidad interna.",
+      action: "intralote",
+      buttonLabel: "Definir zonas",
     },
     {
       title: "Emitir plan operativo",
       body: "Consolida pasos de campo, insumos y verificaciones para la cuadrilla agronomica.",
+      action: "report",
+      buttonLabel: "Emitir plan",
     },
   ],
   Monitoreo: [
     {
       title: "Buscar la escena mas reciente",
       body: "Filtra la escena mas reciente y selecciona el indice o metrica mas util para el estado fenologico actual.",
+      action: "scene",
+      buttonLabel: "Activar escena",
     },
     {
       title: "Localizar alertas intralote",
       body: "Identifica zonas de menor vigor o humedad dispar para priorizar visitas de inspeccion.",
+      action: "intralote",
+      buttonLabel: "Detectar alertas",
     },
     {
       title: "Cruzar clima y termica",
       body: "Analiza lluvia, amplitud termica y temperatura superficial para detectar estres o retrasos.",
+      action: "climate",
+      buttonLabel: "Cruzar clima",
     },
     {
       title: "Cerrar recomendaciones",
       body: "Resume acciones de fertilizacion, riego o control fitosanitario por sector.",
+      action: "report",
+      buttonLabel: "Cerrar recomendaciones",
     },
   ],
   Cosecha: [
     {
       title: "Evaluar acceso y pendientes",
       body: "Verifica topografia, vias y sectores blandos para planificar ingreso de maquinaria.",
+      action: "dem",
+      buttonLabel: "Evaluar acceso",
     },
     {
       title: "Revisar madurez heterogenea",
       body: "Usa las metricas disponibles para ubicar diferencias de desarrollo que puedan requerir cosecha escalonada.",
+      action: "intralote",
+      buttonLabel: "Revisar madurez",
     },
     {
       title: "Cruzar clima de corto plazo",
       body: "Consulta lluvia y temperatura para minimizar perdidas en el corte y el transporte.",
+      action: "climate",
+      buttonLabel: "Cruzar clima",
     },
     {
       title: "Definir ruta de cosecha",
       body: "Ordena lotes y sectores segun prioridad agronomica y condicion operativa.",
+      action: "report",
+      buttonLabel: "Definir ruta",
     },
   ],
   Diagnostico: [
     {
       title: "Delimitar el problema",
       body: "Selecciona el lote afectado y compara indices para acotar si el sintoma parece hidrico, nutricional o estructural.",
+      action: "intralote",
+      buttonLabel: "Delimitar problema",
     },
     {
       title: "Analizar relieve y drenaje",
       body: "Contrasta pendiente y riesgo de anegamiento para descartar o confirmar problemas topograficos.",
+      action: "dem",
+      buttonLabel: "Analizar relieve",
     },
     {
       title: "Cruzar clima y temperatura",
       body: "Busca anomalias termicas y eventos de lluvia que expliquen la respuesta del cultivo.",
+      action: "climate",
+      buttonLabel: "Cruzar clima",
     },
     {
       title: "Priorizar salida a campo",
       body: "Genera una ruta de inspeccion y checklist para validar la hipotesis en sitio.",
+      action: "report",
+      buttonLabel: "Generar checklist",
     },
   ],
 };
@@ -1342,6 +1374,13 @@ const state = {
   planningData: null,
   planningHighlightId: null,
   entryRoute: "agronomia",
+  agronomyOutputs: {
+    intralote: null,
+    dem: null,
+    climate: null,
+  },
+  wizardProgress: {},
+  wizardBusy: false,
 };
 
 const dom = {};
@@ -1905,6 +1944,12 @@ function cacheDom() {
   dom.agronomyModuleCards = Array.from(document.querySelectorAll('[data-module-track="agronomia"]'));
   dom.wizardModes = document.querySelector("#wizardModes");
   dom.wizardSteps = document.querySelector("#wizardSteps");
+  dom.runWizardNextBtn = document.querySelector("#runWizardNextBtn");
+  dom.runWizardPlanBtn = document.querySelector("#runWizardPlanBtn");
+  dom.useDemoPlotBtn = document.querySelector("#useDemoPlotBtn");
+  dom.resetWizardBtn = document.querySelector("#resetWizardBtn");
+  dom.wizardAssistantStatus = document.querySelector("#wizardAssistantStatus");
+  dom.wizardSummary = document.querySelector("#wizardSummary");
   dom.baseButtons = Array.from(document.querySelectorAll("[data-base]"));
 }
 
@@ -1915,8 +1960,7 @@ function bootstrapApp() {
   updateSensorControls();
   renderLayerTree();
   renderIndexButtons();
-  renderWizardModes();
-  renderWizardSteps();
+  renderWizardAssistantState();
   renderPlanningModule();
   renderPlanning3dPanel();
   syncEntryRouteUi(state.entryRoute);
@@ -2076,6 +2120,10 @@ function bindUI() {
   dom.runIntraloteBtn.addEventListener("click", runIntraloteAnalysis);
   dom.runDemBtn.addEventListener("click", runDemAnalysis);
   dom.runClimateBtn.addEventListener("click", runClimateAnalysis);
+  dom.runWizardNextBtn?.addEventListener("click", runWizardNextStep);
+  dom.runWizardPlanBtn?.addEventListener("click", runWizardPlan);
+  dom.useDemoPlotBtn?.addEventListener("click", useWizardDemoPlot);
+  dom.resetWizardBtn?.addEventListener("click", () => resetWizardAssistant());
   dom.runPlanningBtn.addEventListener("click", runPlanningAnalysis);
   dom.focusPlanningBtn.addEventListener("click", focusPlanningCandidates);
   dom.clearPlanningBtn.addEventListener("click", clearPlanningAnalysis);
@@ -2603,6 +2651,7 @@ async function filterSentinelImages() {
       renderAnalysisSummary();
       renderCompareSummary();
       renderSentinelOverlay();
+      renderWizardAssistantState();
     }
   }
 }
@@ -3305,6 +3354,7 @@ async function refreshActiveAnalysis({ silent = false } = {}) {
     renderLegend();
     renderSentinelOverlay();
     updateMapSummary();
+    renderWizardAssistantState();
     return null;
   }
 
@@ -3373,6 +3423,7 @@ async function refreshActiveAnalysis({ silent = false } = {}) {
       renderSentinelOverlay();
       updateMapSummary();
       syncAnalysisDrivenModules();
+      renderWizardAssistantState();
     }
   }
 }
@@ -4645,12 +4696,16 @@ function setCurrentPlot(feature, label) {
     runPlanningAnalysis(true);
   }
   filterSentinelImages();
+  renderWizardAssistantState();
 }
 
 function clearCurrentPlot(triggerRefresh = false) {
   state.currentPlot = null;
   state.currentPlotLabel = "Sin seleccionar";
   state.analysisData = null;
+  state.agronomyOutputs.intralote = null;
+  state.agronomyOutputs.dem = null;
+  state.agronomyOutputs.climate = null;
   dom.overlayPlot.textContent = state.currentPlotLabel;
   renderSentinelSourceStatus();
   renderAnalysisStatus();
@@ -4683,16 +4738,17 @@ function clearCurrentPlot(triggerRefresh = false) {
   if (triggerRefresh) {
     filterSentinelImages();
   }
+  renderWizardAssistantState();
 }
 
 function runIntraloteAnalysis(silent = false) {
   if (!ensurePlot("Analisis intralote requiere un lote activo o un poligono dibujado.", silent)) {
-    return;
+    return null;
   }
 
   const image = getSelectedImage() || getFallbackScene();
   if (!image) {
-    return;
+    return null;
   }
   const plotTarget = {
     feature: state.currentPlot,
@@ -4716,6 +4772,16 @@ function runIntraloteAnalysis(silent = false) {
   ];
 
   paintMetricGrid(dom.intraloteResults, cards);
+  const result = {
+    image,
+    analysis,
+    zoneStats,
+    cards,
+    scopeLabel: state.currentPlotLabel,
+    managementText,
+    recommendedAction: analysis.management.recommendedAction,
+  };
+  state.agronomyOutputs.intralote = result;
   if (!silent) {
     setStatus(
       `Analisis intralote ejecutado para ${state.currentPlotLabel}. Se actualizaron superficies y zonas de manejo.`
@@ -4725,6 +4791,8 @@ function runIntraloteAnalysis(silent = false) {
   if (state.activeWizard === "Monitoreo" || state.activeWizard === "Diagnostico") {
     runClimateAnalysis(true);
   }
+  renderWizardAssistantState();
+  return result;
 }
 
 function renderManagementZones(analysis) {
@@ -4771,12 +4839,12 @@ function renderManagementZones(analysis) {
 
 function runDemAnalysis(silent = false) {
   if (!ensurePlot("Analisis DEM requiere un lote activo o un poligono dibujado.", silent)) {
-    return;
+    return null;
   }
 
   const image = getSelectedImage() || getFallbackScene();
   if (!image) {
-    return;
+    return null;
   }
   const plotTarget = {
     feature: state.currentPlot,
@@ -4810,16 +4878,31 @@ function runDemAnalysis(silent = false) {
   ];
 
   paintMetricGrid(dom.demResults, cards);
+  const result = {
+    image,
+    analysis,
+    cards,
+    scopeLabel: state.currentPlotLabel,
+    altitude,
+    meanSlope: Number(meanSlope.toFixed(1)),
+    maxSlope: Number(maxSlope.toFixed(1)),
+    aspect,
+    floodRisk,
+    operationLabel: meanSlope > 10 ? "Manejo cuidadoso" : "Operacion favorable",
+  };
+  state.agronomyOutputs.dem = result;
   if (!silent) {
     setStatus(`Analisis topografico generado para ${state.currentPlotLabel}.`);
   }
+  renderWizardAssistantState();
+  return result;
 }
 
 function runClimateAnalysis(silent = false) {
   const anchorFeature = state.currentPlot || studyArea;
   const image = getSelectedImage() || getFallbackScene();
   if (!image) {
-    return;
+    return null;
   }
   const target = state.currentPlot
     ? {
@@ -4857,9 +4940,24 @@ function runClimateAnalysis(silent = false) {
   ];
 
   paintMetricGrid(dom.climateResults, cards);
+  const result = {
+    image,
+    analysis,
+    cards,
+    scopeLabel: target.scopeLabel,
+    rainfall,
+    minTemp: Number(minTemp.toFixed(1)),
+    maxTemp: Number(maxTemp.toFixed(1)),
+    soilMoisture: Number(soilMoisture.toFixed(0)),
+    lst: Number(lst.toFixed(1)),
+    stress,
+  };
+  state.agronomyOutputs.climate = result;
   if (!silent) {
     setStatus("Modulo de clima agricola actualizado con variables de referencia.");
   }
+  renderWizardAssistantState();
+  return result;
 }
 
 function getPlanning3dEmptyCollection() {
@@ -7191,6 +7289,468 @@ function getRelativeDirectionLabel(originCoords, targetCoords) {
   return cardinalFromAngle(angle);
 }
 
+function cloneFeature(feature) {
+  return feature ? JSON.parse(JSON.stringify(feature)) : null;
+}
+
+function createWizardProgress(mode = state.activeWizard) {
+  return {
+    mode,
+    steps: (wizardConfig[mode] || []).map(() => ({
+      status: "pending",
+      note: "",
+      updatedAt: null,
+    })),
+    report: null,
+    lastUpdatedAt: null,
+  };
+}
+
+function getWizardProgress(mode = state.activeWizard) {
+  const stepCount = wizardConfig[mode]?.length || 0;
+  const progress = state.wizardProgress[mode];
+  if (!progress || !Array.isArray(progress.steps) || progress.steps.length !== stepCount) {
+    state.wizardProgress[mode] = createWizardProgress(mode);
+  }
+  return state.wizardProgress[mode];
+}
+
+function getWizardCompletedCount(mode = state.activeWizard) {
+  return getWizardProgress(mode).steps.filter((step) => step.status === "done").length;
+}
+
+function getWizardNextPendingIndex(mode = state.activeWizard) {
+  return getWizardProgress(mode).steps.findIndex((step) => step.status !== "done");
+}
+
+function setWizardAssistantStatus(message, tone = "loading") {
+  if (!dom.wizardAssistantStatus) {
+    return;
+  }
+  dom.wizardAssistantStatus.className = `service-banner ${tone}`;
+  dom.wizardAssistantStatus.textContent = message;
+}
+
+function getWizardDemoPlot() {
+  const sourceFeature = geoSources.lotes?.features?.[0];
+  if (!sourceFeature) {
+    return null;
+  }
+  return {
+    feature: cloneFeature(sourceFeature),
+    label: sourceFeature.properties?.name || "Lote demo",
+  };
+}
+
+function ensureWizardPlotContext({ forceDemo = false } = {}) {
+  if (state.currentPlot && !forceDemo) {
+    return {
+      feature: state.currentPlot,
+      label: state.currentPlotLabel,
+      usedDemo: false,
+    };
+  }
+
+  const demoPlot = getWizardDemoPlot();
+  if (!demoPlot) {
+    throw new Error("No hay un lote demo disponible para el asistente.");
+  }
+
+  setCurrentPlot(demoPlot.feature, demoPlot.label);
+  return {
+    feature: state.currentPlot,
+    label: state.currentPlotLabel,
+    usedDemo: true,
+  };
+}
+
+async function ensureWizardSceneContext({ refresh = false } = {}) {
+  if (refresh || !state.filteredImages.length) {
+    await filterSentinelImages();
+  } else if (!getSelectedImage()) {
+    applySelectedScene();
+    renderSceneControls();
+    renderSentinelResults();
+  }
+
+  if (!state.filteredImages.length) {
+    const fallback = getFallbackScene();
+    if (fallback) {
+      state.filteredImages = [fallback];
+      applySelectedScene();
+      renderSceneControls();
+      renderSentinelResults();
+    }
+  }
+
+  const image = getSelectedImage() || state.filteredImages[0] || null;
+  if (!image) {
+    throw new Error("No hay escenas disponibles para activar el asistente.");
+  }
+
+  if (image.id !== state.selectedImageId) {
+    state.selectedImageId = image.id;
+    state.selectedCompareImageId = null;
+    state.surfaceMode = "primary";
+    renderSceneControls();
+    renderSentinelResults();
+  }
+
+  await refreshActiveAnalysis({ silent: true });
+  return {
+    image: getSelectedImage() || image,
+    sourceMode: state.sentinelMode,
+    transport: state.sentinelTransport,
+  };
+}
+
+function formatWizardSceneLabel(image) {
+  if (!image) {
+    return "Sin escena";
+  }
+  const sensor = getSensorForImage(image);
+  const dateLabel = image.date
+    ? localeDate.format(new Date(`${image.date}T00:00:00`))
+    : sensor.label;
+  return `${sensor.label} ${dateLabel}`;
+}
+
+function buildWizardStepNote(action, result, mode = state.activeWizard) {
+  if (!result) {
+    return "Paso ejecutado.";
+  }
+
+  if (action === "scene") {
+    return `${formatWizardSceneLabel(result.image)} activa en el mapa con fuente ${result.sourceMode === "real" ? "real" : "demo"}.`;
+  }
+
+  if (action === "dem") {
+    return `Pendiente media ${result.meanSlope}% y riesgo ${result.floodRisk}.`;
+  }
+
+  if (action === "climate") {
+    return `Lluvia ${result.rainfall} mm, humedad ${result.soilMoisture}% y estado ${result.stress}.`;
+  }
+
+  if (action === "intralote") {
+    return `${result.managementText}. ${result.recommendedAction}`;
+  }
+
+  if (action === "report") {
+    const bullets = Array.isArray(result?.bullets) ? result.bullets.length : 0;
+    return `${bullets || 3} recomendaciones operativas listas para ${mode.toLowerCase()}.`;
+  }
+
+  return "Paso ejecutado.";
+}
+
+function buildWizardOperationalReport(mode = state.activeWizard) {
+  const progress = getWizardProgress(mode);
+  const steps = wizardConfig[mode] || [];
+  const completedCount = progress.steps.filter((step) => step.status === "done").length;
+  const plotLabel = state.currentPlot ? state.currentPlotLabel : "Canton Mejia";
+  const scene = getSelectedImage() || state.filteredImages[0] || getFallbackScene();
+  const sceneLabel = formatWizardSceneLabel(scene);
+  const intralote = state.agronomyOutputs.intralote;
+  const dem = state.agronomyOutputs.dem;
+  const climate = state.agronomyOutputs.climate;
+  const bullets = [];
+
+  if (mode === "Siembra") {
+    if (dem) {
+      bullets.push(`Pendiente media ${dem.meanSlope}% y riesgo ${dem.floodRisk}; ajusta drenaje y mecanizacion antes de entrar al lote.`);
+    }
+    if (climate) {
+      bullets.push(`Lluvia de referencia ${climate.rainfall} mm y humedad ${climate.soilMoisture}%; define la ventana de siembra y el arranque de riego con ese margen.`);
+    }
+    if (intralote) {
+      bullets.push(`Zonas de manejo ${intralote.managementText}; ${intralote.recommendedAction.toLowerCase()}.`);
+    }
+  } else if (mode === "Monitoreo") {
+    bullets.push(`${sceneLabel} queda como escena activa para seguimiento del lote y lectura de alertas.`);
+    if (intralote) {
+      bullets.push(`El lote presenta ${intralote.managementText}; prioriza visita a sectores de baja respuesta.`);
+    }
+    if (climate) {
+      bullets.push(`Cruce clima-termico: ${climate.stress.toLowerCase()} con ${climate.rainfall} mm y LST ${climate.lst} C; ajusta riego o control segun sector.`);
+    }
+  } else if (mode === "Cosecha") {
+    if (dem) {
+      bullets.push(`Acceso y relieve: pendiente media ${dem.meanSlope}% con lectura ${dem.operationLabel.toLowerCase()}; ordena primero los sectores mas favorables.`);
+    }
+    if (intralote) {
+      bullets.push(`Madurez heterogenea detectada en ${intralote.managementText}; programa cosecha escalonada si el cultivo no responde parejo.`);
+    }
+    if (climate) {
+      bullets.push(`Clima corto plazo: ${climate.rainfall} mm y estado ${climate.stress.toLowerCase()}; protege la ventana de corte y transporte.`);
+    }
+  } else if (mode === "Diagnostico") {
+    if (intralote) {
+      bullets.push(`Hipotesis inicial: ${intralote.recommendedAction.toLowerCase()} sobre los sectores de menor vigor.`);
+    }
+    if (dem) {
+      bullets.push(`Relieve y drenaje: pendiente ${dem.meanSlope}% con riesgo ${dem.floodRisk}; confirma en campo si el problema se concentra en bajos o bordes.`);
+    }
+    if (climate) {
+      bullets.push(`Contexto clima-termico: ${climate.stress.toLowerCase()} con humedad ${climate.soilMoisture}% y LST ${climate.lst} C; cruza esa senal con sintomas visibles.`);
+    }
+  }
+
+  if (!bullets.length) {
+    bullets.push("Selecciona un lote o usa el lote demo para que el asistente genere recomendaciones reales.");
+  }
+
+  const summaryByMode = {
+    Siembra: `Flujo guiado para preparar ${plotLabel}, revisar relieve, clima y zonas de manejo antes de sembrar.`,
+    Monitoreo: `Seguimiento operativo sobre ${plotLabel} para localizar alertas, cruzar clima y cerrar acciones de campo.`,
+    Cosecha: `Orden operativo para cosecha sobre ${plotLabel} con foco en acceso, heterogeneidad y ventana climatica.`,
+    Diagnostico: `Ruta de diagnostico sobre ${plotLabel} para contrastar vigor, drenaje y contexto termico.`,
+  };
+
+  return {
+    title: `${mode} sobre ${plotLabel}`,
+    summary: summaryByMode[mode] || `Asistente activo sobre ${plotLabel}.`,
+    bullets,
+    badges: [
+      { label: "Pasos", value: `${completedCount}/${steps.length || 0}` },
+      { label: "Lote", value: plotLabel },
+      { label: "Escena", value: sceneLabel },
+    ],
+    completedCount,
+    totalSteps: steps.length,
+    statusText: completedCount >= steps.length && steps.length
+      ? `Plan ${mode.toLowerCase()} listo para ${plotLabel}.`
+      : `${completedCount}/${steps.length || 0} pasos del asistente ${mode.toLowerCase()} listos.`,
+  };
+}
+
+function renderWizardAssistantStatus() {
+  const progress = getWizardProgress();
+  const steps = wizardConfig[state.activeWizard] || [];
+  const completedCount = getWizardCompletedCount();
+  const runningIndex = progress.steps.findIndex((step) => step.status === "running");
+  const nextIndex = getWizardNextPendingIndex();
+
+  if (state.wizardBusy && runningIndex >= 0) {
+    setWizardAssistantStatus(`Ejecutando paso ${runningIndex + 1}: ${steps[runningIndex].title}.`, "loading");
+    return;
+  }
+
+  if (completedCount >= steps.length && steps.length) {
+    setWizardAssistantStatus(buildWizardOperationalReport().statusText, "real");
+    return;
+  }
+
+  if (!state.currentPlot) {
+    setWizardAssistantStatus("No hay lote activo. Puedes usar el lote demo o tocar un lote en el mapa y el asistente seguira desde ahi.", "demo");
+    return;
+  }
+
+  if (!getSelectedImage() && !state.filteredImages.length) {
+    setWizardAssistantStatus("No hay escena activa todavia. El siguiente paso puede buscar una escena automaticamente.", "loading");
+    return;
+  }
+
+  if (nextIndex >= 0) {
+    setWizardAssistantStatus(`Siguiente paso sugerido: ${steps[nextIndex].title}.`, completedCount > 0 ? "proxy" : "loading");
+    return;
+  }
+
+  setWizardAssistantStatus("El asistente esta listo para seguir trabajando sobre el lote actual.", "real");
+}
+
+function renderWizardSummary() {
+  const progress = getWizardProgress();
+  const report = progress.report || (getWizardCompletedCount() > 0 ? buildWizardOperationalReport() : null);
+
+  if (!report || !report.completedCount) {
+    dom.wizardSummary.classList.add("empty-state");
+    dom.wizardSummary.innerHTML = "Ejecuta un paso o el plan completo para ver recomendaciones operativas del asistente.";
+    return;
+  }
+
+  dom.wizardSummary.classList.remove("empty-state");
+  dom.wizardSummary.innerHTML = `
+    <div class="wizard-summary-head">
+      <div>
+        <p class="section-kicker">Salida operativa</p>
+        <h4>${report.title}</h4>
+      </div>
+      <span class="wizard-summary-pill">${report.completedCount}/${report.totalSteps} pasos</span>
+    </div>
+    <p class="wizard-summary-copy">${report.summary}</p>
+    <div class="wizard-summary-metrics">
+      ${report.badges.map((badge) => `
+        <article class="wizard-summary-metric">
+          <span>${badge.label}</span>
+          <strong>${badge.value}</strong>
+        </article>
+      `).join("")}
+    </div>
+    <ul class="wizard-summary-list">
+      ${report.bullets.map((bullet) => `<li>${bullet}</li>`).join("")}
+    </ul>
+  `;
+}
+
+function renderWizardAssistantControls() {
+  const steps = wizardConfig[state.activeWizard] || [];
+  const progress = getWizardProgress();
+  const completedCount = progress.steps.filter((step) => step.status === "done").length;
+  const nextIndex = getWizardNextPendingIndex();
+  const nextStep = nextIndex >= 0 ? steps[nextIndex] : null;
+
+  if (dom.runWizardNextBtn) {
+    dom.runWizardNextBtn.disabled = state.wizardBusy || !nextStep;
+    dom.runWizardNextBtn.textContent = state.wizardBusy
+      ? "Ejecutando..."
+      : nextStep
+        ? `Ejecutar: ${nextStep.buttonLabel}`
+        : "Plan listo";
+  }
+
+  if (dom.runWizardPlanBtn) {
+    dom.runWizardPlanBtn.disabled = state.wizardBusy || completedCount >= steps.length;
+    dom.runWizardPlanBtn.textContent = state.wizardBusy
+      ? "Procesando..."
+      : completedCount >= steps.length
+        ? "Plan completo listo"
+        : "Ejecutar plan completo";
+  }
+
+  if (dom.useDemoPlotBtn) {
+    dom.useDemoPlotBtn.disabled = state.wizardBusy;
+  }
+
+  if (dom.resetWizardBtn) {
+    dom.resetWizardBtn.disabled = state.wizardBusy;
+  }
+}
+
+function renderWizardAssistantState() {
+  renderWizardModes();
+  renderWizardSteps();
+  renderWizardSummary();
+  renderWizardAssistantControls();
+  renderWizardAssistantStatus();
+}
+
+async function executeWizardAction(action, { mode = state.activeWizard } = {}) {
+  if (action === "scene") {
+    return ensureWizardSceneContext({ refresh: true });
+  }
+
+  if (action === "dem") {
+    ensureWizardPlotContext();
+    await ensureWizardSceneContext();
+    return runDemAnalysis(true);
+  }
+
+  if (action === "climate") {
+    if (mode !== "Monitoreo") {
+      ensureWizardPlotContext();
+    }
+    await ensureWizardSceneContext();
+    return runClimateAnalysis(true);
+  }
+
+  if (action === "intralote") {
+    ensureWizardPlotContext();
+    await ensureWizardSceneContext();
+    return runIntraloteAnalysis(true);
+  }
+
+  if (action === "report") {
+    return buildWizardOperationalReport(mode);
+  }
+
+  throw new Error("El asistente recibio un paso no soportado.");
+}
+
+async function runWizardUpToStep(targetIndex) {
+  const steps = wizardConfig[state.activeWizard] || [];
+  if (!steps[targetIndex] || state.wizardBusy) {
+    return null;
+  }
+
+  const progress = getWizardProgress();
+  state.wizardBusy = true;
+  renderWizardAssistantState();
+
+  try {
+    setActiveTab("modulos");
+
+    for (let index = 0; index <= targetIndex; index += 1) {
+      const step = steps[index];
+      const stepState = progress.steps[index];
+      if (stepState.status === "done") {
+        continue;
+      }
+
+      stepState.status = "running";
+      stepState.note = "Procesando este paso...";
+      renderWizardAssistantState();
+
+      const result = await executeWizardAction(step.action, { mode: state.activeWizard });
+      stepState.status = "done";
+      stepState.note = buildWizardStepNote(step.action, result, state.activeWizard);
+      stepState.updatedAt = new Date().toISOString();
+      progress.lastUpdatedAt = stepState.updatedAt;
+      progress.report = buildWizardOperationalReport(state.activeWizard);
+      renderWizardAssistantState();
+    }
+
+    progress.report = buildWizardOperationalReport(state.activeWizard);
+    setStatus(progress.report.statusText);
+    return progress.report;
+  } catch (error) {
+    const runningStep = progress.steps.find((step) => step.status === "running");
+    if (runningStep) {
+      runningStep.status = "blocked";
+      runningStep.note = error instanceof Error ? error.message : "El paso no pudo completarse.";
+    }
+    const message = error instanceof Error ? error.message : "El asistente no pudo completar el plan.";
+    setWizardAssistantStatus(message, "demo");
+    setStatus(message);
+    return null;
+  } finally {
+    state.wizardBusy = false;
+    renderWizardAssistantState();
+  }
+}
+
+async function runWizardNextStep() {
+  const nextIndex = getWizardNextPendingIndex();
+  if (nextIndex < 0) {
+    const report = buildWizardOperationalReport();
+    getWizardProgress().report = report;
+    renderWizardAssistantState();
+    setStatus(report.statusText);
+    return report;
+  }
+  return runWizardUpToStep(nextIndex);
+}
+
+async function runWizardPlan() {
+  const finalIndex = (wizardConfig[state.activeWizard] || []).length - 1;
+  if (finalIndex < 0) {
+    return null;
+  }
+  return runWizardUpToStep(finalIndex);
+}
+
+function resetWizardAssistant(mode = state.activeWizard) {
+  state.wizardProgress[mode] = createWizardProgress(mode);
+  renderWizardAssistantState();
+  setStatus(`Asistente Agricola reiniciado para el modo ${mode}.`);
+}
+
+function useWizardDemoPlot() {
+  ensureWizardPlotContext({ forceDemo: true });
+  renderWizardAssistantState();
+  setStatus(`Lote demo ${state.currentPlotLabel} activado para el asistente.`);
+}
+
 function renderWizardModes() {
   dom.wizardModes.innerHTML = Object.keys(wizardConfig)
     .map(
@@ -7210,8 +7770,7 @@ function renderWizardModes() {
     button.addEventListener("click", () => {
       state.activeWizard = button.dataset.mode;
       dom.overlayMode.textContent = state.activeWizard;
-      renderWizardModes();
-      renderWizardSteps();
+      renderWizardAssistantState();
       setStatus(`Asistente Agricola ajustado al modo ${state.activeWizard}.`);
       refreshActiveAnalysis({ silent: true });
     });
@@ -7220,17 +7779,51 @@ function renderWizardModes() {
 
 function renderWizardSteps() {
   const steps = wizardConfig[state.activeWizard];
+  const progress = getWizardProgress();
   dom.wizardSteps.innerHTML = steps
     .map(
       (step, index) => `
-        <article class="wizard-step">
-          <p class="section-kicker">Paso ${index + 1}</p>
-          <h4>${step.title}</h4>
+        <article class="wizard-step is-${progress.steps[index].status}">
+          <div class="wizard-step-head">
+            <div>
+              <p class="section-kicker">Paso ${index + 1}</p>
+              <h4>${step.title}</h4>
+            </div>
+            <span class="wizard-step-state tone-${progress.steps[index].status}">
+              ${progress.steps[index].status === "done"
+                ? "Hecho"
+                : progress.steps[index].status === "running"
+                  ? "En curso"
+                  : progress.steps[index].status === "blocked"
+                    ? "Revisar"
+                    : "Pendiente"}
+            </span>
+          </div>
           <p>${step.body}</p>
+          <div class="wizard-step-actions">
+            <button
+              class="ghost-button wizard-step-action"
+              type="button"
+              data-step-index="${index}"
+              ${state.wizardBusy ? "disabled" : ""}
+            >
+              ${step.buttonLabel}
+            </button>
+            <p class="wizard-step-note">${progress.steps[index].note || "Aun no ejecutado."}</p>
+          </div>
         </article>
       `
     )
     .join("");
+
+  dom.wizardSteps.querySelectorAll(".wizard-step-action").forEach((button) => {
+    button.addEventListener("click", () => {
+      const stepIndex = Number(button.dataset.stepIndex);
+      if (Number.isFinite(stepIndex)) {
+        runWizardUpToStep(stepIndex);
+      }
+    });
+  });
 }
 
 function paintMetricGrid(target, cards) {
