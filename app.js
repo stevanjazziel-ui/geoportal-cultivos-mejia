@@ -1388,6 +1388,10 @@ const planning3dState = {
     buildings: 0,
     parcels: 0,
   },
+  datasetWorkers: {
+    buildings: null,
+    parcels: null,
+  },
   datasetStatus: {
     buildings: {
       phase: "idle",
@@ -1492,6 +1496,19 @@ function waitForPlanning3dYield() {
   });
 }
 
+function terminatePlanning3dWorker(datasetKey) {
+  const worker = planning3dState.datasetWorkers?.[datasetKey];
+  if (!worker) {
+    return;
+  }
+  worker.terminate();
+  planning3dState.datasetWorkers[datasetKey] = null;
+}
+
+function getPlanning3dWorkerUrl() {
+  return "./planning3d-worker.js?v=20260412-1";
+}
+
 function getPlanning3dGeometryList(geometries) {
   if (Array.isArray(geometries)) {
     return geometries.filter(Boolean);
@@ -1547,6 +1564,69 @@ function setPlanning3dDatasetStatus(datasetKey, patch = {}) {
     ...current,
     ...patch,
   };
+}
+
+function runPlanning3dWorkerDataset(datasetKey, basePath, metadata = null, options = {}) {
+  if (typeof Worker === "undefined") {
+    return null;
+  }
+
+  terminatePlanning3dWorker(datasetKey);
+  const worker = new Worker(getPlanning3dWorkerUrl());
+  planning3dState.datasetWorkers[datasetKey] = worker;
+  const requestId = options.requestId || planning3dState.datasetRequestId[datasetKey];
+
+  return new Promise((resolve, reject) => {
+    const cleanup = () => {
+      if (planning3dState.datasetWorkers[datasetKey] === worker) {
+        planning3dState.datasetWorkers[datasetKey] = null;
+      }
+      worker.terminate();
+    };
+
+    worker.onmessage = (event) => {
+      const payload = event.data || {};
+      if (payload.requestId !== requestId || payload.datasetKey !== datasetKey) {
+        return;
+      }
+
+      if (payload.type === "preview") {
+        options.onPreview?.(payload);
+        return;
+      }
+
+      if (payload.type === "progress") {
+        options.onProgress?.(payload);
+        return;
+      }
+
+      if (payload.type === "complete") {
+        cleanup();
+        resolve(payload.collection);
+        return;
+      }
+
+      if (payload.type === "error") {
+        cleanup();
+        reject(new Error(payload.message || `No se pudo procesar ${datasetKey} en el worker 3D.`));
+      }
+    };
+
+    worker.onerror = (event) => {
+      cleanup();
+      reject(new Error(event.message || `Fallo el worker del visualizador 3D para ${datasetKey}.`));
+    };
+
+    worker.postMessage({
+      type: "buildDataset",
+      requestId,
+      datasetKey,
+      basePath,
+      metadata,
+      previewTarget: datasetKey === "buildings" ? (options.previewTarget || 3200) : 0,
+      batchSize: options.batchSize || (datasetKey === "buildings" ? 1800 : 1200),
+    });
+  });
 }
 
 function createPlanning3dBuildingFeature(geometry, index, metadata = null) {
@@ -4963,7 +5043,6 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
 
   return {
     version: 8,
-    glyphs: "https://demotiles.maplibre.org/font/{fontstack}/{range}.pbf",
     sources: {
       basemap: {
         type: "raster",
@@ -4973,6 +5052,13 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
       },
     },
     layers: [
+      {
+        id: "background",
+        type: "background",
+        paint: {
+          "background-color": isSatellite ? "#dbe5ea" : "#edf0ea",
+        },
+      },
       {
         id: "basemap",
         type: "raster",
@@ -5163,17 +5249,32 @@ async function initializePlanning3dMap() {
     pitch: 62,
     bearing: -28,
     attributionControl: false,
-    antialias: true,
+    antialias: false,
+    fadeDuration: 0,
+    refreshExpiredTiles: false,
   });
   planning3dState.map.addControl(new window.maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
 
   planning3dState.readyPromise = new Promise((resolve) => {
-    planning3dState.map.on("load", () => {
+    let settled = false;
+    const finalize = () => {
+      if (settled) {
+        return;
+      }
+      if (!planning3dState.map?.isStyleLoaded?.()) {
+        window.setTimeout(finalize, 180);
+        return;
+      }
+      settled = true;
       addPlanning3dRuntimeLayers();
       updatePlanning3dCandidateSource();
       syncPlanning3dLayerVisibility();
       resolve(planning3dState.map);
-    });
+    };
+
+    planning3dState.map.once("style.load", finalize);
+    planning3dState.map.once("load", finalize);
+    window.setTimeout(finalize, 900);
   });
 
   return planning3dState.readyPromise;
@@ -5341,12 +5442,102 @@ async function ensurePlanning3dDataset(datasetKey, force = false) {
   );
 
   try {
-    const geometries = await loadPlanning3dShapefile(basePath);
-    const geometryList = getPlanning3dGeometryList(geometries);
-    const total = geometryList.length;
     const metadata = datasetKey === "buildings"
       ? await loadPlanning3dBuildingMetadata()
       : null;
+
+    const workerCollectionPromise = runPlanning3dWorkerDataset(datasetKey, basePath, metadata, {
+      requestId,
+      previewTarget: datasetKey === "buildings" ? (manifest.viaBackend ? 3600 : 2400) : 0,
+      batchSize: datasetKey === "buildings" ? 1800 : 1200,
+      onPreview: ({ collection, total, previewCount }) => {
+        if (!isActiveRequest()) {
+          return;
+        }
+        planning3dState.sourceData[datasetKey] = collection;
+        syncPlanning3dSource(datasetKey);
+        setPlanning3dDatasetStatus(datasetKey, {
+          phase: "preview",
+          loaded: previewCount,
+          total,
+          previewCount,
+        });
+        renderPlanning3dSummary();
+        renderPlanning3dSelection();
+        setPlanning3dStatus(
+          `Vista rapida lista: ${formatPlanning3dCount(previewCount)} construcciones. Completando detalle total en segundo plano...`,
+          "loading"
+        );
+      },
+      onProgress: ({ loaded, total }) => {
+        if (!isActiveRequest()) {
+          return;
+        }
+        setPlanning3dDatasetStatus(datasetKey, {
+          phase: "building",
+          loaded,
+          total,
+          previewCount: planning3dState.datasetStatus[datasetKey]?.previewCount || 0,
+        });
+        renderPlanning3dSummary();
+        if (loaded !== total) {
+          setPlanning3dStatus(
+            datasetKey === "buildings"
+              ? `Procesando construcciones 3D ${Math.round((loaded / total) * 100)}% (${formatPlanning3dCount(loaded)}/${formatPlanning3dCount(total)}).`
+              : `Procesando catastro ${Math.round((loaded / total) * 100)}% (${formatPlanning3dCount(loaded)}/${formatPlanning3dCount(total)}).`,
+            "loading"
+          );
+        }
+      },
+    });
+
+    if (workerCollectionPromise) {
+      try {
+        const collection = await workerCollectionPromise;
+        if (!isActiveRequest()) {
+          return planning3dState.sourceData[datasetKey] || getPlanning3dEmptyCollection();
+        }
+
+        const total = collection.features.length;
+        planning3dState.sourceData[datasetKey] = collection;
+        syncPlanning3dSource(datasetKey);
+        setPlanning3dDatasetStatus(datasetKey, {
+          phase: "ready",
+          loaded: total,
+          total,
+          previewCount: planning3dState.datasetStatus[datasetKey]?.previewCount || 0,
+        });
+        renderPlanning3dSummary();
+        renderPlanning3dSelection();
+
+        setPlanning3dStatus(
+          datasetKey === "buildings"
+            ? `Construcciones 3D listas: ${formatPlanning3dCount(collection.features.length)} edificaciones extruidas.`
+            : `Catastro listo: ${formatPlanning3dCount(collection.features.length)} predios de apoyo cargados.`,
+          datasetKey === "buildings" && manifest.viaBackend ? "real" : "demo"
+        );
+
+        return collection;
+      } catch (workerError) {
+        if (isActiveRequest()) {
+          setPlanning3dStatus(
+            `Compatibilidad activa: retomando carga directa para ${datasetKey === "buildings" ? "construcciones" : "catastro"}...`,
+            "loading"
+          );
+          setPlanning3dDatasetStatus(datasetKey, {
+            phase: "fetching",
+            loaded: 0,
+            total: 0,
+            previewCount: 0,
+          });
+          renderPlanning3dSummary();
+        }
+      }
+    }
+
+    const geometries = await loadPlanning3dShapefile(basePath);
+    const geometryList = getPlanning3dGeometryList(geometries);
+    const total = geometryList.length;
 
     if (!isActiveRequest()) {
       return planning3dState.sourceData[datasetKey] || getPlanning3dEmptyCollection();
@@ -5913,13 +6104,22 @@ async function openPlanning3dViewer() {
   }
   syncPlanning3dBaseButtons();
   setPlanning3dStatus("Preparando visualizador 3D urbano con vista rapida inicial...", "loading");
+  setPlanning3dDatasetStatus("buildings", {
+    phase: "fetching",
+    loaded: 0,
+    total: 0,
+    previewCount: 0,
+  });
+  renderPlanning3dSummary();
 
   try {
     await hydratePlanning3dManifest();
-    await initializePlanning3dMap();
-    planning3dState.map.resize();
-    await ensurePlanning3dDataset("buildings");
+    const mapPromise = initializePlanning3dMap();
+    const buildingPromise = ensurePlanning3dDataset("buildings");
     hydratePlanning3dPhotoStatus();
+    await mapPromise;
+    planning3dState.map.resize();
+    await buildingPromise;
     if (planning3dState.parcelsVisible) {
       await ensurePlanning3dDataset("parcels");
     }
@@ -5944,6 +6144,8 @@ function closePlanning3dViewer(silent = false) {
 }
 
 async function reloadPlanning3dData() {
+  terminatePlanning3dWorker("buildings");
+  terminatePlanning3dWorker("parcels");
   planning3dState.manifest = null;
   planning3dState.manifestPromise = null;
   planning3dState.photoStatus = null;
