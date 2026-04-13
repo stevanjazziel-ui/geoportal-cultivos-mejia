@@ -1403,7 +1403,7 @@ const mapState = {
 
 const planning3dState = {
   modalOpen: false,
-  currentBase: "satellite",
+  currentBase: "light",
   manifest: null,
   photoStatus: null,
   backendMode: "unknown",
@@ -5266,37 +5266,15 @@ function formatPlanning3dDistance(distanceM) {
 
 function createPlanning3dStyle(baseId = planning3dState.currentBase) {
   const isSatellite = baseId === "satellite";
-  const rasterTiles = isSatellite
-    ? ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"]
-    : ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"];
-  const attribution = isSatellite ? "Esri World Imagery" : "OpenStreetMap";
-
-  return {
+  const style = {
     version: 8,
-    sources: {
-      basemap: {
-        type: "raster",
-        tiles: rasterTiles,
-        tileSize: 256,
-        attribution,
-      },
-    },
+    sources: {},
     layers: [
       {
         id: "background",
         type: "background",
         paint: {
-          "background-color": isSatellite ? "#dbe5ea" : "#edf0ea",
-        },
-      },
-      {
-        id: "basemap",
-        type: "raster",
-        source: "basemap",
-        paint: {
-          "raster-opacity": isSatellite ? 1 : 0.96,
-          "raster-saturation": isSatellite ? 0.18 : -0.25,
-          "raster-contrast": isSatellite ? 0.12 : 0,
+          "background-color": isSatellite ? "#dbe5ea" : "#eef2ee",
         },
       },
     ],
@@ -5321,6 +5299,27 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
       position: [1.3, 180, 38],
     },
   };
+
+  if (isSatellite) {
+    style.sources.basemap = {
+      type: "raster",
+      tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+      tileSize: 256,
+      attribution: "Esri World Imagery",
+    };
+    style.layers.push({
+      id: "basemap",
+      type: "raster",
+      source: "basemap",
+      paint: {
+        "raster-opacity": 1,
+        "raster-saturation": 0.18,
+        "raster-contrast": 0.12,
+      },
+    });
+  }
+
+  return style;
 }
 
 function syncPlanning3dBaseButtons() {
@@ -5475,9 +5474,9 @@ async function initializePlanning3dMap() {
     container: dom.planning3dMap,
     style: createPlanning3dStyle(),
     center: [-78.59, -0.503],
-    zoom: 12.4,
-    pitch: 62,
-    bearing: -28,
+    zoom: 12.3,
+    pitch: 56,
+    bearing: -18,
     attributionControl: false,
     antialias: false,
     fadeDuration: 0,
