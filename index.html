@@ -28,7 +28,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260413-7">
+  <link rel="stylesheet" href="./styles.css?v=20260413-8">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -530,15 +530,15 @@
 
       <div class="planning-3d-toolbar">
         <div class="planning-3d-switch" role="group" aria-label="Mapa base 3D">
-          <button id="planning3dSatelliteBtn" class="base-button" type="button" data-planning-base="satellite">Satelite</button>
-          <button id="planning3dLightBtn" class="base-button active" type="button" data-planning-base="light">Claro</button>
+          <button id="planning3dSatelliteBtn" class="base-button active" type="button" data-planning-base="satellite">Satelite</button>
+          <button id="planning3dLightBtn" class="base-button" type="button" data-planning-base="light">Claro</button>
         </div>
         <label class="planning-3d-check">
           <input id="planning3dBuildingsToggle" type="checkbox" checked>
           <span>Construcciones 3D</span>
         </label>
         <label class="planning-3d-check">
-          <input id="planning3dParcelsToggle" type="checkbox">
+          <input id="planning3dParcelsToggle" type="checkbox" checked>
           <span>Catastro</span>
         </label>
         <label class="field planning-3d-range">
@@ -599,6 +599,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-<script src="./app.js?v=20260413-14" defer></script>
+<script src="./app.js?v=20260413-15" defer></script>
 </body>
 </html>

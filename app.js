@@ -1237,6 +1237,7 @@ const planning3dCatalog = {
     label: "Construcciones",
     shortLabel: "Construcciones 3D",
     basePath: "./construcciones%2031/construcciones_31oct",
+    publicDataPath: "./public-data/planning3d/buildings_public.geojson",
     color: "#78a36d",
     description: "Huella edificada extruida desde el shape real de construcciones.",
   },
@@ -1245,6 +1246,7 @@ const planning3dCatalog = {
     label: "Catastro",
     shortLabel: "Predios",
     basePath: "./CATASTRO%202026/CATASTRO_2026",
+    publicDataPath: "./public-data/planning3d/parcels_public.geojson",
     color: "#cb9440",
     description: "Huella catastral de referencia para implantacion y lectura de manzana.",
   },
@@ -1403,7 +1405,7 @@ const mapState = {
 
 const planning3dState = {
   modalOpen: false,
-  currentBase: "light",
+  currentBase: "satellite",
   statusMessage: "Preparando datasets 3D...",
   statusTone: "loading",
   manifest: null,
@@ -1416,7 +1418,7 @@ const planning3dState = {
   loadingPhotos: false,
   photoQueryMessage: null,
   buildingsVisible: true,
-  parcelsVisible: false,
+  parcelsVisible: true,
   heightScale: 1,
   map: null,
   readyPromise: null,
@@ -1620,6 +1622,19 @@ function getPlanning3dFallbackManifest() {
 
 function getPlanning3dManifest() {
   return planning3dState.manifest || getPlanning3dFallbackManifest();
+}
+
+function parsePlanning3dFloorValue(value) {
+  if (value == null) {
+    return 0;
+  }
+
+  const match = String(value).match(/\d+/);
+  if (!match) {
+    return 0;
+  }
+
+  return Number.parseInt(match[0], 10) || 0;
 }
 
 function getPlanning3dDemoGeometries(datasetKey) {
@@ -2064,6 +2079,7 @@ function getPlanning3dProgressState() {
   const buildingStatus = planning3dState.datasetStatus.buildings;
   const parcelStatus = planning3dState.datasetStatus.parcels;
   const manifest = getPlanning3dManifest();
+  const usingPublishedRealData = !manifest.viaBackend && planning3dState.backendMode === "public";
   const buildingPercent = getPlanning3dDatasetPercent(buildingStatus, "buildings");
   const parcelPercent = planning3dState.parcelsVisible
     ? getPlanning3dDatasetPercent(parcelStatus, "parcels")
@@ -2099,10 +2115,12 @@ function getPlanning3dProgressState() {
         : "Procesando geometria urbana para completar la extrusion 3D.";
       break;
     case "ready":
-      tone = manifest.viaBackend ? "real" : "demo";
+      tone = manifest.viaBackend || usingPublishedRealData ? "real" : "demo";
       copy = manifest.viaBackend
         ? `Construcciones 3D listas con dataset real${buildingTotal ? ` (${formatPlanning3dCount(buildingTotal)})` : ""}.`
-        : "Vista ligera publicada lista para navegacion inmediata.";
+        : usingPublishedRealData
+          ? `Construcciones 3D listas con GeoJSON publico real${buildingTotal ? ` (${formatPlanning3dCount(buildingTotal)})` : ""}.`
+          : "Vista ligera publicada lista para navegacion inmediata.";
       break;
     case "demo":
       tone = "demo";
@@ -2114,7 +2132,7 @@ function getPlanning3dProgressState() {
       break;
   }
 
-  if (buildingStatus?.phase === "ready" && manifest.viaBackend) {
+  if (buildingStatus?.phase === "ready" && (manifest.viaBackend || usingPublishedRealData)) {
     tone = "real";
   } else if (buildingStatus?.phase === "demo") {
     tone = "demo";
@@ -5482,9 +5500,12 @@ function renderPlanning3dPanel() {
   const buildingsReady = !!manifest.buildings?.available;
   const parcelsReady = !!manifest.parcels?.available;
   const stats = manifest.buildings?.stats || null;
+  const usingPublishedRealData = !manifest.viaBackend && planning3dState.backendMode === "public";
   const backendCopy = manifest.viaBackend
     ? "Backend local activo: pisos y alturas reales leidos desde el DBF de construcciones."
-    : "Modo publicado: si no activas server.ps1 el visor usa alturas estimadas y, si hace falta, una muestra 3D ligera para no bloquear la carga.";
+    : usingPublishedRealData
+      ? "Modo publicado con GeoJSON real: huellas de construcciones y catastro servidas como capas publicas listas para el mapa satelital."
+      : "Modo publicado: si no activas server.ps1 el visor usa alturas estimadas y, si hace falta, una muestra 3D ligera para no bloquear la carga.";
 
   dom.planning3dAvailability.classList.remove("empty-state");
   dom.planning3dAvailability.classList.add("has-data");
@@ -5504,7 +5525,7 @@ function renderPlanning3dPanel() {
       </article>
       <article class="planning-3d-stat">
         <span>Modo</span>
-        <strong>${manifest.viaBackend ? "DBF + shapes" : "Shapes directos"}</strong>
+        <strong>${manifest.viaBackend ? "DBF + shapes" : usingPublishedRealData ? "GeoJSON publico real" : "Fallback demo"}</strong>
       </article>
     </div>
     <p class="planning-3d-meta">${backendCopy}</p>
@@ -6009,6 +6030,110 @@ async function loadPlanning3dShapefile(basePath) {
   return window.shp.parseShp(shpBuffer, prjText);
 }
 
+function normalizePlanning3dPublicCollection(datasetKey, collection) {
+  const features = Array.isArray(collection?.features) ? collection.features : [];
+  if (datasetKey === "buildings") {
+    return {
+      type: "FeatureCollection",
+      features: features.map((feature, index) => {
+        const geometry = feature?.geometry;
+        const estimate = estimatePlanning3dMetrics(geometry);
+        const props = feature?.properties || {};
+        const floors = Math.max(1, parsePlanning3dFloorValue(props.n_piso) || estimate.floors || 1);
+        const buildingId = Number(props.id) || index + 1;
+        const blockId = Number(props.bloque_id) || null;
+        return {
+          type: "Feature",
+          id: buildingId,
+          properties: {
+            recordIndex: index,
+            buildingId,
+            blockId,
+            floors,
+            floorCode: props.n_piso || null,
+            heightM: Number((1.2 + (floors * 3.05)).toFixed(1)),
+            heightSource: "dbf",
+            footprintM2: estimate.footprintM2,
+            centroid: estimate.centroid,
+          },
+          geometry,
+        };
+      }),
+    };
+  }
+
+  return {
+    type: "FeatureCollection",
+    features: features.map((feature, index) => {
+      const props = feature?.properties || {};
+      const parcelId = Number(props.id) || index + 1;
+      return {
+        type: "Feature",
+        id: parcelId,
+        properties: {
+          parcelIndex: index + 1,
+          parcelId,
+          cadastralCode: props.cod_catast || null,
+          lotNumber: props.numero_lot || null,
+        },
+        geometry: feature?.geometry,
+      };
+    }),
+  };
+}
+
+function updatePlanning3dManifestFromPublicCollection(datasetKey, collection) {
+  const manifest = getPlanning3dManifest();
+  if (!manifest?.[datasetKey]) {
+    return;
+  }
+
+  manifest[datasetKey].available = true;
+  manifest[datasetKey].recordCount = collection.features.length;
+
+  if (datasetKey !== "buildings") {
+    return;
+  }
+
+  const floors = collection.features
+    .map((feature) => Number(feature.properties?.floors) || 0)
+    .filter((value) => value > 0);
+
+  if (!floors.length) {
+    return;
+  }
+
+  const heights = collection.features.map((feature) => Number(feature.properties?.heightM) || 0);
+  manifest.buildings.stats = {
+    minFloors: Math.min(...floors),
+    maxFloors: Math.max(...floors),
+    meanFloors: Number((floors.reduce((sum, value) => sum + value, 0) / floors.length).toFixed(2)),
+    meanHeightM: Number((heights.reduce((sum, value) => sum + value, 0) / Math.max(heights.length, 1)).toFixed(2)),
+    knownFloorCount: floors.length,
+    estimatedFloorCount: 0,
+  };
+}
+
+async function loadPlanning3dPublicGeoJson(datasetKey) {
+  const datasetConfig = planning3dCatalog[datasetKey];
+  const publicDataPath = datasetConfig?.publicDataPath;
+  if (!publicDataPath) {
+    throw new Error(`No hay GeoJSON publico configurado para ${datasetKey}.`);
+  }
+
+  const response = await fetch(publicDataPath, {
+    headers: {
+      Accept: "application/geo+json, application/json",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`No se pudo cargar ${publicDataPath} (${response.status}).`);
+  }
+
+  const payload = await response.json();
+  return normalizePlanning3dPublicCollection(datasetKey, payload);
+}
+
 async function loadPlanning3dBuildingMetadata() {
   const manifest = getPlanning3dManifest();
   if (!manifest.viaBackend) {
@@ -6068,6 +6193,7 @@ async function ensurePlanning3dDataset(datasetKey, force = false) {
   const datasetManifest = manifest[datasetKey];
   const datasetConfig = planning3dCatalog[datasetKey];
   const basePath = datasetManifest?.basePath || datasetConfig?.basePath;
+  const publicDataPath = datasetConfig?.publicDataPath;
 
   if (!basePath) {
     throw new Error(`No hay ruta disponible para el dataset ${datasetKey}.`);
@@ -6090,7 +6216,30 @@ async function ensurePlanning3dDataset(datasetKey, force = false) {
 
   try {
     if (!manifest.viaBackend) {
-      return primePlanning3dLiteDataset(datasetKey, manifest);
+      if (!publicDataPath) {
+        return primePlanning3dLiteDataset(datasetKey, manifest);
+      }
+
+      const publicCollection = await loadPlanning3dPublicGeoJson(datasetKey);
+      planning3dState.backendMode = "public";
+      planning3dState.sourceData[datasetKey] = publicCollection;
+      updatePlanning3dManifestFromPublicCollection(datasetKey, publicCollection);
+      syncPlanning3dSource(datasetKey);
+      setPlanning3dDatasetStatus(datasetKey, {
+        phase: "ready",
+        loaded: publicCollection.features.length,
+        total: publicCollection.features.length,
+        previewCount: publicCollection.features.length,
+      });
+      renderPlanning3dSummary();
+      renderPlanning3dSelection();
+      setPlanning3dStatus(
+        datasetKey === "buildings"
+          ? `Construcciones reales publicadas listas: ${formatPlanning3dCount(publicCollection.features.length)} huellas con pisos desde n_piso.`
+          : `Catastro real publicado listo: ${formatPlanning3dCount(publicCollection.features.length)} predios de referencia.`,
+        "real"
+      );
+      return publicCollection;
     }
 
     if (datasetKey === "buildings" && !planning3dState.sourceData[datasetKey]) {
@@ -6503,7 +6652,8 @@ function shouldRenderPlanning3dSvgScene() {
     return false;
   }
 
-  return Boolean(planning3dState.sourceData.buildings?.features?.length);
+  return planning3dState.datasetStatus.buildings?.phase === "demo"
+    && Boolean(planning3dState.sourceData.buildings?.features?.length);
 }
 
 function createPlanning3dSvgPolygon(points, className) {
@@ -6820,6 +6970,7 @@ function renderPlanning3dSummary(force = false) {
 
   const buildings = planning3dState.sourceData.buildings;
   const manifest = getPlanning3dManifest();
+  const usingPublishedRealData = !manifest.viaBackend && planning3dState.backendMode === "public";
   const photoStatus = planning3dState.photoStatus;
   const buildingStatus = planning3dState.datasetStatus.buildings;
   if (!buildings?.features?.length) {
@@ -6870,7 +7021,9 @@ function renderPlanning3dSummary(force = false) {
     <p class="planning-3d-copy-small">
       ${manifest.viaBackend
         ? "El backend local esta usando el campo n_piso para definir alturas y mejorar la extrusion del tejido urbano."
-        : "Estas alturas son aproximadas para no depender del backend local; al correr server.ps1 el visor usa el campo real n_piso."}
+        : usingPublishedRealData
+          ? "El modo publicado esta usando huellas reales y pisos leidos del campo n_piso exportado a GeoJSON."
+          : "Estas alturas son aproximadas para no depender del backend local; al correr server.ps1 el visor usa el campo real n_piso."}
       ${buildingStatus?.phase === "preview"
         ? ` Ya tienes una vista rapida activa mientras se completa el detalle total del tejido urbano.`
         : buildingStatus?.phase === "building"
@@ -7269,12 +7422,6 @@ async function openPlanning3dViewer() {
   renderPlanning3dSummary();
 
   try {
-    if (!planning3dState.sourceData.buildings?.features?.length) {
-      primePlanning3dLiteDataset("buildings", getPlanning3dFallbackManifest());
-      renderPlanning3dSvgScene();
-      renderPlanning3dDomMarkers();
-    }
-
     const manifestPromise = hydratePlanning3dManifest();
     const mapPromise = initializePlanning3dMap();
     hydratePlanning3dPhotoStatus();
@@ -7288,17 +7435,11 @@ async function openPlanning3dViewer() {
     focusPlanning3dDataset();
     queuePlanning3dFocus([140, 620]);
 
-    const manifest = await manifestPromise;
-    if (manifest?.viaBackend) {
-      await ensurePlanning3dDataset("buildings", true);
-    }
+    await manifestPromise;
+    await ensurePlanning3dDataset("buildings", !planning3dState.sourceData.buildings?.features?.length);
 
     if (planning3dState.parcelsVisible) {
-      if (!planning3dState.sourceData.parcels?.features?.length && !manifest?.viaBackend) {
-        primePlanning3dLiteDataset("parcels", manifest || getPlanning3dFallbackManifest());
-      } else {
-        await ensurePlanning3dDataset("parcels", Boolean(manifest?.viaBackend));
-      }
+      await ensurePlanning3dDataset("parcels", !planning3dState.sourceData.parcels?.features?.length);
     }
     updatePlanning3dCandidateSource();
     syncPlanning3dLayerVisibility();
