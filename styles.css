@@ -1887,12 +1887,13 @@ button {
   position: absolute;
   top: 14px;
   right: 14px;
-  bottom: 14px;
   width: min(330px, 24vw);
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto auto;
+  align-content: start;
   gap: 12px;
   min-height: 0;
+  max-height: calc(100% - 28px);
   z-index: 4;
   pointer-events: none;
 }
@@ -1907,6 +1908,14 @@ button {
   box-shadow: 0 16px 34px rgba(22, 31, 27, 0.14);
   pointer-events: auto;
   overflow: auto;
+}
+
+.planning-3d-summary {
+  max-height: min(34vh, 280px);
+}
+
+.planning-3d-selection {
+  max-height: min(50vh, 420px);
 }
 
 .planning-3d-summary.has-data,
