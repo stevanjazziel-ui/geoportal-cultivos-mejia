@@ -1447,10 +1447,6 @@ const planning3dState = {
     buildings: null,
     parcels: null,
   },
-  publicUpgradePromise: {
-    buildings: null,
-    parcels: null,
-  },
   datasetStatus: {
     buildings: {
       phase: "idle",
@@ -6509,81 +6505,23 @@ async function ensurePlanning3dDataset(datasetKey, force = false) {
         planning3dState.backendMode = "public";
         planning3dState.sourceData[datasetKey] = previewCollection;
         updatePlanning3dManifestFromPublicCollection(datasetKey, previewCollection, {
-          recordCountOverride: publishedRecordCount || previewCollection.features.length,
+          recordCountOverride: previewCollection.features.length,
         });
         syncPlanning3dSource(datasetKey);
         setPlanning3dDatasetStatus(datasetKey, {
-          phase: "preview",
+          phase: "ready",
           loaded: previewCollection.features.length,
-          total: publishedRecordCount || previewCollection.features.length,
+          total: previewCollection.features.length,
           previewCount: previewCollection.features.length,
         });
         renderPlanning3dSummary();
         renderPlanning3dSelection();
         setPlanning3dStatus(
           datasetKey === "buildings"
-            ? `Vista previa real lista: ${formatPlanning3dCount(previewCollection.features.length)} construcciones ya visibles. Cargando el resto en segundo plano...`
-            : `Vista previa catastral lista: ${formatPlanning3dCount(previewCollection.features.length)} predios visibles. Completando detalle en segundo plano...`,
+            ? `Ventana urbana publicada lista: ${formatPlanning3dCount(previewCollection.features.length)} construcciones reales visibles sobre el satelite.`
+            : `Catastro urbano publicado listo: ${formatPlanning3dCount(previewCollection.features.length)} predios reales visibles para referencia parcelaria.`,
           "real"
         );
-
-        if (!planning3dState.publicUpgradePromise[datasetKey] || force) {
-          let upgradePromise = null;
-          upgradePromise = loadPlanning3dPublicGeoJson(datasetKey, "full")
-            .then((publicCollection) => {
-              if (!isActiveRequest()) {
-                return publicCollection;
-              }
-
-              planning3dState.backendMode = "public";
-              planning3dState.sourceData[datasetKey] = publicCollection;
-              updatePlanning3dManifestFromPublicCollection(datasetKey, publicCollection, {
-                recordCountOverride: publishedRecordCount || publicCollection.features.length,
-              });
-              syncPlanning3dSource(datasetKey);
-              setPlanning3dDatasetStatus(datasetKey, {
-                phase: "ready",
-                loaded: publicCollection.features.length,
-                total: publishedRecordCount || publicCollection.features.length,
-                previewCount: previewCollection.features.length,
-              });
-              renderPlanning3dSummary();
-              renderPlanning3dSelection();
-              setPlanning3dStatus(
-                datasetKey === "buildings"
-                  ? `Construcciones reales publicadas listas: ${formatPlanning3dCount(publicCollection.features.length)} huellas con pisos desde n_piso.`
-                  : `Catastro real publicado listo: ${formatPlanning3dCount(publicCollection.features.length)} predios de referencia.`,
-                "real"
-              );
-              return publicCollection;
-            })
-            .catch((publicError) => {
-              if (isActiveRequest()) {
-                setPlanning3dDatasetStatus(datasetKey, {
-                  phase: "preview",
-                  loaded: previewCollection.features.length,
-                  total: publishedRecordCount || previewCollection.features.length,
-                  previewCount: previewCollection.features.length,
-                });
-                renderPlanning3dSummary();
-                renderPlanning3dSelection();
-                setPlanning3dStatus(
-                  datasetKey === "buildings"
-                    ? `Vista previa real activa: ${formatPlanning3dCount(previewCollection.features.length)} construcciones visibles. El detalle completo sigue pendiente por ahora (${publicError.message}).`
-                    : `Vista previa catastral activa: ${formatPlanning3dCount(previewCollection.features.length)} predios visibles. El detalle completo sigue pendiente por ahora (${publicError.message}).`,
-                  "real"
-                );
-              }
-              return previewCollection;
-            })
-            .finally(() => {
-              if (planning3dState.publicUpgradePromise[datasetKey] === upgradePromise) {
-                planning3dState.publicUpgradePromise[datasetKey] = null;
-              }
-            });
-          planning3dState.publicUpgradePromise[datasetKey] = upgradePromise;
-        }
-
         return previewCollection;
       }
 
