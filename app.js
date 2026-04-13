@@ -1454,6 +1454,109 @@ const planning3dState = {
   },
 };
 
+const uiRenderCache = {
+  html: new WeakMap(),
+  text: new WeakMap(),
+  value: new WeakMap(),
+  disabled: new WeakMap(),
+  className: new WeakMap(),
+};
+
+const scheduledUiTasks = new Map();
+
+function runOnNextFrame(callback) {
+  if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+    window.requestAnimationFrame(callback);
+    return;
+  }
+  setTimeout(callback, 16);
+}
+
+function scheduleUiTask(key, callback) {
+  if (scheduledUiTasks.has(key)) {
+    return;
+  }
+
+  scheduledUiTasks.set(key, true);
+  runOnNextFrame(() => {
+    scheduledUiTasks.delete(key);
+    callback();
+  });
+}
+
+function setHtmlIfChanged(element, markup) {
+  if (!element) {
+    return false;
+  }
+
+  if (uiRenderCache.html.get(element) === markup) {
+    return false;
+  }
+
+  uiRenderCache.html.set(element, markup);
+  element.innerHTML = markup;
+  return true;
+}
+
+function setTextIfChanged(element, text) {
+  if (!element) {
+    return false;
+  }
+
+  const normalized = text == null ? "" : String(text);
+  if (uiRenderCache.text.get(element) === normalized) {
+    return false;
+  }
+
+  uiRenderCache.text.set(element, normalized);
+  element.textContent = normalized;
+  return true;
+}
+
+function setValueIfChanged(element, value) {
+  if (!element) {
+    return false;
+  }
+
+  const normalized = value == null ? "" : String(value);
+  if (uiRenderCache.value.get(element) === normalized) {
+    return false;
+  }
+
+  uiRenderCache.value.set(element, normalized);
+  element.value = normalized;
+  return true;
+}
+
+function setDisabledIfChanged(element, disabled) {
+  if (!element) {
+    return false;
+  }
+
+  const normalized = !!disabled;
+  if (uiRenderCache.disabled.get(element) === normalized) {
+    return false;
+  }
+
+  uiRenderCache.disabled.set(element, normalized);
+  element.disabled = normalized;
+  return true;
+}
+
+function setClassNameIfChanged(element, className) {
+  if (!element) {
+    return false;
+  }
+
+  if (uiRenderCache.className.get(element) === className) {
+    return false;
+  }
+
+  uiRenderCache.className.set(element, className);
+  element.className = className;
+  return true;
+}
+
 function getSensorConfig(sensorId = state.activeSensorId) {
   return sensorCatalog[sensorId] || sensorCatalog.sentinel2;
 }
@@ -2018,7 +2121,12 @@ function getPlanning3dProgressState() {
   };
 }
 
-function renderPlanning3dProgress() {
+function renderPlanning3dProgress(force = false) {
+  if (!force) {
+    scheduleUiTask("planning3d-progress", () => renderPlanning3dProgress(true));
+    return;
+  }
+
   const root = dom.planning3dProgress;
   if (!root) {
     return;
@@ -2029,17 +2137,17 @@ function renderPlanning3dProgress() {
   const trackNode = root.querySelector(".planning-3d-progress-track span");
   const copyNode = root.querySelector(".planning-3d-progress-copy");
 
-  root.className = `planning-3d-progress ${progress.tone}`;
+  setClassNameIfChanged(root, `planning-3d-progress ${progress.tone}`);
   root.setAttribute("aria-valuenow", String(progress.percent));
   root.setAttribute("aria-valuetext", `${progress.percent}%`);
   if (valueNode) {
-    valueNode.textContent = `${progress.percent}%`;
+    setTextIfChanged(valueNode, `${progress.percent}%`);
   }
   if (trackNode) {
     trackNode.style.width = `${progress.percent}%`;
   }
   if (copyNode) {
-    copyNode.textContent = progress.copy;
+    setTextIfChanged(copyNode, progress.copy);
   }
 }
 
@@ -2271,6 +2379,12 @@ function bindUI() {
   dom.openPlanningBtn.addEventListener("click", () => enterPublicView("planificacion"));
   dom.sidebarToggle.addEventListener("click", () => dom.sidebar.classList.add("open"));
   dom.sidebarClose.addEventListener("click", () => dom.sidebar.classList.remove("open"));
+  dom.sceneTimeline?.addEventListener("click", handleSceneTimelineInteraction);
+  dom.sentinelResults?.addEventListener("click", handleSentinelResultsInteraction);
+  dom.indexButtons?.addEventListener("click", handleIndexButtonInteraction);
+  dom.planningCandidates?.addEventListener("click", handlePlanningCandidatesInteraction);
+  dom.wizardModes?.addEventListener("click", handleWizardModeInteraction);
+  dom.wizardSteps?.addEventListener("click", handleWizardStepInteraction);
 
   if (dom.sensorSelect) {
     dom.sensorSelect.addEventListener("change", () => {
@@ -2494,6 +2608,135 @@ function bindUI() {
       closePlanning3dViewer();
     }
   });
+}
+
+function handleSceneTimelineInteraction(event) {
+  const primaryButton = event.target.closest("[data-primary]");
+  if (primaryButton && dom.sceneTimeline?.contains(primaryButton)) {
+    const nextId = primaryButton.dataset.primary;
+    if (!nextId || nextId === state.selectedImageId) {
+      return;
+    }
+    state.selectedImageId = nextId;
+    if (state.selectedCompareImageId === state.selectedImageId) {
+      state.selectedCompareImageId = null;
+      state.surfaceMode = "primary";
+    }
+    renderSceneControls();
+    renderSentinelResults();
+    refreshActiveAnalysis();
+    return;
+  }
+
+  const compareButton = event.target.closest("[data-compare]");
+  if (!compareButton || !dom.sceneTimeline?.contains(compareButton)) {
+    return;
+  }
+
+  const nextId = compareButton.dataset.compare;
+  if (!nextId || nextId === state.selectedImageId) {
+    return;
+  }
+  state.selectedCompareImageId = state.selectedCompareImageId === nextId ? null : nextId;
+  if (!state.selectedCompareImageId) {
+    state.surfaceMode = "primary";
+  }
+  renderSceneControls();
+  renderSentinelResults();
+  refreshActiveAnalysis({ silent: true });
+}
+
+function handleSentinelResultsInteraction(event) {
+  const selectButton = event.target.closest("[data-image]");
+  if (selectButton && dom.sentinelResults?.contains(selectButton) && selectButton.classList.contains("image-select")) {
+    const nextId = selectButton.dataset.image;
+    if (!nextId) {
+      return;
+    }
+    state.selectedImageId = nextId;
+    if (state.selectedCompareImageId === state.selectedImageId) {
+      state.selectedCompareImageId = null;
+      state.surfaceMode = "primary";
+    }
+    renderSceneControls();
+    renderSentinelResults();
+    refreshActiveAnalysis();
+    return;
+  }
+
+  const compareButton = event.target.closest("[data-compare-image]");
+  if (!compareButton || !dom.sentinelResults?.contains(compareButton)) {
+    return;
+  }
+
+  const nextId = compareButton.dataset.compareImage;
+  if (!nextId || nextId === state.selectedImageId) {
+    return;
+  }
+  state.selectedCompareImageId = state.selectedCompareImageId === nextId ? null : nextId;
+  if (!state.selectedCompareImageId) {
+    state.surfaceMode = "primary";
+  }
+  renderSceneControls();
+  renderSentinelResults();
+  refreshActiveAnalysis({ silent: true });
+}
+
+function handleIndexButtonInteraction(event) {
+  const button = event.target.closest("[data-index]");
+  if (!button || !dom.indexButtons?.contains(button)) {
+    return;
+  }
+
+  const nextIndex = button.dataset.index;
+  if (!nextIndex || nextIndex === state.selectedIndex) {
+    return;
+  }
+  state.selectedIndex = nextIndex;
+  renderIndexButtons();
+  renderLegend();
+  renderAnalysisSummary();
+  renderCompareSummary();
+  renderSentinelOverlay();
+  updateMapSummary();
+}
+
+function handlePlanningCandidatesInteraction(event) {
+  const button = event.target.closest("[data-candidate-id]");
+  if (!button || !dom.planningCandidates?.contains(button)) {
+    return;
+  }
+
+  focusPlanningCandidate(button.dataset.candidateId);
+}
+
+function handleWizardModeInteraction(event) {
+  const button = event.target.closest("[data-mode]");
+  if (!button || !dom.wizardModes?.contains(button)) {
+    return;
+  }
+
+  const nextMode = button.dataset.mode;
+  if (!nextMode || nextMode === state.activeWizard) {
+    return;
+  }
+  state.activeWizard = nextMode;
+  setTextIfChanged(dom.overlayMode, state.activeWizard);
+  renderWizardAssistantState();
+  setStatus(`Asistente Agricola ajustado al modo ${state.activeWizard}.`);
+  refreshActiveAnalysis({ silent: true });
+}
+
+function handleWizardStepInteraction(event) {
+  const button = event.target.closest("[data-step-index]");
+  if (!button || !dom.wizardSteps?.contains(button)) {
+    return;
+  }
+
+  const stepIndex = Number(button.dataset.stepIndex);
+  if (Number.isFinite(stepIndex)) {
+    runWizardUpToStep(stepIndex);
+  }
 }
 
 function updateSensorControls() {
@@ -3364,32 +3607,34 @@ function renderSceneControls() {
       `),
   ].join("");
 
-  dom.primarySceneSelect.innerHTML = primaryOptions;
-  dom.primarySceneSelect.disabled = !state.filteredImages.length;
-  dom.compareSceneSelect.innerHTML = compareOptions;
-  dom.compareSceneSelect.disabled = state.filteredImages.length < 2;
-  dom.clearCompareBtn.disabled = !compareImage;
-  dom.toggleSurfaceModeBtn.disabled = !compareImage;
-  dom.toggleAnalysisOverlayBtn.disabled = !selectedImage;
-  dom.toggleSurfaceModeBtn.textContent = state.surfaceMode === "change" ? "Ver escena activa" : "Ver cambio temporal";
-  dom.toggleAnalysisOverlayBtn.textContent = state.showAnalysisOverlay ? "Ver solo escena" : "Ver escena + analisis";
-  dom.scenePreviewOpacity.value = Math.round(state.scenePreviewOpacity * 100);
-  dom.scenePreviewOpacityValue.textContent = `${Math.round(state.scenePreviewOpacity * 100)}%`;
-  dom.scenePreviewOpacity.disabled = !hasScenePreview;
-  dom.toggleScenePreviewBtn.disabled = !hasScenePreview;
+  setHtmlIfChanged(dom.primarySceneSelect, primaryOptions);
+  setValueIfChanged(dom.primarySceneSelect, state.selectedImageId || "");
+  setDisabledIfChanged(dom.primarySceneSelect, !state.filteredImages.length);
+  setHtmlIfChanged(dom.compareSceneSelect, compareOptions);
+  setValueIfChanged(dom.compareSceneSelect, state.selectedCompareImageId || "");
+  setDisabledIfChanged(dom.compareSceneSelect, state.filteredImages.length < 2);
+  setDisabledIfChanged(dom.clearCompareBtn, !compareImage);
+  setDisabledIfChanged(dom.toggleSurfaceModeBtn, !compareImage);
+  setDisabledIfChanged(dom.toggleAnalysisOverlayBtn, !selectedImage);
+  setTextIfChanged(dom.toggleSurfaceModeBtn, state.surfaceMode === "change" ? "Ver escena activa" : "Ver cambio temporal");
+  setTextIfChanged(dom.toggleAnalysisOverlayBtn, state.showAnalysisOverlay ? "Ver solo escena" : "Ver escena + analisis");
+  setValueIfChanged(dom.scenePreviewOpacity, Math.round(state.scenePreviewOpacity * 100));
+  setTextIfChanged(dom.scenePreviewOpacityValue, `${Math.round(state.scenePreviewOpacity * 100)}%`);
+  setDisabledIfChanged(dom.scenePreviewOpacity, !hasScenePreview);
+  setDisabledIfChanged(dom.toggleScenePreviewBtn, !hasScenePreview);
   const sceneLayerLabel = selectedImage ? getSceneLayerStatusLabel(selectedImage, state.sceneLayerKind) : "escena en mapa";
-  dom.toggleScenePreviewBtn.textContent = !hasScenePreview
+  setTextIfChanged(dom.toggleScenePreviewBtn, !hasScenePreview
     ? "Escena no disponible en mapa"
     : state.showScenePreview
       ? `Ocultar ${sceneLayerLabel}`
-      : `Mostrar ${sceneLayerLabel}`;
+      : `Mostrar ${sceneLayerLabel}`);
 
   if (!state.filteredImages.length) {
-    dom.sceneTimeline.innerHTML = `<div class="empty-state">Las escenas de ${sensor.label} apareceran aqui ordenadas por fecha.</div>`;
+    setHtmlIfChanged(dom.sceneTimeline, `<div class="empty-state">Las escenas de ${sensor.label} apareceran aqui ordenadas por fecha.</div>`);
     return;
   }
 
-  dom.sceneTimeline.innerHTML = state.filteredImages
+  setHtmlIfChanged(dom.sceneTimeline, state.filteredImages
     .map((image) => {
       const isPrimary = image.id === state.selectedImageId;
       const isCompare = image.id === state.selectedCompareImageId;
@@ -3405,40 +3650,7 @@ function renderSceneControls() {
         </article>
       `;
     })
-    .join("");
-
-  dom.sceneTimeline.querySelectorAll("[data-primary]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const nextId = button.dataset.primary;
-      if (!nextId || nextId === state.selectedImageId) {
-        return;
-      }
-      state.selectedImageId = nextId;
-      if (state.selectedCompareImageId === state.selectedImageId) {
-        state.selectedCompareImageId = null;
-        state.surfaceMode = "primary";
-      }
-      renderSceneControls();
-      renderSentinelResults();
-      refreshActiveAnalysis();
-    });
-  });
-
-  dom.sceneTimeline.querySelectorAll("[data-compare]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const nextId = button.dataset.compare;
-      if (!nextId || nextId === state.selectedImageId) {
-        return;
-      }
-      state.selectedCompareImageId = state.selectedCompareImageId === nextId ? null : nextId;
-      if (!state.selectedCompareImageId) {
-        state.surfaceMode = "primary";
-      }
-      renderSceneControls();
-      renderSentinelResults();
-      refreshActiveAnalysis({ silent: true });
-    });
-  });
+    .join(""));
 }
 
 function formatSceneOption(image) {
@@ -3448,30 +3660,30 @@ function formatSceneOption(image) {
 function renderSentinelSourceStatus() {
   const sensor = getActiveSensor();
 
-  dom.sentinelSourceStatus.className = "service-banner";
+  setClassNameIfChanged(dom.sentinelSourceStatus, "service-banner");
 
   if (state.sentinelLoading) {
     dom.sentinelSourceStatus.classList.add("loading");
-    dom.sentinelSourceStatus.textContent = `Consultando ${sensor.providerLabel} para ${sensor.label} en ${state.sentinelQueryScopeLabel}...`;
+    setTextIfChanged(dom.sentinelSourceStatus, `Consultando ${sensor.providerLabel} para ${sensor.label} en ${state.sentinelQueryScopeLabel}...`);
     return;
   }
 
   if (state.sentinelMode === "real") {
     if (state.sentinelTransport === "proxy") {
       dom.sentinelSourceStatus.classList.add("proxy");
-      dom.sentinelSourceStatus.textContent = `Busqueda en vivo de ${sensor.label} via proxy local con cache. Ambito actual: ${state.sentinelQueryScopeLabel}. ${state.sentinelCacheHit ? "Respuesta servida desde cache local." : "Consulta fresca al catalogo."}`;
+      setTextIfChanged(dom.sentinelSourceStatus, `Busqueda en vivo de ${sensor.label} via proxy local con cache. Ambito actual: ${state.sentinelQueryScopeLabel}. ${state.sentinelCacheHit ? "Respuesta servida desde cache local." : "Consulta fresca al catalogo."}`);
       return;
     }
 
     dom.sentinelSourceStatus.classList.add("real");
-    dom.sentinelSourceStatus.textContent = sensor.backendEligible
+    setTextIfChanged(dom.sentinelSourceStatus, sensor.backendEligible
       ? `Busqueda en vivo activa de ${sensor.label} desde ${sensor.directProviderLabel} para ${state.sentinelQueryScopeLabel}. Si activas server.ps1, el visor suma proxy local, cache y mejor trazabilidad.`
-      : `Busqueda en vivo activa de ${sensor.label} desde ${sensor.directProviderLabel} para ${state.sentinelQueryScopeLabel}. Este sensor opera directo en el navegador sin proxy local.`;
+      : `Busqueda en vivo activa de ${sensor.label} desde ${sensor.directProviderLabel} para ${state.sentinelQueryScopeLabel}. Este sensor opera directo en el navegador sin proxy local.`);
     return;
   }
 
   dom.sentinelSourceStatus.classList.add("demo");
-  dom.sentinelSourceStatus.textContent = `Sin conexion operativa con ${sensor.providerLabel} para ${sensor.label}. El visor usa escenas demo para no frenar el trabajo. ${state.sentinelError || ""}`.trim();
+  setTextIfChanged(dom.sentinelSourceStatus, `Sin conexion operativa con ${sensor.providerLabel} para ${sensor.label}. El visor usa escenas demo para no frenar el trabajo. ${state.sentinelError || ""}`.trim());
 }
 
 function setSentinelBusy(isBusy) {
@@ -3484,16 +3696,16 @@ function setSentinelBusy(isBusy) {
 function renderSentinelResults() {
   const sensor = getActiveSensor();
   if (!state.filteredImages.length) {
-    dom.sentinelResults.innerHTML = `
+    setHtmlIfChanged(dom.sentinelResults, `
       <div class="empty-state">
         No hay escenas de ${sensor.label} que cumplan el filtro actual para ${state.sentinelQueryScopeLabel}. ${sensor.cloudEnabled ? "Ajusta fechas o permite mayor nubosidad." : "Ajusta fechas para abrir otra ventana temporal."}
       </div>
-    `;
+    `);
     updateMapSummary();
     return;
   }
 
-  dom.sentinelResults.innerHTML = state.filteredImages
+  setHtmlIfChanged(dom.sentinelResults, state.filteredImages
     .map((image) => {
       const activeClass = image.id === state.selectedImageId ? "active" : "";
       const compareClass = image.id === state.selectedCompareImageId ? "compare" : "";
@@ -3543,43 +3755,14 @@ function renderSentinelResults() {
         </article>
       `;
     })
-    .join("");
-
-  dom.sentinelResults.querySelectorAll(".image-select").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.selectedImageId = button.dataset.image;
-      if (state.selectedCompareImageId === state.selectedImageId) {
-        state.selectedCompareImageId = null;
-        state.surfaceMode = "primary";
-      }
-      renderSceneControls();
-      renderSentinelResults();
-      refreshActiveAnalysis();
-    });
-  });
-
-  dom.sentinelResults.querySelectorAll(".image-compare").forEach((button) => {
-    button.addEventListener("click", () => {
-      const nextId = button.dataset.compareImage;
-      if (!nextId || nextId === state.selectedImageId) {
-        return;
-      }
-      state.selectedCompareImageId = state.selectedCompareImageId === nextId ? null : nextId;
-      if (!state.selectedCompareImageId) {
-        state.surfaceMode = "primary";
-      }
-      renderSceneControls();
-      renderSentinelResults();
-      refreshActiveAnalysis({ silent: true });
-    });
-  });
+    .join(""));
 
   updateMapSummary();
 }
 
 function renderIndexButtons() {
   ensureSelectedIndex();
-  dom.indexButtons.innerHTML = getSupportedIndexKeys()
+  setHtmlIfChanged(dom.indexButtons, getSupportedIndexKeys()
     .map(
       (indexKey) => `
         <button
@@ -3591,19 +3774,7 @@ function renderIndexButtons() {
         </button>
       `
     )
-    .join("");
-
-  dom.indexButtons.querySelectorAll(".index-button").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.selectedIndex = button.dataset.index;
-      renderIndexButtons();
-      renderLegend();
-      renderAnalysisSummary();
-      renderCompareSummary();
-      renderSentinelOverlay();
-      updateMapSummary();
-    });
-  });
+    .join(""));
 
   renderLegend();
 }
@@ -3623,7 +3794,7 @@ function renderLegend() {
     `
     : "";
 
-  dom.legendCard.innerHTML = `
+  setHtmlIfChanged(dom.legendCard, `
     <strong>${config.label}</strong>
     <span>${config.description}</span>
     <div
@@ -3636,7 +3807,7 @@ function renderLegend() {
       <span>${formatValue(config.max, config)}</span>
     </div>
     ${statsMarkup}
-  `;
+  `);
 }
 
 async function refreshActiveAnalysis({ silent = false } = {}) {
@@ -4213,7 +4384,7 @@ function renderAnalysisSummary() {
   dom.sceneSummary.classList.add("scene-summary");
   dom.sceneSummary.classList.remove("empty-state");
   dom.sceneSummary.classList.add("has-data");
-  dom.sceneSummary.innerHTML = cards
+  setHtmlIfChanged(dom.sceneSummary, cards
     .map(
       (card) => `
         <article class="metric-card ${card.highlight ? "highlight" : ""}">
@@ -4223,7 +4394,7 @@ function renderAnalysisSummary() {
         </article>
       `
     )
-    .join("");
+    .join(""));
 }
 
 function renderCompareSummary() {
@@ -4275,7 +4446,7 @@ function renderCompareSummary() {
   dom.compareSummary.classList.add("compare-summary");
   dom.compareSummary.classList.remove("empty-state");
   dom.compareSummary.classList.add("has-data");
-  dom.compareSummary.innerHTML = cards
+  setHtmlIfChanged(dom.compareSummary, cards
     .map(
       (card) => `
         <article class="metric-card ${card.highlight ? "highlight" : ""}">
@@ -4285,7 +4456,7 @@ function renderCompareSummary() {
         </article>
       `
     )
-    .join("");
+    .join(""));
 }
 
 function renderSentinelOverlay() {
@@ -5296,7 +5467,7 @@ function renderPlanning3dPanel() {
   if (planning3dState.manifestLoading && !planning3dState.manifest) {
     dom.planning3dAvailability.classList.add("empty-state");
     dom.planning3dAvailability.classList.remove("has-data");
-    dom.planning3dAvailability.textContent = "Verificando disponibilidad de shapes y metadata 3D...";
+    setTextIfChanged(dom.planning3dAvailability, "Verificando disponibilidad de shapes y metadata 3D...");
     renderPlanning3dProgress();
     return;
   }
@@ -5311,7 +5482,7 @@ function renderPlanning3dPanel() {
 
   dom.planning3dAvailability.classList.remove("empty-state");
   dom.planning3dAvailability.classList.add("has-data");
-  dom.planning3dAvailability.innerHTML = `
+  setHtmlIfChanged(dom.planning3dAvailability, `
     <div class="planning-3d-availability-grid">
       <article class="planning-3d-stat">
         <span>Construcciones</span>
@@ -5331,13 +5502,13 @@ function renderPlanning3dPanel() {
       </article>
     </div>
     <p class="planning-3d-meta">${backendCopy}</p>
-  `;
+  `);
 
   if (dom.openPlanning3dBtn) {
-    dom.openPlanning3dBtn.disabled = !buildingsReady;
+    setDisabledIfChanged(dom.openPlanning3dBtn, !buildingsReady);
   }
   if (dom.reloadPlanning3dBtn) {
-    dom.reloadPlanning3dBtn.disabled = planning3dState.manifestLoading;
+    setDisabledIfChanged(dom.reloadPlanning3dBtn, planning3dState.manifestLoading);
   }
 
   renderPlanning3dSummary();
@@ -6204,7 +6375,12 @@ function updatePlanning3dHeightScale() {
   ]);
 }
 
-function renderPlanning3dSummary() {
+function renderPlanning3dSummary(force = false) {
+  if (!force) {
+    scheduleUiTask("planning3d-summary", () => renderPlanning3dSummary(true));
+    return;
+  }
+
   if (!dom.planning3dSummary) {
     return;
   }
@@ -6216,9 +6392,9 @@ function renderPlanning3dSummary() {
   if (!buildings?.features?.length) {
     dom.planning3dSummary.classList.add("empty-state");
     dom.planning3dSummary.classList.remove("has-data");
-    dom.planning3dSummary.textContent = buildingStatus?.phase && buildingStatus.phase !== "idle"
+    setTextIfChanged(dom.planning3dSummary, buildingStatus?.phase && buildingStatus.phase !== "idle"
       ? `Cargando visor 3D: ${getPlanning3dLoadLabel(buildingStatus)}${buildingStatus.total ? ` (${formatPlanning3dCount(buildingStatus.loaded)}/${formatPlanning3dCount(buildingStatus.total)})` : ""}.`
-      : "Aqui veras el estado de carga, el conteo de construcciones y la altura media disponible.";
+      : "Aqui veras el estado de carga, el conteo de construcciones y la altura media disponible.");
     return;
   }
 
@@ -6231,7 +6407,7 @@ function renderPlanning3dSummary() {
 
   dom.planning3dSummary.classList.remove("empty-state");
   dom.planning3dSummary.classList.add("has-data");
-  dom.planning3dSummary.innerHTML = `
+  setHtmlIfChanged(dom.planning3dSummary, `
     <div class="planning-3d-summary-grid">
       <article class="planning-3d-chip">
         <span>Construcciones</span>
@@ -6276,10 +6452,15 @@ function renderPlanning3dSummary() {
         : ""}
       ${candidateCount ? ` Hay ${candidateCount} sectores priorizados del analisis territorial visibles como nodos amarillos.` : ""}
     </p>
-  `;
+  `);
 }
 
-function renderPlanning3dSelection() {
+function renderPlanning3dSelection(force = false) {
+  if (!force) {
+    scheduleUiTask("planning3d-selection", () => renderPlanning3dSelection(true));
+    return;
+  }
+
   if (!dom.planning3dSelection) {
     return;
   }
@@ -6288,7 +6469,7 @@ function renderPlanning3dSelection() {
   if (!feature) {
     dom.planning3dSelection.classList.add("empty-state");
     dom.planning3dSelection.classList.remove("has-data");
-    dom.planning3dSelection.textContent = "Selecciona una construccion en el visor 3D para revisar altura, bloque y huella.";
+    setTextIfChanged(dom.planning3dSelection, "Selecciona una construccion en el visor 3D para revisar altura, bloque y huella.");
     return;
   }
 
@@ -6329,7 +6510,7 @@ function renderPlanning3dSelection() {
 
   dom.planning3dSelection.classList.remove("empty-state");
   dom.planning3dSelection.classList.add("has-data");
-  dom.planning3dSelection.innerHTML = `
+  setHtmlIfChanged(dom.planning3dSelection, `
     <h4>Construccion ${props.buildingId || props.recordIndex + 1}</h4>
     <div class="planning-3d-selection-grid">
       <article class="planning-3d-chip">
@@ -6360,7 +6541,7 @@ function renderPlanning3dSelection() {
       </div>
       ${photoStateMarkup}
     </section>
-  `;
+  `);
 }
 
 async function loadPlanning3dNearbyPhotos(feature) {
@@ -6769,7 +6950,7 @@ function renderPlanningModule() {
     dom.clearPlanningBtn.disabled = !state.planningData;
   }
   if (dom.planningSourceNote) {
-    dom.planningSourceNote.textContent = `${imageryProfile.label}: ${imageryProfile.useCopy} Resolucion ${imageryProfile.spatialLabel} y frecuencia ${imageryProfile.temporalLabel}.`;
+    setTextIfChanged(dom.planningSourceNote, `${imageryProfile.label}: ${imageryProfile.useCopy} Resolucion ${imageryProfile.spatialLabel} y frecuencia ${imageryProfile.temporalLabel}.`);
   }
   if (state.entryRoute === "planificacion" && !state.planningData) {
     updateMapSummary();
@@ -6779,10 +6960,10 @@ function renderPlanningModule() {
     resetMetricGrid(dom.planningResults, "Ejecuta el modulo para obtener celdas aptas y candidatos priorizados.");
     dom.planningWeights.classList.add("empty-state");
     dom.planningWeights.classList.remove("has-data");
-    dom.planningWeights.textContent = "La ponderacion se ajusta automaticamente segun el tipo de equipamiento, la fuente satelital y el escenario de crecimiento.";
+    setTextIfChanged(dom.planningWeights, "La ponderacion se ajusta automaticamente segun el tipo de equipamiento, la fuente satelital y el escenario de crecimiento.");
     dom.planningCandidates.classList.add("empty-state");
     dom.planningCandidates.classList.remove("has-data");
-    dom.planningCandidates.textContent = "Aqui apareceran los sectores recomendados para implantacion territorial.";
+    setTextIfChanged(dom.planningCandidates, "Aqui apareceran los sectores recomendados para implantacion territorial.");
   }
 }
 
@@ -6808,7 +6989,7 @@ function renderPlanningVariableMatrix() {
     || `Esta fuente aporta ${items.length} variables territoriales para modular crecimiento, acceso, servicios, resiliencia y compatibilidad de ocupacion.`;
 
   dom.planningVariableMatrix.classList.remove("empty-state");
-  dom.planningVariableMatrix.innerHTML = `
+  setHtmlIfChanged(dom.planningVariableMatrix, `
     <p class="planning-variable-summary">${summaryCopy}</p>
     <div class="planning-variable-grid">
       ${items.map((item) => `
@@ -6829,7 +7010,7 @@ function renderPlanningVariableMatrix() {
         </article>
       `).join("")}
     </div>
-  `;
+  `);
 }
 
 function runPlanningAnalysis(silent = false) {
@@ -7467,7 +7648,7 @@ function getPlanningVariableStrengthLabel(score) {
 function renderPlanningWeights(planning) {
   dom.planningWeights.classList.remove("empty-state");
   dom.planningWeights.classList.add("has-data");
-  dom.planningWeights.innerHTML = Object.entries(planning.program.weights)
+  setHtmlIfChanged(dom.planningWeights, Object.entries(planning.program.weights)
     .map(([key, weight]) => `
       <span class="planning-pill">
         <strong>${Math.round(weight * 100)}%</strong>
@@ -7480,20 +7661,20 @@ function renderPlanningWeights(planning) {
       <span class="planning-pill emphasis">${planning.imagerySummary.headline}</span>
       <span class="planning-pill emphasis">${planning.horizon.label}</span>
       <span class="planning-pill emphasis">${planning.scenario.label}</span>
-    `;
+    `);
 }
 
 function renderPlanningCandidates(planning) {
   if (!planning.candidates.length) {
     dom.planningCandidates.classList.add("empty-state");
     dom.planningCandidates.classList.remove("has-data");
-    dom.planningCandidates.textContent = "No aparecieron candidatos con puntaje suficiente. Prueba con otro escenario u horizonte.";
+    setTextIfChanged(dom.planningCandidates, "No aparecieron candidatos con puntaje suficiente. Prueba con otro escenario u horizonte.");
     return;
   }
 
   dom.planningCandidates.classList.remove("empty-state");
   dom.planningCandidates.classList.add("has-data");
-  dom.planningCandidates.innerHTML = planning.candidates
+  setHtmlIfChanged(dom.planningCandidates, planning.candidates
     .map((candidate) => `
       <article class="planning-candidate ${candidate.id === state.planningHighlightId ? "active" : ""}">
         <div class="planning-candidate-head">
@@ -7510,11 +7691,7 @@ function renderPlanningCandidates(planning) {
         <button class="ghost-button" type="button" data-candidate-id="${candidate.id}">Ver en mapa</button>
       </article>
     `)
-    .join("");
-
-  dom.planningCandidates.querySelectorAll("[data-candidate-id]").forEach((button) => {
-    button.addEventListener("click", () => focusPlanningCandidate(button.dataset.candidateId));
-  });
+    .join(""));
 }
 
 function renderPlanningOverlay(planning) {
@@ -8084,7 +8261,12 @@ function renderWizardAssistantControls() {
   }
 }
 
-function renderWizardAssistantState() {
+function renderWizardAssistantState(force = false) {
+  if (!force) {
+    scheduleUiTask("wizard-assistant", () => renderWizardAssistantState(true));
+    return;
+  }
+
   renderWizardModes();
   renderWizardSteps();
   renderWizardSummary();
@@ -8209,7 +8391,7 @@ function useWizardDemoPlot() {
 }
 
 function renderWizardModes() {
-  dom.wizardModes.innerHTML = Object.keys(wizardConfig)
+  setHtmlIfChanged(dom.wizardModes, Object.keys(wizardConfig)
     .map(
       (mode) => `
         <button
@@ -8221,23 +8403,13 @@ function renderWizardModes() {
         </button>
       `
     )
-    .join("");
-
-  dom.wizardModes.querySelectorAll(".wizard-mode").forEach((button) => {
-    button.addEventListener("click", () => {
-      state.activeWizard = button.dataset.mode;
-      dom.overlayMode.textContent = state.activeWizard;
-      renderWizardAssistantState();
-      setStatus(`Asistente Agricola ajustado al modo ${state.activeWizard}.`);
-      refreshActiveAnalysis({ silent: true });
-    });
-  });
+    .join(""));
 }
 
 function renderWizardSteps() {
   const steps = wizardConfig[state.activeWizard];
   const progress = getWizardProgress();
-  dom.wizardSteps.innerHTML = steps
+  setHtmlIfChanged(dom.wizardSteps, steps
     .map(
       (step, index) => `
         <article class="wizard-step is-${progress.steps[index].status}">
@@ -8271,22 +8443,13 @@ function renderWizardSteps() {
         </article>
       `
     )
-    .join("");
-
-  dom.wizardSteps.querySelectorAll(".wizard-step-action").forEach((button) => {
-    button.addEventListener("click", () => {
-      const stepIndex = Number(button.dataset.stepIndex);
-      if (Number.isFinite(stepIndex)) {
-        runWizardUpToStep(stepIndex);
-      }
-    });
-  });
+    .join(""));
 }
 
 function paintMetricGrid(target, cards) {
   target.classList.remove("empty-state");
   target.classList.add("has-data");
-  target.innerHTML = cards
+  setHtmlIfChanged(target, cards
     .map(
       (card) => `
         <article class="metric-card">
@@ -8296,13 +8459,13 @@ function paintMetricGrid(target, cards) {
         </article>
       `
     )
-    .join("");
+    .join(""));
 }
 
 function resetMetricGrid(target, message) {
   target.classList.remove("has-data");
   target.classList.add("empty-state");
-  target.textContent = message;
+  setTextIfChanged(target, message);
 }
 
 function ensurePlot(message, silent = false) {
@@ -8315,14 +8478,19 @@ function ensurePlot(message, silent = false) {
   return false;
 }
 
-function updateMapSummary() {
+function updateMapSummary(force = false) {
+  if (!force) {
+    scheduleUiTask("map-summary", () => updateMapSummary(true));
+    return;
+  }
+
   const image = getSelectedImage();
   const sensor = image ? getSensorForImage(image) : getActiveSensor();
   const analysis = getRenderableAnalysis(image);
   const compareImage = getCompareImage();
   const changeAnalysis = getRenderableChangeAnalysis(image, compareImage);
   const previewLabel = getSceneLayerStatusLabel(image || sensor.id, state.sceneLayerKind);
-  dom.overlayIndex.textContent = indexConfig[state.selectedIndex].label;
+  setTextIfChanged(dom.overlayIndex, indexConfig[state.selectedIndex].label);
 
   if (dom.mapStage) {
     dom.mapStage.dataset.sensor = sensor.id;
@@ -8332,20 +8500,20 @@ function updateMapSummary() {
     if (state.entryRoute === "planificacion") {
       const planning = state.planningData;
       const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
-      dom.overlayIndex.textContent = planning ? "Aptitud" : imageryProfile.shortLabel;
+      setTextIfChanged(dom.overlayIndex, planning ? "Aptitud" : imageryProfile.shortLabel);
       renderMapBadges();
       if (planning) {
-        dom.mapTitle.textContent = `${planning.program.longLabel} sobre ${planning.context.scopeLabel}`;
-        dom.mapSubtitle.textContent = `Fuente ${planning.imageryProfile.shortLabel}, horizonte ${planning.horizon.label}, escenario ${planning.scenario.label} y ${planning.candidates.length} candidatos priorizados.`;
+        setTextIfChanged(dom.mapTitle, `${planning.program.longLabel} sobre ${planning.context.scopeLabel}`);
+        setTextIfChanged(dom.mapSubtitle, `Fuente ${planning.imageryProfile.shortLabel}, horizonte ${planning.horizon.label}, escenario ${planning.scenario.label} y ${planning.candidates.length} candidatos priorizados.`);
       } else {
-        dom.mapTitle.textContent = "Planificacion territorial lista";
-        dom.mapSubtitle.textContent = `Elige ${imageryProfile.label} y ejecuta la aptitud territorial para evaluar VIS, escuelas, hospitales o equipamientos.`;
+        setTextIfChanged(dom.mapTitle, "Planificacion territorial lista");
+        setTextIfChanged(dom.mapSubtitle, `Elige ${imageryProfile.label} y ejecuta la aptitud territorial para evaluar VIS, escuelas, hospitales o equipamientos.`);
       }
       return;
     }
-    dom.mapTitle.textContent = "No hay escena activa";
+    setTextIfChanged(dom.mapTitle, "No hay escena activa");
     renderMapBadges();
-    dom.mapSubtitle.textContent = `Ajusta el filtro de ${sensor.label} para cargar una imagen sobre el visor.`;
+    setTextIfChanged(dom.mapSubtitle, `Ajusta el filtro de ${sensor.label} para cargar una imagen sobre el visor.`);
     return;
   }
 
@@ -8354,8 +8522,8 @@ function updateMapSummary() {
   if (analysis) {
     if (state.surfaceMode === "change" && changeAnalysis && compareImage) {
       const delta = changeAnalysis.summary[state.selectedIndex];
-      dom.mapTitle.textContent = `Cambio ${indexConfig[state.selectedIndex].label} sobre ${analysis.context.scopeLabel}`;
-      dom.mapSubtitle.textContent = `Lectura temporal ${changeAnalysis.direction} con delta medio ${formatDelta(delta.mean, indexConfig[state.selectedIndex])}.`;
+      setTextIfChanged(dom.mapTitle, `Cambio ${indexConfig[state.selectedIndex].label} sobre ${analysis.context.scopeLabel}`);
+      setTextIfChanged(dom.mapSubtitle, `Lectura temporal ${changeAnalysis.direction} con delta medio ${formatDelta(delta.mean, indexConfig[state.selectedIndex])}.`);
       return;
     }
 
@@ -8367,19 +8535,19 @@ function updateMapSummary() {
         : image.source === "real"
           ? "AOI local"
           : "motor demo";
-    dom.mapTitle.textContent = `${indexConfig[state.selectedIndex].label} sobre ${analysis.context.scopeLabel}`;
-    dom.mapSubtitle.textContent = `Media ${formatValue(stats.mean, indexConfig[state.selectedIndex])} con ${modeLabel}.`;
+    setTextIfChanged(dom.mapTitle, `${indexConfig[state.selectedIndex].label} sobre ${analysis.context.scopeLabel}`);
+    setTextIfChanged(dom.mapSubtitle, `Media ${formatValue(stats.mean, indexConfig[state.selectedIndex])} con ${modeLabel}.`);
     return;
   }
 
   if (image.source === "real") {
-    dom.mapTitle.textContent = `Escena real ${image.title}`;
-    dom.mapSubtitle.textContent = "Preparando la capa satelital y el AOI operativo.";
+    setTextIfChanged(dom.mapTitle, `Escena real ${image.title}`);
+    setTextIfChanged(dom.mapSubtitle, "Preparando la capa satelital y el AOI operativo.");
     return;
   }
 
-  dom.mapTitle.textContent = `${indexConfig[state.selectedIndex].label} sobre ${image.title}`;
-  dom.mapSubtitle.textContent = image.note;
+  setTextIfChanged(dom.mapTitle, `${indexConfig[state.selectedIndex].label} sobre ${image.title}`);
+  setTextIfChanged(dom.mapSubtitle, image.note);
 }
 
 function renderMapBadges(image = null, compareImage = null, previewLabel = "sin capa") {
@@ -8414,20 +8582,20 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
               label: "Sin escenario",
             },
       ];
-      dom.mapBadges.innerHTML = badges
+      setHtmlIfChanged(dom.mapBadges, badges
         .map((badge) => `<span class="map-badge ${badge.tone}">${badge.label}</span>`)
-        .join("");
+        .join(""));
       return;
     }
     const sensor = getActiveSensor();
     const planningBadge = state.planningData
       ? `<span class="map-badge analysis">Plan ${state.planningData.program.label}</span>`
       : "";
-    dom.mapBadges.innerHTML = `
+    setHtmlIfChanged(dom.mapBadges, `
       <span class="map-badge sensor sensor-${sensor.id}">${sensor.label}</span>
       <span class="map-badge muted">Sin escena</span>
       ${planningBadge}
-    `;
+    `);
     return;
   }
 
@@ -8480,9 +8648,9 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
     });
   }
 
-  dom.mapBadges.innerHTML = badges
+  setHtmlIfChanged(dom.mapBadges, badges
     .map((badge) => `<span class="map-badge ${badge.tone}">${badge.label}</span>`)
-    .join("");
+    .join(""));
 }
 
 function setBaseLayer(baseId, initial = false) {
