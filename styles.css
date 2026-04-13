@@ -1788,10 +1788,10 @@ button {
   position: relative;
   display: grid;
   grid-template-rows: auto auto auto auto minmax(0, 1fr);
-  gap: 12px;
+  gap: 8px;
   width: calc(100vw - 12px);
   height: calc(100vh - 12px);
-  padding: 14px;
+  padding: 10px;
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.28);
   background:
@@ -1811,15 +1811,15 @@ button {
 .planning-3d-header h2 {
   margin: 2px 0 4px;
   font-family: var(--font-display);
-  font-size: clamp(1.38rem, 1.8vw, 1.85rem);
+  font-size: clamp(1.28rem, 1.7vw, 1.72rem);
 }
 
 .planning-3d-subtitle {
   margin: 0;
   max-width: 780px;
   color: var(--muted);
-  line-height: 1.45;
-  font-size: 0.98rem;
+  line-height: 1.35;
+  font-size: 0.9rem;
 }
 
 .planning-3d-header-actions {
@@ -1833,7 +1833,7 @@ button {
   flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.68);
   border: 1px solid rgba(47, 61, 50, 0.1);
@@ -1860,7 +1860,7 @@ button {
 }
 
 .planning-3d-range {
-  min-width: 230px;
+  min-width: 200px;
   margin-left: auto;
 }
 
@@ -1885,9 +1885,9 @@ button {
 
 .planning-3d-panel {
   position: absolute;
-  top: 14px;
-  right: 14px;
-  width: min(330px, 24vw);
+  top: 10px;
+  right: 10px;
+  width: min(310px, 22vw);
   display: grid;
   grid-template-rows: auto auto;
   align-content: start;
@@ -1911,11 +1911,11 @@ button {
 }
 
 .planning-3d-summary {
-  max-height: min(34vh, 280px);
+  max-height: min(30vh, 240px);
 }
 
 .planning-3d-selection {
-  max-height: min(50vh, 420px);
+  max-height: min(42vh, 340px);
 }
 
 .planning-3d-summary.has-data,
@@ -1925,15 +1925,15 @@ button {
 }
 
 .planning-3d-shell > .service-banner {
-  padding: 10px 14px;
-  font-size: 0.94rem;
-  line-height: 1.45;
+  padding: 8px 12px;
+  font-size: 0.88rem;
+  line-height: 1.35;
 }
 
 .planning-3d-progress {
   display: grid;
-  gap: 8px;
-  padding: 10px 14px;
+  gap: 6px;
+  padding: 8px 12px;
   border-radius: 18px;
   border: 1px solid rgba(47, 61, 50, 0.1);
   background: rgba(255, 255, 255, 0.72);
@@ -1957,14 +1957,14 @@ button {
 
 .planning-3d-progress-head span {
   font-family: var(--font-display);
-  font-size: 1rem;
+  font-size: 0.94rem;
   color: var(--ink);
 }
 
 .planning-3d-progress-track {
   position: relative;
   overflow: hidden;
-  height: 10px;
+  height: 8px;
   border-radius: 999px;
   background: rgba(47, 61, 50, 0.1);
 }
@@ -1981,8 +1981,8 @@ button {
 .planning-3d-progress-copy {
   margin: 0;
   color: var(--muted);
-  line-height: 1.45;
-  font-size: 0.88rem;
+  line-height: 1.35;
+  font-size: 0.82rem;
 }
 
 .planning-3d-progress.demo .planning-3d-progress-track span {
