@@ -1426,6 +1426,8 @@ const planning3dState = {
   selectedBuilding: null,
   selectedPhotos: [],
   domMarkers: [],
+  domOverlay: null,
+  domSyncQueued: false,
   datasetRequestId: {
     buildings: 0,
     parcels: 0,
@@ -5892,6 +5894,10 @@ async function initializePlanning3dMap() {
     refreshExpiredTiles: false,
   });
   planning3dState.map.addControl(new window.maplibregl.NavigationControl({ visualizePitch: true }), "top-left");
+  planning3dState.map.on("render", queuePlanning3dDomMarkerPositionSync);
+  planning3dState.map.on("move", queuePlanning3dDomMarkerPositionSync);
+  planning3dState.map.on("zoom", queuePlanning3dDomMarkerPositionSync);
+  planning3dState.map.on("resize", queuePlanning3dDomMarkerPositionSync);
 
   planning3dState.readyPromise = new Promise((resolve) => {
     let settled = false;
@@ -6322,25 +6328,21 @@ async function ensurePlanning3dDataset(datasetKey, force = false) {
 function syncPlanning3dSource(datasetKey) {
   const sourceId = datasetKey === "buildings" ? "planning3d-buildings" : "planning3d-parcels";
   const source = planning3dState.map?.getSource(sourceId);
-  if (!source) {
-    return;
+  if (source) {
+    source.setData(planning3dState.sourceData[datasetKey] || getPlanning3dEmptyCollection());
   }
-  source.setData(planning3dState.sourceData[datasetKey] || getPlanning3dEmptyCollection());
   updatePlanning3dHeightScale();
   if (datasetKey === "buildings" && planning3dState.sourceData.buildings?.features?.length) {
     renderPlanning3dDomMarkers();
-    queuePlanning3dFocus();
+    if (planning3dState.map) {
+      queuePlanning3dFocus();
+    }
   }
 }
 
 function clearPlanning3dDomMarkers() {
-  if (!Array.isArray(planning3dState.domMarkers) || !planning3dState.domMarkers.length) {
-    planning3dState.domMarkers = [];
-    return;
-  }
-
   planning3dState.domMarkers.forEach((entry) => {
-    entry?.marker?.remove?.();
+    entry?.element?.remove?.();
   });
   planning3dState.domMarkers = [];
 }
@@ -6373,8 +6375,25 @@ function getPlanning3dDomMarkerFeatures(limit = 420) {
   return sampled.filter(Boolean);
 }
 
+function ensurePlanning3dDomOverlay() {
+  if (!dom.planning3dMap) {
+    return null;
+  }
+
+  if (planning3dState.domOverlay?.isConnected) {
+    return planning3dState.domOverlay;
+  }
+
+  const overlay = document.createElement("div");
+  overlay.className = "planning-3d-dom-overlay";
+  overlay.setAttribute("aria-hidden", "true");
+  dom.planning3dMap.appendChild(overlay);
+  planning3dState.domOverlay = overlay;
+  return overlay;
+}
+
 function shouldRenderPlanning3dDomMarkers() {
-  if (!planning3dState.map || !window.maplibregl) {
+  if (!dom.planning3dMap) {
     return false;
   }
 
@@ -6437,6 +6456,95 @@ function buildPlanning3dDomMarkerElement(feature) {
   return element;
 }
 
+function getPlanning3dDomFallbackPoint(anchor, overlay) {
+  const buildings = planning3dState.sourceData.buildings;
+  const width = overlay?.clientWidth || 0;
+  const height = overlay?.clientHeight || 0;
+  if (!buildings?.features?.length || !width || !height) {
+    return null;
+  }
+
+  const bbox = turf.bbox(buildings);
+  const lonSpan = Math.max(0.00001, bbox[2] - bbox[0]);
+  const latSpan = Math.max(0.00001, bbox[3] - bbox[1]);
+  const paddingX = 56;
+  const paddingY = 48;
+  const usableWidth = Math.max(40, width - (paddingX * 2));
+  const usableHeight = Math.max(40, height - (paddingY * 2));
+  const x = paddingX + (((anchor[0] - bbox[0]) / lonSpan) * usableWidth);
+  const y = paddingY + ((1 - ((anchor[1] - bbox[1]) / latSpan)) * usableHeight);
+  return { x, y };
+}
+
+function positionPlanning3dDomMarkers() {
+  const overlay = ensurePlanning3dDomOverlay();
+  if (!overlay || !planning3dState.domMarkers.length) {
+    return;
+  }
+
+  const width = overlay.clientWidth || 0;
+  const height = overlay.clientHeight || 0;
+  if (!width || !height) {
+    return;
+  }
+
+  planning3dState.domMarkers.forEach((entry) => {
+    let point = null;
+    const fallbackPoint = getPlanning3dDomFallbackPoint(entry.anchor, overlay);
+    if (planning3dState.map?.project) {
+      try {
+        point = planning3dState.map.project(entry.anchor);
+      } catch (error) {
+        point = null;
+      }
+    }
+
+    const projectedVisible = point
+      && Number.isFinite(point.x)
+      && Number.isFinite(point.y)
+      && point.x >= -80
+      && point.x <= width + 80
+      && point.y >= -120
+      && point.y <= height + 120;
+
+    if (!projectedVisible) {
+      point = fallbackPoint;
+    }
+
+    if (!point) {
+      entry.element.style.display = "none";
+      return;
+    }
+
+    const visible = point.x >= -80 && point.x <= width + 80 && point.y >= -120 && point.y <= height + 120;
+    entry.element.style.display = visible ? "block" : "none";
+    if (!visible) {
+      return;
+    }
+
+    entry.element.style.left = `${point.x}px`;
+    entry.element.style.top = `${point.y}px`;
+  });
+}
+
+function queuePlanning3dDomMarkerPositionSync() {
+  if (planning3dState.domSyncQueued) {
+    return;
+  }
+
+  planning3dState.domSyncQueued = true;
+  const run = () => {
+    planning3dState.domSyncQueued = false;
+    positionPlanning3dDomMarkers();
+  };
+
+  if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+    window.requestAnimationFrame(run);
+    return;
+  }
+  window.setTimeout(run, 0);
+}
+
 function syncPlanning3dDomMarkerSelection() {
   if (!Array.isArray(planning3dState.domMarkers) || !planning3dState.domMarkers.length) {
     return;
@@ -6454,24 +6562,26 @@ function renderPlanning3dDomMarkers() {
     return;
   }
 
+  const overlay = ensurePlanning3dDomOverlay();
+  if (!overlay) {
+    return;
+  }
+
   const features = getPlanning3dDomMarkerFeatures();
   planning3dState.domMarkers = features.map((feature) => {
-    const [lng, lat] = getPlanning3dFeatureAnchor(feature);
     const element = buildPlanning3dDomMarkerElement(feature);
-    const marker = new window.maplibregl.Marker({
-      anchor: "bottom",
-      element,
-    })
-      .setLngLat([lng, lat])
-      .addTo(planning3dState.map);
+    const anchor = getPlanning3dFeatureAnchor(feature);
+    overlay.appendChild(element);
 
     return {
       featureId: feature?.id ?? feature?.properties?.recordIndex ?? null,
+      anchor,
       element,
-      marker,
+      feature,
     };
   });
   syncPlanning3dDomMarkerSelection();
+  queuePlanning3dDomMarkerPositionSync();
 }
 
 function syncPlanning3dLayerVisibility() {
@@ -6985,6 +7095,7 @@ async function openPlanning3dViewer() {
   try {
     if (!planning3dState.sourceData.buildings?.features?.length) {
       primePlanning3dLiteDataset("buildings", getPlanning3dFallbackManifest());
+      renderPlanning3dDomMarkers();
     }
 
     const manifestPromise = hydratePlanning3dManifest();
@@ -7018,6 +7129,7 @@ async function openPlanning3dViewer() {
     focusPlanning3dDataset();
     queuePlanning3dFocus([180, 760]);
   } catch (error) {
+    renderPlanning3dDomMarkers();
     setPlanning3dStatus(`No se pudo abrir el visor 3D: ${error.message}`, "demo");
   }
 }

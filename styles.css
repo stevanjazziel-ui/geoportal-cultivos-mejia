@@ -1883,6 +1883,14 @@ button {
     linear-gradient(180deg, rgba(229, 237, 240, 0.92), rgba(239, 241, 235, 0.88));
 }
 
+.planning-3d-dom-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  overflow: hidden;
+}
+
 .planning-3d-panel {
   position: absolute;
   top: 10px;
@@ -2167,6 +2175,13 @@ button {
     0 12px 22px var(--marker-glow),
     inset 0 0 0 1px rgba(255, 255, 255, 0.18);
   cursor: pointer;
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  pointer-events: auto;
+  transform: translate(calc(-50% - (var(--marker-side-width) * 0.35)), calc(-100% - var(--marker-cap-height)));
   transform-style: preserve-3d;
 }
 
