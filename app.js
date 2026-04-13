@@ -5349,10 +5349,48 @@ function addPlanning3dRuntimeLayers() {
   });
 
   planning3dState.map.addLayer({
+    id: "planning3d-buildings-footprint",
+    type: "fill",
+    source: "planning3d-buildings",
+    minzoom: 9,
+    paint: {
+      "fill-color": [
+        "case",
+        ["boolean", ["feature-state", "selected"], false],
+        "#f4d35e",
+        [
+          "interpolate",
+          ["linear"],
+          ["coalesce", ["get", "floors"], 1],
+          1,
+          "#7aa66f",
+          2,
+          "#6895b3",
+          3,
+          "#4f7f9b",
+          5,
+          "#355f79",
+        ],
+      ],
+      "fill-opacity": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        9,
+        0.72,
+        12,
+        0.56,
+        15,
+        0.18,
+      ],
+    },
+  });
+
+  planning3dState.map.addLayer({
     id: "planning3d-buildings-fill",
     type: "fill-extrusion",
     source: "planning3d-buildings",
-    minzoom: 12,
+    minzoom: 10.5,
     paint: {
       "fill-extrusion-height": [
         "*",
@@ -5360,7 +5398,7 @@ function addPlanning3dRuntimeLayers() {
         planning3dState.heightScale,
       ],
       "fill-extrusion-base": 0,
-      "fill-extrusion-opacity": 0.9,
+      "fill-extrusion-opacity": 0.94,
       "fill-extrusion-color": [
         "case",
         ["boolean", ["feature-state", "selected"], false],
@@ -5386,11 +5424,19 @@ function addPlanning3dRuntimeLayers() {
     id: "planning3d-buildings-outline",
     type: "line",
     source: "planning3d-buildings",
-    minzoom: 13,
+    minzoom: 10,
     paint: {
-      "line-color": "rgba(23, 39, 31, 0.42)",
-      "line-width": 0.7,
-      "line-opacity": 0.55,
+      "line-color": "rgba(23, 39, 31, 0.58)",
+      "line-width": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        10,
+        0.8,
+        15,
+        1.4,
+      ],
+      "line-opacity": 0.72,
     },
   });
 
@@ -5924,6 +5970,13 @@ function syncPlanning3dLayerVisibility() {
     return;
   }
 
+  if (planning3dState.map.getLayer("planning3d-buildings-footprint")) {
+    planning3dState.map.setLayoutProperty(
+      "planning3d-buildings-footprint",
+      "visibility",
+      planning3dState.buildingsVisible ? "visible" : "none"
+    );
+  }
   if (planning3dState.map.getLayer("planning3d-buildings-fill")) {
     planning3dState.map.setLayoutProperty(
       "planning3d-buildings-fill",
@@ -6310,12 +6363,16 @@ function focusPlanning3dDataset() {
   }
 
   const bbox = turf.bbox(focusFeature);
+  const hasDesktopOverlay = typeof window !== "undefined" && window.innerWidth > 900;
   planning3dState.map.fitBounds([
     [bbox[0], bbox[1]],
     [bbox[2], bbox[3]],
   ], {
-    padding: 48,
+    padding: hasDesktopOverlay
+      ? { top: 72, right: 380, bottom: 72, left: 72 }
+      : 56,
     duration: 900,
+    maxZoom: state.planningData?.candidates?.length ? 15.2 : 16.6,
   });
 }
 
@@ -6363,6 +6420,10 @@ async function openPlanning3dViewer() {
     hydratePlanning3dPhotoStatus();
     await mapPromise;
     planning3dState.map.resize();
+    updatePlanning3dCandidateSource();
+    syncPlanning3dLayerVisibility();
+    updatePlanning3dHeightScale();
+    focusPlanning3dDataset();
 
     const manifest = await manifestPromise;
     if (manifest?.viaBackend) {
