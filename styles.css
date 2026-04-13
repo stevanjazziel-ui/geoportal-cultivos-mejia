@@ -1787,7 +1787,7 @@ button {
 .planning-3d-shell {
   position: relative;
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
   gap: 12px;
   width: calc(100vw - 12px);
   height: calc(100vh - 12px);
@@ -1933,11 +1933,12 @@ button {
 .planning-3d-progress {
   display: grid;
   gap: 8px;
-  padding: 12px 14px;
+  padding: 10px 14px;
   border-radius: 18px;
   border: 1px solid rgba(47, 61, 50, 0.1);
   background: rgba(255, 255, 255, 0.72);
   box-shadow: 0 12px 28px rgba(22, 31, 27, 0.08);
+  align-content: start;
 }
 
 .planning-3d-progress-head {
@@ -1981,7 +1982,7 @@ button {
   margin: 0;
   color: var(--muted);
   line-height: 1.45;
-  font-size: 0.9rem;
+  font-size: 0.88rem;
 }
 
 .planning-3d-progress.demo .planning-3d-progress-track span {
@@ -2232,7 +2233,7 @@ button {
   }
 
   .planning-3d-shell {
-    grid-template-rows: auto auto auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto minmax(0, 1fr);
     height: calc(100vh - 12px);
     padding: 16px;
   }

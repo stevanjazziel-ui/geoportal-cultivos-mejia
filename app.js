@@ -6508,10 +6508,10 @@ function focusPlanning3dDataset() {
   }
 
   let focusFeature = null;
-  if (state.planningData?.candidates?.[0]?.feature) {
-    focusFeature = state.planningData.candidates[0].feature;
-  } else if (planning3dState.sourceData.buildings?.features?.length) {
+  if (planning3dState.sourceData.buildings?.features?.length) {
     focusFeature = planning3dState.sourceData.buildings;
+  } else if (state.planningData?.candidates?.[0]?.feature) {
+    focusFeature = state.planningData.candidates[0].feature;
   }
   if (!focusFeature) {
     return;
