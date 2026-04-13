@@ -1428,6 +1428,7 @@ const planning3dState = {
   domMarkers: [],
   domOverlay: null,
   domSyncQueued: false,
+  svgOverlay: null,
   datasetRequestId: {
     buildings: 0,
     parcels: 0,
@@ -5913,6 +5914,7 @@ async function initializePlanning3dMap() {
       addPlanning3dRuntimeLayers();
       updatePlanning3dCandidateSource();
       syncPlanning3dLayerVisibility();
+      renderPlanning3dSvgScene();
       renderPlanning3dDomMarkers();
       resolve(planning3dState.map);
     };
@@ -6333,6 +6335,7 @@ function syncPlanning3dSource(datasetKey) {
   }
   updatePlanning3dHeightScale();
   if (datasetKey === "buildings" && planning3dState.sourceData.buildings?.features?.length) {
+    renderPlanning3dSvgScene();
     renderPlanning3dDomMarkers();
     if (planning3dState.map) {
       queuePlanning3dFocus();
@@ -6345,6 +6348,29 @@ function clearPlanning3dDomMarkers() {
     entry?.element?.remove?.();
   });
   planning3dState.domMarkers = [];
+}
+
+function ensurePlanning3dSvgOverlay() {
+  if (!dom.planning3dMap) {
+    return null;
+  }
+
+  if (planning3dState.svgOverlay?.isConnected) {
+    return planning3dState.svgOverlay;
+  }
+
+  const overlay = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  overlay.setAttribute("class", "planning-3d-svg-overlay");
+  overlay.setAttribute("aria-hidden", "true");
+  dom.planning3dMap.appendChild(overlay);
+  planning3dState.svgOverlay = overlay;
+  return overlay;
+}
+
+function clearPlanning3dSvgScene() {
+  if (planning3dState.svgOverlay) {
+    planning3dState.svgOverlay.innerHTML = "";
+  }
 }
 
 function getPlanning3dFeatureAnchor(feature) {
@@ -6393,25 +6419,7 @@ function ensurePlanning3dDomOverlay() {
 }
 
 function shouldRenderPlanning3dDomMarkers() {
-  if (!dom.planning3dMap) {
-    return false;
-  }
-
-  if (!planning3dState.modalOpen || !planning3dState.buildingsVisible) {
-    return false;
-  }
-
-  const buildings = planning3dState.sourceData.buildings?.features || [];
-  if (!buildings.length) {
-    return false;
-  }
-
-  const datasetPhase = planning3dState.datasetStatus.buildings?.phase;
-  if (!getPlanning3dManifest().viaBackend) {
-    return true;
-  }
-
-  return ["preview", "demo", "fetching"].includes(datasetPhase) || buildings.length <= 500;
+  return false;
 }
 
 function buildPlanning3dDomMarkerElement(feature) {
@@ -6474,6 +6482,173 @@ function getPlanning3dDomFallbackPoint(anchor, overlay) {
   const x = paddingX + (((anchor[0] - bbox[0]) / lonSpan) * usableWidth);
   const y = paddingY + ((1 - ((anchor[1] - bbox[1]) / latSpan)) * usableHeight);
   return { x, y };
+}
+
+function getPlanning3dSvgSceneFeatures(limit = 260) {
+  const features = planning3dState.sourceData.buildings?.features || [];
+  if (features.length <= limit) {
+    return features;
+  }
+
+  const step = features.length / limit;
+  const sampled = [];
+  for (let index = 0; index < limit; index += 1) {
+    sampled.push(features[Math.min(features.length - 1, Math.floor(index * step))]);
+  }
+  return sampled.filter(Boolean);
+}
+
+function shouldRenderPlanning3dSvgScene() {
+  if (!dom.planning3dMap || !planning3dState.modalOpen || !planning3dState.buildingsVisible) {
+    return false;
+  }
+
+  return Boolean(planning3dState.sourceData.buildings?.features?.length);
+}
+
+function createPlanning3dSvgPolygon(points, className) {
+  const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+  polygon.setAttribute("class", className);
+  polygon.setAttribute("points", points.map((point) => `${point[0].toFixed(1)},${point[1].toFixed(1)}`).join(" "));
+  return polygon;
+}
+
+function renderPlanning3dSvgScene() {
+  const overlay = ensurePlanning3dSvgOverlay();
+  if (!overlay) {
+    return;
+  }
+
+  clearPlanning3dSvgScene();
+  if (!shouldRenderPlanning3dSvgScene()) {
+    overlay.style.display = "none";
+    return;
+  }
+
+  overlay.style.display = "block";
+  const width = dom.planning3dMap?.clientWidth || 1280;
+  const height = dom.planning3dMap?.clientHeight || 720;
+  overlay.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  overlay.setAttribute("preserveAspectRatio", "none");
+
+  const buildings = planning3dState.sourceData.buildings;
+  const bbox = turf.bbox(buildings);
+  const leftPadding = 42;
+  const rightPadding = width > 1100 ? 380 : 42;
+  const topPadding = 58;
+  const bottomPadding = 54;
+  const usableWidth = Math.max(120, width - leftPadding - rightPadding);
+  const usableHeight = Math.max(120, height - topPadding - bottomPadding);
+  const lonSpan = Math.max(0.00001, bbox[2] - bbox[0]);
+  const latSpan = Math.max(0.00001, bbox[3] - bbox[1]);
+
+  const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+  defs.innerHTML = `
+    <linearGradient id="planning3dGround" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="rgba(224, 235, 226, 0.9)"/>
+      <stop offset="100%" stop-color="rgba(214, 225, 216, 0.76)"/>
+    </linearGradient>
+    <filter id="planning3dShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="rgba(47, 61, 50, 0.18)"/>
+    </filter>
+  `;
+  overlay.appendChild(defs);
+
+  const ground = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  ground.setAttribute("class", "planning-3d-svg-ground");
+  ground.setAttribute("x", String(leftPadding - 20));
+  ground.setAttribute("y", String(topPadding - 14));
+  ground.setAttribute("width", String(usableWidth + 40));
+  ground.setAttribute("height", String(usableHeight + 28));
+  ground.setAttribute("rx", "22");
+  ground.setAttribute("fill", "url(#planning3dGround)");
+  overlay.appendChild(ground);
+
+  const features = getPlanning3dSvgSceneFeatures().map((feature) => {
+    const anchor = getPlanning3dFeatureAnchor(feature);
+    const x = leftPadding + (((anchor[0] - bbox[0]) / lonSpan) * usableWidth);
+    const y = topPadding + ((1 - ((anchor[1] - bbox[1]) / latSpan)) * usableHeight);
+    return { feature, anchor, x, y };
+  }).sort((a, b) => a.y - b.y);
+
+  features.forEach(({ feature, anchor, x, y }) => {
+    const props = feature.properties || {};
+    const footprint = Number(props.footprintM2) || 80;
+    const heightM = (Number(props.heightM) || 4.2) * planning3dState.heightScale;
+    const floors = Math.max(1, Number(props.floors) || 1);
+    const widthPx = Math.max(10, Math.min(26, Math.sqrt(footprint) * 0.72));
+    const depthPx = Math.max(7, widthPx * 0.58);
+    const heightPx = Math.max(16, Math.min(112, heightM * 2.45));
+    const dx = depthPx * 0.76;
+    const dy = depthPx * 0.46;
+    const active = String(planning3dState.selectedFeatureId) === String(feature.id);
+
+    const front = [
+      [x - (widthPx / 2), y],
+      [x + (widthPx / 2), y],
+      [x + (widthPx / 2), y - heightPx],
+      [x - (widthPx / 2), y - heightPx],
+    ];
+    const side = [
+      [x + (widthPx / 2), y],
+      [x + (widthPx / 2) + dx, y - dy],
+      [x + (widthPx / 2) + dx, y - heightPx - dy],
+      [x + (widthPx / 2), y - heightPx],
+    ];
+    const top = [
+      [x - (widthPx / 2), y - heightPx],
+      [x + (widthPx / 2), y - heightPx],
+      [x + (widthPx / 2) + dx, y - heightPx - dy],
+      [x - (widthPx / 2) + dx, y - heightPx - dy],
+    ];
+
+    const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    group.setAttribute("class", `planning-3d-svg-building${active ? " active" : ""}`);
+    group.setAttribute("data-feature-id", String(feature.id ?? props.recordIndex ?? ""));
+    group.setAttribute("tabindex", "0");
+    group.setAttribute("role", "button");
+    group.setAttribute("aria-label", `Construccion ${props.buildingId || feature.id || "sin id"} con ${floors} pisos`);
+    group.style.setProperty("--svg-front", floors >= 5 ? "#315f83" : floors >= 3 ? "#4f7f9b" : "#8ab17d");
+    group.style.setProperty("--svg-side", floors >= 5 ? "#264964" : floors >= 3 ? "#395f73" : "#64825c");
+    group.style.setProperty("--svg-top", floors >= 5 ? "#7ea6c8" : floors >= 3 ? "#9cc0d7" : "#d6e6ca");
+
+    const shadow = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
+    shadow.setAttribute("class", "planning-3d-svg-shadow");
+    shadow.setAttribute("cx", (x + (dx * 0.45)).toFixed(1));
+    shadow.setAttribute("cy", (y + 4).toFixed(1));
+    shadow.setAttribute("rx", Math.max(8, widthPx * 0.82).toFixed(1));
+    shadow.setAttribute("ry", Math.max(3, depthPx * 0.42).toFixed(1));
+    group.appendChild(shadow);
+
+    group.appendChild(createPlanning3dSvgPolygon(side, "planning-3d-svg-side"));
+    group.appendChild(createPlanning3dSvgPolygon(front, "planning-3d-svg-front"));
+    group.appendChild(createPlanning3dSvgPolygon(top, "planning-3d-svg-top"));
+
+    group.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      selectPlanning3dBuilding(feature, { lng: anchor[0], lat: anchor[1] });
+    });
+    group.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        selectPlanning3dBuilding(feature, { lng: anchor[0], lat: anchor[1] });
+      }
+    });
+
+    overlay.appendChild(group);
+  });
+}
+
+function syncPlanning3dSvgSceneSelection() {
+  if (!planning3dState.svgOverlay) {
+    return;
+  }
+
+  const activeId = planning3dState.selectedFeatureId == null ? null : String(planning3dState.selectedFeatureId);
+  planning3dState.svgOverlay.querySelectorAll(".planning-3d-svg-building").forEach((node) => {
+    node.classList.toggle("active", activeId != null && node.getAttribute("data-feature-id") === activeId);
+  });
 }
 
 function positionPlanning3dDomMarkers() {
@@ -6585,32 +6760,28 @@ function renderPlanning3dDomMarkers() {
 }
 
 function syncPlanning3dLayerVisibility() {
-  if (!planning3dState.map) {
-    return;
-  }
-
-  if (planning3dState.map.getLayer("planning3d-buildings-footprint")) {
+  if (planning3dState.map?.getLayer("planning3d-buildings-footprint")) {
     planning3dState.map.setLayoutProperty(
       "planning3d-buildings-footprint",
       "visibility",
       planning3dState.buildingsVisible ? "visible" : "none"
     );
   }
-  if (planning3dState.map.getLayer("planning3d-buildings-fill")) {
+  if (planning3dState.map?.getLayer("planning3d-buildings-fill")) {
     planning3dState.map.setLayoutProperty(
       "planning3d-buildings-fill",
       "visibility",
       planning3dState.buildingsVisible ? "visible" : "none"
     );
   }
-  if (planning3dState.map.getLayer("planning3d-buildings-outline")) {
+  if (planning3dState.map?.getLayer("planning3d-buildings-outline")) {
     planning3dState.map.setLayoutProperty(
       "planning3d-buildings-outline",
       "visibility",
       planning3dState.buildingsVisible ? "visible" : "none"
     );
   }
-  if (planning3dState.map.getLayer("planning3d-parcels-line")) {
+  if (planning3dState.map?.getLayer("planning3d-parcels-line")) {
     planning3dState.map.setLayoutProperty(
       "planning3d-parcels-line",
       "visibility",
@@ -6618,10 +6789,12 @@ function syncPlanning3dLayerVisibility() {
     );
   }
 
+  renderPlanning3dSvgScene();
   renderPlanning3dDomMarkers();
 }
 
 function updatePlanning3dHeightScale() {
+  renderPlanning3dSvgScene();
   if (!planning3dState.map?.getLayer("planning3d-buildings-fill")) {
     renderPlanning3dDomMarkers();
     return;
@@ -6899,6 +7072,7 @@ function clearPlanning3dSelection() {
   planning3dState.photoQueryMessage = null;
   planning3dState.popup?.remove();
   planning3dState.popup = null;
+  syncPlanning3dSvgSceneSelection();
   syncPlanning3dDomMarkerSelection();
   renderPlanning3dSelection();
 }
@@ -6923,6 +7097,7 @@ async function selectPlanning3dBuilding(feature, lngLat = null) {
   );
   planning3dState.selectedPhotos = [];
   planning3dState.loadingPhotos = true;
+  syncPlanning3dSvgSceneSelection();
   syncPlanning3dDomMarkerSelection();
   renderPlanning3dSelection();
 
@@ -7070,6 +7245,7 @@ function setPlanning3dBase(baseId = "satellite") {
       updatePlanning3dCandidateSource();
       syncPlanning3dLayerVisibility();
       updatePlanning3dHeightScale();
+      renderPlanning3dSvgScene();
       renderPlanning3dDomMarkers();
       resolve(planning3dState.map);
     });
@@ -7095,6 +7271,7 @@ async function openPlanning3dViewer() {
   try {
     if (!planning3dState.sourceData.buildings?.features?.length) {
       primePlanning3dLiteDataset("buildings", getPlanning3dFallbackManifest());
+      renderPlanning3dSvgScene();
       renderPlanning3dDomMarkers();
     }
 
@@ -7106,6 +7283,7 @@ async function openPlanning3dViewer() {
     updatePlanning3dCandidateSource();
     syncPlanning3dLayerVisibility();
     updatePlanning3dHeightScale();
+    renderPlanning3dSvgScene();
     renderPlanning3dDomMarkers();
     focusPlanning3dDataset();
     queuePlanning3dFocus([140, 620]);
@@ -7125,10 +7303,12 @@ async function openPlanning3dViewer() {
     updatePlanning3dCandidateSource();
     syncPlanning3dLayerVisibility();
     updatePlanning3dHeightScale();
+    renderPlanning3dSvgScene();
     renderPlanning3dDomMarkers();
     focusPlanning3dDataset();
     queuePlanning3dFocus([180, 760]);
   } catch (error) {
+    renderPlanning3dSvgScene();
     renderPlanning3dDomMarkers();
     setPlanning3dStatus(`No se pudo abrir el visor 3D: ${error.message}`, "demo");
   }
@@ -7140,6 +7320,7 @@ function closePlanning3dViewer(silent = false) {
   if (dom.planning3dModal) {
     dom.planning3dModal.setAttribute("aria-hidden", "true");
   }
+  clearPlanning3dSvgScene();
   clearPlanning3dDomMarkers();
   if (!silent) {
     clearPlanning3dSelection();
@@ -7149,6 +7330,7 @@ function closePlanning3dViewer(silent = false) {
 async function reloadPlanning3dData() {
   terminatePlanning3dWorker("buildings");
   terminatePlanning3dWorker("parcels");
+  clearPlanning3dSvgScene();
   clearPlanning3dDomMarkers();
   planning3dState.manifest = null;
   planning3dState.manifestPromise = null;
