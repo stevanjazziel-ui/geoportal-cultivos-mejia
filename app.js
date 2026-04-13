@@ -1404,6 +1404,8 @@ const mapState = {
 const planning3dState = {
   modalOpen: false,
   currentBase: "light",
+  statusMessage: "Preparando datasets 3D...",
+  statusTone: "loading",
   manifest: null,
   photoStatus: null,
   backendMode: "unknown",
@@ -1667,6 +1669,20 @@ function waitForPlanning3dYield() {
   });
 }
 
+function queuePlanning3dFocus(delays = [90, 420]) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  delays.forEach((delay) => {
+    window.setTimeout(() => {
+      if (planning3dState.modalOpen) {
+        focusPlanning3dDataset();
+      }
+    }, delay);
+  });
+}
+
 function terminatePlanning3dWorker(datasetKey) {
   const worker = planning3dState.datasetWorkers?.[datasetKey];
   if (!worker) {
@@ -1735,6 +1751,7 @@ function setPlanning3dDatasetStatus(datasetKey, patch = {}) {
     ...current,
     ...patch,
   };
+  renderPlanning3dProgress();
 }
 
 function runPlanning3dWorkerDataset(datasetKey, basePath, metadata = null, options = {}) {
@@ -1880,6 +1897,131 @@ function getPlanning3dLoadLabel(datasetStatus) {
       return "Demo web";
     default:
       return "Pendiente";
+  }
+}
+
+function clampPlanning3dProgress(value, fallback = 0) {
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function getPlanning3dDatasetPercent(datasetStatus, datasetKey = "buildings") {
+  if (!datasetStatus) {
+    return 0;
+  }
+
+  const total = Number(datasetStatus.total) || 0;
+  const loaded = Number(datasetStatus.loaded) || 0;
+  const previewCount = Number(datasetStatus.previewCount) || loaded;
+  const ratio = total > 0 ? Math.max(0, Math.min(1, loaded / total)) : 0;
+  const previewRatio = total > 0 ? Math.max(0, Math.min(1, previewCount / total)) : 0;
+
+  switch (datasetStatus.phase) {
+    case "fetching":
+      return datasetKey === "buildings" ? 10 : 6;
+    case "preview":
+      return clampPlanning3dProgress(38 + (previewRatio * 24), 42);
+    case "building":
+      return clampPlanning3dProgress(66 + (ratio * 33), 72);
+    case "ready":
+    case "demo":
+      return 100;
+    default:
+      return 0;
+  }
+}
+
+function getPlanning3dProgressState() {
+  const buildingStatus = planning3dState.datasetStatus.buildings;
+  const parcelStatus = planning3dState.datasetStatus.parcels;
+  const manifest = getPlanning3dManifest();
+  const buildingPercent = getPlanning3dDatasetPercent(buildingStatus, "buildings");
+  const parcelPercent = planning3dState.parcelsVisible
+    ? getPlanning3dDatasetPercent(parcelStatus, "parcels")
+    : 100;
+  const combinedPercent = planning3dState.parcelsVisible
+    ? clampPlanning3dProgress((buildingPercent * 0.84) + (parcelPercent * 0.16), buildingPercent)
+    : buildingPercent;
+  const buildingLoaded = Number(buildingStatus?.loaded) || 0;
+  const buildingPreview = Number(buildingStatus?.previewCount) || buildingLoaded;
+  const buildingTotal = Number(buildingStatus?.total) || 0;
+  const parcelLabel = planning3dState.parcelsVisible
+    && parcelStatus?.phase
+    && parcelStatus.phase !== "idle"
+    && parcelStatus.phase !== "ready"
+    ? ` Catastro: ${getPlanning3dLoadLabel(parcelStatus)}.`
+    : "";
+
+  let tone = planning3dState.statusTone || "loading";
+  let copy = planning3dState.statusMessage || "Preparando la vista inicial del visor.";
+
+  switch (buildingStatus?.phase) {
+    case "fetching":
+      copy = "Descargando los datos base y preparando la malla urbana inicial del visor.";
+      break;
+    case "preview":
+      copy = buildingTotal
+        ? `Vista rapida activa con ${formatPlanning3dCount(buildingPreview)} de ${formatPlanning3dCount(buildingTotal)} construcciones. El detalle total sigue cargando en segundo plano.`
+        : `Vista rapida activa con ${formatPlanning3dCount(buildingPreview)} construcciones mientras termina la carga total.`;
+      break;
+    case "building":
+      copy = buildingTotal
+        ? `Procesando ${formatPlanning3dCount(buildingLoaded)} de ${formatPlanning3dCount(buildingTotal)} construcciones para completar la extrusion urbana.`
+        : "Procesando geometria urbana para completar la extrusion 3D.";
+      break;
+    case "ready":
+      tone = manifest.viaBackend ? "real" : "demo";
+      copy = manifest.viaBackend
+        ? `Construcciones 3D listas con dataset real${buildingTotal ? ` (${formatPlanning3dCount(buildingTotal)})` : ""}.`
+        : "Vista ligera publicada lista para navegacion inmediata.";
+      break;
+    case "demo":
+      tone = "demo";
+      copy = "Vista ligera publicada lista para navegacion inmediata.";
+      break;
+    case "idle":
+    default:
+      copy = planning3dState.statusMessage || "Preparando la vista inicial del visor.";
+      break;
+  }
+
+  if (buildingStatus?.phase === "ready" && manifest.viaBackend) {
+    tone = "real";
+  } else if (buildingStatus?.phase === "demo") {
+    tone = "demo";
+  }
+
+  return {
+    percent: combinedPercent,
+    tone,
+    copy: `${copy}${parcelLabel}`.trim(),
+  };
+}
+
+function renderPlanning3dProgress() {
+  const root = dom.planning3dProgress;
+  if (!root) {
+    return;
+  }
+
+  const progress = getPlanning3dProgressState();
+  const valueNode = root.querySelector(".planning-3d-progress-head span");
+  const trackNode = root.querySelector(".planning-3d-progress-track span");
+  const copyNode = root.querySelector(".planning-3d-progress-copy");
+
+  root.className = `planning-3d-progress ${progress.tone}`;
+  root.setAttribute("aria-valuenow", String(progress.percent));
+  root.setAttribute("aria-valuetext", `${progress.percent}%`);
+  if (valueNode) {
+    valueNode.textContent = `${progress.percent}%`;
+  }
+  if (trackNode) {
+    trackNode.style.width = `${progress.percent}%`;
+  }
+  if (copyNode) {
+    copyNode.textContent = progress.copy;
   }
 }
 
@@ -2060,6 +2202,7 @@ function cacheDom() {
   dom.planning3dCloseBtn = document.querySelector("#planning3dCloseBtn");
   dom.planning3dResetViewBtn = document.querySelector("#planning3dResetViewBtn");
   dom.planning3dStatus = document.querySelector("#planning3dStatus");
+  dom.planning3dProgress = document.querySelector("#planning3dProgress");
   dom.planning3dSummary = document.querySelector("#planning3dSummary");
   dom.planning3dSelection = document.querySelector("#planning3dSelection");
   dom.planning3dMap = document.querySelector("#planning3dMap");
@@ -5107,16 +5250,21 @@ function formatPlanning3dCount(value, fallback = "Shape listo") {
 }
 
 function setPlanning3dStatus(message, tone = "loading") {
+  planning3dState.statusMessage = message;
+  planning3dState.statusTone = tone;
   if (!dom.planning3dStatus) {
+    renderPlanning3dProgress();
     return;
   }
 
   dom.planning3dStatus.className = `service-banner ${tone}`;
   dom.planning3dStatus.textContent = message;
+  renderPlanning3dProgress();
 }
 
 function renderPlanning3dPanel() {
   if (!dom.planning3dAvailability) {
+    renderPlanning3dProgress();
     return;
   }
 
@@ -5124,6 +5272,7 @@ function renderPlanning3dPanel() {
     dom.planning3dAvailability.classList.add("empty-state");
     dom.planning3dAvailability.classList.remove("has-data");
     dom.planning3dAvailability.textContent = "Verificando disponibilidad de shapes y metadata 3D...";
+    renderPlanning3dProgress();
     return;
   }
 
@@ -5168,6 +5317,7 @@ function renderPlanning3dPanel() {
 
   renderPlanning3dSummary();
   renderPlanning3dSelection();
+  renderPlanning3dProgress();
 }
 
 async function hydratePlanning3dManifest(force = false) {
@@ -5377,11 +5527,13 @@ function addPlanning3dRuntimeLayers() {
         ["linear"],
         ["zoom"],
         9,
-        0.72,
+        0.82,
         12,
-        0.56,
+        0.68,
         15,
-        0.18,
+        0.38,
+        17,
+        0.26,
       ],
     },
   });
@@ -5398,7 +5550,7 @@ function addPlanning3dRuntimeLayers() {
         planning3dState.heightScale,
       ],
       "fill-extrusion-base": 0,
-      "fill-extrusion-opacity": 0.94,
+      "fill-extrusion-opacity": 0.97,
       "fill-extrusion-color": [
         "case",
         ["boolean", ["feature-state", "selected"], false],
@@ -5426,17 +5578,17 @@ function addPlanning3dRuntimeLayers() {
     source: "planning3d-buildings",
     minzoom: 10,
     paint: {
-      "line-color": "rgba(23, 39, 31, 0.58)",
+      "line-color": "rgba(23, 39, 31, 0.7)",
       "line-width": [
         "interpolate",
         ["linear"],
         ["zoom"],
         10,
-        0.8,
+        1,
         15,
-        1.4,
+        1.7,
       ],
-      "line-opacity": 0.72,
+      "line-opacity": 0.86,
     },
   });
 
@@ -5519,9 +5671,9 @@ async function initializePlanning3dMap() {
   planning3dState.map = new window.maplibregl.Map({
     container: dom.planning3dMap,
     style: createPlanning3dStyle(),
-    center: [-78.59, -0.503],
-    zoom: 12.3,
-    pitch: 56,
+    center: [-78.5928, -0.5065],
+    zoom: 14.6,
+    pitch: 52,
     bearing: -18,
     attributionControl: false,
     antialias: false,
@@ -5963,6 +6115,9 @@ function syncPlanning3dSource(datasetKey) {
   }
   source.setData(planning3dState.sourceData[datasetKey] || getPlanning3dEmptyCollection());
   updatePlanning3dHeightScale();
+  if (datasetKey === "buildings" && planning3dState.sourceData.buildings?.features?.length) {
+    queuePlanning3dFocus();
+  }
 }
 
 function syncPlanning3dLayerVisibility() {
@@ -6371,8 +6526,8 @@ function focusPlanning3dDataset() {
     padding: hasDesktopOverlay
       ? { top: 72, right: 380, bottom: 72, left: 72 }
       : 56,
-    duration: 900,
-    maxZoom: state.planningData?.candidates?.length ? 15.2 : 16.6,
+    duration: 720,
+    maxZoom: state.planningData?.candidates?.length ? 15.6 : 17.4,
   });
 }
 
@@ -6424,6 +6579,7 @@ async function openPlanning3dViewer() {
     syncPlanning3dLayerVisibility();
     updatePlanning3dHeightScale();
     focusPlanning3dDataset();
+    queuePlanning3dFocus([140, 620]);
 
     const manifest = await manifestPromise;
     if (manifest?.viaBackend) {
@@ -6441,6 +6597,7 @@ async function openPlanning3dViewer() {
     syncPlanning3dLayerVisibility();
     updatePlanning3dHeightScale();
     focusPlanning3dDataset();
+    queuePlanning3dFocus([180, 760]);
   } catch (error) {
     setPlanning3dStatus(`No se pudo abrir el visor 3D: ${error.message}`, "demo");
   }
@@ -6484,6 +6641,7 @@ async function reloadPlanning3dData() {
   clearPlanning3dSelection();
   renderPlanning3dPanel();
   renderPlanning3dSummary();
+  renderPlanning3dProgress();
   if (planning3dState.map?.getSource("planning3d-buildings")) {
     planning3dState.map.getSource("planning3d-buildings").setData(getPlanning3dEmptyCollection());
   }

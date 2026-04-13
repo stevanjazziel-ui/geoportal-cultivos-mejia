@@ -28,7 +28,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260413-1">
+  <link rel="stylesheet" href="./styles.css?v=20260413-2">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -554,6 +554,25 @@
         Preparando datasets 3D...
       </div>
 
+      <div
+        id="planning3dProgress"
+        class="planning-3d-progress loading"
+        aria-live="polite"
+        role="progressbar"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="0"
+      >
+        <div class="planning-3d-progress-head">
+          <strong>Carga 3D</strong>
+          <span>0%</span>
+        </div>
+        <div class="planning-3d-progress-track">
+          <span style="width: 0%"></span>
+        </div>
+        <p class="planning-3d-progress-copy">Preparando la vista inicial del visor.</p>
+      </div>
+
       <div class="planning-3d-layout">
         <div id="planning3dMap" class="planning-3d-map" aria-label="Mapa 3D de construcciones"></div>
         <aside class="planning-3d-panel">
@@ -580,6 +599,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-<script src="./app.js?v=20260413-3" defer></script>
+<script src="./app.js?v=20260413-5" defer></script>
 </body>
 </html>

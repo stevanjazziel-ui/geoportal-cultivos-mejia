@@ -1930,6 +1930,70 @@ button {
   line-height: 1.45;
 }
 
+.planning-3d-progress {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(47, 61, 50, 0.1);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 12px 28px rgba(22, 31, 27, 0.08);
+}
+
+.planning-3d-progress-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.planning-3d-progress-head strong {
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--leaf-deep);
+}
+
+.planning-3d-progress-head span {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+.planning-3d-progress-track {
+  position: relative;
+  overflow: hidden;
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(47, 61, 50, 0.1);
+}
+
+.planning-3d-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #cb9440, #f4d35e);
+  box-shadow: 0 6px 18px rgba(203, 148, 64, 0.22);
+  transition: width 240ms ease;
+}
+
+.planning-3d-progress-copy {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+  font-size: 0.9rem;
+}
+
+.planning-3d-progress.demo .planning-3d-progress-track span {
+  background: linear-gradient(90deg, #5c8d73, #8ab17d);
+  box-shadow: 0 6px 18px rgba(92, 141, 115, 0.2);
+}
+
+.planning-3d-progress.real .planning-3d-progress-track span {
+  background: linear-gradient(90deg, #2f7f5f, #61b58a);
+  box-shadow: 0 6px 18px rgba(47, 127, 95, 0.22);
+}
+
 .planning-3d-summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
