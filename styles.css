@@ -1774,7 +1774,7 @@ button {
   z-index: 1200;
   display: grid;
   place-items: center;
-  padding: 18px;
+  padding: 6px;
 }
 
 .planning-3d-backdrop {
@@ -1787,9 +1787,10 @@ button {
 .planning-3d-shell {
   position: relative;
   display: grid;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
   gap: 12px;
-  width: min(1720px, calc(100vw - 10px));
-  height: min(97vh, 1160px);
+  width: calc(100vw - 12px);
+  height: calc(100vh - 12px);
   padding: 14px;
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.28);
@@ -1867,7 +1868,7 @@ button {
   position: relative;
   display: block;
   min-height: 0;
-  flex: 1;
+  height: 100%;
 }
 
 .planning-3d-map {
@@ -2158,7 +2159,8 @@ button {
   }
 
   .planning-3d-shell {
-    height: min(94vh, 1040px);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    height: calc(100vh - 12px);
     padding: 16px;
   }
 
@@ -2166,7 +2168,8 @@ button {
     display: grid;
     position: static;
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(320px, 54vh) auto;
+    grid-template-rows: minmax(420px, 60vh) auto;
+    height: 100%;
   }
 
   .planning-3d-map {
@@ -2264,13 +2267,13 @@ button {
   }
 
   .planning-3d-shell {
-    height: min(96vh, 1200px);
+    height: calc(100vh - 10px);
     padding: 14px;
     border-radius: 22px;
   }
 
   .planning-3d-layout {
-    grid-template-rows: minmax(280px, 48vh) auto;
+    grid-template-rows: minmax(420px, 58vh) auto;
   }
 
   .overlay-left {
