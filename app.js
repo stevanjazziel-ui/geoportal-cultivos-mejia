@@ -5482,7 +5482,7 @@ async function initializePlanning3dMap() {
     fadeDuration: 0,
     refreshExpiredTiles: false,
   });
-  planning3dState.map.addControl(new window.maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
+  planning3dState.map.addControl(new window.maplibregl.NavigationControl({ visualizePitch: true }), "top-left");
 
   planning3dState.readyPromise = new Promise((resolve) => {
     let settled = false;
@@ -6354,15 +6354,27 @@ async function openPlanning3dViewer() {
   renderPlanning3dSummary();
 
   try {
-    await hydratePlanning3dManifest();
+    if (!planning3dState.sourceData.buildings?.features?.length) {
+      primePlanning3dLiteDataset("buildings", getPlanning3dFallbackManifest());
+    }
+
+    const manifestPromise = hydratePlanning3dManifest();
     const mapPromise = initializePlanning3dMap();
-    const buildingPromise = ensurePlanning3dDataset("buildings");
     hydratePlanning3dPhotoStatus();
     await mapPromise;
     planning3dState.map.resize();
-    await buildingPromise;
+
+    const manifest = await manifestPromise;
+    if (manifest?.viaBackend) {
+      await ensurePlanning3dDataset("buildings", true);
+    }
+
     if (planning3dState.parcelsVisible) {
-      await ensurePlanning3dDataset("parcels");
+      if (!planning3dState.sourceData.parcels?.features?.length && !manifest?.viaBackend) {
+        primePlanning3dLiteDataset("parcels", manifest || getPlanning3dFallbackManifest());
+      } else {
+        await ensurePlanning3dDataset("parcels", Boolean(manifest?.viaBackend));
+      }
     }
     updatePlanning3dCandidateSource();
     syncPlanning3dLayerVisibility();
