@@ -757,6 +757,261 @@ function Find-NearbyPlanningPhotos($Body) {
   }
 }
 
+function Convert-RgbToHex([double]$R, [double]$G, [double]$B) {
+  $rValue = [int](Clamp ([Math]::Round($R)) 0 255)
+  $gValue = [int](Clamp ([Math]::Round($G)) 0 255)
+  $bValue = [int](Clamp ([Math]::Round($B)) 0 255)
+  return "#{0:x2}{1:x2}{2:x2}" -f $rValue, $gValue, $bValue
+}
+
+function Get-Planning3dFallbackFacadeProfiles() {
+  return @{
+    source = "fallback"
+    label = "Catalogo base urbano"
+    derivedFromPhotos = $false
+    sampledPhotos = 0
+    profiles = @(
+      @{
+        id = "estuco_crema"
+        label = "Estuco crema"
+        material = "Estuco"
+        pattern = "stucco-grid"
+        frontColor = "#c8b5a1"
+        sideColor = "#9f836c"
+        roofColor = "#d9cbbb"
+        accentColor = "#b9987b"
+        windowColor = "#51636c"
+      },
+      @{
+        id = "ladrillo_terracota"
+        label = "Ladrillo terracota"
+        material = "Ladrillo"
+        pattern = "brick"
+        frontColor = "#a86246"
+        sideColor = "#7d4735"
+        roofColor = "#c98d73"
+        accentColor = "#d8b19a"
+        windowColor = "#4c3a37"
+      },
+      @{
+        id = "bloque_oliva"
+        label = "Bloque pintado"
+        material = "Bloque pintado"
+        pattern = "panel"
+        frontColor = "#8d9a7c"
+        sideColor = "#65745b"
+        roofColor = "#bcc7ae"
+        accentColor = "#dbe2d0"
+        windowColor = "#47545c"
+      },
+      @{
+        id = "concreto_gris"
+        label = "Concreto gris"
+        material = "Concreto"
+        pattern = "slab"
+        frontColor = "#8e9496"
+        sideColor = "#666d71"
+        roofColor = "#bcc2c5"
+        accentColor = "#dfe3e5"
+        windowColor = "#495865"
+      },
+      @{
+        id = "pintado_azul"
+        label = "Fachada pintada"
+        material = "Fachada pintada"
+        pattern = "window-grid"
+        frontColor = "#6e8ea3"
+        sideColor = "#4f6d82"
+        roofColor = "#a8c0cf"
+        accentColor = "#dce8ef"
+        windowColor = "#3d4d59"
+      }
+    )
+  }
+}
+
+function Get-Planning3dPhotoFacadeSample([string]$PhotoPath) {
+  if (-not (Test-Path -LiteralPath $PhotoPath)) {
+    return $null
+  }
+
+  Add-Type -AssemblyName System.Drawing | Out-Null
+  $bitmap = $null
+  $thumb = $null
+  $graphics = $null
+
+  try {
+    $bitmap = [System.Drawing.Bitmap]::new($PhotoPath)
+    if ($bitmap.Width -lt 12 -or $bitmap.Height -lt 12) {
+      return $null
+    }
+
+    $cropX = [int]([Math]::Floor($bitmap.Width * 0.16))
+    $cropY = [int]([Math]::Floor($bitmap.Height * 0.18))
+    $cropWidth = [int]([Math]::Max(12, [Math]::Floor($bitmap.Width * 0.68)))
+    $cropHeight = [int]([Math]::Max(12, [Math]::Floor($bitmap.Height * 0.62)))
+    if (($cropX + $cropWidth) -gt $bitmap.Width) { $cropWidth = $bitmap.Width - $cropX }
+    if (($cropY + $cropHeight) -gt $bitmap.Height) { $cropHeight = $bitmap.Height - $cropY }
+
+    $thumb = New-Object System.Drawing.Bitmap 24, 24
+    $graphics = [System.Drawing.Graphics]::FromImage($thumb)
+    $graphics.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
+    $graphics.DrawImage(
+      $bitmap,
+      [System.Drawing.Rectangle]::new(0, 0, 24, 24),
+      [System.Drawing.Rectangle]::new($cropX, $cropY, $cropWidth, $cropHeight),
+      [System.Drawing.GraphicsUnit]::Pixel
+    )
+
+    $samples = @()
+    for ($y = 0; $y -lt 24; $y += 2) {
+      for ($x = 0; $x -lt 24; $x += 2) {
+        $color = $thumb.GetPixel($x, $y)
+        $samples += $color
+      }
+    }
+
+    if (-not $samples.Count) {
+      return $null
+    }
+
+    $avgR = ($samples | Measure-Object R -Average).Average
+    $avgG = ($samples | Measure-Object G -Average).Average
+    $avgB = ($samples | Measure-Object B -Average).Average
+    $meanColor = [System.Drawing.Color]::FromArgb([int][Math]::Round($avgR), [int][Math]::Round($avgG), [int][Math]::Round($avgB))
+    $hue = $meanColor.GetHue()
+    $saturation = $meanColor.GetSaturation()
+    $brightness = $meanColor.GetBrightness()
+
+    $material = "Bloque pintado"
+    $pattern = "panel"
+    if ($hue -ge 12 -and $hue -le 35 -and $saturation -ge 0.22) {
+      $material = "Ladrillo"
+      $pattern = "brick"
+    } elseif ($brightness -ge 0.66 -and $saturation -le 0.18) {
+      $material = "Estuco"
+      $pattern = "stucco-grid"
+    } elseif ($brightness -le 0.42 -and $saturation -le 0.16) {
+      $material = "Cubierta metalica"
+      $pattern = "bands"
+    } elseif ($saturation -le 0.12) {
+      $material = "Concreto"
+      $pattern = "slab"
+    } elseif ($hue -ge 170 -and $hue -le 245) {
+      $material = "Fachada pintada"
+      $pattern = "window-grid"
+    }
+
+    return @{
+      avgR = [Math]::Round($avgR, 2)
+      avgG = [Math]::Round($avgG, 2)
+      avgB = [Math]::Round($avgB, 2)
+      hue = [Math]::Round($hue, 2)
+      saturation = [Math]::Round($saturation, 3)
+      brightness = [Math]::Round($brightness, 3)
+      material = $material
+      pattern = $pattern
+    }
+  } finally {
+    if ($graphics) { $graphics.Dispose() }
+    if ($thumb) { $thumb.Dispose() }
+    if ($bitmap) { $bitmap.Dispose() }
+  }
+}
+
+function Get-Planning3dFacadeProfiles() {
+  $cacheKey = "planning3d|facade-profiles"
+  $cached = Get-Cached $cacheKey 21600
+  if ($cached) {
+    return $cached
+  }
+
+  $fallback = Get-Planning3dFallbackFacadeProfiles
+  $index = Get-PlanningPhotoIndex
+  $jobInfo = Get-PlanningPhotoIndexJobInfo
+
+  if (-not $index -or -not $index.available -or -not $index.photos) {
+    $fallback["indexing"] = [bool]($jobInfo.state -in @("running", "notstarted"))
+    $fallback["message"] = if (-not (Test-Path -LiteralPath $Planning3dPhotoRoot)) {
+      "No se encontro la carpeta local de fotos para derivar texturas."
+    } elseif ($jobInfo.state -eq "failed") {
+      "No se pudo indexar la carpeta de fotos para derivar texturas."
+    } else {
+      "Aun no hay indice local de fotos; usando catalogo base de materiales."
+    }
+    return $fallback
+  }
+
+  $photos = @($index.photos)
+  if (-not $photos.Count) {
+    return $fallback
+  }
+
+  $targetSamples = 42
+  $step = [Math]::Max(1, [int][Math]::Floor($photos.Count / $targetSamples))
+  $samples = [System.Collections.Generic.List[object]]::new()
+
+  for ($indexValue = 0; $indexValue -lt $photos.Count -and $samples.Count -lt $targetSamples; $indexValue += $step) {
+    $photo = $photos[$indexValue]
+    $photoPath = Resolve-PlanningPhotoFile $photo.id
+    if (-not $photoPath) {
+      continue
+    }
+
+    $sample = Get-Planning3dPhotoFacadeSample $photoPath
+    if ($sample) {
+      $samples.Add([pscustomobject]@{
+        avgR = $sample.avgR
+        avgG = $sample.avgG
+        avgB = $sample.avgB
+        material = $sample.material
+        pattern = $sample.pattern
+      })
+    }
+  }
+
+  if (-not $samples.Count) {
+    return $fallback
+  }
+
+  $profiles = @()
+  foreach ($group in ($samples | Group-Object material | Sort-Object Count -Descending | Select-Object -First 6)) {
+    $avgR = ($group.Group | Measure-Object avgR -Average).Average
+    $avgG = ($group.Group | Measure-Object avgG -Average).Average
+    $avgB = ($group.Group | Measure-Object avgB -Average).Average
+    $pattern = ($group.Group | Group-Object pattern | Sort-Object Count -Descending | Select-Object -First 1).Name
+    $profileId = ($group.Name.ToLowerInvariant() -replace "[^a-z0-9]+", "_").Trim([char]"_")
+
+    $profiles += @{
+      id = if ([string]::IsNullOrWhiteSpace($profileId)) { "perfil_$($profiles.Count + 1)" } else { $profileId }
+      label = $group.Name
+      material = $group.Name
+      pattern = if ([string]::IsNullOrWhiteSpace($pattern)) { "window-grid" } else { $pattern }
+      frontColor = Convert-RgbToHex $avgR $avgG $avgB
+      sideColor = Convert-RgbToHex ($avgR * 0.78) ($avgG * 0.78) ($avgB * 0.78)
+      roofColor = Convert-RgbToHex ($avgR + ((255 - $avgR) * 0.16)) ($avgG + ((255 - $avgG) * 0.16)) ($avgB + ((255 - $avgB) * 0.16))
+      accentColor = Convert-RgbToHex ($avgR + ((255 - $avgR) * 0.34)) ($avgG + ((255 - $avgG) * 0.34)) ($avgB + ((255 - $avgB) * 0.34))
+      windowColor = Convert-RgbToHex ($avgR * 0.46) ($avgG * 0.5) ($avgB * 0.56)
+    }
+  }
+
+  if (-not $profiles.Count) {
+    return $fallback
+  }
+
+  $payload = @{
+    source = "local-photos"
+    label = "Perfiles derivados de fachadas"
+    derivedFromPhotos = $true
+    sampledPhotos = $samples.Count
+    indexedAt = $index.indexedAt
+    profiles = $profiles
+  }
+
+  Set-Cached $cacheKey $payload
+  return $payload
+}
+
 function Invoke-StacSearch($Body) {
   $bbox = ($Body.bbox | ForEach-Object { [string]$_ }) -join ","
   $fields = "id,geometry,bbox,collection,assets.thumbnail,properties.datetime,properties.eo:cloud_cover,properties.grid:code,properties.platform,properties.sat:relative_orbit,properties.processing:level,properties.product:timeliness_category"
@@ -910,6 +1165,11 @@ try {
       }
       if ($request.Path -eq "/api/planning/3d/photo-status") {
         $result = Get-PlanningPhotoStatus
+        Write-Json $stream 200 $result
+        continue
+      }
+      if ($request.Path -eq "/api/planning/3d/facade-profiles") {
+        $result = Get-Planning3dFacadeProfiles
         Write-Json $stream 200 $result
         continue
       }

@@ -43,6 +43,7 @@ function estimateMetrics(geometry) {
       floors: 1,
       heightM: 4.3,
       centroid: [-78.59, -0.503],
+      bounds: [-78.5901, -0.5031, -78.5899, -0.5029],
     };
   }
 
@@ -65,6 +66,12 @@ function estimateMetrics(geometry) {
       Number(((minLon + maxLon) / 2).toFixed(6)),
       Number(((minLat + maxLat) / 2).toFixed(6)),
     ],
+    bounds: [
+      Number(minLon.toFixed(6)),
+      Number(minLat.toFixed(6)),
+      Number(maxLon.toFixed(6)),
+      Number(maxLat.toFixed(6)),
+    ],
   };
 }
 
@@ -83,16 +90,19 @@ function createBuildingFeature(geometry, index, metadata = null) {
       heightSource: metadata ? "dbf" : "estimado",
       footprintM2: estimate.footprintM2,
       centroid: estimate.centroid,
+      bounds: estimate.bounds,
     },
     geometry,
   };
 }
 
 function createParcelFeature(geometry, index) {
+  const estimate = estimateMetrics(geometry);
   return {
     type: "Feature",
     properties: {
       parcelIndex: index + 1,
+      bounds: estimate.bounds,
     },
     geometry,
   };

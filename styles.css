@@ -1897,14 +1897,8 @@ button {
   z-index: 2;
   width: 100%;
   height: 100%;
-  overflow: visible;
+  overflow: hidden;
   pointer-events: none;
-}
-
-.planning-3d-svg-ground {
-  fill: rgba(223, 234, 226, 0.82);
-  stroke: rgba(110, 136, 118, 0.22);
-  stroke-width: 1;
 }
 
 .planning-3d-svg-building {
@@ -1913,31 +1907,32 @@ button {
   filter: url(#planning3dShadow);
 }
 
-.planning-3d-svg-front {
-  fill: var(--svg-front, #4f7f9b);
-  stroke: rgba(22, 31, 27, 0.18);
-  stroke-width: 1;
+.planning-3d-svg-footprint {
+  opacity: 0.22;
+  stroke: rgba(255, 255, 255, 0.14);
+  stroke-width: 0.8;
 }
 
 .planning-3d-svg-side {
-  fill: var(--svg-side, #395f73);
   stroke: rgba(22, 31, 27, 0.15);
-  stroke-width: 1;
+  stroke-width: 0.9;
+  opacity: 0.92;
 }
 
 .planning-3d-svg-top {
-  fill: var(--svg-top, #9cc0d7);
-  stroke: rgba(255, 255, 255, 0.3);
-  stroke-width: 1;
+  stroke: rgba(255, 255, 255, 0.34);
+  stroke-width: 0.9;
+  opacity: 0.94;
 }
 
 .planning-3d-svg-shadow {
-  fill: rgba(47, 61, 50, 0.16);
+  fill: rgba(21, 28, 24, 0.16);
+  opacity: 0.88;
 }
 
-.planning-3d-svg-building.active .planning-3d-svg-front,
 .planning-3d-svg-building.active .planning-3d-svg-side,
-.planning-3d-svg-building.active .planning-3d-svg-top {
+.planning-3d-svg-building.active .planning-3d-svg-top,
+.planning-3d-svg-building.active .planning-3d-svg-footprint {
   stroke: rgba(244, 211, 94, 0.95);
   stroke-width: 2;
 }

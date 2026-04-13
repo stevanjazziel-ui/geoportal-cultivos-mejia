@@ -1417,6 +1417,9 @@ const planning3dState = {
   dataLoading: false,
   loadingPhotos: false,
   photoQueryMessage: null,
+  textureCatalog: null,
+  textureCatalogPromise: null,
+  textureSource: "fallback",
   buildingsVisible: true,
   parcelsVisible: true,
   heightScale: 1,
@@ -1431,6 +1434,7 @@ const planning3dState = {
   domOverlay: null,
   domSyncQueued: false,
   svgOverlay: null,
+  svgSyncQueued: false,
   datasetRequestId: {
     buildings: 0,
     parcels: 0,
@@ -1458,6 +1462,81 @@ const planning3dState = {
     parcels: null,
     candidates: null,
   },
+};
+
+const planning3dFallbackTextureCatalog = {
+  source: "fallback",
+  label: "Catalogo base urbano",
+  derivedFromPhotos: false,
+  sampledPhotos: 0,
+  profiles: [
+    {
+      id: "estuco_crema",
+      label: "Estuco crema",
+      material: "Estuco",
+      pattern: "stucco-grid",
+      frontColor: "#c8b5a1",
+      sideColor: "#9f836c",
+      roofColor: "#d9cbbb",
+      accentColor: "#b9987b",
+      windowColor: "#51636c",
+    },
+    {
+      id: "ladrillo_terracota",
+      label: "Ladrillo terracota",
+      material: "Ladrillo",
+      pattern: "brick",
+      frontColor: "#a86246",
+      sideColor: "#7d4735",
+      roofColor: "#c98d73",
+      accentColor: "#d8b19a",
+      windowColor: "#4c3a37",
+    },
+    {
+      id: "bloque_oliva",
+      label: "Bloque oliva",
+      material: "Bloque pintado",
+      pattern: "panel",
+      frontColor: "#8d9a7c",
+      sideColor: "#65745b",
+      roofColor: "#bcc7ae",
+      accentColor: "#dbe2d0",
+      windowColor: "#47545c",
+    },
+    {
+      id: "concreto_gris",
+      label: "Concreto gris",
+      material: "Concreto",
+      pattern: "slab",
+      frontColor: "#8e9496",
+      sideColor: "#666d71",
+      roofColor: "#bcc2c5",
+      accentColor: "#dfe3e5",
+      windowColor: "#495865",
+    },
+    {
+      id: "pintado_azul",
+      label: "Pintado azul",
+      material: "Fachada pintada",
+      pattern: "window-grid",
+      frontColor: "#6e8ea3",
+      sideColor: "#4f6d82",
+      roofColor: "#a8c0cf",
+      accentColor: "#dce8ef",
+      windowColor: "#3d4d59",
+    },
+    {
+      id: "cubierta_metalica",
+      label: "Cubierta metalica",
+      material: "Cubierta metalica",
+      pattern: "bands",
+      frontColor: "#7895a5",
+      sideColor: "#567282",
+      roofColor: "#c6d4dd",
+      accentColor: "#edf3f7",
+      windowColor: "#455663",
+    },
+  ],
 };
 
 const uiRenderCache = {
@@ -1637,6 +1716,174 @@ function parsePlanning3dFloorValue(value) {
   return Number.parseInt(match[0], 10) || 0;
 }
 
+function clonePlanning3dTextureCatalog(catalog = planning3dFallbackTextureCatalog) {
+  return {
+    source: catalog?.source || "fallback",
+    label: catalog?.label || "Catalogo base urbano",
+    derivedFromPhotos: !!catalog?.derivedFromPhotos,
+    sampledPhotos: Number(catalog?.sampledPhotos) || 0,
+    profiles: Array.isArray(catalog?.profiles)
+      ? catalog.profiles.map((profile, index) => ({
+        id: profile?.id || `perfil-${index + 1}`,
+        label: profile?.label || `Perfil ${index + 1}`,
+        material: profile?.material || "Fachada",
+        pattern: profile?.pattern || "window-grid",
+        frontColor: profile?.frontColor || "#6e8ea3",
+        sideColor: profile?.sideColor || "#4f6d82",
+        roofColor: profile?.roofColor || "#a8c0cf",
+        accentColor: profile?.accentColor || "#dce8ef",
+        windowColor: profile?.windowColor || "#3d4d59",
+      }))
+      : [],
+  };
+}
+
+function getPlanning3dFallbackTextureCatalog() {
+  return clonePlanning3dTextureCatalog(planning3dFallbackTextureCatalog);
+}
+
+function normalizePlanning3dTextureCatalog(payload = null) {
+  const fallback = getPlanning3dFallbackTextureCatalog();
+  if (!payload || !Array.isArray(payload.profiles) || !payload.profiles.length) {
+    return fallback;
+  }
+
+  const normalized = clonePlanning3dTextureCatalog({
+    source: payload.source || "local-photos",
+    label: payload.label || "Perfiles de fachada",
+    derivedFromPhotos: payload.derivedFromPhotos !== false,
+    sampledPhotos: Number(payload.sampledPhotos) || 0,
+    profiles: payload.profiles,
+  });
+
+  return normalized.profiles.length ? normalized : fallback;
+}
+
+function hashPlanning3dSeed(value) {
+  const text = String(value ?? "");
+  let hash = 0;
+  for (let index = 0; index < text.length; index += 1) {
+    hash = ((hash << 5) - hash) + text.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function getPlanning3dTextureProfileForFeature(feature, index = 0, catalog = planning3dState.textureCatalog) {
+  const profiles = Array.isArray(catalog?.profiles) && catalog.profiles.length
+    ? catalog.profiles
+    : planning3dFallbackTextureCatalog.profiles;
+  const props = feature?.properties || {};
+  const floors = Math.max(1, Number(props.floors) || 1);
+  const seed = [
+    props.blockId || 0,
+    props.buildingId || feature?.id || 0,
+    props.recordIndex || index,
+    floors,
+  ].join("|");
+
+  let pool = profiles;
+  if (floors >= 4) {
+    const denseProfiles = profiles.filter((profile) =>
+      ["Concreto", "Cubierta metalica", "Fachada pintada", "Bloque pintado"].includes(profile.material)
+    );
+    if (denseProfiles.length) {
+      pool = denseProfiles;
+    }
+  } else if (floors <= 2) {
+    const lowProfiles = profiles.filter((profile) =>
+      ["Estuco", "Ladrillo", "Bloque pintado"].includes(profile.material)
+    );
+    if (lowProfiles.length) {
+      pool = lowProfiles;
+    }
+  }
+
+  return pool[hashPlanning3dSeed(seed) % pool.length] || profiles[0];
+}
+
+function applyPlanning3dTextureProfileToFeature(feature, index = 0, catalog = planning3dState.textureCatalog) {
+  if (!feature?.properties) {
+    return feature;
+  }
+
+  const profile = getPlanning3dTextureProfileForFeature(feature, index, catalog);
+  if (!profile) {
+    return feature;
+  }
+
+  feature.properties.facadeProfileId = profile.id;
+  feature.properties.facadeLabel = profile.label;
+  feature.properties.facadeMaterial = profile.material;
+  feature.properties.texturePattern = profile.pattern;
+  feature.properties.facadeFront = profile.frontColor;
+  feature.properties.facadeSide = profile.sideColor;
+  feature.properties.facadeTop = profile.roofColor;
+  feature.properties.facadeAccent = profile.accentColor;
+  feature.properties.facadeWindow = profile.windowColor;
+  feature.properties.textureSource = catalog?.derivedFromPhotos ? "photo-analysis" : "fallback";
+  return feature;
+}
+
+function applyPlanning3dTextureCatalogToCollection(collection, catalog = planning3dState.textureCatalog) {
+  if (!collection?.features?.length) {
+    return collection;
+  }
+
+  collection.features.forEach((feature, index) => {
+    applyPlanning3dTextureProfileToFeature(feature, index, catalog);
+  });
+  return collection;
+}
+
+function applyPlanning3dTextureCatalogToLoadedData() {
+  const buildings = planning3dState.sourceData.buildings;
+  if (!buildings?.features?.length) {
+    return;
+  }
+
+  applyPlanning3dTextureCatalogToCollection(buildings);
+  if (planning3dState.map?.getSource("planning3d-buildings")) {
+    planning3dState.map.getSource("planning3d-buildings").setData(buildings);
+  }
+  queuePlanning3dSvgSceneSync();
+  renderPlanning3dSummary();
+  renderPlanning3dSelection();
+}
+
+async function hydratePlanning3dTextureCatalog(force = false) {
+  if (planning3dState.textureCatalogPromise && !force) {
+    return planning3dState.textureCatalogPromise;
+  }
+
+  const fallbackCatalog = getPlanning3dFallbackTextureCatalog();
+  const request = (async () => {
+    try {
+      const response = await fetch("./api/planning/3d/facade-profiles", {
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) {
+        throw new Error(`Perfiles de fachada no disponibles (${response.status}).`);
+      }
+
+      const payload = await response.json();
+      planning3dState.textureCatalog = normalizePlanning3dTextureCatalog(payload);
+      planning3dState.textureSource = planning3dState.textureCatalog.source || "local-photos";
+      return planning3dState.textureCatalog;
+    } catch (error) {
+      planning3dState.textureCatalog = fallbackCatalog;
+      planning3dState.textureSource = "fallback";
+      return planning3dState.textureCatalog;
+    } finally {
+      planning3dState.textureCatalogPromise = null;
+      applyPlanning3dTextureCatalogToLoadedData();
+    }
+  })();
+
+  planning3dState.textureCatalogPromise = request;
+  return request;
+}
+
 function getPlanning3dDemoGeometries(datasetKey) {
   const rings = planning3dDemoData[datasetKey];
   if (!Array.isArray(rings)) {
@@ -1757,7 +2004,7 @@ function buildPlanning3dLiteCollection(datasetKey) {
     collection.features = collection.features.map((feature, index) => {
       const floors = Math.max(3, Number(feature.properties?.floors) || 1);
       const heightBoost = 1.9 + ((index % 4) * 0.2);
-      return {
+      const enhancedFeature = {
         ...feature,
         properties: {
           ...feature.properties,
@@ -1766,6 +2013,7 @@ function buildPlanning3dLiteCollection(datasetKey) {
           heightSource: "demo",
         },
       };
+      return applyPlanning3dTextureProfileToFeature(enhancedFeature, index);
     });
   }
 
@@ -1833,7 +2081,7 @@ function terminatePlanning3dWorker(datasetKey) {
 }
 
 function getPlanning3dWorkerUrl() {
-  return "./planning3d-worker.js?v=20260412-1";
+  return "./planning3d-worker.js?v=20260412-2";
 }
 
 function getPlanning3dGeometryList(geometries) {
@@ -1961,7 +2209,7 @@ function createPlanning3dBuildingFeature(geometry, index, metadata = null) {
   const estimate = estimatePlanning3dMetrics(geometry);
   const floors = Number(metadata?.floors?.[index]) || estimate.floors;
   const heightM = Number(metadata?.heights?.[index]) || Number((1.2 + floors * 3.05).toFixed(1));
-  return {
+  const feature = {
     type: "Feature",
     id: index + 1,
     properties: {
@@ -1973,17 +2221,21 @@ function createPlanning3dBuildingFeature(geometry, index, metadata = null) {
       heightSource: metadata ? "dbf" : "estimado",
       footprintM2: estimate.footprintM2,
       centroid: estimate.centroid,
+      bounds: estimate.bounds,
     },
     geometry,
   };
+  return applyPlanning3dTextureProfileToFeature(feature, index);
 }
 
 function createPlanning3dParcelFeature(geometry, index) {
+  const estimate = estimatePlanning3dMetrics(geometry);
   return {
     type: "Feature",
     id: index + 1,
     properties: {
       parcelIndex: index + 1,
+      bounds: estimate.bounds,
     },
     geometry,
   };
@@ -5743,32 +5995,20 @@ function addPlanning3dRuntimeLayers() {
         "case",
         ["boolean", ["feature-state", "selected"], false],
         "#f4d35e",
-        [
-          "interpolate",
-          ["linear"],
-          ["coalesce", ["get", "floors"], 1],
-          1,
-          "#7aa66f",
-          2,
-          "#6895b3",
-          3,
-          "#4f7f9b",
-          5,
-          "#355f79",
-        ],
+        ["coalesce", ["get", "facadeTop"], "#a8c0cf"],
       ],
       "fill-opacity": [
         "interpolate",
         ["linear"],
         ["zoom"],
         9,
-        0.82,
-        12,
-        0.68,
-        15,
-        0.38,
-        17,
         0.26,
+        12,
+        0.22,
+        15,
+        0.18,
+        17,
+        0.14,
       ],
     },
   });
@@ -5790,19 +6030,7 @@ function addPlanning3dRuntimeLayers() {
         "case",
         ["boolean", ["feature-state", "selected"], false],
         "#f4d35e",
-        [
-          "interpolate",
-          ["linear"],
-          ["coalesce", ["get", "floors"], 1],
-          1,
-          "#8ab17d",
-          2,
-          "#76a5c9",
-          3,
-          "#5387b0",
-          5,
-          "#315f83",
-        ],
+        ["coalesce", ["get", "facadeFront"], "#6e8ea3"],
       ],
     },
   });
@@ -5831,7 +6059,7 @@ function addPlanning3dRuntimeLayers() {
     id: "planning3d-parcels-line",
     type: "line",
     source: "planning3d-parcels",
-    minzoom: 14,
+    minzoom: 11.5,
     layout: {
       visibility: "none",
     },
@@ -5841,12 +6069,14 @@ function addPlanning3dRuntimeLayers() {
         "interpolate",
         ["linear"],
         ["zoom"],
+        11.5,
+        0.45,
         14,
-        0.5,
+        0.8,
         18,
-        1.2,
+        1.45,
       ],
-      "line-opacity": 0.58,
+      "line-opacity": 0.78,
     },
   });
 
@@ -5916,6 +6146,11 @@ async function initializePlanning3dMap() {
     refreshExpiredTiles: false,
   });
   planning3dState.map.addControl(new window.maplibregl.NavigationControl({ visualizePitch: true }), "top-left");
+  planning3dState.map.on("move", queuePlanning3dSvgSceneSync);
+  planning3dState.map.on("zoom", queuePlanning3dSvgSceneSync);
+  planning3dState.map.on("rotate", queuePlanning3dSvgSceneSync);
+  planning3dState.map.on("pitch", queuePlanning3dSvgSceneSync);
+  planning3dState.map.on("resize", queuePlanning3dSvgSceneSync);
   planning3dState.map.on("render", queuePlanning3dDomMarkerPositionSync);
   planning3dState.map.on("move", queuePlanning3dDomMarkerPositionSync);
   planning3dState.map.on("zoom", queuePlanning3dDomMarkerPositionSync);
@@ -5980,6 +6215,7 @@ function estimatePlanning3dMetrics(geometry) {
       floors: 1,
       heightM: 4.3,
       centroid: [-78.59, -0.503],
+      bounds: [-78.5901, -0.5031, -78.5899, -0.5029],
     };
   }
 
@@ -6001,6 +6237,12 @@ function estimatePlanning3dMetrics(geometry) {
     centroid: [
       Number(((minLon + maxLon) / 2).toFixed(6)),
       Number(((minLat + maxLat) / 2).toFixed(6)),
+    ],
+    bounds: [
+      Number(minLon.toFixed(6)),
+      Number(minLat.toFixed(6)),
+      Number(maxLon.toFixed(6)),
+      Number(maxLat.toFixed(6)),
     ],
   };
 }
@@ -6033,7 +6275,7 @@ async function loadPlanning3dShapefile(basePath) {
 function normalizePlanning3dPublicCollection(datasetKey, collection) {
   const features = Array.isArray(collection?.features) ? collection.features : [];
   if (datasetKey === "buildings") {
-    return {
+    return applyPlanning3dTextureCatalogToCollection({
       type: "FeatureCollection",
       features: features.map((feature, index) => {
         const geometry = feature?.geometry;
@@ -6055,17 +6297,19 @@ function normalizePlanning3dPublicCollection(datasetKey, collection) {
             heightSource: "dbf",
             footprintM2: estimate.footprintM2,
             centroid: estimate.centroid,
+            bounds: estimate.bounds,
           },
           geometry,
         };
       }),
-    };
+    });
   }
 
   return {
     type: "FeatureCollection",
     features: features.map((feature, index) => {
       const props = feature?.properties || {};
+      const estimate = estimatePlanning3dMetrics(feature?.geometry);
       const parcelId = Number(props.id) || index + 1;
       return {
         type: "Feature",
@@ -6075,6 +6319,7 @@ function normalizePlanning3dPublicCollection(datasetKey, collection) {
           parcelId,
           cadastralCode: props.cod_catast || null,
           lotNumber: props.numero_lot || null,
+          bounds: estimate.bounds,
         },
         geometry: feature?.geometry,
       };
@@ -6160,12 +6405,12 @@ async function loadPlanning3dBuildingMetadata() {
 }
 
 function buildPlanning3dBuildingsCollection(geometries, metadata = null) {
-  return {
+  return applyPlanning3dTextureCatalogToCollection({
     type: "FeatureCollection",
     features: getPlanning3dGeometryList(geometries).map((geometry, index) =>
       createPlanning3dBuildingFeature(geometry, index, metadata)
     ),
-  };
+  });
 }
 
 function buildPlanning3dParcelsCollection(geometries) {
@@ -6262,6 +6507,9 @@ async function ensurePlanning3dDataset(datasetKey, force = false) {
         if (!isActiveRequest()) {
           return;
         }
+        if (datasetKey === "buildings") {
+          applyPlanning3dTextureCatalogToCollection(collection);
+        }
         planning3dState.sourceData[datasetKey] = collection;
         syncPlanning3dSource(datasetKey);
         setPlanning3dDatasetStatus(datasetKey, {
@@ -6304,6 +6552,10 @@ async function ensurePlanning3dDataset(datasetKey, force = false) {
         const collection = await workerCollectionPromise;
         if (!isActiveRequest()) {
           return planning3dState.sourceData[datasetKey] || getPlanning3dEmptyCollection();
+        }
+
+        if (datasetKey === "buildings") {
+          applyPlanning3dTextureCatalogToCollection(collection);
         }
 
         const total = collection.features.length;
@@ -6484,7 +6736,7 @@ function syncPlanning3dSource(datasetKey) {
   }
   updatePlanning3dHeightScale();
   if (datasetKey === "buildings" && planning3dState.sourceData.buildings?.features?.length) {
-    renderPlanning3dSvgScene();
+    queuePlanning3dSvgSceneSync();
     renderPlanning3dDomMarkers();
     if (planning3dState.map) {
       queuePlanning3dFocus();
@@ -6633,34 +6885,288 @@ function getPlanning3dDomFallbackPoint(anchor, overlay) {
   return { x, y };
 }
 
-function getPlanning3dSvgSceneFeatures(limit = 260) {
-  const features = planning3dState.sourceData.buildings?.features || [];
-  if (features.length <= limit) {
-    return features;
+function getPlanning3dFeatureBounds(feature) {
+  const bounds = feature?.properties?.bounds;
+  if (Array.isArray(bounds) && bounds.length === 4) {
+    return bounds.map((value) => Number(value) || 0);
   }
 
-  const step = features.length / limit;
+  const estimate = estimatePlanning3dMetrics(feature?.geometry);
+  return estimate.bounds || null;
+}
+
+function getPlanning3dRingArea(ring) {
+  if (!Array.isArray(ring) || ring.length < 4) {
+    return 0;
+  }
+
+  let area = 0;
+  for (let index = 0; index < ring.length - 1; index += 1) {
+    const current = ring[index];
+    const next = ring[index + 1];
+    area += ((Number(current?.[0]) || 0) * (Number(next?.[1]) || 0))
+      - ((Number(next?.[0]) || 0) * (Number(current?.[1]) || 0));
+  }
+  return Math.abs(area / 2);
+}
+
+function getPlanning3dPrimaryRing(geometry) {
+  if (!geometry) {
+    return null;
+  }
+
+  if (geometry.type === "Polygon") {
+    return Array.isArray(geometry.coordinates?.[0]) ? geometry.coordinates[0] : null;
+  }
+
+  if (geometry.type === "MultiPolygon" && Array.isArray(geometry.coordinates)) {
+    let bestRing = null;
+    let bestArea = -Infinity;
+    geometry.coordinates.forEach((polygon) => {
+      const ring = Array.isArray(polygon?.[0]) ? polygon[0] : null;
+      const area = getPlanning3dRingArea(ring);
+      if (area > bestArea) {
+        bestArea = area;
+        bestRing = ring;
+      }
+    });
+    return bestRing;
+  }
+
+  return null;
+}
+
+function getPlanning3dRenderableFeatureLimit() {
+  const zoom = planning3dState.map?.getZoom?.() || 15;
+  if (zoom >= 17.3) return 2200;
+  if (zoom >= 16.6) return 1500;
+  if (zoom >= 15.8) return 900;
+  if (zoom >= 14.8) return 540;
+  return 320;
+}
+
+function getPlanning3dSvgSceneFeatures() {
+  const features = planning3dState.sourceData.buildings?.features || [];
+  if (!planning3dState.map || !features.length) {
+    return [];
+  }
+
+  const bounds = planning3dState.map.getBounds();
+  const west = bounds.getWest();
+  const south = bounds.getSouth();
+  const east = bounds.getEast();
+  const north = bounds.getNorth();
+  const lonPad = Math.max(0.00018, (east - west) * 0.18);
+  const latPad = Math.max(0.00018, (north - south) * 0.18);
+  const paddedBounds = [west - lonPad, south - latPad, east + lonPad, north + latPad];
+
+  const visible = features.filter((feature) => {
+    const featureBounds = getPlanning3dFeatureBounds(feature);
+    if (!featureBounds) {
+      return false;
+    }
+    return !(
+      featureBounds[2] < paddedBounds[0]
+      || featureBounds[0] > paddedBounds[2]
+      || featureBounds[3] < paddedBounds[1]
+      || featureBounds[1] > paddedBounds[3]
+    );
+  });
+
+  const limit = getPlanning3dRenderableFeatureLimit();
+  if (visible.length <= limit) {
+    return visible;
+  }
+
+  const step = visible.length / limit;
   const sampled = [];
   for (let index = 0; index < limit; index += 1) {
-    sampled.push(features[Math.min(features.length - 1, Math.floor(index * step))]);
+    sampled.push(visible[Math.min(visible.length - 1, Math.floor(index * step))]);
   }
   return sampled.filter(Boolean);
 }
 
 function shouldRenderPlanning3dSvgScene() {
-  if (!dom.planning3dMap || !planning3dState.modalOpen || !planning3dState.buildingsVisible) {
-    return false;
-  }
-
-  return planning3dState.datasetStatus.buildings?.phase === "demo"
-    && Boolean(planning3dState.sourceData.buildings?.features?.length);
+  return Boolean(
+    dom.planning3dMap
+    && planning3dState.modalOpen
+    && planning3dState.buildingsVisible
+    && planning3dState.sourceData.buildings?.features?.length
+  );
 }
 
-function createPlanning3dSvgPolygon(points, className) {
+function createPlanning3dSvgPolygon(points, className, attributes = {}) {
   const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
   polygon.setAttribute("class", className);
   polygon.setAttribute("points", points.map((point) => `${point[0].toFixed(1)},${point[1].toFixed(1)}`).join(" "));
+  Object.entries(attributes).forEach(([key, value]) => {
+    if (value != null) {
+      polygon.setAttribute(key, String(value));
+    }
+  });
   return polygon;
+}
+
+function getPlanning3dPixelsPerMeter(lat = -0.5065) {
+  const zoom = planning3dState.map?.getZoom?.() || 15;
+  const metersPerPixel = (156543.03392 * Math.cos((lat * Math.PI) / 180)) / (2 ** zoom);
+  return 1 / Math.max(metersPerPixel, 0.01);
+}
+
+function getPlanning3dExtrusionVector(heightPx) {
+  const bearingRad = ((planning3dState.map?.getBearing?.() || -18) * Math.PI) / 180;
+  const pitchFactor = clamp((planning3dState.map?.getPitch?.() || 52) / 60, 0.58, 1.35);
+  return {
+    dx: (Math.sin(bearingRad + 0.58) * heightPx * 0.28) + (heightPx * 0.14),
+    dy: -heightPx * (0.72 + (pitchFactor * 0.14)) + (Math.cos(bearingRad) * heightPx * 0.06),
+  };
+}
+
+function createPlanning3dTextureDefsMarkup() {
+  const catalog = planning3dState.textureCatalog || getPlanning3dFallbackTextureCatalog();
+  const profileMarkup = catalog.profiles.map((profile) => {
+    const facadeId = `planning3d-facade-${profile.id}`;
+    const roofId = `planning3d-roof-${profile.id}`;
+    const pattern = profile.pattern || "window-grid";
+
+    let facadePattern = `
+      <rect width="16" height="16" fill="${profile.frontColor}"></rect>
+      <path d="M0 0H16M0 8H16M0 16H16" stroke="${profile.accentColor}" stroke-opacity="0.22" stroke-width="0.9"></path>
+    `;
+
+    if (pattern === "brick") {
+      facadePattern = `
+        <rect width="18" height="12" fill="${profile.frontColor}"></rect>
+        <path d="M0 0H18M0 6H18M0 12H18M4 0V6M13 0V6M0 6V12M9 6V12M18 6V12" stroke="${profile.accentColor}" stroke-opacity="0.5" stroke-width="0.8"></path>
+      `;
+    } else if (pattern === "panel") {
+      facadePattern = `
+        <rect width="16" height="16" fill="${profile.frontColor}"></rect>
+        <path d="M4 0V16M8 0V16M12 0V16" stroke="${profile.accentColor}" stroke-opacity="0.32" stroke-width="1"></path>
+      `;
+    } else if (pattern === "slab") {
+      facadePattern = `
+        <rect width="16" height="16" fill="${profile.frontColor}"></rect>
+        <path d="M0 4H16M0 8H16M0 12H16" stroke="${profile.accentColor}" stroke-opacity="0.34" stroke-width="1"></path>
+      `;
+    } else if (pattern === "bands") {
+      facadePattern = `
+        <rect width="16" height="16" fill="${profile.frontColor}"></rect>
+        <rect x="0" y="2" width="16" height="2" fill="${profile.accentColor}" fill-opacity="0.35"></rect>
+        <rect x="0" y="8" width="16" height="2" fill="${profile.accentColor}" fill-opacity="0.35"></rect>
+        <rect x="0" y="14" width="16" height="2" fill="${profile.accentColor}" fill-opacity="0.35"></rect>
+      `;
+    } else if (pattern === "window-grid") {
+      facadePattern = `
+        <rect width="18" height="18" fill="${profile.frontColor}"></rect>
+        <rect x="2" y="2" width="4" height="4" fill="${profile.windowColor}" fill-opacity="0.46"></rect>
+        <rect x="8" y="2" width="4" height="4" fill="${profile.windowColor}" fill-opacity="0.46"></rect>
+        <rect x="14" y="2" width="2" height="4" fill="${profile.windowColor}" fill-opacity="0.46"></rect>
+        <rect x="2" y="9" width="4" height="4" fill="${profile.windowColor}" fill-opacity="0.38"></rect>
+        <rect x="8" y="9" width="4" height="4" fill="${profile.windowColor}" fill-opacity="0.38"></rect>
+        <rect x="14" y="9" width="2" height="4" fill="${profile.windowColor}" fill-opacity="0.38"></rect>
+      `;
+    }
+
+    return `
+      <pattern id="${facadeId}" width="18" height="18" patternUnits="userSpaceOnUse">
+        ${facadePattern}
+      </pattern>
+      <pattern id="${roofId}" width="14" height="14" patternUnits="userSpaceOnUse">
+        <rect width="14" height="14" fill="${profile.roofColor}"></rect>
+        <path d="M0 14L14 0M-4 10L4 2M10 18L18 10" stroke="${profile.accentColor}" stroke-opacity="0.28" stroke-width="1"></path>
+      </pattern>
+    `;
+  }).join("");
+
+  return `
+    <filter id="planning3dShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="5" stdDeviation="4.5" flood-color="rgba(21, 28, 24, 0.18)"></feDropShadow>
+    </filter>
+    ${profileMarkup}
+  `;
+}
+
+function getPlanning3dProjectedPrism(feature) {
+  const ring = getPlanning3dPrimaryRing(feature?.geometry);
+  if (!Array.isArray(ring) || ring.length < 4 || !planning3dState.map?.project) {
+    return null;
+  }
+
+  const projected = ring.map((coordinate) => {
+    const point = planning3dState.map.project({ lng: coordinate[0], lat: coordinate[1] });
+    return [point.x, point.y];
+  });
+
+  if (!projected.every((point) => Number.isFinite(point[0]) && Number.isFinite(point[1]))) {
+    return null;
+  }
+
+  const props = feature.properties || {};
+  const anchor = getPlanning3dFeatureAnchor(feature);
+  const heightPx = clamp(
+    (Number(props.heightM) || 4.2) * planning3dState.heightScale * getPlanning3dPixelsPerMeter(anchor[1]) * 1.9,
+    8,
+    188
+  );
+  const extrusion = getPlanning3dExtrusionVector(heightPx);
+  const top = projected.map((point) => [point[0] + extrusion.dx, point[1] + extrusion.dy]);
+  const centroid = projected.reduce((accumulator, point) => ({
+    x: accumulator.x + point[0],
+    y: accumulator.y + point[1],
+  }), { x: 0, y: 0 });
+  const center = [centroid.x / projected.length, centroid.y / projected.length];
+
+  const sideFaces = [];
+  for (let index = 0; index < projected.length - 1; index += 1) {
+    const bottomA = projected[index];
+    const bottomB = projected[index + 1];
+    const topA = top[index];
+    const topB = top[index + 1];
+    const midX = (bottomA[0] + bottomB[0]) / 2;
+    const midY = (bottomA[1] + bottomB[1]) / 2;
+    const visibilityScore = (midY - center[1]) + ((midX - center[0]) * (extrusion.dx >= 0 ? 0.32 : -0.32));
+    if (visibilityScore < -3.5) {
+      continue;
+    }
+    sideFaces.push({
+      points: [bottomA, bottomB, topB, topA],
+      score: visibilityScore,
+    });
+  }
+
+  const shadow = projected.map((point) => [
+    point[0] + (extrusion.dx * 1.08),
+    point[1] + Math.max(8, (Math.abs(extrusion.dy) * 0.28) + 5),
+  ]);
+
+  return {
+    feature,
+    anchor,
+    bottom: projected,
+    top,
+    shadow,
+    sideFaces: sideFaces.sort((a, b) => a.score - b.score),
+    order: Math.max(...projected.map((point) => point[1])),
+  };
+}
+
+function queuePlanning3dSvgSceneSync() {
+  if (planning3dState.svgSyncQueued) {
+    return;
+  }
+
+  planning3dState.svgSyncQueued = true;
+  const run = () => {
+    planning3dState.svgSyncQueued = false;
+    renderPlanning3dSvgScene();
+  };
+
+  if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+    window.requestAnimationFrame(run);
+    return;
+  }
+  window.setTimeout(run, 0);
 }
 
 function renderPlanning3dSvgScene() {
@@ -6681,98 +7187,45 @@ function renderPlanning3dSvgScene() {
   overlay.setAttribute("viewBox", `0 0 ${width} ${height}`);
   overlay.setAttribute("preserveAspectRatio", "none");
 
-  const buildings = planning3dState.sourceData.buildings;
-  const bbox = turf.bbox(buildings);
-  const leftPadding = 42;
-  const rightPadding = width > 1100 ? 380 : 42;
-  const topPadding = 58;
-  const bottomPadding = 54;
-  const usableWidth = Math.max(120, width - leftPadding - rightPadding);
-  const usableHeight = Math.max(120, height - topPadding - bottomPadding);
-  const lonSpan = Math.max(0.00001, bbox[2] - bbox[0]);
-  const latSpan = Math.max(0.00001, bbox[3] - bbox[1]);
-
   const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-  defs.innerHTML = `
-    <linearGradient id="planning3dGround" x1="0" x2="1" y1="0" y2="1">
-      <stop offset="0%" stop-color="rgba(224, 235, 226, 0.9)"/>
-      <stop offset="100%" stop-color="rgba(214, 225, 216, 0.76)"/>
-    </linearGradient>
-    <filter id="planning3dShadow" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="rgba(47, 61, 50, 0.18)"/>
-    </filter>
-  `;
+  defs.innerHTML = createPlanning3dTextureDefsMarkup();
   overlay.appendChild(defs);
 
-  const ground = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-  ground.setAttribute("class", "planning-3d-svg-ground");
-  ground.setAttribute("x", String(leftPadding - 20));
-  ground.setAttribute("y", String(topPadding - 14));
-  ground.setAttribute("width", String(usableWidth + 40));
-  ground.setAttribute("height", String(usableHeight + 28));
-  ground.setAttribute("rx", "22");
-  ground.setAttribute("fill", "url(#planning3dGround)");
-  overlay.appendChild(ground);
+  const features = getPlanning3dSvgSceneFeatures()
+    .map((feature) => getPlanning3dProjectedPrism(feature))
+    .filter(Boolean)
+    .sort((a, b) => a.order - b.order);
 
-  const features = getPlanning3dSvgSceneFeatures().map((feature) => {
-    const anchor = getPlanning3dFeatureAnchor(feature);
-    const x = leftPadding + (((anchor[0] - bbox[0]) / lonSpan) * usableWidth);
-    const y = topPadding + ((1 - ((anchor[1] - bbox[1]) / latSpan)) * usableHeight);
-    return { feature, anchor, x, y };
-  }).sort((a, b) => a.y - b.y);
-
-  features.forEach(({ feature, anchor, x, y }) => {
+  features.forEach((entry) => {
+    const { feature, anchor, bottom, top, shadow, sideFaces } = entry;
     const props = feature.properties || {};
-    const footprint = Number(props.footprintM2) || 80;
-    const heightM = (Number(props.heightM) || 4.2) * planning3dState.heightScale;
-    const floors = Math.max(1, Number(props.floors) || 1);
-    const widthPx = Math.max(10, Math.min(26, Math.sqrt(footprint) * 0.72));
-    const depthPx = Math.max(7, widthPx * 0.58);
-    const heightPx = Math.max(16, Math.min(112, heightM * 2.45));
-    const dx = depthPx * 0.76;
-    const dy = depthPx * 0.46;
     const active = String(planning3dState.selectedFeatureId) === String(feature.id);
-
-    const front = [
-      [x - (widthPx / 2), y],
-      [x + (widthPx / 2), y],
-      [x + (widthPx / 2), y - heightPx],
-      [x - (widthPx / 2), y - heightPx],
-    ];
-    const side = [
-      [x + (widthPx / 2), y],
-      [x + (widthPx / 2) + dx, y - dy],
-      [x + (widthPx / 2) + dx, y - heightPx - dy],
-      [x + (widthPx / 2), y - heightPx],
-    ];
-    const top = [
-      [x - (widthPx / 2), y - heightPx],
-      [x + (widthPx / 2), y - heightPx],
-      [x + (widthPx / 2) + dx, y - heightPx - dy],
-      [x - (widthPx / 2) + dx, y - heightPx - dy],
-    ];
+    const profileId = props.facadeProfileId || planning3dFallbackTextureCatalog.profiles[0].id;
 
     const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
     group.setAttribute("class", `planning-3d-svg-building${active ? " active" : ""}`);
     group.setAttribute("data-feature-id", String(feature.id ?? props.recordIndex ?? ""));
     group.setAttribute("tabindex", "0");
     group.setAttribute("role", "button");
-    group.setAttribute("aria-label", `Construccion ${props.buildingId || feature.id || "sin id"} con ${floors} pisos`);
-    group.style.setProperty("--svg-front", floors >= 5 ? "#315f83" : floors >= 3 ? "#4f7f9b" : "#8ab17d");
-    group.style.setProperty("--svg-side", floors >= 5 ? "#264964" : floors >= 3 ? "#395f73" : "#64825c");
-    group.style.setProperty("--svg-top", floors >= 5 ? "#7ea6c8" : floors >= 3 ? "#9cc0d7" : "#d6e6ca");
+    group.setAttribute(
+      "aria-label",
+      `Construccion ${props.buildingId || feature.id || "sin id"} con ${props.floors || 1} pisos en lote georreferenciado`
+    );
 
-    const shadow = document.createElementNS("http://www.w3.org/2000/svg", "ellipse");
-    shadow.setAttribute("class", "planning-3d-svg-shadow");
-    shadow.setAttribute("cx", (x + (dx * 0.45)).toFixed(1));
-    shadow.setAttribute("cy", (y + 4).toFixed(1));
-    shadow.setAttribute("rx", Math.max(8, widthPx * 0.82).toFixed(1));
-    shadow.setAttribute("ry", Math.max(3, depthPx * 0.42).toFixed(1));
-    group.appendChild(shadow);
+    group.appendChild(createPlanning3dSvgPolygon(shadow, "planning-3d-svg-shadow"));
+    group.appendChild(createPlanning3dSvgPolygon(bottom, "planning-3d-svg-footprint", {
+      fill: props.facadeFront || "#6e8ea3",
+    }));
 
-    group.appendChild(createPlanning3dSvgPolygon(side, "planning-3d-svg-side"));
-    group.appendChild(createPlanning3dSvgPolygon(front, "planning-3d-svg-front"));
-    group.appendChild(createPlanning3dSvgPolygon(top, "planning-3d-svg-top"));
+    sideFaces.forEach((face) => {
+      group.appendChild(createPlanning3dSvgPolygon(face.points, "planning-3d-svg-side", {
+        fill: `url(#planning3d-facade-${profileId})`,
+      }));
+    });
+
+    group.appendChild(createPlanning3dSvgPolygon(top, "planning-3d-svg-top", {
+      fill: `url(#planning3d-roof-${profileId})`,
+    }));
 
     group.addEventListener("click", (event) => {
       event.preventDefault();
@@ -6939,12 +7392,12 @@ function syncPlanning3dLayerVisibility() {
     );
   }
 
-  renderPlanning3dSvgScene();
+  queuePlanning3dSvgSceneSync();
   renderPlanning3dDomMarkers();
 }
 
 function updatePlanning3dHeightScale() {
-  renderPlanning3dSvgScene();
+  queuePlanning3dSvgSceneSync();
   if (!planning3dState.map?.getLayer("planning3d-buildings-fill")) {
     renderPlanning3dDomMarkers();
     return;
@@ -6973,6 +7426,7 @@ function renderPlanning3dSummary(force = false) {
   const usingPublishedRealData = !manifest.viaBackend && planning3dState.backendMode === "public";
   const photoStatus = planning3dState.photoStatus;
   const buildingStatus = planning3dState.datasetStatus.buildings;
+  const textureCatalog = planning3dState.textureCatalog || getPlanning3dFallbackTextureCatalog();
   if (!buildings?.features?.length) {
     dom.planning3dSummary.classList.add("empty-state");
     dom.planning3dSummary.classList.remove("has-data");
@@ -6988,6 +7442,9 @@ function renderPlanning3dSummary(force = false) {
   const parcelCount = planning3dState.sourceData.parcels?.features?.length || manifest.parcels?.recordCount || null;
   const candidateCount = state.planningData?.candidates?.length || 0;
   const photoCount = photoStatus?.available ? photoStatus.geotaggedCount : null;
+  const textureLabel = textureCatalog.derivedFromPhotos
+    ? `${textureCatalog.sampledPhotos || textureCatalog.profiles.length} fotos`
+    : "Catalogo base";
 
   dom.planning3dSummary.classList.remove("empty-state");
   dom.planning3dSummary.classList.add("has-data");
@@ -7014,6 +7471,10 @@ function renderPlanning3dSummary(force = false) {
         <strong>${photoStatus ? (photoStatus.indexing ? "Indexando" : (photoStatus.available ? formatPlanning3dCount(photoCount) : "Sin indice")) : "Pendiente"}</strong>
       </article>
       <article class="planning-3d-chip">
+        <span>Texturas</span>
+        <strong>${textureLabel}</strong>
+      </article>
+      <article class="planning-3d-chip">
         <span>Carga</span>
         <strong>${getPlanning3dLoadLabel(buildingStatus)}</strong>
       </article>
@@ -7036,6 +7497,9 @@ function renderPlanning3dSummary(force = false) {
           ? ` El servicio local encontro ${formatPlanning3dCount(photoStatus.totalFiles)} fotos, con ${formatPlanning3dCount(photoStatus.geotaggedCount)} georreferenciadas.`
           : ` ${photoStatus.message || "Sin acceso a fotos locales por ahora."}`))
         : ""}
+      ${textureCatalog.derivedFromPhotos
+        ? ` Las fachadas del overlay SVG estan usando perfiles derivados de ${textureCatalog.sampledPhotos || textureCatalog.profiles.length} fotos reales.`
+        : " Mientras no haya analisis local de fotos, las fachadas usan un catalogo base de materiales urbanos."}
       ${candidateCount ? ` Hay ${candidateCount} sectores priorizados del analisis territorial visibles como nodos amarillos.` : ""}
     </p>
   `);
@@ -7062,6 +7526,7 @@ function renderPlanning3dSelection(force = false) {
   const props = feature.properties || {};
   const photoStatus = planning3dState.photoStatus;
   const photos = planning3dState.selectedPhotos || [];
+  const textureSourceLabel = props.textureSource === "photo-analysis" ? "Fotos analizadas" : "Catalogo base";
   const photoStateMarkup = planning3dState.loadingPhotos
     ? `
       <div class="planning-3d-photo-state loading">
@@ -7115,10 +7580,18 @@ function renderPlanning3dSelection(force = false) {
         <span>Huella aprox.</span>
         <strong>${props.footprintM2 || 0} m2</strong>
       </article>
+      <article class="planning-3d-chip">
+        <span>Fachada</span>
+        <strong>${props.facadeLabel || "Base urbana"}</strong>
+      </article>
+      <article class="planning-3d-chip">
+        <span>Textura</span>
+        <strong>${textureSourceLabel}</strong>
+      </article>
     </div>
     <p class="planning-3d-note">
       Fuente de altura: ${props.heightSource === "dbf" ? "campo n_piso del shape de construcciones" : "estimacion geometrica local"}.
-      Las fotos se buscan por cercania al centroide del edificio usando el indice GPS local.
+      La extrusion usa la huella real del shape sobre el satelite y el catastro. Las fotos se buscan por cercania al centroide del edificio usando el indice GPS local.
     </p>
     <section class="planning-3d-photo-section">
       <div class="planning-3d-photo-head">
@@ -7337,10 +7810,7 @@ function focusPlanning3dDataset() {
     return;
   }
 
-  if (
-    planning3dState.datasetStatus.buildings?.phase === "demo"
-    || !getPlanning3dManifest().viaBackend
-  ) {
+  if (planning3dState.datasetStatus.buildings?.phase === "demo") {
     if (focusPlanning3dDemoView()) {
       return;
     }
@@ -7425,6 +7895,7 @@ async function openPlanning3dViewer() {
     const manifestPromise = hydratePlanning3dManifest();
     const mapPromise = initializePlanning3dMap();
     hydratePlanning3dPhotoStatus();
+    hydratePlanning3dTextureCatalog();
     await mapPromise;
     planning3dState.map.resize();
     updatePlanning3dCandidateSource();
