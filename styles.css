@@ -2145,6 +2145,86 @@ button {
   display: none;
 }
 
+.planning-3d-block-marker {
+  --marker-width: 18px;
+  --marker-height: 42px;
+  --marker-side-width: 7px;
+  --marker-cap-height: 8px;
+  --block-front: #4f7f9b;
+  --block-side: #395f73;
+  --block-top: #9cc0d7;
+  --marker-glow: rgba(57, 95, 115, 0.26);
+  position: relative;
+  width: var(--marker-width);
+  height: var(--marker-height);
+  padding: 0;
+  border: 0;
+  border-radius: 4px 4px 3px 3px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0) 34%),
+    var(--block-front);
+  box-shadow:
+    0 12px 22px var(--marker-glow),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  transform-style: preserve-3d;
+}
+
+.planning-3d-block-marker::before,
+.planning-3d-block-marker::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.planning-3d-block-marker::before {
+  left: 0;
+  top: calc(var(--marker-cap-height) * -1);
+  width: 100%;
+  height: var(--marker-cap-height);
+  border-radius: 4px 4px 1px 1px;
+  background: var(--block-top);
+  transform: skewX(-48deg);
+  transform-origin: left bottom;
+}
+
+.planning-3d-block-marker::after {
+  top: 0;
+  right: calc(var(--marker-side-width) * -1);
+  width: var(--marker-side-width);
+  height: 100%;
+  border-radius: 0 4px 3px 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.1)),
+    var(--block-side);
+  transform: skewY(-42deg);
+  transform-origin: left top;
+}
+
+.planning-3d-block-marker.active {
+  box-shadow:
+    0 0 0 2px rgba(244, 211, 94, 0.9),
+    0 14px 26px rgba(244, 211, 94, 0.34);
+}
+
+.planning-3d-block-marker .planning-3d-block-facade {
+  position: absolute;
+  inset: 5px 3px 4px;
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.36) 0 2px,
+      rgba(255, 255, 255, 0) 2px 9px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.14) 0 2px,
+      rgba(255, 255, 255, 0) 2px 7px
+    );
+  opacity: 0.68;
+}
+
 .mobile-only {
   display: none;
 }

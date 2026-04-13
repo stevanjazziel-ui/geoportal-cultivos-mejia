@@ -1425,6 +1425,7 @@ const planning3dState = {
   selectedFeatureId: null,
   selectedBuilding: null,
   selectedPhotos: [],
+  domMarkers: [],
   datasetRequestId: {
     buildings: 0,
     parcels: 0,
@@ -1944,6 +1945,7 @@ function createPlanning3dBuildingFeature(geometry, index, metadata = null) {
   const heightM = Number(metadata?.heights?.[index]) || Number((1.2 + floors * 3.05).toFixed(1));
   return {
     type: "Feature",
+    id: index + 1,
     properties: {
       recordIndex: index,
       buildingId: metadata?.ids?.[index] || index + 1,
@@ -1961,6 +1963,7 @@ function createPlanning3dBuildingFeature(geometry, index, metadata = null) {
 function createPlanning3dParcelFeature(geometry, index) {
   return {
     type: "Feature",
+    id: index + 1,
     properties: {
       parcelIndex: index + 1,
     },
@@ -5904,6 +5907,7 @@ async function initializePlanning3dMap() {
       addPlanning3dRuntimeLayers();
       updatePlanning3dCandidateSource();
       syncPlanning3dLayerVisibility();
+      renderPlanning3dDomMarkers();
       resolve(planning3dState.map);
     };
 
@@ -6324,8 +6328,150 @@ function syncPlanning3dSource(datasetKey) {
   source.setData(planning3dState.sourceData[datasetKey] || getPlanning3dEmptyCollection());
   updatePlanning3dHeightScale();
   if (datasetKey === "buildings" && planning3dState.sourceData.buildings?.features?.length) {
+    renderPlanning3dDomMarkers();
     queuePlanning3dFocus();
   }
+}
+
+function clearPlanning3dDomMarkers() {
+  if (!Array.isArray(planning3dState.domMarkers) || !planning3dState.domMarkers.length) {
+    planning3dState.domMarkers = [];
+    return;
+  }
+
+  planning3dState.domMarkers.forEach((entry) => {
+    entry?.marker?.remove?.();
+  });
+  planning3dState.domMarkers = [];
+}
+
+function getPlanning3dFeatureAnchor(feature) {
+  const centroid = feature?.properties?.centroid;
+  if (Array.isArray(centroid) && centroid.length >= 2) {
+    return [Number(centroid[0]) || -78.5928, Number(centroid[1]) || -0.5065];
+  }
+
+  try {
+    const point = turf.centroid(feature).geometry.coordinates;
+    return [Number(point?.[0]) || -78.5928, Number(point?.[1]) || -0.5065];
+  } catch (error) {
+    return [-78.5928, -0.5065];
+  }
+}
+
+function getPlanning3dDomMarkerFeatures(limit = 420) {
+  const features = planning3dState.sourceData.buildings?.features || [];
+  if (features.length <= limit) {
+    return features;
+  }
+
+  const step = features.length / limit;
+  const sampled = [];
+  for (let index = 0; index < limit; index += 1) {
+    sampled.push(features[Math.min(features.length - 1, Math.floor(index * step))]);
+  }
+  return sampled.filter(Boolean);
+}
+
+function shouldRenderPlanning3dDomMarkers() {
+  if (!planning3dState.map || !window.maplibregl) {
+    return false;
+  }
+
+  if (!planning3dState.modalOpen || !planning3dState.buildingsVisible) {
+    return false;
+  }
+
+  const buildings = planning3dState.sourceData.buildings?.features || [];
+  if (!buildings.length) {
+    return false;
+  }
+
+  const datasetPhase = planning3dState.datasetStatus.buildings?.phase;
+  if (!getPlanning3dManifest().viaBackend) {
+    return true;
+  }
+
+  return ["preview", "demo", "fetching"].includes(datasetPhase) || buildings.length <= 500;
+}
+
+function buildPlanning3dDomMarkerElement(feature) {
+  const element = document.createElement("button");
+  element.type = "button";
+  element.className = "planning-3d-block-marker";
+
+  const floors = Math.max(1, Number(feature?.properties?.floors) || 1);
+  const scaledHeight = (Number(feature?.properties?.heightM) || 4.2) * planning3dState.heightScale;
+  const footprint = Number(feature?.properties?.footprintM2) || 80;
+  const widthPx = Math.max(12, Math.min(28, Math.round(Math.sqrt(footprint) / 2.2)));
+  const heightPx = Math.max(24, Math.min(92, Math.round(scaledHeight * 2.35)));
+  const palette = floors >= 5
+    ? { front: "#315f83", side: "#264964", top: "#7ea6c8" }
+    : floors >= 3
+      ? { front: "#4f7f9b", side: "#395f73", top: "#9cc0d7" }
+      : { front: "#8ab17d", side: "#64825c", top: "#d6e6ca" };
+
+  element.style.setProperty("--marker-width", `${widthPx}px`);
+  element.style.setProperty("--marker-height", `${heightPx}px`);
+  element.style.setProperty("--marker-side-width", `${Math.max(5, Math.round(widthPx * 0.38))}px`);
+  element.style.setProperty("--marker-cap-height", `${Math.max(5, Math.round(widthPx * 0.42))}px`);
+  element.style.setProperty("--block-front", palette.front);
+  element.style.setProperty("--block-side", palette.side);
+  element.style.setProperty("--block-top", palette.top);
+  element.style.setProperty("--marker-glow", floors >= 4 ? "rgba(49, 95, 131, 0.28)" : "rgba(90, 131, 96, 0.26)");
+  element.title = `Construccion ${feature?.properties?.buildingId || feature?.id || "sin id"} | ${floors} pisos | ${scaledHeight.toFixed(1)} m`;
+  element.setAttribute("aria-label", element.title);
+  element.dataset.featureId = String(feature?.id ?? feature?.properties?.recordIndex ?? "");
+
+  const facade = document.createElement("span");
+  facade.className = "planning-3d-block-facade";
+  element.appendChild(facade);
+
+  element.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    const [lng, lat] = getPlanning3dFeatureAnchor(feature);
+    selectPlanning3dBuilding(feature, { lng, lat });
+  });
+
+  return element;
+}
+
+function syncPlanning3dDomMarkerSelection() {
+  if (!Array.isArray(planning3dState.domMarkers) || !planning3dState.domMarkers.length) {
+    return;
+  }
+
+  const activeId = planning3dState.selectedFeatureId == null ? null : String(planning3dState.selectedFeatureId);
+  planning3dState.domMarkers.forEach((entry) => {
+    entry?.element?.classList.toggle("active", activeId != null && String(entry.featureId) === activeId);
+  });
+}
+
+function renderPlanning3dDomMarkers() {
+  clearPlanning3dDomMarkers();
+  if (!shouldRenderPlanning3dDomMarkers()) {
+    return;
+  }
+
+  const features = getPlanning3dDomMarkerFeatures();
+  planning3dState.domMarkers = features.map((feature) => {
+    const [lng, lat] = getPlanning3dFeatureAnchor(feature);
+    const element = buildPlanning3dDomMarkerElement(feature);
+    const marker = new window.maplibregl.Marker({
+      anchor: "bottom",
+      element,
+    })
+      .setLngLat([lng, lat])
+      .addTo(planning3dState.map);
+
+    return {
+      featureId: feature?.id ?? feature?.properties?.recordIndex ?? null,
+      element,
+      marker,
+    };
+  });
+  syncPlanning3dDomMarkerSelection();
 }
 
 function syncPlanning3dLayerVisibility() {
@@ -6361,10 +6507,13 @@ function syncPlanning3dLayerVisibility() {
       planning3dState.parcelsVisible ? "visible" : "none"
     );
   }
+
+  renderPlanning3dDomMarkers();
 }
 
 function updatePlanning3dHeightScale() {
   if (!planning3dState.map?.getLayer("planning3d-buildings-fill")) {
+    renderPlanning3dDomMarkers();
     return;
   }
 
@@ -6373,6 +6522,7 @@ function updatePlanning3dHeightScale() {
     ["coalesce", ["get", "heightM"], 4.2],
     planning3dState.heightScale,
   ]);
+  renderPlanning3dDomMarkers();
 }
 
 function renderPlanning3dSummary(force = false) {
@@ -6639,6 +6789,7 @@ function clearPlanning3dSelection() {
   planning3dState.photoQueryMessage = null;
   planning3dState.popup?.remove();
   planning3dState.popup = null;
+  syncPlanning3dDomMarkerSelection();
   renderPlanning3dSelection();
 }
 
@@ -6662,6 +6813,7 @@ async function selectPlanning3dBuilding(feature, lngLat = null) {
   );
   planning3dState.selectedPhotos = [];
   planning3dState.loadingPhotos = true;
+  syncPlanning3dDomMarkerSelection();
   renderPlanning3dSelection();
 
   if (!lngLat) {
@@ -6808,6 +6960,7 @@ function setPlanning3dBase(baseId = "satellite") {
       updatePlanning3dCandidateSource();
       syncPlanning3dLayerVisibility();
       updatePlanning3dHeightScale();
+      renderPlanning3dDomMarkers();
       resolve(planning3dState.map);
     });
   });
@@ -6842,6 +6995,7 @@ async function openPlanning3dViewer() {
     updatePlanning3dCandidateSource();
     syncPlanning3dLayerVisibility();
     updatePlanning3dHeightScale();
+    renderPlanning3dDomMarkers();
     focusPlanning3dDataset();
     queuePlanning3dFocus([140, 620]);
 
@@ -6860,6 +7014,7 @@ async function openPlanning3dViewer() {
     updatePlanning3dCandidateSource();
     syncPlanning3dLayerVisibility();
     updatePlanning3dHeightScale();
+    renderPlanning3dDomMarkers();
     focusPlanning3dDataset();
     queuePlanning3dFocus([180, 760]);
   } catch (error) {
@@ -6873,6 +7028,7 @@ function closePlanning3dViewer(silent = false) {
   if (dom.planning3dModal) {
     dom.planning3dModal.setAttribute("aria-hidden", "true");
   }
+  clearPlanning3dDomMarkers();
   if (!silent) {
     clearPlanning3dSelection();
   }
@@ -6881,6 +7037,7 @@ function closePlanning3dViewer(silent = false) {
 async function reloadPlanning3dData() {
   terminatePlanning3dWorker("buildings");
   terminatePlanning3dWorker("parcels");
+  clearPlanning3dDomMarkers();
   planning3dState.manifest = null;
   planning3dState.manifestPromise = null;
   planning3dState.photoStatus = null;
