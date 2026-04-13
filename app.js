@@ -1573,10 +1573,10 @@ function buildPlanning3dLiteGeometries(datasetKey) {
     ? {
       rows: 7,
       cols: 8,
-      lonStep: 0.00102,
-      latStep: 0.00082,
-      scaleBase: 0.96,
-      scaleStep: 0.03,
+      lonStep: 0.00046,
+      latStep: 0.00038,
+      scaleBase: 1.18,
+      scaleStep: 0.05,
       skipMod: 9,
     }
     : {
@@ -5713,7 +5713,7 @@ async function initializePlanning3dMap() {
     pitch: 52,
     bearing: -18,
     attributionControl: false,
-    antialias: false,
+    antialias: true,
     fadeDuration: 0,
     refreshExpiredTiles: false,
   });
@@ -6539,9 +6539,40 @@ function updatePlanning3dCandidateSource() {
   renderPlanning3dSummary();
 }
 
+function focusPlanning3dDemoView() {
+  if (!planning3dState.map || !planning3dState.sourceData.buildings?.features?.length) {
+    return false;
+  }
+
+  const bbox = turf.bbox(planning3dState.sourceData.buildings);
+  const center = [
+    Number(((bbox[0] + bbox[2]) / 2).toFixed(6)),
+    Number(((bbox[1] + bbox[3]) / 2).toFixed(6)),
+  ];
+
+  planning3dState.map.easeTo({
+    center,
+    zoom: 17.1,
+    pitch: 66,
+    bearing: -24,
+    duration: 760,
+    essential: true,
+  });
+  return true;
+}
+
 function focusPlanning3dDataset() {
   if (!planning3dState.map) {
     return;
+  }
+
+  if (
+    planning3dState.datasetStatus.buildings?.phase === "demo"
+    || !getPlanning3dManifest().viaBackend
+  ) {
+    if (focusPlanning3dDemoView()) {
+      return;
+    }
   }
 
   let focusFeature = null;
