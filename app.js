@@ -6127,6 +6127,30 @@ function addPlanning3dRuntimeLayers() {
   }
 }
 
+function hydratePlanning3dRuntimeLayers() {
+  if (!planning3dState.map) {
+    return false;
+  }
+
+  try {
+    const style = planning3dState.map.getStyle?.();
+    if (!style || !Array.isArray(style.layers)) {
+      return false;
+    }
+
+    addPlanning3dRuntimeLayers();
+    updatePlanning3dCandidateSource();
+    syncPlanning3dLayerVisibility();
+    updatePlanning3dHeightScale();
+    renderPlanning3dSvgScene();
+    renderPlanning3dDomMarkers();
+    return true;
+  } catch (error) {
+    console.warn("No se pudieron hidratar aun las capas runtime del visor 3D.", error);
+    return false;
+  }
+}
+
 async function initializePlanning3dMap() {
   if (!dom.planning3dMap) {
     return null;
@@ -6163,6 +6187,8 @@ async function initializePlanning3dMap() {
   planning3dState.map.on("move", queuePlanning3dDomMarkerPositionSync);
   planning3dState.map.on("zoom", queuePlanning3dDomMarkerPositionSync);
   planning3dState.map.on("resize", queuePlanning3dDomMarkerPositionSync);
+  planning3dState.map.on("styledata", hydratePlanning3dRuntimeLayers);
+  planning3dState.map.on("load", hydratePlanning3dRuntimeLayers);
 
   planning3dState.readyPromise = new Promise((resolve) => {
     let settled = false;
@@ -6170,16 +6196,8 @@ async function initializePlanning3dMap() {
       if (settled) {
         return;
       }
-      if (!planning3dState.map?.isStyleLoaded?.()) {
-        window.setTimeout(finalize, 180);
-        return;
-      }
       settled = true;
-      addPlanning3dRuntimeLayers();
-      updatePlanning3dCandidateSource();
-      syncPlanning3dLayerVisibility();
-      renderPlanning3dSvgScene();
-      renderPlanning3dDomMarkers();
+      hydratePlanning3dRuntimeLayers();
       resolve(planning3dState.map);
     };
 
@@ -6434,7 +6452,7 @@ function buildPlanning3dParcelsCollection(geometries) {
 
 async function ensurePlanning3dDataset(datasetKey, force = false) {
   await hydratePlanning3dManifest();
-  await initializePlanning3dMap();
+  initializePlanning3dMap();
 
   if (!force && planning3dState.sourceData[datasetKey]) {
     return planning3dState.sourceData[datasetKey];
@@ -7969,15 +7987,19 @@ function setPlanning3dBase(baseId = "satellite") {
   }
   planning3dState.map.setStyle(createPlanning3dStyle(baseId));
   planning3dState.readyPromise = new Promise((resolve) => {
-    planning3dState.map.once("style.load", () => {
-      addPlanning3dRuntimeLayers();
-      updatePlanning3dCandidateSource();
-      syncPlanning3dLayerVisibility();
-      updatePlanning3dHeightScale();
-      renderPlanning3dSvgScene();
-      renderPlanning3dDomMarkers();
+    let settled = false;
+    const finalize = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      hydratePlanning3dRuntimeLayers();
       resolve(planning3dState.map);
-    });
+    };
+
+    planning3dState.map.once("style.load", finalize);
+    planning3dState.map.once("load", finalize);
+    window.setTimeout(finalize, 900);
   });
 }
 
@@ -8002,15 +8024,6 @@ async function openPlanning3dViewer() {
     const mapPromise = initializePlanning3dMap();
     hydratePlanning3dPhotoStatus();
     hydratePlanning3dTextureCatalog();
-    await mapPromise;
-    planning3dState.map.resize();
-    updatePlanning3dCandidateSource();
-    syncPlanning3dLayerVisibility();
-    updatePlanning3dHeightScale();
-    renderPlanning3dSvgScene();
-    renderPlanning3dDomMarkers();
-    focusPlanning3dDataset();
-    queuePlanning3dFocus([140, 620]);
 
     await manifestPromise;
     await ensurePlanning3dDataset("buildings", !planning3dState.sourceData.buildings?.features?.length);
@@ -8018,6 +8031,9 @@ async function openPlanning3dViewer() {
     if (planning3dState.parcelsVisible) {
       await ensurePlanning3dDataset("parcels", !planning3dState.sourceData.parcels?.features?.length);
     }
+    await mapPromise;
+    planning3dState.map?.resize();
+    hydratePlanning3dRuntimeLayers();
     updatePlanning3dCandidateSource();
     syncPlanning3dLayerVisibility();
     updatePlanning3dHeightScale();
