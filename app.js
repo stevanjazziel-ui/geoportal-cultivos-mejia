@@ -1627,9 +1627,27 @@ function buildPlanning3dLiteGeometries(datasetKey) {
 
 function buildPlanning3dLiteCollection(datasetKey) {
   const geometries = buildPlanning3dLiteGeometries(datasetKey);
-  return datasetKey === "buildings"
+  const collection = datasetKey === "buildings"
     ? buildPlanning3dBuildingsCollection(geometries)
     : buildPlanning3dParcelsCollection(geometries);
+
+  if (datasetKey === "buildings") {
+    collection.features = collection.features.map((feature, index) => {
+      const floors = Math.max(3, Number(feature.properties?.floors) || 1);
+      const heightBoost = 1.9 + ((index % 4) * 0.2);
+      return {
+        ...feature,
+        properties: {
+          ...feature.properties,
+          floors,
+          heightM: Number(Math.max(14, (Number(feature.properties?.heightM) || 4.2) * heightBoost).toFixed(1)),
+          heightSource: "demo",
+        },
+      };
+    });
+  }
+
+  return collection;
 }
 
 function primePlanning3dLiteDataset(datasetKey, manifest = getPlanning3dManifest()) {
@@ -2521,6 +2539,7 @@ function applyRouteFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const routeParam = params.get("route");
   const tabParam = params.get("tab");
+  const viewerParam = params.get("viewer");
   const route = routeParam === "planificacion" ? "planificacion" : routeParam === "agronomia" ? "agronomia" : null;
   if (!route) {
     return;
@@ -2533,6 +2552,12 @@ function applyRouteFromUrl() {
         setActiveTab(tabParam);
       }
     }, 260);
+  }
+
+  if (route === "planificacion" && viewerParam === "3d") {
+    window.setTimeout(() => {
+      openPlanning3dViewer();
+    }, 520);
   }
 }
 
@@ -5450,24 +5475,36 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
     },
   };
 
-  if (isSatellite) {
-    style.sources.basemap = {
-      type: "raster",
-      tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
-      tileSize: 256,
-      attribution: "Esri World Imagery",
-    };
-    style.layers.push({
-      id: "basemap",
-      type: "raster",
-      source: "basemap",
-      paint: {
+  style.sources.basemap = {
+    type: "raster",
+    tiles: isSatellite
+      ? ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"]
+      : [
+        "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      ],
+    tileSize: 256,
+    attribution: isSatellite ? "Esri World Imagery" : "OpenStreetMap",
+  };
+  style.layers.push({
+    id: "basemap",
+    type: "raster",
+    source: "basemap",
+    paint: isSatellite
+      ? {
         "raster-opacity": 1,
         "raster-saturation": 0.18,
         "raster-contrast": 0.12,
+      }
+      : {
+        "raster-opacity": 0.9,
+        "raster-saturation": -0.78,
+        "raster-brightness-min": 0.22,
+        "raster-brightness-max": 0.94,
+        "raster-contrast": 0.08,
       },
-    });
-  }
+  });
 
   return style;
 }
@@ -5502,7 +5539,7 @@ function addPlanning3dRuntimeLayers() {
     id: "planning3d-buildings-footprint",
     type: "fill",
     source: "planning3d-buildings",
-    minzoom: 9,
+    minzoom: 0,
     paint: {
       "fill-color": [
         "case",
@@ -5542,7 +5579,7 @@ function addPlanning3dRuntimeLayers() {
     id: "planning3d-buildings-fill",
     type: "fill-extrusion",
     source: "planning3d-buildings",
-    minzoom: 10.5,
+    minzoom: 8.2,
     paint: {
       "fill-extrusion-height": [
         "*",
@@ -5576,7 +5613,7 @@ function addPlanning3dRuntimeLayers() {
     id: "planning3d-buildings-outline",
     type: "line",
     source: "planning3d-buildings",
-    minzoom: 10,
+    minzoom: 7.8,
     paint: {
       "line-color": "rgba(23, 39, 31, 0.7)",
       "line-width": [
@@ -6527,7 +6564,22 @@ function focusPlanning3dDataset() {
       ? { top: 72, right: 380, bottom: 72, left: 72 }
       : 56,
     duration: 720,
+    pitch: 58,
+    bearing: -18,
     maxZoom: state.planningData?.candidates?.length ? 15.6 : 17.4,
+    essential: true,
+  });
+
+  planning3dState.map.once("moveend", () => {
+    if (!planning3dState.modalOpen) {
+      return;
+    }
+    planning3dState.map.easeTo({
+      pitch: 58,
+      bearing: -18,
+      duration: 280,
+      essential: true,
+    });
   });
 }
 
