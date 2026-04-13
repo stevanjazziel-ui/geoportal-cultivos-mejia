@@ -1787,8 +1787,8 @@ button {
 .planning-3d-shell {
   position: relative;
   display: grid;
-  grid-template-rows: auto auto auto auto minmax(0, 1fr);
-  gap: 8px;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 10px;
   width: calc(100vw - 12px);
   height: calc(100vh - 12px);
   padding: 10px;
@@ -1806,6 +1806,7 @@ button {
   align-items: start;
   justify-content: space-between;
   gap: 12px;
+  padding: 2px 4px 0;
 }
 
 .planning-3d-header h2 {
@@ -1866,16 +1867,19 @@ button {
 
 .planning-3d-layout {
   position: relative;
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
+  gap: 12px;
   min-height: 0;
   height: 100%;
+  align-items: stretch;
 }
 
 .planning-3d-map {
-  position: absolute;
-  inset: 0;
+  position: relative;
   min-height: 0;
   height: 100%;
+  width: 100%;
   border-radius: 24px;
   overflow: hidden;
   border: 1px solid rgba(47, 61, 50, 0.1);
@@ -1938,18 +1942,16 @@ button {
 }
 
 .planning-3d-panel {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  width: min(310px, 22vw);
+  position: relative;
+  width: auto;
   display: grid;
-  grid-template-rows: auto auto;
-  align-content: start;
-  gap: 12px;
+  grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 1fr);
+  align-content: stretch;
+  gap: 10px;
   min-height: 0;
-  max-height: calc(100% - 28px);
-  z-index: 4;
-  pointer-events: none;
+  height: 100%;
+  z-index: 1;
+  pointer-events: auto;
 }
 
 .planning-3d-summary,
@@ -1960,16 +1962,16 @@ button {
   background: rgba(255, 255, 255, 0.78);
   backdrop-filter: blur(12px);
   box-shadow: 0 16px 34px rgba(22, 31, 27, 0.14);
-  pointer-events: auto;
   overflow: auto;
+  min-height: 0;
 }
 
 .planning-3d-summary {
-  max-height: min(30vh, 240px);
+  max-height: none;
 }
 
 .planning-3d-selection {
-  max-height: min(42vh, 340px);
+  max-height: none;
 }
 
 .planning-3d-summary.has-data,
@@ -1978,7 +1980,7 @@ button {
   gap: 12px;
 }
 
-.planning-3d-shell > .service-banner {
+.planning-3d-panel > .service-banner {
   padding: 8px 12px;
   font-size: 0.88rem;
   line-height: 1.35;
@@ -1993,6 +1995,10 @@ button {
   background: rgba(255, 255, 255, 0.72);
   box-shadow: 0 12px 28px rgba(22, 31, 27, 0.08);
   align-content: start;
+}
+
+.planning-3d-panel > .planning-3d-progress {
+  min-height: 0;
 }
 
 .planning-3d-progress-head {
@@ -2374,29 +2380,33 @@ button {
   }
 
   .planning-3d-shell {
-    grid-template-rows: auto auto auto auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
     height: calc(100vh - 12px);
     padding: 16px;
   }
 
   .planning-3d-layout {
-    display: grid;
-    position: static;
     grid-template-columns: 1fr;
     grid-template-rows: minmax(420px, 60vh) auto;
     height: 100%;
   }
 
   .planning-3d-map {
-    position: static;
+    position: relative;
   }
 
   .planning-3d-panel {
     position: static;
     width: auto;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-rows: none;
-    pointer-events: auto;
+    grid-template-rows: auto auto;
+    align-content: start;
+    height: auto;
+  }
+
+  .planning-3d-panel > .service-banner,
+  .planning-3d-panel > .planning-3d-progress {
+    grid-column: 1 / -1;
   }
 }
 
@@ -2489,6 +2499,10 @@ button {
 
   .planning-3d-layout {
     grid-template-rows: minmax(420px, 58vh) auto;
+  }
+
+  .planning-3d-panel {
+    grid-template-columns: 1fr;
   }
 
   .overlay-left {
