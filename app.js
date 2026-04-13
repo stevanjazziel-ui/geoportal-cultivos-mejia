@@ -1239,9 +1239,9 @@ const planning3dCatalog = {
     basePath: "./construcciones%2031/construcciones_31oct",
     previewDataPath: "./public-data/planning3d/buildings_preview.geojson",
     publicDataPath: "./public-data/planning3d/buildings_public.geojson",
-    publicRecordCount: 53476,
+    publicRecordCount: 361,
     color: "#78a36d",
-    description: "Huella edificada extruida desde el shape real de construcciones.",
+    description: "Ventana urbana del centro de Machachi extruida desde el shape real de construcciones.",
   },
   parcels: {
     id: "parcels",
@@ -1250,10 +1250,17 @@ const planning3dCatalog = {
     basePath: "./CATASTRO%202026/CATASTRO_2026",
     previewDataPath: "./public-data/planning3d/parcels_preview.geojson",
     publicDataPath: "./public-data/planning3d/parcels_public.geojson",
-    publicRecordCount: 50471,
+    publicRecordCount: 119,
     color: "#cb9440",
-    description: "Huella catastral de referencia para implantacion y lectura de manzana.",
+    description: "Predios del centro de Machachi para lectura parcelaria rapida en modo publicado.",
   },
+};
+
+const planning3dPublishedView = {
+  center: [-78.5662, -0.5106],
+  zoom: 17.25,
+  pitch: 58,
+  bearing: -18,
 };
 
 const planning3dDemoData = {
@@ -6164,10 +6171,10 @@ async function initializePlanning3dMap() {
   planning3dState.map = new window.maplibregl.Map({
     container: dom.planning3dMap,
     style: createPlanning3dStyle(),
-    center: [-78.5928, -0.5065],
-    zoom: 14.6,
-    pitch: 52,
-    bearing: -18,
+    center: planning3dPublishedView.center,
+    zoom: planning3dPublishedView.zoom,
+    pitch: planning3dPublishedView.pitch,
+    bearing: planning3dPublishedView.bearing,
     attributionControl: false,
     antialias: true,
     fadeDuration: 0,
@@ -7869,6 +7876,19 @@ function focusPlanning3dDemoView() {
 
 function focusPlanning3dDataset() {
   if (!planning3dState.map) {
+    return;
+  }
+
+  const manifest = getPlanning3dManifest();
+  if (!manifest.viaBackend && planning3dState.backendMode === "public") {
+    planning3dState.map.easeTo({
+      center: planning3dPublishedView.center,
+      zoom: planning3dPublishedView.zoom,
+      pitch: planning3dPublishedView.pitch,
+      bearing: planning3dPublishedView.bearing,
+      duration: 720,
+      essential: true,
+    });
     return;
   }
 
