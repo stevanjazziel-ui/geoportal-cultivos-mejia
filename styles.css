@@ -1887,10 +1887,23 @@ button {
     linear-gradient(180deg, rgba(229, 237, 240, 0.92), rgba(239, 241, 235, 0.88));
 }
 
+.planning-3d-image-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background-image: url("./public-data/planning3d/machachi_satellite_fallback.jpg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0.92;
+  filter: saturate(1.02) contrast(1.04);
+}
+
 .planning-3d-dom-overlay {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 3;
   pointer-events: none;
   overflow: hidden;
 }
@@ -1898,7 +1911,7 @@ button {
 .planning-3d-svg-overlay {
   position: absolute;
   inset: 0;
-  z-index: 2;
+  z-index: 3;
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -1912,9 +1925,9 @@ button {
 }
 
 .planning-3d-svg-footprint {
-  opacity: 0.22;
-  stroke: rgba(255, 255, 255, 0.14);
-  stroke-width: 0.8;
+  opacity: 0.32;
+  stroke: rgba(255, 255, 255, 0.2);
+  stroke-width: 1;
 }
 
 .planning-3d-svg-side {
@@ -1932,6 +1945,26 @@ button {
 .planning-3d-svg-shadow {
   fill: rgba(21, 28, 24, 0.16);
   opacity: 0.88;
+}
+
+.planning-3d-svg-building.simple {
+  filter: drop-shadow(0 5px 10px rgba(16, 24, 20, 0.22));
+}
+
+.planning-3d-svg-building.simple .planning-3d-svg-side {
+  opacity: 0.95;
+  stroke: rgba(18, 29, 25, 0.18);
+  stroke-width: 1.05;
+}
+
+.planning-3d-svg-building.simple .planning-3d-svg-top {
+  opacity: 0.98;
+  stroke: rgba(255, 255, 255, 0.42);
+  stroke-width: 1.1;
+}
+
+.planning-3d-svg-building.simple .planning-3d-svg-footprint {
+  opacity: 0.38;
 }
 
 .planning-3d-svg-building.active .planning-3d-svg-side,

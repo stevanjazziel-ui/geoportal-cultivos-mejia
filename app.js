@@ -1456,6 +1456,7 @@ const planning3dState = {
   selectedFeatureId: null,
   selectedBuilding: null,
   selectedPhotos: [],
+  imageBackdrop: null,
   domMarkers: [],
   domOverlay: null,
   domSyncQueued: false,
@@ -6066,11 +6067,12 @@ function updatePlanning3dBasemapStyle() {
   }
 
   const isSatellite = planning3dState.currentBase === "satellite";
+  syncPlanning3dImageBackdrop();
   if (planning3dState.map.getLayer("background")) {
     planning3dState.map.setPaintProperty(
       "background",
       "background-color",
-      isSatellite ? "#dbe5ea" : "#eef2ee"
+      isSatellite ? "rgba(219, 229, 234, 0.18)" : "#eef2ee"
     );
   }
 
@@ -6083,6 +6085,34 @@ function updatePlanning3dBasemapStyle() {
       planning3dState.map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
     }
   });
+}
+
+function ensurePlanning3dImageBackdrop() {
+  if (!dom.planning3dMap) {
+    return null;
+  }
+
+  if (planning3dState.imageBackdrop?.isConnected) {
+    return planning3dState.imageBackdrop;
+  }
+
+  const backdrop = document.createElement("div");
+  backdrop.className = "planning-3d-image-backdrop";
+  backdrop.setAttribute("aria-hidden", "true");
+  backdrop.style.backgroundImage = `url('${planning3dPublishedSatelliteFallback.url}')`;
+  dom.planning3dMap.appendChild(backdrop);
+  planning3dState.imageBackdrop = backdrop;
+  return backdrop;
+}
+
+function syncPlanning3dImageBackdrop() {
+  const backdrop = ensurePlanning3dImageBackdrop();
+  if (!backdrop) {
+    return;
+  }
+
+  const isSatellite = planning3dState.currentBase === "satellite";
+  backdrop.style.display = isSatellite ? "block" : "none";
 }
 
 function syncPlanning3dBaseButtons() {
@@ -7171,21 +7201,23 @@ function getPlanning3dSvgSceneFeatures() {
   return sampled.filter(Boolean);
 }
 
-function shouldRenderPlanning3dSvgScene() {
-  const buildingCount = planning3dState.sourceData.buildings?.features?.length || 0;
-  const zoom = planning3dState.map?.getZoom?.() || 0;
-  const wantsFacadeDetail = Boolean(
+function shouldUsePlanning3dDetailedSvgScene() {
+  return Boolean(
     planning3dState.selectedFeatureId != null
     || planning3dState.textureCatalog?.derivedFromPhotos
   );
+}
+
+function shouldRenderPlanning3dSvgScene() {
+  const buildingCount = planning3dState.sourceData.buildings?.features?.length || 0;
+  const zoom = planning3dState.map?.getZoom?.() || 0;
   return Boolean(
     dom.planning3dMap
     && planning3dState.modalOpen
     && planning3dState.buildingsVisible
     && buildingCount
-    && wantsFacadeDetail
-    && zoom >= 17.2
-    && buildingCount <= 480
+    && zoom >= 16
+    && buildingCount <= 520
   );
 }
 
@@ -7390,9 +7422,12 @@ function renderPlanning3dSvgScene() {
   overlay.setAttribute("viewBox", `0 0 ${width} ${height}`);
   overlay.setAttribute("preserveAspectRatio", "none");
 
-  const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-  defs.innerHTML = createPlanning3dTextureDefsMarkup();
-  overlay.appendChild(defs);
+  const useDetailedMaterials = shouldUsePlanning3dDetailedSvgScene();
+  if (useDetailedMaterials) {
+    const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    defs.innerHTML = createPlanning3dTextureDefsMarkup();
+    overlay.appendChild(defs);
+  }
 
   const features = getPlanning3dSvgSceneFeatures()
     .map((feature) => getPlanning3dProjectedPrism(feature))
@@ -7406,7 +7441,7 @@ function renderPlanning3dSvgScene() {
     const profileId = props.facadeProfileId || planning3dFallbackTextureCatalog.profiles[0].id;
 
     const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    group.setAttribute("class", `planning-3d-svg-building${active ? " active" : ""}`);
+    group.setAttribute("class", `planning-3d-svg-building${useDetailedMaterials ? " detailed" : " simple"}${active ? " active" : ""}`);
     group.setAttribute("data-feature-id", String(feature.id ?? props.recordIndex ?? ""));
     group.setAttribute("tabindex", "0");
     group.setAttribute("role", "button");
@@ -7422,12 +7457,16 @@ function renderPlanning3dSvgScene() {
 
     sideFaces.forEach((face) => {
       group.appendChild(createPlanning3dSvgPolygon(face.points, "planning-3d-svg-side", {
-        fill: `url(#planning3d-facade-${profileId})`,
+        fill: useDetailedMaterials
+          ? `url(#planning3d-facade-${profileId})`
+          : (props.facadeSide || "#4f6d82"),
       }));
     });
 
     group.appendChild(createPlanning3dSvgPolygon(top, "planning-3d-svg-top", {
-      fill: `url(#planning3d-roof-${profileId})`,
+      fill: useDetailedMaterials
+        ? `url(#planning3d-roof-${profileId})`
+        : (props.facadeTop || "#a8c0cf"),
     }));
 
     group.addEventListener("click", (event) => {
@@ -8020,6 +8059,37 @@ function focusPlanning3dDataset() {
 
   const manifest = getPlanning3dManifest();
   if (!manifest.viaBackend && planning3dState.backendMode === "public") {
+    const publishedBuildings = planning3dState.sourceData.buildings;
+    if (publishedBuildings?.features?.length) {
+      const bbox = turf.bbox(publishedBuildings);
+      const hasDesktopOverlay = typeof window !== "undefined" && window.innerWidth > 900;
+      planning3dState.map.fitBounds([
+        [bbox[0], bbox[1]],
+        [bbox[2], bbox[3]],
+      ], {
+        padding: hasDesktopOverlay
+          ? { top: 72, right: 380, bottom: 72, left: 72 }
+          : 48,
+        duration: 720,
+        pitch: planning3dPublishedView.pitch,
+        bearing: planning3dPublishedView.bearing,
+        maxZoom: planning3dPublishedView.zoom,
+        essential: true,
+      });
+      planning3dState.map.once("moveend", () => {
+        if (!planning3dState.modalOpen) {
+          return;
+        }
+        planning3dState.map.easeTo({
+          pitch: planning3dPublishedView.pitch,
+          bearing: planning3dPublishedView.bearing,
+          duration: 240,
+          essential: true,
+        });
+      });
+      return;
+    }
+
     planning3dState.map.easeTo({
       center: planning3dPublishedView.center,
       zoom: planning3dPublishedView.zoom,
