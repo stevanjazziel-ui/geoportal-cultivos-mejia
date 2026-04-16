@@ -1882,28 +1882,100 @@ button {
   width: 100%;
   border-radius: 24px;
   overflow: hidden;
+  isolation: isolate;
   border: 1px solid rgba(47, 61, 50, 0.1);
   background:
-    linear-gradient(180deg, rgba(229, 237, 240, 0.92), rgba(239, 241, 235, 0.88));
+    linear-gradient(180deg, rgba(216, 226, 232, 0.96), rgba(234, 239, 234, 0.9));
+}
+
+.planning-3d-map::before,
+.planning-3d-map::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 240ms ease;
+}
+
+.planning-3d-map::before {
+  z-index: 2;
+  background:
+    linear-gradient(180deg, rgba(233, 239, 243, 0.58) 0%, rgba(233, 239, 243, 0.14) 24%, rgba(18, 25, 22, 0.12) 100%);
+}
+
+.planning-3d-map::after {
+  z-index: 2;
+  background:
+    radial-gradient(circle at 50% 10%, rgba(255, 251, 243, 0.36), transparent 42%),
+    radial-gradient(circle at 50% 118%, rgba(20, 28, 24, 0.24), transparent 48%);
+}
+
+.planning-3d-map.satellite-mode::before,
+.planning-3d-map.satellite-mode::after {
+  opacity: 1;
 }
 
 .planning-3d-image-backdrop {
   position: absolute;
-  inset: 0;
-  z-index: 1;
+  inset: -7% -5% -2%;
+  z-index: 0;
   pointer-events: none;
   background-image: url("./public-data/planning3d/machachi_satellite_fallback.jpg");
   background-size: cover;
-  background-position: center;
+  background-position: center 46%;
   background-repeat: no-repeat;
-  opacity: 0.92;
-  filter: saturate(1.02) contrast(1.04);
+  opacity: 0;
+  transform: scale(1.08) translate3d(0, -1.5%, 0);
+  transform-origin: center 58%;
+  filter: saturate(1.08) contrast(1.08) brightness(0.96);
+  transition: opacity 260ms ease, transform 320ms ease, filter 320ms ease;
+}
+
+.planning-3d-image-backdrop::before,
+.planning-3d-image-backdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+
+.planning-3d-image-backdrop::before {
+  background:
+    linear-gradient(180deg, rgba(214, 224, 232, 0.52) 0%, rgba(214, 224, 232, 0.12) 30%, rgba(18, 25, 22, 0.16) 100%);
+  mix-blend-mode: multiply;
+}
+
+.planning-3d-image-backdrop::after {
+  background:
+    radial-gradient(circle at 50% 12%, rgba(255, 252, 245, 0.38), transparent 40%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.08));
+  mix-blend-mode: screen;
+}
+
+.planning-3d-image-backdrop.active {
+  opacity: 0.78;
+  transform: scale(1.11) translate3d(0, -2.3%, 0);
+  filter: saturate(1.12) contrast(1.12) brightness(0.93);
+}
+
+.planning-3d-map .maplibregl-map,
+.planning-3d-map .maplibregl-canvas-container,
+.planning-3d-map .maplibregl-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.planning-3d-map .maplibregl-control-container,
+.planning-3d-map .maplibregl-ctrl-top-left,
+.planning-3d-map .maplibregl-ctrl-top-right {
+  z-index: 6;
 }
 
 .planning-3d-dom-overlay {
   position: absolute;
   inset: 0;
-  z-index: 3;
+  z-index: 4;
   pointer-events: none;
   overflow: hidden;
 }
@@ -1911,7 +1983,7 @@ button {
 .planning-3d-svg-overlay {
   position: absolute;
   inset: 0;
-  z-index: 3;
+  z-index: 4;
   width: 100%;
   height: 100%;
   overflow: hidden;
@@ -1928,43 +2000,54 @@ button {
   opacity: 0.32;
   stroke: rgba(255, 255, 255, 0.2);
   stroke-width: 1;
+  stroke-linejoin: round;
 }
 
 .planning-3d-svg-side {
   stroke: rgba(22, 31, 27, 0.15);
   stroke-width: 0.9;
   opacity: 0.92;
+  stroke-linejoin: round;
 }
 
 .planning-3d-svg-top {
   stroke: rgba(255, 255, 255, 0.34);
   stroke-width: 0.9;
   opacity: 0.94;
+  stroke-linejoin: round;
 }
 
 .planning-3d-svg-shadow {
-  fill: rgba(21, 28, 24, 0.16);
-  opacity: 0.88;
+  fill: rgba(21, 28, 24, 0.22);
+  opacity: 0.9;
 }
 
 .planning-3d-svg-building.simple {
-  filter: drop-shadow(0 5px 10px rgba(16, 24, 20, 0.22));
+  filter: drop-shadow(0 12px 20px rgba(16, 24, 20, 0.18)) drop-shadow(0 3px 7px rgba(16, 24, 20, 0.16));
 }
 
 .planning-3d-svg-building.simple .planning-3d-svg-side {
-  opacity: 0.95;
-  stroke: rgba(18, 29, 25, 0.18);
-  stroke-width: 1.05;
+  opacity: 0.97;
+  stroke: rgba(18, 29, 25, 0.22);
+  stroke-width: 1.12;
 }
 
 .planning-3d-svg-building.simple .planning-3d-svg-top {
-  opacity: 0.98;
-  stroke: rgba(255, 255, 255, 0.42);
-  stroke-width: 1.1;
+  opacity: 1;
+  stroke: rgba(255, 255, 255, 0.48);
+  stroke-width: 1.14;
 }
 
 .planning-3d-svg-building.simple .planning-3d-svg-footprint {
-  opacity: 0.38;
+  opacity: 0.42;
+}
+
+.planning-3d-map.satellite-mode .planning-3d-svg-building.simple .planning-3d-svg-side {
+  stroke: rgba(15, 23, 20, 0.28);
+}
+
+.planning-3d-map.satellite-mode .planning-3d-svg-building.simple .planning-3d-svg-top {
+  stroke: rgba(255, 255, 255, 0.54);
 }
 
 .planning-3d-svg-building.active .planning-3d-svg-side,

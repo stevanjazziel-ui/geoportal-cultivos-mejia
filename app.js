@@ -1258,9 +1258,9 @@ const planning3dCatalog = {
 
 const planning3dPublishedView = {
   center: [-78.5662, -0.5106],
-  zoom: 18.1,
-  pitch: 62,
-  bearing: -22,
+  zoom: 18.25,
+  pitch: 67,
+  bearing: -24,
 };
 
 const planning3dPublishedSatelliteFallback = {
@@ -5990,7 +5990,7 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
         id: "background",
         type: "background",
         paint: {
-          "background-color": isSatellite ? "#dbe5ea" : "#eef2ee",
+          "background-color": isSatellite ? "#d6e0e5" : "#eef2ee",
         },
       },
       {
@@ -6016,9 +6016,12 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
           visibility: isSatellite ? "visible" : "none",
         },
         paint: {
-          "raster-opacity": 1,
-          "raster-saturation": 0.18,
-          "raster-contrast": 0.12,
+          "raster-opacity": 0.88,
+          "raster-saturation": 0.24,
+          "raster-contrast": 0.18,
+          "raster-brightness-min": 0.06,
+          "raster-brightness-max": 1.02,
+          "raster-resampling": "linear",
         },
       },
       {
@@ -6029,9 +6032,12 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
           visibility: isSatellite ? "visible" : "none",
         },
         paint: {
-          "raster-opacity": 0.96,
-          "raster-saturation": 0.06,
-          "raster-contrast": 0.14,
+          "raster-opacity": 0.72,
+          "raster-saturation": 0.12,
+          "raster-contrast": 0.2,
+          "raster-brightness-min": 0.12,
+          "raster-brightness-max": 0.98,
+          "raster-resampling": "linear",
           "raster-fade-duration": 0,
         },
       },
@@ -6068,11 +6074,16 @@ function updatePlanning3dBasemapStyle() {
 
   const isSatellite = planning3dState.currentBase === "satellite";
   syncPlanning3dImageBackdrop();
+  if (dom.planning3dMap) {
+    dom.planning3dMap.classList.toggle("satellite-mode", isSatellite);
+    dom.planning3dMap.classList.toggle("light-mode", !isSatellite);
+    dom.planning3dMap.dataset.base = planning3dState.currentBase;
+  }
   if (planning3dState.map.getLayer("background")) {
     planning3dState.map.setPaintProperty(
       "background",
       "background-color",
-      isSatellite ? "rgba(219, 229, 234, 0.18)" : "#eef2ee"
+      isSatellite ? "rgba(214, 224, 229, 0.16)" : "#eef2ee"
     );
   }
 
@@ -6112,7 +6123,8 @@ function syncPlanning3dImageBackdrop() {
   }
 
   const isSatellite = planning3dState.currentBase === "satellite";
-  backdrop.style.display = isSatellite ? "block" : "none";
+  backdrop.classList.toggle("active", isSatellite);
+  backdrop.setAttribute("data-base", planning3dState.currentBase);
 }
 
 function syncPlanning3dBaseButtons() {
