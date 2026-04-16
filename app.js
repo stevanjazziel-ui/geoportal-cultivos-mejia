@@ -8843,20 +8843,6 @@ function renderPlanningOverlay(planning) {
     return;
   }
 
-  mapState.planningLayer = L.geoJSON(planning.surface, {
-    style: (feature) => ({
-      color: feature.properties.score >= 78 ? "#224d3d" : "#ffffff",
-      weight: feature.properties.score >= 78 ? 0.8 : 0.4,
-      fillColor: interpolateColor(feature.properties.score, 35, 90, ["#7c4834", "#d6a250", "#95be78", "#2f7f5f"]),
-      fillOpacity: feature.properties.score >= 78 ? 0.34 : 0.22,
-    }),
-    onEachFeature: (feature, layer) => {
-      layer.bindPopup(
-        `<h3 class="popup-title">${planning.program.longLabel}</h3><p class="popup-copy">${planning.imageryProfile.shortLabel} / ${feature.properties.anchorName} / Puntaje ${feature.properties.score}/100 / ${feature.properties.classLabel}. ${feature.properties.summary}</p>`
-      );
-    },
-  }).addTo(mapState.map);
-
   const candidatePoints = planning.candidates.map((candidate) => pointFeature(candidate.title, candidate.centroid, {
     candidateId: candidate.id,
     candidateRank: candidate.rank,
@@ -8885,9 +8871,6 @@ function renderPlanningOverlay(planning) {
     },
   }).addTo(mapState.map);
 
-  if (mapState.planningLayer.bringToFront) {
-    mapState.planningLayer.bringToFront();
-  }
   if (mapState.currentPlotLayer) {
     mapState.currentPlotLayer.bringToFront();
   }
