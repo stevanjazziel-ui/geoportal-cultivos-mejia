@@ -5984,6 +5984,8 @@ function preloadPlanning3dBasemap(baseId = planning3dState.currentBase) {
 
 function createPlanning3dStyle(baseId = planning3dState.currentBase) {
   const isSatellite = baseId === "satellite";
+  const hasPublishedOrthophotoTiles = Array.isArray(planning3dPublishedOrthophotoTiles.tiles)
+    && planning3dPublishedOrthophotoTiles.tiles.length > 0;
   const style = {
     version: 8,
     sources: {
@@ -6023,7 +6025,7 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
         id: "background",
         type: "background",
         paint: {
-          "background-color": isSatellite ? "#d6e0e5" : "#eef2ee",
+          "background-color": isSatellite ? "rgba(214, 224, 229, 0)" : "#eef2ee",
         },
       },
       {
@@ -6046,15 +6048,32 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
         type: "raster",
         source: "planning3d-basemap-satellite",
         layout: {
-          visibility: isSatellite ? "visible" : "none",
+          visibility: isSatellite && !hasPublishedOrthophotoTiles ? "visible" : "none",
         },
         paint: {
-          "raster-opacity": 0.34,
+          "raster-opacity": 0.18,
           "raster-saturation": 0.1,
           "raster-contrast": 0.1,
           "raster-brightness-min": 0.06,
           "raster-brightness-max": 0.98,
           "raster-resampling": "linear",
+        },
+      },
+      {
+        id: "planning3d-basemap-satellite-preview",
+        type: "raster",
+        source: "planning3d-basemap-satellite-preview",
+        layout: {
+          visibility: isSatellite ? "visible" : "none",
+        },
+        paint: {
+          "raster-opacity": 0.94,
+          "raster-saturation": 0.08,
+          "raster-contrast": 0.12,
+          "raster-brightness-min": 0.04,
+          "raster-brightness-max": 1,
+          "raster-resampling": "linear",
+          "raster-fade-duration": 0,
         },
       },
       {
@@ -6066,26 +6085,9 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
         },
         paint: {
           "raster-opacity": 1,
-          "raster-saturation": 0.12,
-          "raster-contrast": 0.18,
-          "raster-brightness-min": 0.08,
-          "raster-brightness-max": 1,
-          "raster-resampling": "linear",
-          "raster-fade-duration": 0,
-        },
-      },
-      {
-        id: "planning3d-basemap-satellite-preview",
-        type: "raster",
-        source: "planning3d-basemap-satellite-preview",
-        layout: {
-          visibility: isSatellite ? "visible" : "none",
-        },
-        paint: {
-          "raster-opacity": 0,
-          "raster-saturation": 0.14,
-          "raster-contrast": 0.22,
-          "raster-brightness-min": 0.1,
+          "raster-saturation": 0.1,
+          "raster-contrast": 0.15,
+          "raster-brightness-min": 0.04,
           "raster-brightness-max": 1,
           "raster-resampling": "linear",
           "raster-fade-duration": 0,
@@ -6123,6 +6125,8 @@ function updatePlanning3dBasemapStyle() {
   }
 
   const isSatellite = planning3dState.currentBase === "satellite";
+  const showRemoteSatellite = isSatellite && !(Array.isArray(planning3dPublishedOrthophotoTiles.tiles)
+    && planning3dPublishedOrthophotoTiles.tiles.length > 0);
   syncPlanning3dImageBackdrop();
   if (dom.planning3dMap) {
     dom.planning3dMap.classList.toggle("satellite-mode", isSatellite);
@@ -6133,13 +6137,13 @@ function updatePlanning3dBasemapStyle() {
     planning3dState.map.setPaintProperty(
       "background",
       "background-color",
-      isSatellite ? "rgba(214, 224, 229, 0.16)" : "#eef2ee"
+      isSatellite ? "rgba(214, 224, 229, 0)" : "#eef2ee"
     );
   }
 
   [
     ["planning3d-basemap-light", !isSatellite],
-    ["planning3d-basemap-satellite", isSatellite],
+    ["planning3d-basemap-satellite", showRemoteSatellite],
     ["planning3d-basemap-orthophoto", isSatellite],
     ["planning3d-basemap-satellite-preview", isSatellite],
   ].forEach(([layerId, visible]) => {

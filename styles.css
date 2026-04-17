@@ -1888,6 +1888,18 @@ button {
     linear-gradient(180deg, rgba(216, 226, 232, 0.96), rgba(234, 239, 234, 0.9));
 }
 
+.planning-3d-map.satellite-mode {
+  background-color: #dce5e7;
+  background-image: url("./public-data/planning3d/machachi_orthophoto_center.jpg");
+  background-size: cover;
+  background-position: center center;
+  background-repeat: no-repeat;
+}
+
+.planning-3d-map.light-mode {
+  background-image: linear-gradient(180deg, rgba(216, 226, 232, 0.96), rgba(234, 239, 234, 0.9));
+}
+
 .planning-3d-map::before,
 .planning-3d-map::after {
   content: "";
@@ -1913,7 +1925,7 @@ button {
 
 .planning-3d-map.satellite-mode::before,
 .planning-3d-map.satellite-mode::after {
-  opacity: 1;
+  opacity: 0.28;
 }
 
 .planning-3d-image-backdrop {
@@ -1953,7 +1965,7 @@ button {
 }
 
 .planning-3d-image-backdrop.active {
-  opacity: 0.78;
+  opacity: 0;
   transform: scale(1.11) translate3d(0, -2.3%, 0);
   filter: saturate(1.12) contrast(1.12) brightness(0.93);
 }
