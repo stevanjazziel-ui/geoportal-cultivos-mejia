@@ -1455,7 +1455,7 @@ const planning3dState = {
   textureSource: "fallback",
   buildingsVisible: true,
   parcelsVisible: true,
-  heightScale: 1.3,
+  heightScale: 1,
   map: null,
   readyPromise: null,
   eventsBound: false,
@@ -6249,12 +6249,7 @@ function addPlanning3dRuntimeLayers() {
       ],
       "fill-extrusion-base": 0,
       "fill-extrusion-opacity": 0.97,
-      "fill-extrusion-color": [
-        "case",
-        ["boolean", ["feature-state", "selected"], false],
-        "#f4d35e",
-        ["coalesce", ["get", "facadeFront"], "#6e8ea3"],
-      ],
+      "fill-extrusion-color": getPlanning3dBuildingFillColorExpression(),
     },
   });
 
@@ -6340,6 +6335,16 @@ function addPlanning3dRuntimeLayers() {
     });
     planning3dState.eventsBound = true;
   }
+}
+
+function getPlanning3dBuildingFillColorExpression() {
+  const useRoofColor = isPlanning3dOrthographicView();
+  return [
+    "case",
+    ["boolean", ["feature-state", "selected"], false],
+    "#f4d35e",
+    ["coalesce", ["get", useRoofColor ? "facadeTop" : "facadeFront"], useRoofColor ? "#d9e3ea" : "#6e8ea3"],
+  ];
 }
 
 function hydratePlanning3dRuntimeLayers() {
@@ -7277,6 +7282,12 @@ function shouldUsePlanning3dDetailedSvgScene() {
   );
 }
 
+function isPlanning3dOrthographicView() {
+  const pitch = planning3dState.map?.getPitch?.() ?? planning3dPublishedView.pitch ?? 0;
+  const bearing = planning3dState.map?.getBearing?.() ?? planning3dPublishedView.bearing ?? 0;
+  return Math.abs(pitch) <= 5 && Math.abs(bearing) <= 3;
+}
+
 function shouldRenderPlanning3dSvgScene() {
   const buildingCount = planning3dState.sourceData.buildings?.features?.length || 0;
   const zoom = planning3dState.map?.getZoom?.() || 0;
@@ -7287,6 +7298,7 @@ function shouldRenderPlanning3dSvgScene() {
     && buildingCount
     && zoom >= 16
     && buildingCount <= 520
+    && !isPlanning3dOrthographicView()
   );
 }
 
@@ -7724,6 +7736,11 @@ function updatePlanning3dHeightScale() {
     ["coalesce", ["get", "heightM"], 4.2],
     planning3dState.heightScale,
   ]);
+  planning3dState.map.setPaintProperty(
+    "planning3d-buildings-fill",
+    "fill-extrusion-color",
+    getPlanning3dBuildingFillColorExpression()
+  );
   renderPlanning3dDomMarkers();
 }
 
