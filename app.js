@@ -3127,6 +3127,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   syncEntryRouteUi(route);
 
   if (route === "planificacion") {
+    clearAgronomyMapContext();
     setActiveTab("modulos");
     hydratePlanning3dManifest();
     if (dom.sidebarTitle) {
@@ -3147,6 +3148,12 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
 
   setActiveTab("modulos");
   closePlanning3dViewer(true);
+  if (state.currentPlot) {
+    renderCurrentPlotLayer();
+  }
+  if (getSelectedImage()) {
+    renderSentinelOverlay();
+  }
   if (dom.sidebarTitle) {
     dom.sidebarTitle.textContent = "Centro de trabajo agronomico";
   }
@@ -3158,6 +3165,33 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   }
   clearPlanningModuleFocus();
   updateMapSummary();
+}
+
+function clearAgronomyMapContext() {
+  if (!mapState.map) {
+    return;
+  }
+
+  [
+    "sceneExactLayer",
+    "scenePreviewLayer",
+    "sceneFootprintLayer",
+    "sentinelLayer",
+    "managementLayer",
+    "currentPlotLayer",
+  ].forEach((layerKeyName) => {
+    if (mapState[layerKeyName]) {
+      mapState.map.removeLayer(mapState[layerKeyName]);
+      mapState[layerKeyName] = null;
+    }
+  });
+
+  if (mapState.controlGroup) {
+    mapState.controlGroup.clearLayers();
+  }
+
+  mapState.map.closePopup?.();
+  state.sceneLayerKind = "off";
 }
 
 function focusPlanningModuleCard() {
@@ -4782,6 +4816,12 @@ function renderSentinelOverlay() {
     return;
   }
 
+  if (state.entryRoute === "planificacion") {
+    clearAgronomyMapContext();
+    updateMapSummary();
+    return;
+  }
+
   if (mapState.sceneExactLayer) {
     mapState.map.removeLayer(mapState.sceneExactLayer);
     mapState.sceneExactLayer = null;
@@ -5459,24 +5499,7 @@ function setCurrentPlot(feature, label) {
     return;
   }
 
-  if (mapState.currentPlotLayer) {
-    mapState.map.removeLayer(mapState.currentPlotLayer);
-  }
-
-  mapState.currentPlotLayer = L.geoJSON(feature, {
-    style: {
-      color: "#ffce73",
-      weight: 2,
-      fillColor: "#ffce73",
-      fillOpacity: 0.18,
-    },
-  }).addTo(mapState.map);
-
-  mapState.currentPlotLayer.bringToFront();
-  mapState.map.fitBounds(mapState.currentPlotLayer.getBounds(), {
-    padding: [36, 36],
-  });
-
+  renderCurrentPlotLayer(true);
   updateMapSummary();
   runIntraloteAnalysis();
   runDemAnalysis(true);
@@ -5486,6 +5509,32 @@ function setCurrentPlot(feature, label) {
   }
   filterSentinelImages();
   renderWizardAssistantState();
+}
+
+function renderCurrentPlotLayer(fitBounds = false) {
+  if (!mapState.map || !state.currentPlot) {
+    return;
+  }
+
+  if (mapState.currentPlotLayer) {
+    mapState.map.removeLayer(mapState.currentPlotLayer);
+  }
+
+  mapState.currentPlotLayer = L.geoJSON(state.currentPlot, {
+    style: {
+      color: "#ffce73",
+      weight: 2,
+      fillColor: "#ffce73",
+      fillOpacity: 0.18,
+    },
+  }).addTo(mapState.map);
+
+  mapState.currentPlotLayer.bringToFront();
+  if (fitBounds) {
+    mapState.map.fitBounds(mapState.currentPlotLayer.getBounds(), {
+      padding: [36, 36],
+    });
+  }
 }
 
 function clearCurrentPlot(triggerRefresh = false) {
@@ -5590,6 +5639,10 @@ function renderManagementZones(analysis) {
   if (mapState.managementLayer) {
     mapState.map.removeLayer(mapState.managementLayer);
     mapState.managementLayer = null;
+  }
+
+  if (state.entryRoute === "planificacion") {
+    return analysis.management;
   }
 
   const features = analysis.surface?.features || [];
@@ -9906,6 +9959,21 @@ function updateMapSummary(force = false) {
     return;
   }
 
+  if (state.entryRoute === "planificacion") {
+    const planning = state.planningData;
+    const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
+    setTextIfChanged(dom.overlayIndex, planning ? "Aptitud" : imageryProfile.shortLabel);
+    renderMapBadges();
+    if (planning) {
+      setTextIfChanged(dom.mapTitle, `${planning.program.longLabel} sobre ${planning.context.scopeLabel}`);
+      setTextIfChanged(dom.mapSubtitle, `Fuente ${planning.imageryProfile.shortLabel}, horizonte ${planning.horizon.label}, escenario ${planning.scenario.label} y ${planning.candidates.length} candidatos priorizados.`);
+    } else {
+      setTextIfChanged(dom.mapTitle, "Planificacion territorial lista");
+      setTextIfChanged(dom.mapSubtitle, `Elige ${imageryProfile.label} y ejecuta la aptitud territorial para evaluar VIS, escuelas, hospitales o equipamientos.`);
+    }
+    return;
+  }
+
   const image = getSelectedImage();
   const sensor = image ? getSensorForImage(image) : getActiveSensor();
   const analysis = getRenderableAnalysis(image);
@@ -9919,20 +9987,6 @@ function updateMapSummary(force = false) {
   }
 
   if (!image) {
-    if (state.entryRoute === "planificacion") {
-      const planning = state.planningData;
-      const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
-      setTextIfChanged(dom.overlayIndex, planning ? "Aptitud" : imageryProfile.shortLabel);
-      renderMapBadges();
-      if (planning) {
-        setTextIfChanged(dom.mapTitle, `${planning.program.longLabel} sobre ${planning.context.scopeLabel}`);
-        setTextIfChanged(dom.mapSubtitle, `Fuente ${planning.imageryProfile.shortLabel}, horizonte ${planning.horizon.label}, escenario ${planning.scenario.label} y ${planning.candidates.length} candidatos priorizados.`);
-      } else {
-        setTextIfChanged(dom.mapTitle, "Planificacion territorial lista");
-        setTextIfChanged(dom.mapSubtitle, `Elige ${imageryProfile.label} y ejecuta la aptitud territorial para evaluar VIS, escuelas, hospitales o equipamientos.`);
-      }
-      return;
-    }
     setTextIfChanged(dom.mapTitle, "No hay escena activa");
     renderMapBadges();
     setTextIfChanged(dom.mapSubtitle, `Ajusta el filtro de ${sensor.label} para cargar una imagen sobre el visor.`);
@@ -9977,38 +10031,39 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
     return;
   }
 
+  if (state.entryRoute === "planificacion") {
+    const planning = state.planningData;
+    const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
+    const badges = [
+      {
+        tone: "analysis",
+        label: "Territorial",
+      },
+      {
+        tone: "neutral",
+        label: imageryProfile.shortLabel,
+      },
+      {
+        tone: "neutral",
+        label: imageryProfile.spatialLabel,
+      },
+      planning
+        ? {
+            tone: "analysis",
+            label: `Plan ${planning.program.label}`,
+          }
+        : {
+            tone: "muted",
+            label: "Sin escenario",
+          },
+    ];
+    setHtmlIfChanged(dom.mapBadges, badges
+      .map((badge) => `<span class="map-badge ${badge.tone}">${badge.label}</span>`)
+      .join(""));
+    return;
+  }
+
   if (!image) {
-    if (state.entryRoute === "planificacion") {
-      const planning = state.planningData;
-      const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
-      const badges = [
-        {
-          tone: "analysis",
-          label: "Territorial",
-        },
-        {
-          tone: "neutral",
-          label: imageryProfile.shortLabel,
-        },
-        {
-          tone: "neutral",
-          label: imageryProfile.spatialLabel,
-        },
-        planning
-          ? {
-              tone: "analysis",
-              label: `Plan ${planning.program.label}`,
-            }
-          : {
-              tone: "muted",
-              label: "Sin escenario",
-            },
-      ];
-      setHtmlIfChanged(dom.mapBadges, badges
-        .map((badge) => `<span class="map-badge ${badge.tone}">${badge.label}</span>`)
-        .join(""));
-      return;
-    }
     const sensor = getActiveSensor();
     const planningBadge = state.planningData
       ? `<span class="map-badge analysis">Plan ${state.planningData.program.label}</span>`
