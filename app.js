@@ -1237,39 +1237,41 @@ const planning3dCatalog = {
     label: "Construcciones",
     shortLabel: "Construcciones 3D",
     basePath: "./construcciones%2031/construcciones_31oct",
-    previewDataPath: "./public-data/planning3d/buildings_preview.geojson",
+    previewDataPath: "./public-data/planning3d/buildings_orthophoto.geojson",
     publicDataPath: "./public-data/planning3d/buildings_public.geojson",
-    publicRecordCount: 361,
+    publicRecordCount: 17223,
     color: "#78a36d",
-    description: "Ventana urbana del centro de Machachi extruida desde el shape real de construcciones.",
+    description: "Construcciones reales de Machachi dentro del ambito completo de la ortofoto publicada.",
   },
   parcels: {
     id: "parcels",
     label: "Catastro",
     shortLabel: "Predios",
     basePath: "./CATASTRO%202026/CATASTRO_2026",
-    previewDataPath: "./public-data/planning3d/parcels_preview.geojson",
+    previewDataPath: "./public-data/planning3d/parcels_orthophoto.geojson",
     publicDataPath: "./public-data/planning3d/parcels_public.geojson",
-    publicRecordCount: 119,
+    publicRecordCount: 11820,
     color: "#cb9440",
-    description: "Predios del centro de Machachi para lectura parcelaria rapida en modo publicado.",
+    description: "Predios reales dentro del ambito completo de la ortofoto publicada.",
   },
 };
 
+const planning3dPublishedOrthophotoBounds = [-78.581347, -0.534320, -78.545394, -0.490360];
+
 const planning3dPublishedView = {
-  center: [-78.5662, -0.5106],
-  zoom: 18.3,
+  center: [-78.563371, -0.51234],
+  zoom: 15.8,
   pitch: 0,
   bearing: 0,
 };
 
 const planning3dPublishedSatelliteFallback = {
-  url: "./public-data/planning3d/machachi_orthophoto_center.jpg",
+  url: "./public-data/planning3d/machachi_orthophoto_full.jpg",
   coordinates: [
-    [-78.5687255859375, -0.508111015572299],
-    [-78.563232421875, -0.508111015572299],
-    [-78.563232421875, -0.513603961287338],
-    [-78.5687255859375, -0.513603961287338],
+    [planning3dPublishedOrthophotoBounds[0], planning3dPublishedOrthophotoBounds[3]],
+    [planning3dPublishedOrthophotoBounds[2], planning3dPublishedOrthophotoBounds[3]],
+    [planning3dPublishedOrthophotoBounds[2], planning3dPublishedOrthophotoBounds[1]],
+    [planning3dPublishedOrthophotoBounds[0], planning3dPublishedOrthophotoBounds[1]],
   ],
 };
 
@@ -6278,13 +6280,13 @@ function addPlanning3dRuntimeLayers() {
         ["linear"],
         ["zoom"],
         9,
-        0.26,
+        0.42,
         12,
-        0.22,
+        0.38,
         15,
-        0.18,
+        0.34,
         17,
-        0.14,
+        0.3,
       ],
     },
   });
@@ -6307,22 +6309,42 @@ function addPlanning3dRuntimeLayers() {
   });
 
   planning3dState.map.addLayer({
-    id: "planning3d-buildings-outline",
+    id: "planning3d-buildings-outline-glow",
     type: "line",
     source: "planning3d-buildings",
     minzoom: 7.8,
     paint: {
-      "line-color": "rgba(23, 39, 31, 0.7)",
+      "line-color": "rgba(255, 250, 240, 0.82)",
       "line-width": [
         "interpolate",
         ["linear"],
         ["zoom"],
         10,
-        1,
+        1.4,
         15,
-        1.7,
+        2.2,
       ],
-      "line-opacity": 0.86,
+      "line-opacity": 0.9,
+    },
+  });
+
+  planning3dState.map.addLayer({
+    id: "planning3d-buildings-outline",
+    type: "line",
+    source: "planning3d-buildings",
+    minzoom: 7.8,
+    paint: {
+      "line-color": "rgba(33, 47, 40, 0.92)",
+      "line-width": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        10,
+        0.8,
+        15,
+        1.35,
+      ],
+      "line-opacity": 0.95,
     },
   });
 
@@ -6453,6 +6475,10 @@ async function initializePlanning3dMap() {
     refreshExpiredTiles: false,
     dragRotate: false,
     pitchWithRotate: false,
+    maxBounds: [
+      [planning3dPublishedOrthophotoBounds[0], planning3dPublishedOrthophotoBounds[1]],
+      [planning3dPublishedOrthophotoBounds[2], planning3dPublishedOrthophotoBounds[3]],
+    ],
   });
   planning3dState.map.addControl(new window.maplibregl.NavigationControl({ visualizePitch: false }), "top-left");
   planning3dState.map.on("moveend", queuePlanning3dSvgSceneSync);
@@ -8198,44 +8224,30 @@ function focusPlanning3dDataset() {
 
   const manifest = getPlanning3dManifest();
   if (!manifest.viaBackend && planning3dState.backendMode === "public") {
-    const publishedBuildings = planning3dState.sourceData.buildings;
-    if (publishedBuildings?.features?.length) {
-      const bbox = turf.bbox(publishedBuildings);
-      const hasDesktopOverlay = typeof window !== "undefined" && window.innerWidth > 900;
-      planning3dState.map.fitBounds([
-        [bbox[0], bbox[1]],
-        [bbox[2], bbox[3]],
-      ], {
-        padding: hasDesktopOverlay
-          ? { top: 72, right: 380, bottom: 72, left: 72 }
-          : 48,
-        duration: 720,
-        pitch: planning3dPublishedView.pitch,
-        bearing: planning3dPublishedView.bearing,
-        maxZoom: planning3dPublishedView.zoom,
-        essential: true,
-      });
-      planning3dState.map.once("moveend", () => {
-        if (!planning3dState.modalOpen) {
-          return;
-        }
-        planning3dState.map.easeTo({
-          pitch: planning3dPublishedView.pitch,
-          bearing: planning3dPublishedView.bearing,
-          duration: 240,
-          essential: true,
-        });
-      });
-      return;
-    }
-
-    planning3dState.map.easeTo({
-      center: planning3dPublishedView.center,
-      zoom: planning3dPublishedView.zoom,
+    const hasDesktopOverlay = typeof window !== "undefined" && window.innerWidth > 900;
+    planning3dState.map.fitBounds([
+      [planning3dPublishedOrthophotoBounds[0], planning3dPublishedOrthophotoBounds[1]],
+      [planning3dPublishedOrthophotoBounds[2], planning3dPublishedOrthophotoBounds[3]],
+    ], {
+      padding: hasDesktopOverlay
+        ? { top: 72, right: 380, bottom: 72, left: 72 }
+        : 48,
+      duration: 720,
       pitch: planning3dPublishedView.pitch,
       bearing: planning3dPublishedView.bearing,
-      duration: 720,
+      maxZoom: planning3dPublishedView.zoom,
       essential: true,
+    });
+    planning3dState.map.once("moveend", () => {
+      if (!planning3dState.modalOpen) {
+        return;
+      }
+      planning3dState.map.easeTo({
+        pitch: planning3dPublishedView.pitch,
+        bearing: planning3dPublishedView.bearing,
+        duration: 240,
+        essential: true,
+      });
     });
     return;
   }

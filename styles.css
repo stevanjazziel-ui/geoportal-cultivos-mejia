@@ -1890,7 +1890,7 @@ button {
 
 .planning-3d-map.satellite-mode {
   background-color: #dce5e7;
-  background-image: url("./public-data/planning3d/machachi_orthophoto_center.jpg");
+  background-image: url("./public-data/planning3d/machachi_orthophoto_full.jpg");
   background-size: cover;
   background-position: center center;
   background-repeat: no-repeat;
