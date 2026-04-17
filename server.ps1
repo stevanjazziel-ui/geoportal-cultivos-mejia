@@ -34,11 +34,38 @@ $Planning3dDatasets = @{
 }
 
 $Planning3dPhotoRoot = "E:\FOTOS MACHACHI"
+$PlanningOrthophoto = @{
+  label = "Ortofoto Machachi"
+  tifPath = "E:\Ortofotos\actuales\07 MACHACHI\MACHACHIOTF.TIF"
+  worldFilePath = "E:\Ortofotos\actuales\07 MACHACHI\MACHACHIOTF.tfw"
+  metadataXmlPath = "E:\Ortofotos\actuales\07 MACHACHI\MACHACHIOTF.TIF.xml"
+  auxXmlPath = "E:\Ortofotos\actuales\07 MACHACHI\MACHACHIOTF.TIF.aux.xml"
+}
 $Planning3dPhotoIndexPath = Join-Path $Root "planning3d_photo_index.json"
 $script:Planning3dPhotoIndexJob = $null
 
 function Clamp([double]$Value, [double]$Min, [double]$Max) {
   return [Math]::Min([Math]::Max($Value, $Min), $Max)
+}
+
+function Convert-ToInvariantDouble($Value, [double]$Fallback = 0) {
+  $parsed = 0.0
+  $text = if ($null -eq $Value) { "" } else { [string]$Value }
+  if ([double]::TryParse($text, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$parsed)) {
+    return $parsed
+  }
+  return $Fallback
+}
+
+function Get-XmlNodeText($Document, [string]$XPath) {
+  if (-not $Document) {
+    return $null
+  }
+  $node = $Document.SelectSingleNode($XPath)
+  if ($node) {
+    return $node.InnerText
+  }
+  return $null
 }
 
 function Noise([double]$X, [double]$Y, [double]$Seed) {
@@ -112,6 +139,108 @@ function Convert-ToUrlPath([string]$RelativePath) {
 
   $segments = $RelativePath -split "[\\/]+" | Where-Object { $_ }
   return "/" + (($segments | ForEach-Object { [System.Uri]::EscapeDataString($_) }) -join "/")
+}
+
+function Read-PlanningOrthophotoWorldFile([string]$Path) {
+  if (-not [System.IO.File]::Exists($Path)) {
+    return $null
+  }
+
+  $lines = Get-Content -LiteralPath $Path | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+  if ($lines.Count -lt 6) {
+    return $null
+  }
+
+  return @{
+    pixelSizeX = Convert-ToInvariantDouble $lines[0]
+    rotationX = Convert-ToInvariantDouble $lines[1]
+    rotationY = Convert-ToInvariantDouble $lines[2]
+    pixelSizeY = Convert-ToInvariantDouble $lines[3]
+    originX = Convert-ToInvariantDouble $lines[4]
+    originY = Convert-ToInvariantDouble $lines[5]
+  }
+}
+
+function Get-PlanningOrthophotoInfo() {
+  $cacheKey = "planning|orthophoto"
+  $cached = Get-Cached $cacheKey 3600
+  if ($cached) {
+    return $cached
+  }
+
+  $tifPath = $PlanningOrthophoto.tifPath
+  if (-not [System.IO.File]::Exists($tifPath)) {
+    $payload = @{
+      available = $false
+      label = $PlanningOrthophoto.label
+      tifPath = $tifPath
+      message = "No se encontro la ortofoto local de Machachi."
+    }
+    Set-Cached $cacheKey $payload
+    return $payload
+  }
+
+  $file = Get-Item -LiteralPath $tifPath
+  $world = Read-PlanningOrthophotoWorldFile $PlanningOrthophoto.worldFilePath
+  $metadataXml = $null
+  if ([System.IO.File]::Exists($PlanningOrthophoto.metadataXmlPath)) {
+    try {
+      $metadataXml = [xml](Get-Content -LiteralPath $PlanningOrthophoto.metadataXmlPath -Raw)
+    } catch {
+      $metadataXml = $null
+    }
+  }
+
+  $west = Convert-ToInvariantDouble (Get-XmlNodeText $metadataXml "//dataExt/geoEle/GeoBndBox/westBL") ([double]::NaN)
+  $east = Convert-ToInvariantDouble (Get-XmlNodeText $metadataXml "//dataExt/geoEle/GeoBndBox/eastBL") ([double]::NaN)
+  $south = Convert-ToInvariantDouble (Get-XmlNodeText $metadataXml "//dataExt/geoEle/GeoBndBox/southBL") ([double]::NaN)
+  $north = Convert-ToInvariantDouble (Get-XmlNodeText $metadataXml "//dataExt/geoEle/GeoBndBox/northBL") ([double]::NaN)
+  $pixelResolutionM = if ($world) {
+    [Math]::Round([Math]::Abs([double]$world.pixelSizeX), 4)
+  } else {
+    [Math]::Round([Math]::Abs((Convert-ToInvariantDouble (Get-XmlNodeText $metadataXml "//axisDimension[@type='002']/dimResol/value") 0)), 4)
+  }
+
+  $payload = @{
+    available = $true
+    label = $PlanningOrthophoto.label
+    tifPath = $tifPath
+    tifName = $file.Name
+    sizeBytes = [int64]$file.Length
+    sizeGb = [Math]::Round($file.Length / 1GB, 2)
+    modifiedAt = $file.LastWriteTime.ToString("o")
+    worldFileAvailable = [bool][System.IO.File]::Exists($PlanningOrthophoto.worldFilePath)
+    metadataAvailable = [bool]$metadataXml
+    projection = (Get-XmlNodeText $metadataXml "//coordRef/projcsn")
+    epsg = (Get-XmlNodeText $metadataXml "//refSysInfo/RefSystem/refSysID/identCode")
+    width = [int](Convert-ToInvariantDouble (Get-XmlNodeText $metadataXml "//axisDimension[@type='002']/dimSize") 0)
+    height = [int](Convert-ToInvariantDouble (Get-XmlNodeText $metadataXml "//axisDimension[@type='001']/dimSize") 0)
+    bands = [int](Convert-ToInvariantDouble (Get-XmlNodeText $metadataXml "//RasterProperties/General/NumBands") 0)
+    pixelDepth = [int](Convert-ToInvariantDouble (Get-XmlNodeText $metadataXml "//RasterProperties/General/PixelDepth") 0)
+    resolutionM = $pixelResolutionM
+    resolutionCm = if ($pixelResolutionM -gt 0) { [Math]::Round($pixelResolutionM * 100, 2) } else { 0 }
+    bounds = if ([double]::IsNaN($west) -or [double]::IsNaN($east) -or [double]::IsNaN($south) -or [double]::IsNaN($north)) {
+      $null
+    } else {
+      @{
+        west = $west
+        east = $east
+        south = $south
+        north = $north
+      }
+    }
+    directWebReady = $false
+    recommendedMode = "local-preview-or-tiles"
+    previewUrl = "./public-data/planning3d/machachi_orthophoto_center.jpg"
+    message = if ($pixelResolutionM -gt 0) {
+      "Ortofoto local detectada con resolucion aproximada de $([Math]::Round($pixelResolutionM * 100, 2)) cm por pixel. Conviene servirla como preview liviano o teselas locales, no abrir el TIFF crudo en navegador."
+    } else {
+      "Ortofoto local detectada. Conviene servirla como preview liviano o teselas locales, no abrir el TIFF crudo en navegador."
+    }
+  }
+
+  Set-Cached $cacheKey $payload
+  return $payload
 }
 
 function Resolve-ProjectFile([string]$RequestPath) {
@@ -611,6 +740,7 @@ function Get-Planning3dManifest() {
   $buildingSchema = if ($buildings) { Get-DbfSchema $buildings.dbfPath } else { $null }
   $parcelSchema = if ($parcels) { Get-DbfSchema $parcels.dbfPath } else { $null }
   $buildingMeta = if ($buildings) { Get-Building3dMetadata } else { $null }
+  $orthophoto = Get-PlanningOrthophotoInfo
 
   $payload = @{
     ok = $true
@@ -632,6 +762,7 @@ function Get-Planning3dManifest() {
       bounds = if ($parcels) { Get-ShapefileBounds $parcels.shpPath } else { $null }
       recordCount = if ($parcelSchema) { $parcelSchema.RecordCount } else { 0 }
     }
+    orthophoto = $orthophoto
   }
 
   Set-Cached $cacheKey $payload

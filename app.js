@@ -1264,7 +1264,7 @@ const planning3dPublishedView = {
 };
 
 const planning3dPublishedSatelliteFallback = {
-  url: "./public-data/planning3d/machachi_satellite_fallback.jpg",
+  url: "./public-data/planning3d/machachi_orthophoto_center.jpg",
   coordinates: [
     [-78.5687255859375, -0.508111015572299],
     [-78.563232421875, -0.508111015572299],
@@ -1722,6 +1722,14 @@ function getPlanning3dFallbackManifest() {
       label: planning3dCatalog.parcels.label,
       basePath: planning3dCatalog.parcels.basePath,
       recordCount: planning3dCatalog.parcels.publicRecordCount || null,
+    },
+    orthophoto: {
+      available: true,
+      label: "Ortofoto Machachi",
+      resolutionCm: 5.88,
+      sizeGb: 10.6,
+      previewUrl: "./public-data/planning3d/machachi_orthophoto_center.jpg",
+      message: "Ortofoto local de alta resolucion disponible como preview ligero del centro de Machachi para el visor 3D.",
     },
   };
 }
@@ -5779,12 +5787,17 @@ function renderPlanning3dPanel() {
   const buildingsReady = !!manifest.buildings?.available;
   const parcelsReady = !!manifest.parcels?.available;
   const stats = manifest.buildings?.stats || null;
+  const orthophoto = manifest.orthophoto || null;
+  const orthophotoReady = !!orthophoto?.available;
   const usingPublishedRealData = !manifest.viaBackend && planning3dState.backendMode === "public";
   const backendCopy = manifest.viaBackend
     ? "Backend local activo: pisos y alturas reales leidos desde el DBF de construcciones."
     : usingPublishedRealData
       ? "Modo publicado con GeoJSON real: huellas de construcciones y catastro servidas como capas publicas listas para el mapa satelital."
       : "Modo publicado: si no activas server.ps1 el visor usa alturas estimadas y, si hace falta, una muestra 3D ligera para no bloquear la carga.";
+  const orthophotoCopy = orthophotoReady
+    ? ` Ortofoto local detectada: ${orthophoto.resolutionCm ? `${orthophoto.resolutionCm} cm/pixel` : "alta resolucion"} y preview ligero listo para base urbana del visor 3D.`
+    : "";
 
   dom.planning3dAvailability.classList.remove("empty-state");
   dom.planning3dAvailability.classList.add("has-data");
@@ -5803,11 +5816,15 @@ function renderPlanning3dPanel() {
         <strong>${stats?.meanFloors ? `${stats.meanFloors}` : "Estimado"}</strong>
       </article>
       <article class="planning-3d-stat">
+        <span>Ortofoto</span>
+        <strong>${orthophotoReady ? `${orthophoto.resolutionCm || "alta"} cm` : "No detectada"}</strong>
+      </article>
+      <article class="planning-3d-stat">
         <span>Modo</span>
         <strong>${manifest.viaBackend ? "DBF + shapes" : usingPublishedRealData ? "GeoJSON publico real" : "Fallback demo"}</strong>
       </article>
     </div>
-    <p class="planning-3d-meta">${backendCopy}</p>
+    <p class="planning-3d-meta">${backendCopy}${orthophotoCopy}</p>
   `);
 
   if (dom.openPlanning3dBtn) {
@@ -6016,11 +6033,11 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
           visibility: isSatellite ? "visible" : "none",
         },
         paint: {
-          "raster-opacity": 0.88,
-          "raster-saturation": 0.24,
-          "raster-contrast": 0.18,
+          "raster-opacity": 0.34,
+          "raster-saturation": 0.1,
+          "raster-contrast": 0.1,
           "raster-brightness-min": 0.06,
-          "raster-brightness-max": 1.02,
+          "raster-brightness-max": 0.98,
           "raster-resampling": "linear",
         },
       },
@@ -6032,11 +6049,11 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
           visibility: isSatellite ? "visible" : "none",
         },
         paint: {
-          "raster-opacity": 0.72,
-          "raster-saturation": 0.12,
-          "raster-contrast": 0.2,
-          "raster-brightness-min": 0.12,
-          "raster-brightness-max": 0.98,
+          "raster-opacity": 0.98,
+          "raster-saturation": 0.14,
+          "raster-contrast": 0.22,
+          "raster-brightness-min": 0.1,
+          "raster-brightness-max": 1,
           "raster-resampling": "linear",
           "raster-fade-duration": 0,
         },
@@ -8193,6 +8210,15 @@ async function openPlanning3dViewer() {
     hydratePlanning3dTextureCatalog();
 
     await manifestPromise;
+    const orthophoto = getPlanning3dManifest().orthophoto || null;
+    if (dom.planning3dSubtitle) {
+      setTextIfChanged(
+        dom.planning3dSubtitle,
+        orthophoto?.available
+          ? `Huellas reales de construcciones extruidas por n_piso, soporte catastral y ortofoto local de ${orthophoto.resolutionCm || "alta"} cm para lectura espacial fina.`
+          : "Huellas reales de construcciones extruidas por n_piso, soporte catastral y lectura espacial sobre satelite."
+      );
+    }
     await ensurePlanning3dDataset("buildings", !planning3dState.sourceData.buildings?.features?.length);
 
     if (planning3dState.parcelsVisible) {
@@ -8281,6 +8307,7 @@ async function reloadPlanning3dData() {
 
 function renderPlanningModule() {
   const imageryProfile = getPlanningImageryProfile();
+  const orthophoto = getPlanning3dManifest().orthophoto || null;
   renderPlanningVariableMatrix();
   renderPlanning3dPanel();
   if (dom.planningImagerySelect) {
@@ -8302,7 +8329,10 @@ function renderPlanningModule() {
     dom.clearPlanningBtn.disabled = !state.planningData;
   }
   if (dom.planningSourceNote) {
-    setTextIfChanged(dom.planningSourceNote, `${imageryProfile.label}: ${imageryProfile.useCopy} Resolucion ${imageryProfile.spatialLabel} y frecuencia ${imageryProfile.temporalLabel}.`);
+    const orthophotoNote = orthophoto?.available
+      ? ` Ortofoto Machachi local disponible: ${orthophoto.resolutionCm ? `${orthophoto.resolutionCm} cm/pixel` : "alta resolucion"} para validacion fina de lotes, cubiertas, vias y equipamientos.`
+      : "";
+    setTextIfChanged(dom.planningSourceNote, `${imageryProfile.label}: ${imageryProfile.useCopy} Resolucion ${imageryProfile.spatialLabel} y frecuencia ${imageryProfile.temporalLabel}.${orthophotoNote}`);
   }
   if (state.entryRoute === "planificacion" && !state.planningData) {
     updateMapSummary();

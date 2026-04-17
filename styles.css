@@ -1921,7 +1921,7 @@ button {
   inset: -7% -5% -2%;
   z-index: 0;
   pointer-events: none;
-  background-image: url("./public-data/planning3d/machachi_satellite_fallback.jpg");
+  background-image: url("./public-data/planning3d/machachi_orthophoto_center.jpg");
   background-size: cover;
   background-position: center 46%;
   background-repeat: no-repeat;
