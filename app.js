@@ -1273,6 +1273,13 @@ const planning3dPublishedSatelliteFallback = {
   ],
 };
 
+const planning3dPublishedOrthophotoTiles = {
+  tiles: ["./public-data/planning3d/machachi_orthophoto_tiles/{z}/{x}/{y}.jpg"],
+  bounds: [-78.5687255859375, -0.513603961287338, -78.563232421875, -0.508111015572299],
+  minzoom: 16,
+  maxzoom: 20,
+};
+
 const planning3dBasemapWarmup = {
   satellite: null,
   light: null,
@@ -5996,6 +6003,15 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
         tileSize: 256,
         attribution: "OpenStreetMap",
       },
+      "planning3d-basemap-orthophoto": {
+        type: "raster",
+        tiles: planning3dPublishedOrthophotoTiles.tiles,
+        tileSize: 256,
+        bounds: planning3dPublishedOrthophotoTiles.bounds,
+        minzoom: planning3dPublishedOrthophotoTiles.minzoom,
+        maxzoom: planning3dPublishedOrthophotoTiles.maxzoom,
+        attribution: "Ortofoto local Machachi",
+      },
       "planning3d-basemap-satellite-preview": {
         type: "image",
         url: planning3dPublishedSatelliteFallback.url,
@@ -6042,6 +6058,23 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
         },
       },
       {
+        id: "planning3d-basemap-orthophoto",
+        type: "raster",
+        source: "planning3d-basemap-orthophoto",
+        layout: {
+          visibility: isSatellite ? "visible" : "none",
+        },
+        paint: {
+          "raster-opacity": 1,
+          "raster-saturation": 0.12,
+          "raster-contrast": 0.18,
+          "raster-brightness-min": 0.08,
+          "raster-brightness-max": 1,
+          "raster-resampling": "linear",
+          "raster-fade-duration": 0,
+        },
+      },
+      {
         id: "planning3d-basemap-satellite-preview",
         type: "raster",
         source: "planning3d-basemap-satellite-preview",
@@ -6049,7 +6082,7 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
           visibility: isSatellite ? "visible" : "none",
         },
         paint: {
-          "raster-opacity": 0.98,
+          "raster-opacity": 0,
           "raster-saturation": 0.14,
           "raster-contrast": 0.22,
           "raster-brightness-min": 0.1,
@@ -6107,6 +6140,7 @@ function updatePlanning3dBasemapStyle() {
   [
     ["planning3d-basemap-light", !isSatellite],
     ["planning3d-basemap-satellite", isSatellite],
+    ["planning3d-basemap-orthophoto", isSatellite],
     ["planning3d-basemap-satellite-preview", isSatellite],
   ].forEach(([layerId, visible]) => {
     if (planning3dState.map?.getLayer(layerId)) {
