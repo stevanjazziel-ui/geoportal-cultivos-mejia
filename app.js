@@ -1258,9 +1258,9 @@ const planning3dCatalog = {
 
 const planning3dPublishedView = {
   center: [-78.5662, -0.5106],
-  zoom: 18.25,
-  pitch: 67,
-  bearing: -24,
+  zoom: 18.3,
+  pitch: 0,
+  bearing: 0,
 };
 
 const planning3dPublishedSatelliteFallback = {
@@ -6355,8 +6355,10 @@ async function initializePlanning3dMap() {
     antialias: true,
     fadeDuration: 0,
     refreshExpiredTiles: false,
+    dragRotate: false,
+    pitchWithRotate: false,
   });
-  planning3dState.map.addControl(new window.maplibregl.NavigationControl({ visualizePitch: true }), "top-left");
+  planning3dState.map.addControl(new window.maplibregl.NavigationControl({ visualizePitch: false }), "top-left");
   planning3dState.map.on("moveend", queuePlanning3dSvgSceneSync);
   planning3dState.map.on("zoomend", queuePlanning3dSvgSceneSync);
   planning3dState.map.on("rotateend", queuePlanning3dSvgSceneSync);
@@ -8073,8 +8075,8 @@ function focusPlanning3dDemoView() {
   planning3dState.map.easeTo({
     center,
     zoom: 17.1,
-    pitch: 66,
-    bearing: -24,
+    pitch: 0,
+    bearing: 0,
     duration: 760,
     essential: true,
   });
@@ -8156,9 +8158,9 @@ function focusPlanning3dDataset() {
       ? { top: 72, right: 380, bottom: 72, left: 72 }
       : 56,
     duration: 720,
-    pitch: 58,
-    bearing: -18,
-    maxZoom: state.planningData?.candidates?.length ? 15.6 : 17.4,
+    pitch: 0,
+    bearing: 0,
+    maxZoom: state.planningData?.candidates?.length ? 16.2 : 18.2,
     essential: true,
   });
 
@@ -8167,8 +8169,8 @@ function focusPlanning3dDataset() {
       return;
     }
     planning3dState.map.easeTo({
-      pitch: 58,
-      bearing: -18,
+      pitch: 0,
+      bearing: 0,
       duration: 280,
       essential: true,
     });
