@@ -1623,6 +1623,16 @@ button {
   border-radius: var(--radius-md);
   border: 1px solid rgba(47, 61, 50, 0.08);
   background: rgba(255, 255, 255, 0.8);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.scenario-card[data-compare-module] {
+  cursor: pointer;
+}
+
+.scenario-card[data-compare-module]:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(24, 84, 65, 0.08);
 }
 
 .scenario-card.active {

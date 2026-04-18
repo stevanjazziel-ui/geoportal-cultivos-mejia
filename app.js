@@ -1805,6 +1805,8 @@ const planning3dAreaCatalog = {
     label: "Machachi",
     shortLabel: "Machachi",
     subtitle: "Huellas reales de construcciones extruidas por n_piso, soporte catastral y base OpenStreetMap para lectura urbana en Machachi.",
+    previewBuildingsPath: "./public-data/planning3d/buildings_machachi_preview.geojson",
+    previewParcelsPath: "./public-data/planning3d/parcels_machachi_preview.geojson",
     buildingsPath: "./public-data/planning3d/buildings_orthophoto.geojson",
     parcelsPath: "./public-data/planning3d/parcels_orthophoto.geojson",
     buildingsCount: 17223,
@@ -1824,6 +1826,8 @@ const planning3dAreaCatalog = {
     label: "Cutuglagua",
     shortLabel: "Cutuglagua",
     subtitle: "Huellas reales de construcciones extruidas por n_piso, soporte catastral y base OpenStreetMap para lectura urbana en Cutuglagua.",
+    previewBuildingsPath: "./public-data/planning3d/buildings_cutuglagua_preview.geojson",
+    previewParcelsPath: "./public-data/planning3d/parcels_cutuglagua_preview.geojson",
     buildingsPath: "./public-data/planning3d/buildings_cutuglagua.geojson",
     parcelsPath: "./public-data/planning3d/parcels_cutuglagua.geojson",
     buildingsCount: 2523,
@@ -1855,11 +1859,11 @@ function getPlanning3dAreaProfile(areaId = planning3dState?.areaId || "machachi"
 
 function applyPlanning3dAreaProfile(areaId = planning3dState?.areaId || "machachi") {
   const profile = getPlanning3dAreaProfile(areaId);
-  planning3dCatalog.buildings.previewDataPath = profile.buildingsPath;
+  planning3dCatalog.buildings.previewDataPath = profile.previewBuildingsPath || profile.buildingsPath;
   planning3dCatalog.buildings.publicDataPath = profile.buildingsPath;
   planning3dCatalog.buildings.publicRecordCount = profile.buildingsCount;
   planning3dCatalog.buildings.description = profile.buildingsDescription;
-  planning3dCatalog.parcels.previewDataPath = profile.parcelsPath;
+  planning3dCatalog.parcels.previewDataPath = profile.previewParcelsPath || profile.parcelsPath;
   planning3dCatalog.parcels.publicDataPath = profile.parcelsPath;
   planning3dCatalog.parcels.publicRecordCount = profile.parcelsCount;
   planning3dCatalog.parcels.description = profile.parcelsDescription;
@@ -2070,7 +2074,7 @@ const planning3dState = {
   textureCatalogPromise: null,
   textureSource: "fallback",
   buildingsVisible: true,
-  parcelsVisible: true,
+  parcelsVisible: false,
   heightScale: 1,
   shadowsVisible: false,
   sunDate: "",
@@ -2096,6 +2100,10 @@ const planning3dState = {
     parcels: 0,
   },
   datasetWorkers: {
+    buildings: null,
+    parcels: null,
+  },
+  publicUpgradeTimers: {
     buildings: null,
     parcels: null,
   },
@@ -3546,6 +3554,7 @@ function bindUI() {
   dom.planningCandidates?.addEventListener("click", handlePlanningCandidatesInteraction);
   dom.landChangeSectors?.addEventListener("click", handleLandChangeSectorsInteraction);
   dom.hydrologySectors?.addEventListener("click", handleHydrologySectorsInteraction);
+  dom.territorialScenarioCompare?.addEventListener("click", handleTerritorialScenarioCompareInteraction);
   dom.territorialSectorSheets?.addEventListener("click", handleTerritorialSectorSheetsInteraction);
   dom.territorialExportPanel?.addEventListener("click", handleTerritorialExportInteraction);
   dom.wizardModes?.addEventListener("click", handleWizardModeInteraction);
@@ -4059,9 +4068,10 @@ function handleTerritorialExportInteraction(event) {
   }
 
   const format = button.dataset.exportFormat;
+  const areaSlug = getTerritorialExportSlug();
   if (format === "csv") {
     downloadTerritorialFile(
-      `mejia_territorial_${formatDateInput(new Date())}.csv`,
+      `${areaSlug}_territorial_${formatDateInput(new Date())}.csv`,
       buildTerritorialCsvExport(),
       "text/csv;charset=utf-8"
     );
@@ -4070,7 +4080,7 @@ function handleTerritorialExportInteraction(event) {
 
   if (format === "geojson") {
     downloadTerritorialFile(
-      `mejia_territorial_${formatDateInput(new Date())}.geojson`,
+      `${areaSlug}_territorial_${formatDateInput(new Date())}.geojson`,
       JSON.stringify(buildTerritorialGeoJsonExport(), null, 2),
       "application/geo+json;charset=utf-8"
     );
@@ -4079,6 +4089,57 @@ function handleTerritorialExportInteraction(event) {
 
   if (format === "report") {
     openTerritorialReport();
+  }
+}
+
+function handleTerritorialScenarioCompareInteraction(event) {
+  const card = event.target.closest("[data-compare-module][data-compare-id]");
+  if (!card || !dom.territorialScenarioCompare?.contains(card)) {
+    return;
+  }
+
+  const moduleId = card.dataset.compareModule;
+  const compareId = card.dataset.compareId;
+  if (!moduleId || !compareId) {
+    return;
+  }
+
+  if (moduleId === "planning") {
+    state.planningGrowthScenarioId = compareId;
+    if (dom.planningGrowthSelect) {
+      dom.planningGrowthSelect.value = compareId;
+    }
+    renderPlanningModule();
+    if (state.planningData) {
+      runPlanningAnalysis(true);
+    }
+    setStatus(`Comparador territorial ajustado a ${getPlanningScenario(compareId).label.toLowerCase()} para aptitud urbana.`);
+    return;
+  }
+
+  if (moduleId === "landChange") {
+    state.landChangeScenarioId = compareId;
+    if (dom.landChangeScenarioSelect) {
+      dom.landChangeScenarioSelect.value = compareId;
+    }
+    renderPlanningModule();
+    if (state.landChangeData) {
+      runLandChangeAnalysis(true);
+    }
+    setStatus(`Comparador territorial ajustado a ${getLandChangeScenarioProfile(compareId).label.toLowerCase()} para huella urbana.`);
+    return;
+  }
+
+  if (moduleId === "hydrology") {
+    state.hydrologyClimateId = compareId;
+    if (dom.hydrologyClimateSelect) {
+      dom.hydrologyClimateSelect.value = compareId;
+    }
+    renderPlanningModule();
+    if (state.hydrologyData) {
+      runHydrologyAnalysis(true);
+    }
+    setStatus(`Comparador territorial ajustado a ${getHydrologyClimateProfile(compareId).label.toLowerCase()} para seguridad hidrica.`);
   }
 }
 
@@ -7144,6 +7205,15 @@ function renderPlanning3dPanel() {
   }
   const areaProfile = getPlanning3dAreaProfile();
   syncTerritorialAreaSelects();
+  if (dom.planning3dBuildingsToggle) {
+    dom.planning3dBuildingsToggle.checked = planning3dState.buildingsVisible;
+  }
+  if (dom.planning3dParcelsToggle) {
+    dom.planning3dParcelsToggle.checked = planning3dState.parcelsVisible;
+  }
+  if (dom.planning3dShadowsToggle) {
+    dom.planning3dShadowsToggle.checked = planning3dState.shadowsVisible;
+  }
 
   if (planning3dState.manifestLoading && !planning3dState.manifest) {
     dom.planning3dAvailability.classList.add("empty-state");
@@ -8246,6 +8316,14 @@ function normalizePlanning3dPublicCollection(datasetKey, collection) {
   };
 }
 
+function clearPlanning3dPublicUpgradeTimer(datasetKey) {
+  const timer = planning3dState.publicUpgradeTimers?.[datasetKey];
+  if (timer) {
+    window.clearTimeout(timer);
+    planning3dState.publicUpgradeTimers[datasetKey] = null;
+  }
+}
+
 function updatePlanning3dManifestFromPublicCollection(datasetKey, collection, options = {}) {
   const manifest = getPlanning3dManifest();
   if (!manifest?.[datasetKey]) {
@@ -8300,6 +8378,78 @@ async function loadPlanning3dPublicGeoJson(datasetKey, mode = "full") {
   return normalizePlanning3dPublicCollection(datasetKey, payload);
 }
 
+function queuePlanning3dPublicDatasetUpgrade(datasetKey, requestId) {
+  const datasetConfig = planning3dCatalog[datasetKey];
+  if (
+    datasetKey !== "buildings"
+    || !datasetConfig?.publicDataPath
+    || datasetConfig.publicDataPath === datasetConfig.previewDataPath
+  ) {
+    return;
+  }
+
+  clearPlanning3dPublicUpgradeTimer(datasetKey);
+  planning3dState.publicUpgradeTimers[datasetKey] = window.setTimeout(async () => {
+    planning3dState.publicUpgradeTimers[datasetKey] = null;
+    if (planning3dState.datasetRequestId[datasetKey] !== requestId) {
+      return;
+    }
+
+    const previewCount = Number(planning3dState.datasetStatus[datasetKey]?.previewCount) || 0;
+    const total = datasetConfig.publicRecordCount || previewCount;
+    setPlanning3dDatasetStatus(datasetKey, {
+      phase: "building",
+      loaded: previewCount,
+      total,
+      previewCount,
+    });
+    setPlanning3dStatus(
+      "Refinando el tejido urbano completo en segundo plano para mejorar el detalle del visor 3D sin bloquear la navegacion.",
+      "loading"
+    );
+
+    try {
+      const fullCollection = await loadPlanning3dPublicGeoJson(datasetKey, "full");
+      if (planning3dState.datasetRequestId[datasetKey] !== requestId) {
+        return;
+      }
+
+      planning3dState.backendMode = "public";
+      planning3dState.sourceData[datasetKey] = fullCollection;
+      updatePlanning3dManifestFromPublicCollection(datasetKey, fullCollection, {
+        recordCountOverride: datasetConfig.publicRecordCount || fullCollection.features.length,
+      });
+      syncPlanning3dSource(datasetKey);
+      setPlanning3dDatasetStatus(datasetKey, {
+        phase: "ready",
+        loaded: fullCollection.features.length,
+        total: datasetConfig.publicRecordCount || fullCollection.features.length,
+        previewCount,
+      });
+      renderPlanning3dSummary();
+      renderPlanning3dSelection();
+      setPlanning3dStatus(
+        `Detalle urbano completo listo: ${formatPlanning3dCount(fullCollection.features.length)} construcciones reales visibles sobre la base OpenStreetMap.`,
+        "real"
+      );
+    } catch (error) {
+      if (planning3dState.datasetRequestId[datasetKey] !== requestId) {
+        return;
+      }
+      setPlanning3dDatasetStatus(datasetKey, {
+        phase: "ready",
+        loaded: previewCount,
+        total: previewCount,
+        previewCount,
+      });
+      setPlanning3dStatus(
+        `Se mantuvo la vista ligera publicada porque el detalle completo no pudo terminar de cargar: ${error.message}`,
+        "demo"
+      );
+    }
+  }, 900);
+}
+
 async function loadPlanning3dBuildingMetadata() {
   const manifest = getPlanning3dManifest();
   if (!manifest.viaBackend) {
@@ -8351,6 +8501,7 @@ async function ensurePlanning3dDataset(datasetKey, force = false) {
     return planning3dState.sourceData[datasetKey];
   }
 
+  clearPlanning3dPublicUpgradeTimer(datasetKey);
   const requestId = (planning3dState.datasetRequestId[datasetKey] || 0) + 1;
   planning3dState.datasetRequestId[datasetKey] = requestId;
   const isActiveRequest = () => planning3dState.datasetRequestId[datasetKey] === requestId;
@@ -8419,6 +8570,7 @@ async function ensurePlanning3dDataset(datasetKey, force = false) {
             : `Catastro urbano publicado listo: ${formatPlanning3dCount(previewCollection.features.length)} predios reales visibles para referencia parcelaria.`,
           "real"
         );
+        queuePlanning3dPublicDatasetUpgrade(datasetKey, requestId);
         return previewCollection;
       }
 
@@ -8797,6 +8949,13 @@ function shouldRenderPlanning3dDomMarkers() {
   return buildingCount <= 900;
 }
 
+function hasPlanning3dNativeBuildingScene() {
+  return Boolean(
+    planning3dState.map?.getLayer?.("planning3d-buildings-fill")
+    && planning3dState.sourceData.buildings?.features?.length
+  );
+}
+
 function buildPlanning3dDomMarkerElement(feature) {
   const element = document.createElement("button");
   element.type = "button";
@@ -8977,6 +9136,9 @@ function isPlanning3dOrthographicView() {
 function shouldRenderPlanning3dSvgScene() {
   const buildingCount = planning3dState.sourceData.buildings?.features?.length || 0;
   const zoom = planning3dState.map?.getZoom?.() || 0;
+  if (hasPlanning3dNativeBuildingScene()) {
+    return false;
+  }
   return Boolean(
     dom.planning3dMap
     && planning3dState.modalOpen
@@ -9404,32 +9566,38 @@ function renderPlanning3dDomMarkers() {
 }
 
 function syncPlanning3dLayerVisibility() {
+  const showBuildings = planning3dState.buildingsVisible;
+  const orthographic = isPlanning3dOrthographicView();
+  const showFootprints = showBuildings && orthographic;
+  const showExtrusions = showBuildings && !orthographic;
+  const showOutlines = showBuildings && !orthographic;
+
   if (planning3dState.map?.getLayer("planning3d-buildings-footprint")) {
     planning3dState.map.setLayoutProperty(
       "planning3d-buildings-footprint",
       "visibility",
-      planning3dState.buildingsVisible ? "visible" : "none"
+      showFootprints ? "visible" : "none"
     );
   }
   if (planning3dState.map?.getLayer("planning3d-buildings-outline-glow")) {
     planning3dState.map.setLayoutProperty(
       "planning3d-buildings-outline-glow",
       "visibility",
-      planning3dState.buildingsVisible ? "visible" : "none"
+      showOutlines ? "visible" : "none"
     );
   }
   if (planning3dState.map?.getLayer("planning3d-buildings-fill")) {
     planning3dState.map.setLayoutProperty(
       "planning3d-buildings-fill",
       "visibility",
-      planning3dState.buildingsVisible ? "visible" : "none"
+      showExtrusions ? "visible" : "none"
     );
   }
   if (planning3dState.map?.getLayer("planning3d-buildings-outline")) {
     planning3dState.map.setLayoutProperty(
       "planning3d-buildings-outline",
       "visibility",
-      planning3dState.buildingsVisible ? "visible" : "none"
+      showOutlines ? "visible" : "none"
     );
   }
   if (planning3dState.map?.getLayer("planning3d-parcels-line")) {
@@ -9448,7 +9616,9 @@ function syncPlanning3dLayerVisibility() {
 }
 
 function updatePlanning3dHeightScale() {
-  queuePlanning3dSvgSceneSync();
+  if (!hasPlanning3dNativeBuildingScene()) {
+    queuePlanning3dSvgSceneSync();
+  }
   if (!planning3dState.map?.getLayer("planning3d-buildings-fill")) {
     queuePlanning3dShadowSync();
     renderPlanning3dDomMarkers();
@@ -9577,6 +9747,9 @@ function renderPlanning3dSummary(force = false) {
         : buildingStatus?.phase === "building"
           ? ` El visor sigue refinando el detalle completo en segundo plano para no bloquear la navegacion inicial.`
           : ""}
+      ${!planning3dState.parcelsVisible
+        ? " El catastro queda apagado al inicio para que la navegacion 3D abra mas fluida; puedes activarlo cuando necesites leer lotes."
+        : ""}
       ${photoStatus
         ? (photoStatus.indexing
           ? ` ${photoStatus.message || "Las fotos se estan indexando en segundo plano para habilitar la galeria local."}`
@@ -10030,6 +10203,8 @@ async function openPlanning3dViewer() {
 
 function closePlanning3dViewer(silent = false) {
   planning3dState.modalOpen = false;
+  clearPlanning3dPublicUpgradeTimer("buildings");
+  clearPlanning3dPublicUpgradeTimer("parcels");
   dom.planning3dModal?.classList.add("hidden");
   if (dom.planning3dModal) {
     dom.planning3dModal.setAttribute("aria-hidden", "true");
@@ -10044,6 +10219,8 @@ function closePlanning3dViewer(silent = false) {
 async function reloadPlanning3dData() {
   terminatePlanning3dWorker("buildings");
   terminatePlanning3dWorker("parcels");
+  clearPlanning3dPublicUpgradeTimer("buildings");
+  clearPlanning3dPublicUpgradeTimer("parcels");
   clearPlanning3dSvgScene();
   clearPlanning3dDomMarkers();
   planning3dState.manifest = null;
@@ -12304,6 +12481,15 @@ function escapeCsvValue(value) {
   return `"${text.replace(/"/g, "\"\"")}"`;
 }
 
+function getTerritorialExportSlug() {
+  return getTerritorialAreaProfile().scopeLabel
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "") || "mejia";
+}
+
 function buildTerritorialCsvExport() {
   const rows = [["modulo", "id", "nombre", "estado", "valor_1", "valor_2", "detalle"]];
 
@@ -12422,12 +12608,13 @@ function buildTerritorialReportHtml() {
   const snapshot = buildTerritorialDecisionSnapshot();
   const sheets = buildTerritorialSectorSheets();
   const today = new Date();
+  const areaProfile = getTerritorialAreaProfile();
 
   return `<!doctype html>
   <html lang="es">
     <head>
       <meta charset="utf-8">
-      <title>Informe territorial Mejia</title>
+      <title>Informe territorial ${escapeHtmlContent(areaProfile.scopeLabel)}</title>
       <style>
         body { font-family: Arial, sans-serif; margin: 28px; color: #243129; }
         h1, h2, h3 { margin: 0 0 12px; }
@@ -12445,9 +12632,9 @@ function buildTerritorialReportHtml() {
       </style>
     </head>
     <body>
-      <p class="kicker">Geoportal territorial Mejia</p>
+      <p class="kicker">Geoportal territorial ${escapeHtmlContent(areaProfile.scopeLabel)}</p>
       <h1>Informe ejecutivo territorial</h1>
-      <p>Generado el ${escapeHtmlContent(today.toLocaleString("es-EC"))} con la corrida territorial activa del geoportal.</p>
+      <p>Generado el ${escapeHtmlContent(today.toLocaleString("es-EC"))} con la corrida territorial activa sobre ${escapeHtmlContent(areaProfile.scopeLabel)}.</p>
       ${snapshot ? `
         <section>
           <p class="kicker">Semaforo integrado</p>
@@ -12988,6 +13175,7 @@ function renderTerritorialScenarioCompare() {
   }
 
   const comparison = buildTerritorialScenarioCompareData();
+  const areaProfile = getTerritorialAreaProfile();
   if (!comparison) {
     dom.territorialScenarioCompare.classList.add("empty-state");
     dom.territorialScenarioCompare.classList.remove("has-data");
@@ -13009,12 +13197,12 @@ function renderTerritorialScenarioCompare() {
           <div>
             <p class="section-kicker">Planeamiento</p>
             <h4>Aptitud por escenario</h4>
-            <p>Compara suelo clase A, puntaje multicriterio y numero de candidatos bajo los tres marcos de crecimiento.</p>
+            <p>Compara suelo clase A, puntaje multicriterio y numero de candidatos bajo los tres marcos de crecimiento en ${areaProfile.scopeLabel}.</p>
           </div>
         </div>
         <div class="scenario-grid">
           ${comparison.planning.map((item) => `
-            <article class="scenario-card ${item.active ? "active" : ""}">
+            <article class="scenario-card ${item.active ? "active" : ""}" data-compare-module="planning" data-compare-id="${item.id}">
               <div class="scenario-card-head">
                 <div>
                   <p class="candidate-rank">Escenario</p>
@@ -13044,12 +13232,12 @@ function renderTerritorialScenarioCompare() {
           <div>
             <p class="section-kicker">Huella urbana</p>
             <h4>Expansion y riesgo</h4>
-            <p>Mide cuanto suelo se transforma y cuanta huella entra en tension preventiva segun contencion, tendencia o expansion.</p>
+            <p>Mide cuanto suelo se transforma y cuanta huella entra en tension preventiva segun contencion, tendencia o expansion sobre ${areaProfile.scopeLabel}.</p>
           </div>
         </div>
         <div class="scenario-grid">
           ${comparison.landChange.map((item) => `
-            <article class="scenario-card ${item.active ? "active" : ""}">
+            <article class="scenario-card ${item.active ? "active" : ""}" data-compare-module="landChange" data-compare-id="${item.id}">
               <div class="scenario-card-head">
                 <div>
                   <p class="candidate-rank">Escenario</p>
@@ -13079,12 +13267,12 @@ function renderTerritorialScenarioCompare() {
           <div>
             <p class="section-kicker">Seguridad hidrica</p>
             <h4>Sensibilidad climatica</h4>
-            <p>Contrasta el balance hidrico y la resiliencia media entre clima historico, mitigado e intensivo.</p>
+            <p>Contrasta el balance hidrico y la resiliencia media entre clima historico, mitigado e intensivo para ${areaProfile.scopeLabel}.</p>
           </div>
         </div>
         <div class="scenario-grid">
           ${comparison.hydrology.map((item) => `
-            <article class="scenario-card ${item.active ? "active" : ""}">
+            <article class="scenario-card ${item.active ? "active" : ""}" data-compare-module="hydrology" data-compare-id="${item.id}">
               <div class="scenario-card-head">
                 <div>
                   <p class="candidate-rank">Clima</p>
@@ -13296,6 +13484,7 @@ function renderTerritorialExportPanel() {
     return;
   }
 
+  const areaProfile = getTerritorialAreaProfile();
   const hasAnyData = Boolean(state.planningData || state.landChangeData || state.hydrologyData);
   if (!hasAnyData) {
     dom.territorialExportPanel.classList.add("empty-state");
@@ -13316,13 +13505,13 @@ function renderTerritorialExportPanel() {
       <div class="territorial-export-head">
         <div>
           <p class="section-kicker">Salida tecnica</p>
-          <h4>Exportables territoriales</h4>
+          <h4>Exportables territoriales de ${areaProfile.scopeLabel}</h4>
         </div>
         <span class="planning-pill emphasis">${exportCounts.planning + exportCounts.land + exportCounts.hydrology} fichas activas</span>
       </div>
       <p class="territorial-readout-copy">
         Descarga un consolidado tabular, una capa GeoJSON combinada o abre un informe ejecutivo con semaforo,
-        fichas y resumen territorial del escenario vigente.
+        fichas y resumen territorial del escenario vigente sobre ${areaProfile.scopeLabel}.
       </p>
       <div class="territorial-export-pills">
         <span class="planning-pill emphasis">${exportCounts.planning} candidatos</span>
