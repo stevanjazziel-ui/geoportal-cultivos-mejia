@@ -1823,6 +1823,9 @@ const mapState = {
   planningLayer: null,
   planningCandidatesLayer: null,
   planningCoverageLayer: null,
+  planningRestrictionLayer: null,
+  planningServiceLayer: null,
+  planningFacilityLayer: null,
   landChangeLayer: null,
   landChangePressureLayer: null,
   landChangeHotspotLayer: null,
@@ -3147,6 +3150,10 @@ function cacheDom() {
   dom.planningCandidates = document.querySelector("#planningCandidates");
   dom.planningSourceNote = document.querySelector("#planningSourceNote");
   dom.planningVariableMatrix = document.querySelector("#planningVariableMatrix");
+  dom.territorialScenarioCompare = document.querySelector("#territorialScenarioCompare");
+  dom.territorialReadout = document.querySelector("#territorialReadout");
+  dom.territorialSolarDate = document.querySelector("#territorialSolarDate");
+  dom.territorialSolarTime = document.querySelector("#territorialSolarTime");
   dom.landChangeResults = document.querySelector("#landChangeResults");
   dom.landChangeDoctrine = document.querySelector("#landChangeDoctrine");
   dom.landChangeDrivers = document.querySelector("#landChangeDrivers");
@@ -3398,6 +3405,8 @@ function bindUI() {
     setModulePendingState(dom.planningResults, "Calculando aptitud territorial y cruce multicriterio...", [
       { target: dom.planningWeights, message: "Recalculando ponderacion segun programa, escenario y fuente satelital..." },
       { target: dom.planningCandidates, message: "Buscando sectores candidatos con mejor ajuste territorial..." },
+      { target: dom.territorialScenarioCompare, message: "Contrastando escenarios de aptitud, huella y seguridad hidrica..." },
+      { target: dom.territorialReadout, message: "Armando restricciones, coberturas y lectura solar del suelo candidato..." },
     ]);
     return runModuleAction(dom.runPlanningBtn, "Evaluando aptitud...", () => runPlanningAnalysis());
   });
@@ -3408,6 +3417,7 @@ function bindUI() {
       { target: dom.hydrologyDrivers, message: "Cargando pilares metodologicos del estudio hidrico..." },
       { target: dom.hydrologyTimeline, message: "Proyectando horizontes hidricos y sensibilidad climatica..." },
       { target: dom.hydrologySectors, message: "Priorizando subzonas hidricas y medidas recomendadas..." },
+      { target: dom.territorialScenarioCompare, message: "Releyendo como cambia la seguridad hidrica entre climas y escenarios..." },
     ]);
     return runModuleAction(dom.runHydrologyBtn, "Simulando escenarios...", () => runHydrologyAnalysis());
   });
@@ -3445,11 +3455,24 @@ function bindUI() {
     }
   });
 
+  dom.territorialSolarDate?.addEventListener("change", () => {
+    planning3dState.sunDate = dom.territorialSolarDate.value || planning3dState.sunDate;
+    updatePlanning3dSunModel();
+    renderPlanningModule();
+  });
+
+  dom.territorialSolarTime?.addEventListener("change", () => {
+    planning3dState.sunTime = dom.territorialSolarTime.value || planning3dState.sunTime;
+    updatePlanning3dSunModel();
+    renderPlanningModule();
+  });
+
   dom.runLandChangeBtn?.addEventListener("click", () => {
     setModulePendingState(dom.landChangeResults, "Analizando huella urbana, transformacion rural y presion territorial...", [
       { target: dom.landChangeDrivers, message: "Cargando componentes metodologicos de la lectura de huella urbana..." },
       { target: dom.landChangeTimeline, message: "Reconstruyendo serie temporal 2010-2016-2022-2030..." },
       { target: dom.landChangeSectors, message: "Detectando hotspots de ocupacion, riesgo y suelo rural en tension..." },
+      { target: dom.territorialScenarioCompare, message: "Comparando huella urbana entre contencion, tendencia y expansion..." },
     ]);
     return runModuleAction(dom.runLandChangeBtn, "Analizando huella...", () => runLandChangeAnalysis());
   });
@@ -4031,6 +4054,12 @@ function setPlanning3dSunDefaults() {
   }
   if (dom.planning3dTime) {
     dom.planning3dTime.value = planning3dState.sunTime;
+  }
+  if (dom.territorialSolarDate) {
+    dom.territorialSolarDate.value = planning3dState.sunDate;
+  }
+  if (dom.territorialSolarTime) {
+    dom.territorialSolarTime.value = planning3dState.sunTime;
   }
 }
 
@@ -7102,6 +7131,12 @@ function updatePlanning3dSunModel() {
   if (dom.planning3dTime) {
     dom.planning3dTime.value = planning3dState.sunTime || dom.planning3dTime.value;
   }
+  if (dom.territorialSolarDate) {
+    dom.territorialSolarDate.value = planning3dState.sunDate || dom.territorialSolarDate.value;
+  }
+  if (dom.territorialSolarTime) {
+    dom.territorialSolarTime.value = planning3dState.sunTime || dom.territorialSolarTime.value;
+  }
   if (dom.planning3dShadowsToggle) {
     dom.planning3dShadowsToggle.checked = planning3dState.shadowsVisible;
   }
@@ -7112,6 +7147,7 @@ function updatePlanning3dSunModel() {
   syncPlanning3dShadowLayerVisibility();
   queuePlanning3dShadowSync();
   renderPlanning3dSummary();
+  renderPlanningTerritoryReadout();
 }
 
 function queuePlanning3dShadowSync() {
@@ -9628,6 +9664,8 @@ function renderPlanningModule() {
   renderPlanningVariableMatrix();
   renderLandChangeModule();
   renderHydrologyModule();
+  renderTerritorialScenarioCompare();
+  renderPlanningTerritoryReadout();
   renderPlanning3dPanel();
   if (dom.planningImagerySelect) {
     dom.planningImagerySelect.value = state.planningImageryId;
@@ -9670,6 +9708,12 @@ function renderPlanningModule() {
   }
   if (dom.hydrologyDemandSelect) {
     dom.hydrologyDemandSelect.value = state.hydrologyDemandId;
+  }
+  if (dom.territorialSolarDate) {
+    dom.territorialSolarDate.value = planning3dState.sunDate;
+  }
+  if (dom.territorialSolarTime) {
+    dom.territorialSolarTime.value = planning3dState.sunTime;
   }
   if (dom.focusHydrologyBtn) {
     dom.focusHydrologyBtn.disabled = !(state.hydrologyData?.prioritySectors?.length);
@@ -9930,10 +9974,10 @@ function clearLandChangeAnalysis() {
   setStatus("Estudio de transformacion del suelo limpiado. Puedes correr una nueva lectura territorial para Mejia.");
 }
 
-function buildLandChangeAnalysis() {
-  const period = getLandChangePeriodProfile();
-  const scenario = getLandChangeScenarioProfile();
-  const lens = getLandChangeLensProfile();
+function buildLandChangeAnalysis(options = {}) {
+  const period = getLandChangePeriodProfile(options.periodId);
+  const scenario = getLandChangeScenarioProfile(options.scenarioId);
+  const lens = getLandChangeLensProfile(options.lensId);
   const series = buildLandChangeSettlementSeries(scenario);
   const timeline = buildLandChangeTimelineData(series, scenario);
   const sectors = buildLandChangeSectors(series, period, scenario, lens);
@@ -10633,11 +10677,11 @@ function clearHydrologyAnalysis() {
   setStatus("Estudio hidrico limpiado. Puedes correr un nuevo escenario para Mejia.");
 }
 
-function buildHydrologyAnalysis(horizonOverride = null) {
-  const climate = getHydrologyClimateProfile();
-  const horizon = getHydrologyHorizonProfile(horizonOverride || state.hydrologyHorizonId);
-  const demand = getHydrologyDemandProfile();
-  const sourceFeatures = getHydrologySourceFeatures();
+function buildHydrologyAnalysis(options = {}) {
+  const climate = getHydrologyClimateProfile(options.climateId);
+  const horizon = getHydrologyHorizonProfile(options.horizonId || options.horizonOverride || state.hydrologyHorizonId);
+  const demand = getHydrologyDemandProfile(options.demandId);
+  const sourceFeatures = options.sourceFeatures || getHydrologySourceFeatures();
   const sectors = sourceFeatures.map((feature, index) =>
     simulateHydrologySectorFeature(feature, climate, horizon, demand, index)
   ).filter(Boolean);
@@ -11161,8 +11205,11 @@ function runPlanningAnalysis(silent = false) {
     resetTerritorialModuleState(dom.planningResults, "No se pudo calcular la aptitud territorial para esta corrida.", [
       { target: dom.planningWeights, message: "No fue posible construir la ponderacion multicriterio." },
       { target: dom.planningCandidates, message: "No fue posible generar sectores candidatos en esta corrida." },
+      { target: dom.territorialScenarioCompare, message: "No fue posible comparar escenarios territoriales en esta corrida." },
+      { target: dom.territorialReadout, message: "No fue posible construir restricciones, cobertura y lectura solar en esta corrida." },
     ]);
     renderPlanningVariableMatrix();
+    renderPlanningModule();
     if (!silent) {
       setStatus(`Planificacion territorial: ${error.message || "ocurrio un error inesperado"}.`);
     }
@@ -11186,12 +11233,12 @@ function clearPlanningAnalysis() {
   setStatus("Modulo de planificacion limpiado. Puedes lanzar un nuevo escenario territorial.");
 }
 
-function buildPlanningAnalysis() {
-  const program = getPlanningProgram();
-  const imageryProfile = getPlanningImageryProfile();
-  const horizon = getPlanningHorizon();
-  const scenario = getPlanningScenario();
-  const target = getCurrentAnalysisTarget();
+function buildPlanningAnalysis(options = {}) {
+  const program = getPlanningProgram(options.programId);
+  const imageryProfile = getPlanningImageryProfile(options.imageryId);
+  const horizon = getPlanningHorizon(options.horizonId);
+  const scenario = getPlanningScenario(options.scenarioId);
+  const target = options.target || getCurrentAnalysisTarget();
   const urbanFeatures = geoSources.manchaUrbana.features;
   const roadFeatures = geoSources.vias.features;
   const canalFeatures = geoSources.canales.features;
@@ -11308,6 +11355,14 @@ function buildPlanningAnalysis() {
   const candidates = selectPlanningCandidates(features, program, imageryProfile, target.scopeType);
   const summary = summarizePlanningSurface(features, program, scenario);
   const imagerySummary = summarizePlanningImageryVariables(features, imageryProfile);
+  const restrictions = buildPlanningRestrictionReadout(features, program, target.feature);
+  const serviceCoverage = buildPlanningServiceCoverageReadout({
+    planningSurface: features,
+    program,
+    targetFeature: target.feature,
+    facilityFeatures,
+  });
+  const solarReadout = buildPlanningSolarReadout(target.feature, candidates);
 
   return {
     context: target,
@@ -11322,7 +11377,294 @@ function buildPlanningAnalysis() {
     candidates,
     imagerySummary,
     summary,
+    restrictions,
+    serviceCoverage,
+    solarReadout,
   };
+}
+
+function getPlanningServiceCoverageProfiles(programId) {
+  const profiles = {
+    vis: [
+      { serviceType: "escuela", label: "Cobertura educativa", shortLabel: "Escuelas", bufferKm: 1.4, tone: "service", color: "#d39a3d" },
+      { serviceType: "hospital", label: "Cobertura sanitaria", shortLabel: "Salud", bufferKm: 2.2, tone: "access", color: "#4f7ea7" },
+      { serviceType: "equipamiento", label: "Cobertura barrial", shortLabel: "Barrial", bufferKm: 0.8, tone: "growth", color: "#5d8f62" },
+    ],
+    escuela: [
+      { serviceType: "escuela", label: "Cobertura educativa", shortLabel: "Escuelas", bufferKm: 1.4, tone: "service", color: "#d39a3d" },
+    ],
+    hospital: [
+      { serviceType: "hospital", label: "Cobertura sanitaria", shortLabel: "Salud", bufferKm: 2.2, tone: "access", color: "#4f7ea7" },
+    ],
+    equipamiento: [
+      { serviceType: "equipamiento", label: "Cobertura barrial", shortLabel: "Barrial", bufferKm: 0.8, tone: "growth", color: "#5d8f62" },
+    ],
+  };
+  return profiles[programId] || profiles.vis;
+}
+
+function buildPlanningRestrictionReadout(features, program, targetFeature) {
+  const totalAreaHa = Math.max(turf.area(targetFeature) / 10000, 0.1);
+  const profiles = [
+    {
+      id: "water",
+      label: "Ronda y cauce",
+      copy: "Frentes donde quebradas, drenajes y bordes de escorrentia piden proteccion estricta antes de habilitar suelo.",
+      tone: "resilience",
+      color: "#4c8eab",
+      predicate: (feature) => (feature.properties?.canalDistanceKm || 999) <= 0.28 || (
+        (feature.properties?.resilienceScore || 0) <= 42
+        && (feature.properties?.canalDistanceKm || 999) <= 0.42
+      ),
+    },
+    {
+      id: "slope",
+      label: "Pendiente condicionante",
+      copy: `Sectores que superan la pendiente operativa para ${program.longLabel.toLowerCase()} y requieren manejo diferenciado o descarte.`,
+      tone: "service",
+      color: "#cb9440",
+      predicate: (feature) => (feature.properties?.slope || 0) > program.maxSlope,
+    },
+    {
+      id: "reserve",
+      label: "Reserva agro-rural",
+      copy: "Borde rural y suelo de soporte donde conviene contener ocupacion, evitar dispersion y proteger productividad territorial.",
+      tone: "land",
+      color: "#7f6a4f",
+      predicate: (feature) => (
+        (feature.properties?.landScore || 100) <= 44
+        && (feature.properties?.urbanDistanceKm || 0) >= Math.max(program.urbanDistance.idealMax, 1)
+      ),
+    },
+  ];
+
+  const items = profiles.map((profile) => {
+    const matching = features.filter((feature) => profile.predicate(feature));
+    const areaHa = Number(matching.reduce((sum, feature) => sum + turf.area(feature) / 10000, 0).toFixed(1));
+    return {
+      ...profile,
+      areaHa,
+      sharePct: Math.round((areaHa / totalAreaHa) * 100),
+      features: matching.map((feature) => {
+        const clone = cloneFeature(feature);
+        clone.properties = {
+          ...(clone.properties || {}),
+          restrictionId: profile.id,
+          restrictionLabel: profile.label,
+          restrictionCopy: profile.copy,
+          restrictionTone: profile.tone,
+          restrictionColor: profile.color,
+        };
+        return clone;
+      }),
+    };
+  }).filter((item) => item.areaHa > 0.1)
+    .sort((left, right) => right.areaHa - left.areaHa);
+
+  const uniqueRestrictedAreaHa = Number(features
+    .filter((feature) => profiles.some((profile) => profile.predicate(feature)))
+    .reduce((sum, feature) => sum + turf.area(feature) / 10000, 0)
+    .toFixed(1));
+  const dominant = items[0] || null;
+
+  return {
+    headline: dominant ? dominant.label : "Sin restricciones dominantes",
+    copy: dominant
+      ? `${formatLandChangeHa(uniqueRestrictedAreaHa)} ha del ambito quedan condicionadas por ${dominant.label.toLowerCase()}.`
+      : "No aparecieron restricciones fuertes sobre el ambito activo en esta corrida.",
+    uniqueRestrictedAreaHa,
+    items,
+    collection: {
+      type: "FeatureCollection",
+      features: items.flatMap((item) => item.features),
+    },
+  };
+}
+
+function buildPlanningServiceCoverageReadout({ planningSurface, program, targetFeature, facilityFeatures }) {
+  const profiles = getPlanningServiceCoverageProfiles(program.id);
+  const totalCells = planningSurface.length || 1;
+
+  const items = profiles.map((profile) => {
+    const relevant = facilityFeatures.filter((feature) => feature.properties?.serviceType === profile.serviceType);
+    const coveredCount = planningSurface.filter((cell) => {
+      if (!relevant.length) {
+        return false;
+      }
+      const centroid = turf.centroid(cell);
+      const nearest = getNearestFeatureMatch(centroid, relevant);
+      return nearest.distanceKm <= profile.bufferKm;
+    }).length;
+    const coveragePct = Math.round((coveredCount / totalCells) * 100);
+    const gapPct = Math.max(0, 100 - coveragePct);
+    return {
+      ...profile,
+      facilities: relevant.length,
+      coveragePct,
+      gapPct,
+      bufferFeatures: relevant
+        .map((feature) => createTerritorialBufferFeature(feature, profile.bufferKm, {
+          serviceType: profile.serviceType,
+          coverageLabel: profile.label,
+          coveragePct,
+          coverageGapPct: gapPct,
+          coverageColor: profile.color,
+        }))
+        .filter(Boolean),
+      facilityPoints: relevant.map((feature) => {
+        const clone = cloneFeature(feature);
+        clone.properties = {
+          ...(clone.properties || {}),
+          serviceType: profile.serviceType,
+          coverageLabel: profile.label,
+          coverageColor: profile.color,
+          facilities: relevant.length,
+        };
+        return clone;
+      }),
+    };
+  });
+
+  const overallCoverage = Math.round(items.reduce((sum, item) => sum + item.coveragePct, 0) / Math.max(items.length, 1));
+  const weakest = [...items].sort((left, right) => left.coveragePct - right.coveragePct)[0] || null;
+
+  return {
+    overallCoverage,
+    weakestLabel: weakest ? `${weakest.shortLabel} ${weakest.coveragePct}%` : "Sin lectura",
+    copy: weakest
+      ? `${weakest.label} deja la brecha mas abierta con ${weakest.gapPct}% del ambito fuera del radio funcional.`
+      : "No se detectaron equipamientos relevantes para construir cobertura de servicios.",
+    items,
+    bufferCollection: {
+      type: "FeatureCollection",
+      features: items.flatMap((item) => item.bufferFeatures),
+    },
+    facilityCollection: {
+      type: "FeatureCollection",
+      features: items.flatMap((item) => item.facilityPoints),
+    },
+    targetAreaHa: Number((turf.area(targetFeature) / 10000).toFixed(1)),
+  };
+}
+
+function buildPlanningSolarReadout(targetFeature, candidates = []) {
+  const centroid = turf.centroid(targetFeature).geometry.coordinates;
+  const sunPosition = computePlanning3dSunPosition(getPlanning3dSunDateTime(), centroid[1], centroid[0]);
+  const referenceHeights = [
+    { label: "1 piso", heightM: 3.2 },
+    { label: "3 pisos", heightM: 9.6 },
+    { label: "5 pisos", heightM: 16 },
+  ];
+  const exposures = referenceHeights.map((entry) => ({
+    ...entry,
+    shadowLengthM: sunPosition.daylight
+      ? Number((entry.heightM / Math.tan(Math.max(sunPosition.elevationRad, 0.12))).toFixed(1))
+      : null,
+  }));
+  const longestShadow = exposures.reduce((max, entry) => Math.max(max, entry.shadowLengthM || 0), 0);
+  const tone = !sunPosition.daylight
+    ? "low"
+    : sunPosition.elevation >= 52
+      ? "high"
+      : sunPosition.elevation >= 30
+        ? "mid"
+        : "low";
+  const guidance = !sunPosition.daylight
+    ? "En este horario el sol queda bajo el horizonte; conviene evaluar otra hora para revisar sombreado util sobre calles y lotes."
+    : sunPosition.elevation >= 52
+      ? "La elevacion solar favorece asoleamiento amplio; las sombras se compactan y conviene cuidar retiros sobre espacio publico y patios."
+      : sunPosition.elevation >= 30
+        ? "La luz entra con angulo intermedio; el diseno urbano debe revisar anchos de via, vacios y separacion entre volumenes para no perder confort."
+        : "La elevacion solar es baja; las sombras se alargan y el ordenamiento debe proteger frentes sensibles, plazas y equipamientos de mayor permanencia."
+  ;
+
+  return {
+    sunPosition,
+    tone,
+    longestShadow,
+    solarLabel: sunPosition.daylight ? "Sol sobre horizonte" : "Sol bajo horizonte",
+    copy: `${guidance}${candidates.length ? ` La corrida actual deja ${candidates.length} candidatos territoriales listos para cotejar con esta lectura solar.` : ""}`,
+    exposures,
+  };
+}
+
+function buildTerritorialScenarioCompareData() {
+  if (!(state.planningData || state.landChangeData || state.hydrologyData)) {
+    return null;
+  }
+
+  const target = state.planningData?.context || getCurrentAnalysisTarget();
+  const planningScenarioIds = ["conservador", "balanceado", "expansivo"];
+  const landScenarioIds = ["contencion", "tendencial", "expansivo"];
+  const hydrologyClimateIds = ["historico", "rcp26", "rcp85"];
+
+  const planning = planningScenarioIds.map((scenarioId) => {
+    const analysis = state.planningData?.scenario?.id === scenarioId
+      ? state.planningData
+      : buildPlanningAnalysis({
+          programId: state.planningUseId,
+          imageryId: state.planningImageryId,
+          horizonId: state.planningHorizonId,
+          scenarioId,
+          target,
+        });
+    return {
+      id: scenarioId,
+      label: analysis.scenario.label,
+      shortLabel: analysis.scenario.shortLabel || analysis.scenario.label,
+      active: state.planningGrowthScenarioId === scenarioId,
+      tone: getPlanningScoreTone(analysis.summary.meanScore),
+      meanScore: analysis.summary.meanScore,
+      priorityAreaHa: analysis.summary.priorityAreaHa,
+      candidates: analysis.candidates.length,
+      copy: `${analysis.summary.anchorLabel} con ${analysis.summary.serviceGapLabel.toLowerCase()} y resiliencia ${analysis.summary.resilienceMean}%.`,
+    };
+  });
+
+  const landChange = landScenarioIds.map((scenarioId) => {
+    const analysis = state.landChangeData?.scenario?.id === scenarioId
+      ? state.landChangeData
+      : buildLandChangeAnalysis({
+          periodId: state.landChangePeriodId,
+          scenarioId,
+          lensId: state.landChangeLensId,
+        });
+    return {
+      id: scenarioId,
+      label: analysis.scenario.label,
+      shortLabel: analysis.scenario.shortLabel || analysis.scenario.label,
+      active: state.landChangeScenarioId === scenarioId,
+      tone: getLandChangeScoreTone(analysis.summary.meanScore),
+      transformedHa: analysis.summary.transformedHa,
+      riskHa: analysis.summary.riskHa,
+      productiveLossHa: analysis.summary.productiveLossHa,
+      copy: `${analysis.summary.hotspotLabel} queda como frente dominante con ${analysis.summary.riskLabel.toLowerCase()}.`,
+    };
+  });
+
+  const hydrology = hydrologyClimateIds.map((climateId) => {
+    const analysis = state.hydrologyData?.climate?.id === climateId
+      ? state.hydrologyData
+      : buildHydrologyAnalysis({
+          climateId,
+          horizonId: state.hydrologyHorizonId,
+          demandId: state.hydrologyDemandId,
+        });
+    const tone = getHydrologyBalanceTone(analysis.summary.balanceHm3);
+    return {
+      id: climateId,
+      label: analysis.climate.label,
+      shortLabel: analysis.climate.shortLabel,
+      active: state.hydrologyClimateId === climateId,
+      tone,
+      balanceHm3: analysis.summary.balanceHm3,
+      resilience: analysis.summary.meanResilience,
+      coveragePct: analysis.summary.coveragePct,
+      copy: `${analysis.summary.criticalSectorLabel} aparece como sector critico con ${analysis.summary.balanceLabel.toLowerCase()}.`,
+    };
+  });
+
+  return { planning, landChange, hydrology };
 }
 
 function computePlanningGrowthScore(program, horizon, scenario, nearestUrban, nearestRoad, insideUrban) {
@@ -11792,6 +12134,226 @@ function renderPlanningCandidates(planning) {
     .join(""));
 }
 
+function renderTerritorialScenarioCompare() {
+  if (!dom.territorialScenarioCompare) {
+    return;
+  }
+
+  const comparison = buildTerritorialScenarioCompareData();
+  if (!comparison) {
+    dom.territorialScenarioCompare.classList.add("empty-state");
+    dom.territorialScenarioCompare.classList.remove("has-data");
+    setTextIfChanged(dom.territorialScenarioCompare, "Ejecuta los modulos territoriales para ver el comparador grafico de escenarios.");
+    return;
+  }
+
+  const planningMaxArea = Math.max(...comparison.planning.map((item) => item.priorityAreaHa), 1);
+  const landMaxArea = Math.max(...comparison.landChange.map((item) => item.transformedHa), 1);
+  const landMaxRisk = Math.max(...comparison.landChange.map((item) => item.riskHa), 1);
+  const hydrologyMaxBalance = Math.max(...comparison.hydrology.map((item) => Math.abs(item.balanceHm3)), 1);
+
+  dom.territorialScenarioCompare.classList.remove("empty-state");
+  dom.territorialScenarioCompare.classList.add("has-data");
+  setHtmlIfChanged(dom.territorialScenarioCompare, `
+    <div class="scenario-compare-stack">
+      <section class="scenario-section">
+        <div class="scenario-section-head">
+          <div>
+            <p class="section-kicker">Planeamiento</p>
+            <h4>Aptitud por escenario</h4>
+            <p>Compara suelo clase A, puntaje multicriterio y numero de candidatos bajo los tres marcos de crecimiento.</p>
+          </div>
+        </div>
+        <div class="scenario-grid">
+          ${comparison.planning.map((item) => `
+            <article class="scenario-card ${item.active ? "active" : ""}">
+              <div class="scenario-card-head">
+                <div>
+                  <p class="candidate-rank">Escenario</p>
+                  <h5>${item.shortLabel}</h5>
+                </div>
+                <span class="scenario-chip tone-${item.tone}">${item.meanScore}/100</span>
+              </div>
+              <div class="scenario-bar-group">
+                <div class="scenario-bar-row">
+                  <span>Suelo A</span>
+                  <strong>${item.priorityAreaHa.toFixed(0)} ha</strong>
+                  <div class="scenario-track"><i style="width: ${Math.max(10, item.priorityAreaHa / planningMaxArea * 100)}%"></i></div>
+                </div>
+                <div class="scenario-bar-row">
+                  <span>Candidatos</span>
+                  <strong>${item.candidates}</strong>
+                  <div class="scenario-track"><i style="width: ${Math.max(10, item.candidates / 5 * 100)}%"></i></div>
+                </div>
+              </div>
+              <p class="scenario-copy">${item.copy}</p>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+      <section class="scenario-section">
+        <div class="scenario-section-head">
+          <div>
+            <p class="section-kicker">Huella urbana</p>
+            <h4>Expansion y riesgo</h4>
+            <p>Mide cuanto suelo se transforma y cuanta huella entra en tension preventiva segun contencion, tendencia o expansion.</p>
+          </div>
+        </div>
+        <div class="scenario-grid">
+          ${comparison.landChange.map((item) => `
+            <article class="scenario-card ${item.active ? "active" : ""}">
+              <div class="scenario-card-head">
+                <div>
+                  <p class="candidate-rank">Escenario</p>
+                  <h5>${item.shortLabel}</h5>
+                </div>
+                <span class="scenario-chip tone-${item.tone}">${formatLandChangeHa(item.transformedHa)} ha</span>
+              </div>
+              <div class="scenario-bar-group">
+                <div class="scenario-bar-row">
+                  <span>Huella</span>
+                  <strong>${formatLandChangeHa(item.transformedHa)} ha</strong>
+                  <div class="scenario-track"><i style="width: ${Math.max(10, item.transformedHa / landMaxArea * 100)}%"></i></div>
+                </div>
+                <div class="scenario-bar-row">
+                  <span>Riesgo</span>
+                  <strong>${formatLandChangeHa(item.riskHa)} ha</strong>
+                  <div class="scenario-track"><i style="width: ${Math.max(10, item.riskHa / landMaxRisk * 100)}%"></i></div>
+                </div>
+              </div>
+              <p class="scenario-copy">${item.copy}</p>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+      <section class="scenario-section">
+        <div class="scenario-section-head">
+          <div>
+            <p class="section-kicker">Seguridad hidrica</p>
+            <h4>Sensibilidad climatica</h4>
+            <p>Contrasta el balance hidrico y la resiliencia media entre clima historico, mitigado e intensivo.</p>
+          </div>
+        </div>
+        <div class="scenario-grid">
+          ${comparison.hydrology.map((item) => `
+            <article class="scenario-card ${item.active ? "active" : ""}">
+              <div class="scenario-card-head">
+                <div>
+                  <p class="candidate-rank">Clima</p>
+                  <h5>${item.shortLabel}</h5>
+                </div>
+                <span class="scenario-chip tone-${item.tone === "surplus" ? "high" : item.tone === "watch" ? "mid" : "low"}">${item.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(item.balanceHm3)} hm3</span>
+              </div>
+              <div class="scenario-bar-group">
+                <div class="scenario-bar-row">
+                  <span>Balance</span>
+                  <strong>${item.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(item.balanceHm3)} hm3</strong>
+                  <div class="scenario-track"><i style="width: ${Math.max(10, Math.abs(item.balanceHm3) / hydrologyMaxBalance * 100)}%"></i></div>
+                </div>
+                <div class="scenario-bar-row">
+                  <span>Resiliencia</span>
+                  <strong>${item.resilience}/100</strong>
+                  <div class="scenario-track"><i style="width: ${Math.max(10, item.resilience)}%"></i></div>
+                </div>
+              </div>
+              <p class="scenario-copy">${item.copy}</p>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+    </div>
+  `);
+}
+
+function renderPlanningTerritoryReadout() {
+  if (!dom.territorialReadout) {
+    return;
+  }
+
+  if (!state.planningData) {
+    dom.territorialReadout.classList.add("empty-state");
+    dom.territorialReadout.classList.remove("has-data");
+    setTextIfChanged(dom.territorialReadout, "Ejecuta la planificacion territorial para ver restricciones, cobertura y comportamiento solar sobre el suelo candidato.");
+    return;
+  }
+
+  const planning = state.planningData;
+  const restrictionMax = Math.max(1, ...planning.restrictions.items.map((item) => item.areaHa));
+  const solarMax = Math.max(1, ...planning.solarReadout.exposures.map((item) => item.shadowLengthM || 0));
+
+  dom.territorialReadout.classList.remove("empty-state");
+  dom.territorialReadout.classList.add("has-data");
+  setHtmlIfChanged(dom.territorialReadout, `
+    <div class="territorial-readout-grid">
+      <article class="territorial-readout-card tone-risk">
+        <div class="territorial-readout-head">
+          <div>
+            <p class="section-kicker">Restricciones reales</p>
+            <h4>${planning.restrictions.headline}</h4>
+          </div>
+          <span class="scenario-chip tone-low">${formatLandChangeHa(planning.restrictions.uniqueRestrictedAreaHa)} ha</span>
+        </div>
+        <p class="territorial-readout-copy">${planning.restrictions.copy}</p>
+        <div class="territorial-readout-bars">
+          ${planning.restrictions.items.map((item) => `
+            <div class="territorial-readout-row">
+              <span>${item.label}</span>
+              <strong>${formatLandChangeHa(item.areaHa)} ha</strong>
+              <div class="territorial-readout-track"><i style="width: ${Math.max(10, item.areaHa / restrictionMax * 100)}%"></i></div>
+            </div>
+          `).join("")}
+        </div>
+      </article>
+      <article class="territorial-readout-card tone-service">
+        <div class="territorial-readout-head">
+          <div>
+            <p class="section-kicker">Cobertura de servicios</p>
+            <h4>${planning.serviceCoverage.overallCoverage}% del ambito</h4>
+          </div>
+          <span class="scenario-chip tone-mid">${planning.serviceCoverage.weakestLabel}</span>
+        </div>
+        <p class="territorial-readout-copy">${planning.serviceCoverage.copy}</p>
+        <div class="territorial-readout-bars">
+          ${planning.serviceCoverage.items.map((item) => `
+            <div class="territorial-readout-row">
+              <span>${item.shortLabel}</span>
+              <strong>${item.coveragePct}%</strong>
+              <div class="territorial-readout-track"><i style="width: ${Math.max(10, item.coveragePct)}%"></i></div>
+            </div>
+          `).join("")}
+        </div>
+        <div class="territorial-readout-pills">
+          ${planning.serviceCoverage.items.map((item) => `<span class="planning-pill emphasis">${item.facilities} ${item.shortLabel.toLowerCase()}</span>`).join("")}
+        </div>
+      </article>
+      <article class="territorial-readout-card tone-solar">
+        <div class="territorial-readout-head">
+          <div>
+            <p class="section-kicker">Asoleamiento urbano</p>
+            <h4>${planning.solarReadout.solarLabel}</h4>
+          </div>
+          <span class="scenario-chip tone-${planning.solarReadout.tone}">Az ${planning.solarReadout.sunPosition.azimuth}° | El ${planning.solarReadout.sunPosition.elevation}°</span>
+        </div>
+        <p class="territorial-readout-copy">${planning.solarReadout.copy}</p>
+        <div class="territorial-readout-bars">
+          ${planning.solarReadout.exposures.map((item) => `
+            <div class="territorial-readout-row">
+              <span>${item.label}</span>
+              <strong>${item.shadowLengthM == null ? "Sin sombra" : `${item.shadowLengthM.toFixed(1)} m`}</strong>
+              <div class="territorial-readout-track"><i style="width: ${item.shadowLengthM == null ? 0 : Math.max(8, item.shadowLengthM / solarMax * 100)}%"></i></div>
+            </div>
+          `).join("")}
+        </div>
+        <div class="territorial-readout-pills">
+          <span class="planning-pill emphasis">${planning3dState.sunDate}</span>
+          <span class="planning-pill emphasis">${planning3dState.sunTime}</span>
+          <span class="planning-pill emphasis">${planning.candidates.length} candidatos sincronizados</span>
+        </div>
+      </article>
+    </div>
+  `);
+}
+
 function createTerritorialBufferFeature(feature, distanceKm, properties = {}) {
   if (!feature?.geometry || !Number.isFinite(distanceKm) || distanceKm <= 0) {
     return null;
@@ -11985,6 +12547,9 @@ function renderPlanningOverlay(planning) {
     type: "FeatureCollection",
     features: buildPlanningFootprintFeatures(planning),
   };
+  const restrictionCollection = planning.restrictions?.collection || { type: "FeatureCollection", features: [] };
+  const serviceCoverageCollection = planning.serviceCoverage?.bufferCollection || { type: "FeatureCollection", features: [] };
+  const serviceFacilityCollection = planning.serviceCoverage?.facilityCollection || { type: "FeatureCollection", features: [] };
   const candidatePoints = planning.candidates.map((candidate) => pointFeature(candidate.title, candidate.centroid, {
     candidateId: candidate.id,
     candidateRank: candidate.rank,
@@ -12013,6 +12578,65 @@ function renderPlanningOverlay(planning) {
       onEachFeature: (feature, layer) => {
         layer.bindPopup(
           `<h3 class="popup-title">${feature.properties?.title || "Cobertura territorial"}</h3><p class="popup-copy">${feature.properties?.coverageLabel || "Franja de influencia"} a ${feature.properties?.bufferKm || 0} km para ${planning.program.longLabel.toLowerCase()}. Puntaje ${feature.properties?.score || 0}/100.</p>`
+        );
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (restrictionCollection.features.length) {
+    mapState.planningRestrictionLayer = L.geoJSON(restrictionCollection, {
+      style: (feature) => {
+        const tone = feature.properties?.restrictionTone || "land";
+        const palette = tone === "resilience"
+          ? { stroke: "#4c8eab", fill: "#8fd9e0" }
+          : tone === "service"
+            ? { stroke: "#cb9440", fill: "#efc36b" }
+            : { stroke: "#7f6a4f", fill: "#d7bb8b" };
+        return {
+          color: palette.stroke,
+          weight: 1.1,
+          fillColor: palette.fill,
+          fillOpacity: 0.12,
+          dashArray: "6 6",
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          `<h3 class="popup-title">${feature.properties?.restrictionLabel || "Restriccion territorial"}</h3><p class="popup-copy">${feature.properties?.restrictionCopy || "Condicion territorial activa para ordenar ocupacion."}</p>`
+        );
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (serviceCoverageCollection.features.length) {
+    mapState.planningServiceLayer = L.geoJSON(serviceCoverageCollection, {
+      style: (feature) => ({
+        color: feature.properties?.coverageColor || "#5d8f62",
+        weight: 1.2,
+        fillColor: feature.properties?.coverageColor || "#5d8f62",
+        fillOpacity: 0.07,
+        dashArray: "8 8",
+      }),
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          `<h3 class="popup-title">${feature.properties?.coverageLabel || "Cobertura de servicio"}</h3><p class="popup-copy">${feature.properties?.coveragePct || 0}% del ambito ya cae dentro de este radio funcional. Brecha restante ${feature.properties?.coverageGapPct || 0}%.</p>`
+        );
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (serviceFacilityCollection.features.length) {
+    mapState.planningFacilityLayer = L.geoJSON(serviceFacilityCollection, {
+      pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+        radius: 5.5,
+        weight: 2,
+        color: "#fff8ef",
+        fillColor: feature.properties?.coverageColor || "#5d8f62",
+        fillOpacity: 0.95,
+      }),
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          `<h3 class="popup-title">${feature.properties?.name || "Equipamiento"}</h3><p class="popup-copy">${feature.properties?.coverageLabel || "Cobertura activa"} desde ${feature.properties?.name || "el equipamiento"}.</p>`
         );
       },
     }).addTo(mapState.map);
@@ -12062,8 +12686,17 @@ function renderPlanningOverlay(planning) {
   if (mapState.planningCoverageLayer?.bringToBack) {
     mapState.planningCoverageLayer.bringToBack();
   }
+  if (mapState.planningRestrictionLayer?.bringToFront) {
+    mapState.planningRestrictionLayer.bringToFront();
+  }
+  if (mapState.planningServiceLayer?.bringToFront) {
+    mapState.planningServiceLayer.bringToFront();
+  }
   if (mapState.planningLayer?.bringToFront) {
     mapState.planningLayer.bringToFront();
+  }
+  if (mapState.planningFacilityLayer?.bringToFront) {
+    mapState.planningFacilityLayer.bringToFront();
   }
   if (mapState.currentPlotLayer) {
     mapState.currentPlotLayer.bringToFront();
@@ -12330,6 +12963,18 @@ function clearPlanningOverlay() {
   if (mapState.planningCoverageLayer) {
     mapState.map.removeLayer(mapState.planningCoverageLayer);
     mapState.planningCoverageLayer = null;
+  }
+  if (mapState.planningRestrictionLayer) {
+    mapState.map.removeLayer(mapState.planningRestrictionLayer);
+    mapState.planningRestrictionLayer = null;
+  }
+  if (mapState.planningServiceLayer) {
+    mapState.map.removeLayer(mapState.planningServiceLayer);
+    mapState.planningServiceLayer = null;
+  }
+  if (mapState.planningFacilityLayer) {
+    mapState.map.removeLayer(mapState.planningFacilityLayer);
+    mapState.planningFacilityLayer = null;
   }
   if (mapState.planningCandidatesLayer) {
     mapState.map.removeLayer(mapState.planningCandidatesLayer);
@@ -13414,7 +14059,10 @@ function updateMapSummary(force = false) {
       );
     } else if (planning) {
       setTextIfChanged(dom.mapTitle, `${planning.program.longLabel} sobre ${planning.context.scopeLabel}`);
-      setTextIfChanged(dom.mapSubtitle, `Fuente ${planning.imageryProfile.shortLabel}, horizonte ${planning.horizon.label}, escenario ${planning.scenario.label}, ${planning.candidates.length} candidatos priorizados y halos de cobertura con delimitacion de implantacion.`);
+      setTextIfChanged(
+        dom.mapSubtitle,
+        `Fuente ${planning.imageryProfile.shortLabel}, horizonte ${planning.horizon.label}, escenario ${planning.scenario.label}, ${planning.candidates.length} candidatos priorizados, ${planning.restrictions.headline.toLowerCase()}, cobertura ${planning.serviceCoverage.overallCoverage}% y lectura solar ${planning.solarReadout.sunPosition.elevation}° sobre el horizonte.`
+      );
     } else if (hydrology) {
       setTextIfChanged(dom.overlayIndex, "Balance");
       setTextIfChanged(dom.mapTitle, "Estudio hidrico de Mejia listo");
@@ -13566,7 +14214,7 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
           planning
             ? {
                 tone: "neutral",
-                label: "Halos",
+                label: "Halos + buffers",
               }
             : hydrology
               ? {
@@ -13587,7 +14235,7 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
                 tone: "analysis",
                 label: `Plan ${planning.program.label}`,
               }
-            : hydrology
+              : hydrology
               ? {
                   tone: "analysis",
                   label: `Agua ${hydrology.climate.shortLabel}`,
@@ -13601,7 +14249,13 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
                   tone: "muted",
                   label: "Sin escenario",
                 },
-        ];
+          planning
+            ? {
+                tone: "neutral",
+                label: "Restricciones",
+              }
+            : null,
+        ].filter(Boolean);
     setHtmlIfChanged(dom.mapBadges, badges
       .map((badge) => `<span class="map-badge ${badge.tone}">${badge.label}</span>`)
       .join(""));

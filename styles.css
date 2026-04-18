@@ -1547,6 +1547,187 @@ button {
   justify-content: center;
 }
 
+.scenario-compare,
+.territorial-readout {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.scenario-compare.has-data,
+.territorial-readout.has-data {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.scenario-compare-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.scenario-section,
+.territorial-readout-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(47, 61, 50, 0.1);
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.scenario-section-head,
+.territorial-readout-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.scenario-section-head h4,
+.territorial-readout-head h4,
+.scenario-card-head h5 {
+  margin: 0;
+  font-family: var(--font-display);
+  line-height: 1.2;
+}
+
+.scenario-section-head p:last-child,
+.territorial-readout-copy,
+.scenario-copy {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.scenario-grid,
+.territorial-readout-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.scenario-card {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(47, 61, 50, 0.08);
+  background: rgba(255, 255, 255, 0.8);
+}
+
+.scenario-card.active {
+  border-color: rgba(47, 127, 95, 0.24);
+  box-shadow: 0 16px 30px rgba(24, 84, 65, 0.1);
+}
+
+.scenario-card-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.scenario-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(47, 61, 50, 0.1);
+  background: rgba(255, 255, 255, 0.9);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.scenario-chip.tone-high {
+  color: var(--leaf-deep);
+  background: rgba(47, 127, 95, 0.12);
+  border-color: rgba(47, 127, 95, 0.18);
+}
+
+.scenario-chip.tone-mid {
+  color: #8b6721;
+  background: rgba(210, 165, 68, 0.16);
+  border-color: rgba(210, 165, 68, 0.22);
+}
+
+.scenario-chip.tone-low {
+  color: #8a3f2e;
+  background: rgba(181, 90, 63, 0.12);
+  border-color: rgba(181, 90, 63, 0.18);
+}
+
+.scenario-bar-group,
+.territorial-readout-bars {
+  display: grid;
+  gap: 10px;
+}
+
+.scenario-bar-row,
+.territorial-readout-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: center;
+  gap: 10px;
+}
+
+.scenario-bar-row span,
+.territorial-readout-row span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.scenario-bar-row strong,
+.territorial-readout-row strong {
+  font-family: var(--font-display);
+  font-size: 0.94rem;
+}
+
+.scenario-track,
+.territorial-readout-track {
+  position: relative;
+  min-height: 10px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(47, 61, 50, 0.08);
+}
+
+.scenario-track i,
+.territorial-readout-track i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: block;
+  border-radius: inherit;
+  background: linear-gradient(90deg, rgba(47, 127, 95, 0.72), rgba(210, 165, 68, 0.92));
+}
+
+.territorial-readout-card.tone-risk {
+  border-color: rgba(144, 63, 93, 0.14);
+}
+
+.territorial-readout-card.tone-service {
+  border-color: rgba(203, 148, 64, 0.14);
+}
+
+.territorial-readout-card.tone-solar {
+  border-color: rgba(58, 111, 143, 0.14);
+}
+
+.territorial-readout-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.territorial-solar-toolbar {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .risk-doctrine {
   display: flex;
   flex-direction: column;
