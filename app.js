@@ -1221,7 +1221,7 @@ const hydrologyDemandCatalog = {
 };
 
 const landChangePeriodCatalog = {
-  2010_2016: {
+  "2010_2016": {
     id: "2010_2016",
     label: "Huella 2010-2016",
     shortLabel: "2010-2016",
@@ -1230,7 +1230,7 @@ const landChangePeriodCatalog = {
     headline: "Transicion inicial",
     years: [2010, 2016],
   },
-  2016_2022: {
+  "2016_2022": {
     id: "2016_2022",
     label: "Huella 2016-2022",
     shortLabel: "2016-2022",
@@ -1239,7 +1239,7 @@ const landChangePeriodCatalog = {
     headline: "Consolidacion reciente",
     years: [2016, 2022],
   },
-  2010_2022: {
+  "2010_2022": {
     id: "2010_2022",
     label: "Serie 2010-2022",
     shortLabel: "2010-2022",
@@ -1248,7 +1248,7 @@ const landChangePeriodCatalog = {
     headline: "Lectura completa",
     years: [2010, 2016, 2022],
   },
-  2022_2030: {
+  "2022_2030": {
     id: "2022_2030",
     label: "Proyeccion 2022-2030",
     shortLabel: "2022-2030",
@@ -2125,7 +2125,17 @@ function getHydrologyDemandProfile(demandId = state.hydrologyDemandId) {
 }
 
 function getLandChangePeriodProfile(periodId = state.landChangePeriodId) {
-  return landChangePeriodCatalog[periodId] || landChangePeriodCatalog["2010_2022"];
+  return landChangePeriodCatalog[periodId]
+    || landChangePeriodCatalog["2010_2022"]
+    || {
+      id: "2010_2022",
+      label: "Serie 2010-2022",
+      shortLabel: "2010-2022",
+      fromYear: 2010,
+      toYear: 2022,
+      headline: "Lectura completa",
+      years: [2010, 2016, 2022],
+    };
 }
 
 function getLandChangeScenarioProfile(scenarioId = state.landChangeScenarioId) {
@@ -9913,9 +9923,9 @@ function buildLandChangeSettlementSeries(scenario) {
     });
 
     const periods = {
-      2010_2016: buildLandChangeDeltaRecord(records[2010], records[2016], baseName, "growth2016", "Huella 2016", "2010_2016"),
-      2016_2022: buildLandChangeDeltaRecord(records[2016], records[2022], baseName, "growth2022", "Huella 2022", "2016_2022"),
-      2022_2030: buildLandChangeDeltaRecord(records[2022], records[2030], baseName, "projected2030", "Huella 2030", "2022_2030"),
+      "2010_2016": buildLandChangeDeltaRecord(records[2010], records[2016], baseName, "growth2016", "Huella 2016", "2010_2016"),
+      "2016_2022": buildLandChangeDeltaRecord(records[2016], records[2022], baseName, "growth2022", "Huella 2022", "2016_2022"),
+      "2022_2030": buildLandChangeDeltaRecord(records[2022], records[2030], baseName, "projected2030", "Huella 2030", "2022_2030"),
     };
 
     return {
