@@ -28,7 +28,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260418-8">
+  <link rel="stylesheet" href="./styles.css?v=20260418-9">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -602,6 +602,28 @@
             <article class="module-card planning-card hidden" data-module-track="planificacion">
               <div class="module-head">
                 <div>
+                  <p class="module-kicker">Decision tecnica</p>
+                  <h3>Semaforo, fichas y exportables</h3>
+                </div>
+              </div>
+              <p class="module-copy">
+                Resume el estado territorial, prepara fichas operativas por sector y genera salidas para compartir
+                escenarios, candidatos y capas de soporte.
+              </p>
+              <div id="territorialDecisionBoard" class="territorial-decision-board empty-state">
+                Ejecuta los estudios territoriales para construir el semaforo integrado de aptitud, riesgo y resiliencia.
+              </div>
+              <div id="territorialSectorSheets" class="territorial-sector-sheets empty-state">
+                Aqui apareceran fichas tecnicas por candidato, hotspot de huella y sector hidrico prioritario.
+              </div>
+              <div id="territorialExportPanel" class="territorial-export-panel empty-state">
+                Los exportables tecnicos se activaran cuando haya resultados territoriales disponibles.
+              </div>
+            </article>
+
+            <article class="module-card planning-card hidden" data-module-track="planificacion">
+              <div class="module-head">
+                <div>
                   <p class="module-kicker">Visualizador urbano</p>
                   <h3>Visor 3D de construcciones</h3>
                 </div>
@@ -707,14 +729,14 @@
           </p>
         </div>
         <div class="planning-3d-header-actions">
-          <button id="planning3dResetViewBtn" class="ghost-button" type="button">Vista urbana</button>
+          <button id="planning3dResetViewBtn" class="ghost-button" type="button">Vista general</button>
           <button id="planning3dCloseBtn" class="secondary-button" type="button">Cerrar</button>
         </div>
       </header>
 
       <div class="planning-3d-toolbar">
         <div class="planning-3d-switch" role="group" aria-label="Mapa base 3D">
-          <button id="planning3dSatelliteBtn" class="base-button active" type="button" data-planning-base="satellite">Satelite</button>
+          <button id="planning3dSatelliteBtn" class="base-button active" type="button" data-planning-base="satellite">OpenStreetMap</button>
           <button id="planning3dLightBtn" class="base-button" type="button" data-planning-base="light">Claro</button>
         </div>
         <label class="planning-3d-check">
@@ -726,7 +748,7 @@
           <span>Catastro</span>
         </label>
         <label class="planning-3d-check">
-          <input id="planning3dShadowsToggle" type="checkbox" checked>
+          <input id="planning3dShadowsToggle" type="checkbox">
           <span>Sombras</span>
         </label>
         <label class="field planning-3d-sun-field">
@@ -793,6 +815,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260418-14" defer></script>
+  <script src="./app.js?v=20260418-15" defer></script>
 </body>
 </html>

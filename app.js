@@ -1654,9 +1654,9 @@ const planning3dPublishedBounds = [-78.5718, -0.5264, -78.5488, -0.5060];
 
 const planning3dPublishedView = {
   center: [-78.5603, -0.5162],
-  zoom: 17.15,
-  pitch: 58,
-  bearing: -18,
+  zoom: 16.5,
+  pitch: 54,
+  bearing: -14,
 };
 
 const planning3dBasemapWarmup = {
@@ -1839,7 +1839,7 @@ const mapState = {
 
 const planning3dState = {
   modalOpen: false,
-  currentBase: "light",
+  currentBase: "satellite",
   statusMessage: "Preparando datasets 3D...",
   statusTone: "loading",
   manifest: null,
@@ -1857,7 +1857,7 @@ const planning3dState = {
   buildingsVisible: true,
   parcelsVisible: true,
   heightScale: 1,
-  shadowsVisible: true,
+  shadowsVisible: false,
   sunDate: "",
   sunTime: "",
   sunPosition: null,
@@ -3152,6 +3152,9 @@ function cacheDom() {
   dom.planningVariableMatrix = document.querySelector("#planningVariableMatrix");
   dom.territorialScenarioCompare = document.querySelector("#territorialScenarioCompare");
   dom.territorialReadout = document.querySelector("#territorialReadout");
+  dom.territorialDecisionBoard = document.querySelector("#territorialDecisionBoard");
+  dom.territorialSectorSheets = document.querySelector("#territorialSectorSheets");
+  dom.territorialExportPanel = document.querySelector("#territorialExportPanel");
   dom.territorialSolarDate = document.querySelector("#territorialSolarDate");
   dom.territorialSolarTime = document.querySelector("#territorialSolarTime");
   dom.landChangeResults = document.querySelector("#landChangeResults");
@@ -3238,6 +3241,8 @@ function bindUI() {
   dom.planningCandidates?.addEventListener("click", handlePlanningCandidatesInteraction);
   dom.landChangeSectors?.addEventListener("click", handleLandChangeSectorsInteraction);
   dom.hydrologySectors?.addEventListener("click", handleHydrologySectorsInteraction);
+  dom.territorialSectorSheets?.addEventListener("click", handleTerritorialSectorSheetsInteraction);
+  dom.territorialExportPanel?.addEventListener("click", handleTerritorialExportInteraction);
   dom.wizardModes?.addEventListener("click", handleWizardModeInteraction);
   dom.wizardSteps?.addEventListener("click", handleWizardStepInteraction);
 
@@ -3407,6 +3412,9 @@ function bindUI() {
       { target: dom.planningCandidates, message: "Buscando sectores candidatos con mejor ajuste territorial..." },
       { target: dom.territorialScenarioCompare, message: "Contrastando escenarios de aptitud, huella y seguridad hidrica..." },
       { target: dom.territorialReadout, message: "Armando restricciones, coberturas y lectura solar del suelo candidato..." },
+      { target: dom.territorialDecisionBoard, message: "Recomponiendo el semaforo territorial integrado..." },
+      { target: dom.territorialSectorSheets, message: "Preparando fichas tecnicas por candidato y sector..." },
+      { target: dom.territorialExportPanel, message: "Actualizando exportables tecnicos y salida de informe..." },
     ]);
     return runModuleAction(dom.runPlanningBtn, "Evaluando aptitud...", () => runPlanningAnalysis());
   });
@@ -3418,6 +3426,9 @@ function bindUI() {
       { target: dom.hydrologyTimeline, message: "Proyectando horizontes hidricos y sensibilidad climatica..." },
       { target: dom.hydrologySectors, message: "Priorizando subzonas hidricas y medidas recomendadas..." },
       { target: dom.territorialScenarioCompare, message: "Releyendo como cambia la seguridad hidrica entre climas y escenarios..." },
+      { target: dom.territorialDecisionBoard, message: "Actualizando el semaforo de seguridad hidrica y resiliencia..." },
+      { target: dom.territorialSectorSheets, message: "Sintetizando fichas hidricas por sector prioritario..." },
+      { target: dom.territorialExportPanel, message: "Preparando salidas exportables con balance y sectores hidricos..." },
     ]);
     return runModuleAction(dom.runHydrologyBtn, "Simulando escenarios...", () => runHydrologyAnalysis());
   });
@@ -3473,6 +3484,9 @@ function bindUI() {
       { target: dom.landChangeTimeline, message: "Reconstruyendo serie temporal 2010-2016-2022-2030..." },
       { target: dom.landChangeSectors, message: "Detectando hotspots de ocupacion, riesgo y suelo rural en tension..." },
       { target: dom.territorialScenarioCompare, message: "Comparando huella urbana entre contencion, tendencia y expansion..." },
+      { target: dom.territorialDecisionBoard, message: "Consolidando el semaforo de transformacion del suelo..." },
+      { target: dom.territorialSectorSheets, message: "Armando fichas por hotspot de huella urbana y riesgo..." },
+      { target: dom.territorialExportPanel, message: "Actualizando exportables con huella observada y proyectada..." },
     ]);
     return runModuleAction(dom.runLandChangeBtn, "Analizando huella...", () => runLandChangeAnalysis());
   });
@@ -3697,6 +3711,55 @@ function handleHydrologySectorsInteraction(event) {
   }
 
   focusHydrologySector(button.dataset.hydrologySectorId);
+}
+
+function handleTerritorialSectorSheetsInteraction(event) {
+  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id]");
+  if (!button || !dom.territorialSectorSheets?.contains(button)) {
+    return;
+  }
+
+  if (button.dataset.candidateId) {
+    focusPlanningCandidate(button.dataset.candidateId);
+    return;
+  }
+  if (button.dataset.landChangeSectorId) {
+    focusLandChangeSector(button.dataset.landChangeSectorId);
+    return;
+  }
+  if (button.dataset.hydrologySectorId) {
+    focusHydrologySector(button.dataset.hydrologySectorId);
+  }
+}
+
+function handleTerritorialExportInteraction(event) {
+  const button = event.target.closest("[data-export-format]");
+  if (!button || !dom.territorialExportPanel?.contains(button)) {
+    return;
+  }
+
+  const format = button.dataset.exportFormat;
+  if (format === "csv") {
+    downloadTerritorialFile(
+      `mejia_territorial_${formatDateInput(new Date())}.csv`,
+      buildTerritorialCsvExport(),
+      "text/csv;charset=utf-8"
+    );
+    return;
+  }
+
+  if (format === "geojson") {
+    downloadTerritorialFile(
+      `mejia_territorial_${formatDateInput(new Date())}.geojson`,
+      JSON.stringify(buildTerritorialGeoJsonExport(), null, 2),
+      "application/geo+json;charset=utf-8"
+    );
+    return;
+  }
+
+  if (format === "report") {
+    openTerritorialReport();
+  }
 }
 
 function handleWizardModeInteraction(event) {
@@ -6742,7 +6805,7 @@ function renderPlanning3dPanel() {
       </article>
       <article class="planning-3d-stat">
         <span>Base 3D</span>
-        <strong>${planning3dState.currentBase === "satellite" ? "Satelite" : "Claro urbano"}</strong>
+        <strong>${planning3dState.currentBase === "satellite" ? "OpenStreetMap" : "Claro urbano"}</strong>
       </article>
       <article class="planning-3d-stat">
         <span>Modo</span>
@@ -6861,18 +6924,18 @@ function formatPlanning3dDistance(distanceM) {
 function buildPlanning3dBasemapWarmupUrls(baseId = "satellite") {
   if (baseId === "satellite") {
     return [
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/17/65721/36930",
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/17/65721/36931",
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/17/65722/36930",
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/17/65722/36931",
+      "https://a.tile.openstreetmap.org/17/36930/65721.png",
+      "https://b.tile.openstreetmap.org/17/36931/65721.png",
+      "https://c.tile.openstreetmap.org/17/36930/65722.png",
+      "https://a.tile.openstreetmap.org/17/36931/65722.png",
     ];
   }
 
   return [
-    "https://a.tile.openstreetmap.org/17/36930/65721.png",
-    "https://b.tile.openstreetmap.org/17/36931/65721.png",
-    "https://c.tile.openstreetmap.org/17/36930/65722.png",
-    "https://a.tile.openstreetmap.org/17/36931/65722.png",
+    "https://a.basemaps.cartocdn.com/light_all/17/36930/65721.png",
+    "https://b.basemaps.cartocdn.com/light_all/17/36931/65721.png",
+    "https://c.basemaps.cartocdn.com/light_all/17/36930/65722.png",
+    "https://d.basemaps.cartocdn.com/light_all/17/36931/65722.png",
   ];
 }
 
@@ -6907,9 +6970,13 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
     sources: {
       "planning3d-basemap-satellite": {
         type: "raster",
-        tiles: ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"],
+        tiles: [
+          "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+        ],
         tileSize: 256,
-        attribution: "Esri World Imagery",
+        attribution: "OpenStreetMap contributors",
       },
       "planning3d-basemap-light": {
         type: "raster",
@@ -6928,7 +6995,7 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
         id: "background",
         type: "background",
         paint: {
-          "background-color": isSatellite ? "#d7d8d3" : "#efe9df",
+          "background-color": isSatellite ? "#dfe5db" : "#efe9df",
         },
       },
       {
@@ -6954,11 +7021,11 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
           visibility: isSatellite ? "visible" : "none",
         },
         paint: {
-          "raster-opacity": 0.78,
-          "raster-saturation": -0.12,
-          "raster-contrast": 0.08,
-          "raster-brightness-min": 0.12,
-          "raster-brightness-max": 0.98,
+          "raster-opacity": 0.98,
+          "raster-saturation": -0.08,
+          "raster-contrast": 0.1,
+          "raster-brightness-min": 0.16,
+          "raster-brightness-max": 1,
           "raster-resampling": "linear",
         },
       },
@@ -7003,7 +7070,7 @@ function updatePlanning3dBasemapStyle() {
     planning3dState.map.setPaintProperty(
       "background",
       "background-color",
-      isSatellite ? "rgba(214, 224, 229, 0)" : "#eef2ee"
+      isSatellite ? "#dfe5db" : "#eef2ee"
     );
   }
 
@@ -7572,14 +7639,16 @@ async function initializePlanning3dMap() {
     antialias: true,
     fadeDuration: 0,
     refreshExpiredTiles: false,
-    dragRotate: false,
-    pitchWithRotate: false,
-    maxBounds: [
-      [planning3dPublishedBounds[0], planning3dPublishedBounds[1]],
-      [planning3dPublishedBounds[2], planning3dPublishedBounds[3]],
-    ],
+    dragRotate: true,
+    pitchWithRotate: true,
   });
   planning3dState.map.addControl(new window.maplibregl.NavigationControl({ visualizePitch: false }), "top-left");
+  planning3dState.map.dragPan?.enable?.();
+  planning3dState.map.scrollZoom?.enable?.();
+  planning3dState.map.doubleClickZoom?.enable?.();
+  planning3dState.map.keyboard?.enable?.();
+  planning3dState.map.touchZoomRotate?.enable?.();
+  planning3dState.map.touchPitch?.enable?.();
   planning3dState.map.on("moveend", queuePlanning3dSvgSceneSync);
   planning3dState.map.on("zoomend", queuePlanning3dSvgSceneSync);
   planning3dState.map.on("rotateend", queuePlanning3dSvgSceneSync);
@@ -7965,7 +8034,7 @@ async function ensurePlanning3dDataset(datasetKey, force = false) {
         renderPlanning3dSelection();
         setPlanning3dStatus(
           datasetKey === "buildings"
-            ? `Ventana urbana publicada lista: ${formatPlanning3dCount(previewCollection.features.length)} construcciones reales visibles sobre el satelite.`
+            ? `Ventana urbana publicada lista: ${formatPlanning3dCount(previewCollection.features.length)} construcciones reales visibles sobre la base OpenStreetMap.`
             : `Catastro urbano publicado listo: ${formatPlanning3dCount(previewCollection.features.length)} predios reales visibles para referencia parcelaria.`,
           "real"
         );
@@ -8248,9 +8317,6 @@ function syncPlanning3dSource(datasetKey) {
     queuePlanning3dShadowSync();
     queuePlanning3dSvgSceneSync();
     renderPlanning3dDomMarkers();
-    if (planning3dState.map) {
-      queuePlanning3dFocus();
-    }
   }
 }
 
@@ -8332,21 +8398,22 @@ function ensurePlanning3dDomOverlay() {
 function shouldRenderPlanning3dDomMarkers() {
   const buildingCount = planning3dState.sourceData.buildings?.features?.length || 0;
   const zoom = planning3dState.map?.getZoom?.() || 0;
+  const hasExtrusionLayer = Boolean(planning3dState.map?.getLayer?.("planning3d-buildings-fill"));
   if (
     !dom.planning3dMap
     || !planning3dState.modalOpen
     || !planning3dState.buildingsVisible
     || !buildingCount
-    || zoom < 14.8
+    || zoom < 16.4
   ) {
     return false;
   }
 
-  if (!shouldRenderPlanning3dSvgScene()) {
-    return true;
+  if (hasExtrusionLayer) {
+    return false;
   }
 
-  return getPlanning3dSvgSceneFeatures().length === 0;
+  return buildingCount <= 900;
 }
 
 function buildPlanning3dDomMarkerElement(feature) {
@@ -8534,7 +8601,8 @@ function shouldRenderPlanning3dSvgScene() {
     && planning3dState.modalOpen
     && planning3dState.buildingsVisible
     && buildingCount
-    && zoom >= 14.4
+    && zoom >= 15.6
+    && (buildingCount <= 6000 || planning3dState.selectedFeatureId != null)
   );
 }
 
@@ -9234,7 +9302,7 @@ function renderPlanning3dSelection(force = false) {
     </div>
     <p class="planning-3d-note">
       Fuente de altura: ${props.heightSource === "dbf" ? "campo n_piso del shape de construcciones" : "estimacion geometrica local"}.
-      La extrusion usa la huella real del shape sobre el satelite y el catastro. Las fotos se buscan por cercania al centroide del edificio usando el indice GPS local.
+      La extrusion usa la huella real del shape sobre la base OpenStreetMap y el catastro. Las fotos se buscan por cercania al centroide del edificio usando el indice GPS local.
     </p>
     <section class="planning-3d-photo-section">
       <div class="planning-3d-photo-head">
@@ -9439,7 +9507,7 @@ function focusPlanning3dDemoView() {
 
   planning3dState.map.easeTo({
     center,
-    zoom: 17.1,
+    zoom: 16.8,
     pitch: planning3dPublishedView.pitch,
     bearing: planning3dPublishedView.bearing,
     duration: 760,
@@ -9470,19 +9538,8 @@ function focusPlanning3dDataset() {
       duration: 720,
       pitch: planning3dPublishedView.pitch,
       bearing: planning3dPublishedView.bearing,
-      maxZoom: publicFocusFeature ? 17.6 : planning3dPublishedView.zoom,
+      maxZoom: publicFocusFeature ? 16.9 : planning3dPublishedView.zoom,
       essential: true,
-    });
-    planning3dState.map.once("moveend", () => {
-      if (!planning3dState.modalOpen) {
-        return;
-      }
-      planning3dState.map.easeTo({
-        pitch: planning3dPublishedView.pitch,
-        bearing: planning3dPublishedView.bearing,
-        duration: 240,
-        essential: true,
-      });
     });
     return;
   }
@@ -9515,20 +9572,8 @@ function focusPlanning3dDataset() {
     duration: 720,
     pitch: planning3dPublishedView.pitch,
     bearing: planning3dPublishedView.bearing,
-    maxZoom: state.planningData?.candidates?.length ? 16.8 : 17.8,
+    maxZoom: state.planningData?.candidates?.length ? 16.8 : 17.2,
     essential: true,
-  });
-
-  planning3dState.map.once("moveend", () => {
-    if (!planning3dState.modalOpen) {
-      return;
-    }
-    planning3dState.map.easeTo({
-      pitch: planning3dPublishedView.pitch,
-      bearing: planning3dPublishedView.bearing,
-      duration: 280,
-      essential: true,
-    });
   });
 }
 
@@ -9587,7 +9632,6 @@ async function openPlanning3dViewer() {
     renderPlanning3dSvgScene();
     renderPlanning3dDomMarkers();
     focusPlanning3dDataset();
-    queuePlanning3dFocus([180, 760]);
   } catch (error) {
     renderPlanning3dSvgScene();
     renderPlanning3dDomMarkers();
@@ -9666,6 +9710,7 @@ function renderPlanningModule() {
   renderHydrologyModule();
   renderTerritorialScenarioCompare();
   renderPlanningTerritoryReadout();
+  renderTerritorialDecisionSupport();
   renderPlanning3dPanel();
   if (dom.planningImagerySelect) {
     dom.planningImagerySelect.value = state.planningImageryId;
@@ -10161,6 +10206,7 @@ function buildLandChangeTimelineData(series, scenario) {
       deltaPopulation,
       active: year === 2022 || (year === 2030 && scenario.id !== "contencion"),
       tone: year === 2010 ? "base" : year === 2016 ? "mid" : year === 2022 ? "current" : "future",
+      phaseLabel: year <= 2022 ? "Observado" : "Proyectado",
       copy: previous
         ? `${deltaHa >= 0 ? "+" : ""}${formatLandChangeHa(deltaHa)} ha y ${deltaPopulation >= 0 ? "+" : ""}${formatLandChangePopulation(deltaPopulation)} hab frente a ${previous.year}.`
         : `Linea base sintetica de ocupacion urbana y poblacion para la serie territorial.`,
@@ -10461,7 +10507,7 @@ function renderLandChangeTimeline(analysis) {
         <article class="land-change-year-card ${snapshot.year === analysis.period.toYear ? "active" : ""}">
           <div class="land-change-year-head">
             <h5>${snapshot.shortLabel}</h5>
-            <span class="land-change-pill tone-${snapshot.tone}">${snapshot.year === analysis.period.toYear ? "Referencia" : "Serie"}</span>
+            <span class="land-change-pill tone-${snapshot.tone}">${snapshot.phaseLabel}</span>
           </div>
           <strong>${formatLandChangeHa(snapshot.areaHa)} ha</strong>
           <span>${formatLandChangePopulation(snapshot.inhabitants)} habitantes</span>
@@ -11667,6 +11713,411 @@ function buildTerritorialScenarioCompareData() {
   return { planning, landChange, hydrology };
 }
 
+function getTerritorialSignalState(score) {
+  if (!Number.isFinite(score)) {
+    return {
+      tone: "pending",
+      label: "Pendiente",
+      shortLabel: "Pendiente",
+    };
+  }
+  if (score >= 72) {
+    return {
+      tone: "good",
+      label: "Apto",
+      shortLabel: "Verde",
+    };
+  }
+  if (score >= 52) {
+    return {
+      tone: "watch",
+      label: "Condicionado",
+      shortLabel: "Amarillo",
+    };
+  }
+  return {
+    tone: "critical",
+    label: "Proteccion prioritaria",
+    shortLabel: "Rojo",
+  };
+}
+
+function buildTerritorialDecisionSnapshot() {
+  const items = [];
+
+  if (state.planningData) {
+    const planning = state.planningData;
+    const score = planning.summary.meanScore;
+    const signal = getTerritorialSignalState(score);
+    items.push({
+      id: "planning",
+      score,
+      signal,
+      title: "Implantacion urbana",
+      metric: `${score}/100`,
+      copy: `${planning.candidates.length} candidatos y ${planning.serviceCoverage.overallCoverage}% de cobertura funcional. Restriccion dominante: ${planning.restrictions.headline.toLowerCase()}.`,
+      note: `${planning.program.longLabel} con ${planning.imageryProfile.shortLabel} y horizonte ${planning.horizon.label}.`,
+    });
+  }
+
+  if (state.landChangeData) {
+    const landChange = state.landChangeData;
+    const score = clamp(100 - landChange.summary.meanScore, 0, 100);
+    const signal = getTerritorialSignalState(score);
+    items.push({
+      id: "landChange",
+      score,
+      signal,
+      title: "Transformacion del suelo",
+      metric: `${formatLandChangeHa(landChange.summary.transformedHa)} ha`,
+      copy: `${landChange.summary.hotspotLabel} concentra ${landChange.summary.riskLabel.toLowerCase()} y ${formatLandChangeHa(landChange.summary.productiveLossHa)} ha de suelo rural en tension.`,
+      note: `${landChange.period.shortLabel} bajo ${landChange.scenario.label.toLowerCase()} con enfoque ${landChange.lens.label.toLowerCase()}.`,
+    });
+  }
+
+  if (state.hydrologyData) {
+    const hydrology = state.hydrologyData;
+    const score = clamp(
+      hydrology.summary.meanResilience
+      + (hydrology.summary.balanceHm3 >= 0 ? 8 : 0)
+      - (hydrology.summary.meanFloodRisk * 0.08)
+      - (hydrology.summary.meanDroughtRisk * 0.08),
+      0,
+      100
+    );
+    const signal = getTerritorialSignalState(score);
+    items.push({
+      id: "hydrology",
+      score,
+      signal,
+      title: "Seguridad hidrica",
+      metric: `${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3`,
+      copy: `${hydrology.summary.criticalSectorLabel} exige seguimiento por estiaje ${hydrology.summary.meanDroughtRisk}% y crecida ${hydrology.summary.meanFloodRisk}%.`,
+      note: `${hydrology.climate.shortLabel}, ${hydrology.horizon.shortLabel} y ${hydrology.demand.shortLabel} con resiliencia ${hydrology.summary.meanResilience}/100.`,
+    });
+  }
+
+  if (!items.length) {
+    return null;
+  }
+
+  const overallScore = Math.round(items.reduce((sum, item) => sum + item.score, 0) / items.length);
+  const overallSignal = getTerritorialSignalState(overallScore);
+  return {
+    overallScore,
+    overallSignal,
+    headline: overallSignal.label,
+    copy: overallSignal.tone === "good"
+      ? "El territorio analizado muestra condiciones favorables para implantar, densificar o proteger con medidas manejables y soporte tecnico."
+      : overallSignal.tone === "watch"
+        ? "El territorio requiere condicionantes claras, mitigacion y secuencia de inversion antes de habilitar nuevos proyectos o consolidar ocupacion."
+        : "El territorio pide contencion, proteccion o rediseño fuerte. La prevencion debe anteceder a cualquier ocupacion o licencia.",
+    items,
+  };
+}
+
+function buildTerritorialSectorSheets() {
+  const sheets = [];
+
+  if (state.planningData?.candidates?.length) {
+    state.planningData.candidates.slice(0, 3).forEach((candidate) => {
+      const feature = candidate.feature?.properties || {};
+      sheets.push({
+        id: candidate.id,
+        module: "Planeamiento",
+        title: candidate.title,
+        tone: getPlanningScoreTone(candidate.score),
+        kicker: `Candidato ${candidate.rank}`,
+        summary: candidate.summary,
+        note: `Variable dominante ${feature.primaryVariableLabel || "sin lectura"} con cobertura ${feature.serviceScore || 0}% y resiliencia ${feature.resilienceScore || 0}%.`,
+        metrics: [
+          { label: "Puntaje", value: `${candidate.score}/100` },
+          { label: "Programa", value: state.planningData.program.shortLabel || state.planningData.program.label },
+          { label: "Cobertura", value: `${state.planningData.serviceCoverage.overallCoverage}%` },
+          { label: "Solar", value: state.planningData.solarReadout.solarLabel },
+        ],
+        actionAttr: `data-candidate-id="${candidate.id}"`,
+      });
+    });
+  }
+
+  if (state.landChangeData?.prioritySectors?.length) {
+    state.landChangeData.prioritySectors.slice(0, 2).forEach((sector) => {
+      sheets.push({
+        id: sector.id,
+        module: "Huella urbana",
+        title: sector.name,
+        tone: getLandChangeScoreTone(sector.score),
+        kicker: sector.priorityLabel,
+        summary: sector.summary,
+        note: sector.recommendation,
+        metrics: [
+          { label: "Huella nueva", value: `${formatLandChangeHa(sector.transformedHa)} ha` },
+          { label: "Suelo rural", value: `${formatLandChangeHa(sector.productiveLossHa)} ha` },
+          { label: "Riesgo", value: `${formatLandChangeHa(sector.riskHa)} ha` },
+          { label: "Driver", value: sector.dominantDriver },
+        ],
+        actionAttr: `data-land-change-sector-id="${sector.id}"`,
+      });
+    });
+  }
+
+  if (state.hydrologyData?.prioritySectors?.length) {
+    state.hydrologyData.prioritySectors.slice(0, 2).forEach((sector) => {
+      sheets.push({
+        id: sector.id,
+        module: "Seguridad hidrica",
+        title: sector.name,
+        tone: getHydrologyBalanceTone(sector.balanceHm3) === "surplus"
+          ? "high"
+          : getHydrologyBalanceTone(sector.balanceHm3) === "watch"
+            ? "mid"
+            : "low",
+        kicker: sector.priorityLabel,
+        summary: sector.summary,
+        note: sector.intervention?.copy || state.hydrologyData.summary.criticalCopy,
+        metrics: [
+          { label: "Balance", value: `${sector.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(sector.balanceHm3)} hm3` },
+          { label: "Resiliencia", value: `${sector.resilience}/100` },
+          { label: "Estiaje", value: `${sector.droughtRisk}%` },
+          { label: "Crecida", value: `${sector.floodRisk}%` },
+        ],
+        actionAttr: `data-hydrology-sector-id="${sector.id}"`,
+      });
+    });
+  }
+
+  return sheets.slice(0, 7);
+}
+
+function escapeHtmlContent(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function escapeCsvValue(value) {
+  const text = String(value ?? "");
+  if (!/[",\n]/.test(text)) {
+    return text;
+  }
+  return `"${text.replace(/"/g, "\"\"")}"`;
+}
+
+function buildTerritorialCsvExport() {
+  const rows = [["modulo", "id", "nombre", "estado", "valor_1", "valor_2", "detalle"]];
+
+  (state.planningData?.candidates || []).forEach((candidate) => {
+    rows.push([
+      "planeamiento",
+      candidate.id,
+      candidate.title,
+      `${candidate.score}/100`,
+      candidate.feature?.properties?.primaryVariableLabel || "",
+      `${candidate.feature?.properties?.serviceScore || 0}%`,
+      candidate.summary,
+    ]);
+  });
+
+  (state.landChangeData?.prioritySectors || []).forEach((sector) => {
+    rows.push([
+      "huella_urbana",
+      sector.id,
+      sector.name,
+      sector.pressureLabel,
+      `${formatLandChangeHa(sector.transformedHa)} ha`,
+      `${formatLandChangeHa(sector.riskHa)} ha`,
+      sector.summary,
+    ]);
+  });
+
+  (state.hydrologyData?.prioritySectors || []).forEach((sector) => {
+    rows.push([
+      "seguridad_hidrica",
+      sector.id,
+      sector.name,
+      sector.balanceLabel,
+      `${sector.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(sector.balanceHm3)} hm3`,
+      `${sector.resilience}/100`,
+      sector.summary,
+    ]);
+  });
+
+  return rows.map((row) => row.map(escapeCsvValue).join(",")).join("\n");
+}
+
+function buildTerritorialGeoJsonExport() {
+  const features = [];
+  const pushFeatures = (collection, module, layer) => {
+    const sourceFeatures = Array.isArray(collection?.features) ? collection.features : [];
+    sourceFeatures.forEach((feature) => {
+      const clone = cloneFeature(feature);
+      clone.properties = {
+        ...(clone.properties || {}),
+        exportModule: module,
+        exportLayer: layer,
+      };
+      features.push(clone);
+    });
+  };
+
+  if (state.planningData) {
+    state.planningData.candidates.forEach((candidate) => {
+      const clone = cloneFeature(candidate.feature);
+      clone.properties = {
+        ...(clone.properties || {}),
+        exportModule: "planeamiento",
+        exportLayer: "candidatos",
+        candidateId: candidate.id,
+        candidateTitle: candidate.title,
+        score: candidate.score,
+      };
+      features.push(clone);
+    });
+    pushFeatures(state.planningData.restrictions.collection, "planeamiento", "restricciones");
+    pushFeatures(state.planningData.serviceCoverage.bufferCollection, "planeamiento", "cobertura_servicios");
+    pushFeatures(state.planningData.serviceCoverage.facilityCollection, "planeamiento", "equipamientos");
+  }
+
+  if (state.landChangeData) {
+    pushFeatures(state.landChangeData.surface, "huella_urbana", "serie_huella");
+    pushFeatures(state.landChangeData.pressureSurface, "huella_urbana", "buffers_presion");
+    state.landChangeData.prioritySectors.forEach((sector) => {
+      const clone = cloneFeature(sector.feature);
+      clone.properties = {
+        ...(clone.properties || {}),
+        exportModule: "huella_urbana",
+        exportLayer: "hotspots",
+        sectorId: sector.id,
+        sectorName: sector.name,
+        score: sector.score,
+      };
+      features.push(clone);
+    });
+  }
+
+  if (state.hydrologyData) {
+    pushFeatures(state.hydrologyData.surface, "seguridad_hidrica", "subzonas");
+    state.hydrologyData.prioritySectors.forEach((sector) => {
+      const clone = cloneFeature(sector.feature);
+      clone.properties = {
+        ...(clone.properties || {}),
+        exportModule: "seguridad_hidrica",
+        exportLayer: "prioridades",
+        sectorId: sector.id,
+        sectorName: sector.name,
+        stressScore: sector.stressScore,
+      };
+      features.push(clone);
+    });
+  }
+
+  return {
+    type: "FeatureCollection",
+    features,
+  };
+}
+
+function buildTerritorialReportHtml() {
+  const snapshot = buildTerritorialDecisionSnapshot();
+  const sheets = buildTerritorialSectorSheets();
+  const today = new Date();
+
+  return `<!doctype html>
+  <html lang="es">
+    <head>
+      <meta charset="utf-8">
+      <title>Informe territorial Mejia</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 28px; color: #243129; }
+        h1, h2, h3 { margin: 0 0 12px; }
+        p { line-height: 1.55; }
+        .kicker { text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; color: #2f7f5f; margin-bottom: 8px; }
+        .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin: 18px 0 26px; }
+        .card { border: 1px solid #d8ddd5; border-radius: 14px; padding: 16px; background: #fbfaf7; }
+        .metric { font-size: 28px; font-weight: 700; margin: 8px 0; }
+        .tone-good { border-color: #8ac39f; }
+        .tone-watch { border-color: #d9b15d; }
+        .tone-critical { border-color: #c37b7b; }
+        .tone-pending { border-color: #c9cec5; }
+        .sheet { margin-bottom: 14px; }
+        ul { margin: 0; padding-left: 18px; }
+      </style>
+    </head>
+    <body>
+      <p class="kicker">Geoportal territorial Mejia</p>
+      <h1>Informe ejecutivo territorial</h1>
+      <p>Generado el ${escapeHtmlContent(today.toLocaleString("es-EC"))} con la corrida territorial activa del geoportal.</p>
+      ${snapshot ? `
+        <section>
+          <p class="kicker">Semaforo integrado</p>
+          <h2>${escapeHtmlContent(snapshot.headline)}</h2>
+          <p>${escapeHtmlContent(snapshot.copy)}</p>
+          <div class="grid">
+            ${snapshot.items.map((item) => `
+              <article class="card tone-${item.signal.tone}">
+                <p class="kicker">${escapeHtmlContent(item.title)}</p>
+                <div class="metric">${escapeHtmlContent(item.metric)}</div>
+                <p><strong>${escapeHtmlContent(item.signal.label)}</strong></p>
+                <p>${escapeHtmlContent(item.copy)}</p>
+                <p>${escapeHtmlContent(item.note)}</p>
+              </article>
+            `).join("")}
+          </div>
+        </section>
+      ` : ""}
+      ${sheets.length ? `
+        <section>
+          <p class="kicker">Fichas priorizadas</p>
+          <h2>Sectores y candidatos</h2>
+          ${sheets.map((sheet) => `
+            <article class="card sheet">
+              <p class="kicker">${escapeHtmlContent(sheet.module)} | ${escapeHtmlContent(sheet.kicker)}</p>
+              <h3>${escapeHtmlContent(sheet.title)}</h3>
+              <p>${escapeHtmlContent(sheet.summary)}</p>
+              <ul>
+                ${sheet.metrics.map((metric) => `<li><strong>${escapeHtmlContent(metric.label)}:</strong> ${escapeHtmlContent(metric.value)}</li>`).join("")}
+              </ul>
+              <p>${escapeHtmlContent(sheet.note)}</p>
+            </article>
+          `).join("")}
+        </section>
+      ` : ""}
+    </body>
+  </html>`;
+}
+
+function downloadTerritorialFile(filename, content, mimeType) {
+  if (typeof window === "undefined" || typeof Blob === "undefined") {
+    return;
+  }
+
+  const blob = new Blob([content], { type: mimeType });
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  window.setTimeout(() => window.URL.revokeObjectURL(url), 400);
+}
+
+function openTerritorialReport() {
+  if (typeof window === "undefined" || typeof Blob === "undefined") {
+    return;
+  }
+
+  const html = buildTerritorialReportHtml();
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = window.URL.createObjectURL(blob);
+  window.open(url, "_blank", "noopener");
+  window.setTimeout(() => window.URL.revokeObjectURL(url), 1200);
+}
+
 function computePlanningGrowthScore(program, horizon, scenario, nearestUrban, nearestRoad, insideUrban) {
   const urbanDistance = nearestUrban.distanceKm;
   const growthRate = Number(nearestUrban.feature?.properties?.growthRate) || 0.62;
@@ -12352,6 +12803,148 @@ function renderPlanningTerritoryReadout() {
       </article>
     </div>
   `);
+}
+
+function renderTerritorialDecisionBoard() {
+  if (!dom.territorialDecisionBoard) {
+    return;
+  }
+
+  const snapshot = buildTerritorialDecisionSnapshot();
+  if (!snapshot) {
+    dom.territorialDecisionBoard.classList.add("empty-state");
+    dom.territorialDecisionBoard.classList.remove("has-data");
+    setTextIfChanged(dom.territorialDecisionBoard, "Ejecuta los modulos territoriales para construir el semaforo integrado de aptitud, riesgo y resiliencia.");
+    return;
+  }
+
+  dom.territorialDecisionBoard.classList.remove("empty-state");
+  dom.territorialDecisionBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.territorialDecisionBoard, `
+    <article class="territorial-decision-hero tone-${snapshot.overallSignal.tone}">
+      <div>
+        <p class="section-kicker">Semaforo integrado</p>
+        <h4>${snapshot.headline}</h4>
+        <p>${snapshot.copy}</p>
+      </div>
+      <div class="territorial-decision-score">
+        <strong>${snapshot.overallScore}/100</strong>
+        <span>${snapshot.overallSignal.shortLabel}</span>
+      </div>
+    </article>
+    <div class="territorial-decision-grid">
+      ${snapshot.items.map((item) => `
+        <article class="territorial-decision-card tone-${item.signal.tone}">
+          <div class="territorial-decision-card-head">
+            <div>
+              <p class="candidate-rank">${item.title}</p>
+              <h5>${item.signal.label}</h5>
+            </div>
+            <span class="scenario-chip tone-${item.signal.tone === "good" ? "high" : item.signal.tone === "watch" ? "mid" : item.signal.tone === "critical" ? "low" : "base"}">${item.metric}</span>
+          </div>
+          <div class="territorial-readout-row">
+            <span>Indice</span>
+            <strong>${item.score}/100</strong>
+            <div class="territorial-readout-track"><i style="width: ${Math.max(10, item.score)}%"></i></div>
+          </div>
+          <p class="territorial-readout-copy">${item.copy}</p>
+          <p class="territorial-decision-note">${item.note}</p>
+        </article>
+      `).join("")}
+    </div>
+  `);
+}
+
+function renderTerritorialSectorSheets() {
+  if (!dom.territorialSectorSheets) {
+    return;
+  }
+
+  const sheets = buildTerritorialSectorSheets();
+  if (!sheets.length) {
+    dom.territorialSectorSheets.classList.add("empty-state");
+    dom.territorialSectorSheets.classList.remove("has-data");
+    setTextIfChanged(dom.territorialSectorSheets, "Aqui apareceran fichas tecnicas por candidato, hotspot de huella y sector hidrico prioritario.");
+    return;
+  }
+
+  dom.territorialSectorSheets.classList.remove("empty-state");
+  dom.territorialSectorSheets.classList.add("has-data");
+  setHtmlIfChanged(dom.territorialSectorSheets, sheets.map((sheet) => `
+    <article class="territorial-sector-sheet tone-${sheet.tone}">
+      <div class="territorial-sector-head">
+        <div>
+          <p class="candidate-rank">${sheet.module}</p>
+          <h4>${sheet.title}</h4>
+        </div>
+        <span class="planning-pill emphasis">${sheet.kicker}</span>
+      </div>
+      <p class="territorial-readout-copy">${sheet.summary}</p>
+      <div class="territorial-sector-grid">
+        ${sheet.metrics.map((metric) => `
+          <article class="territorial-sector-metric">
+            <span>${metric.label}</span>
+            <strong>${metric.value}</strong>
+          </article>
+        `).join("")}
+      </div>
+      <p class="territorial-decision-note">${sheet.note}</p>
+      <button class="ghost-button" type="button" ${sheet.actionAttr}>Ver en mapa</button>
+    </article>
+  `).join(""));
+}
+
+function renderTerritorialExportPanel() {
+  if (!dom.territorialExportPanel) {
+    return;
+  }
+
+  const hasAnyData = Boolean(state.planningData || state.landChangeData || state.hydrologyData);
+  if (!hasAnyData) {
+    dom.territorialExportPanel.classList.add("empty-state");
+    dom.territorialExportPanel.classList.remove("has-data");
+    setTextIfChanged(dom.territorialExportPanel, "Los exportables tecnicos se activaran cuando haya resultados territoriales disponibles.");
+    return;
+  }
+
+  const exportCounts = {
+    planning: state.planningData?.candidates?.length || 0,
+    land: state.landChangeData?.prioritySectors?.length || 0,
+    hydrology: state.hydrologyData?.prioritySectors?.length || 0,
+  };
+  dom.territorialExportPanel.classList.remove("empty-state");
+  dom.territorialExportPanel.classList.add("has-data");
+  setHtmlIfChanged(dom.territorialExportPanel, `
+    <article class="territorial-export-card">
+      <div class="territorial-export-head">
+        <div>
+          <p class="section-kicker">Salida tecnica</p>
+          <h4>Exportables territoriales</h4>
+        </div>
+        <span class="planning-pill emphasis">${exportCounts.planning + exportCounts.land + exportCounts.hydrology} fichas activas</span>
+      </div>
+      <p class="territorial-readout-copy">
+        Descarga un consolidado tabular, una capa GeoJSON combinada o abre un informe ejecutivo con semaforo,
+        fichas y resumen territorial del escenario vigente.
+      </p>
+      <div class="territorial-export-pills">
+        <span class="planning-pill emphasis">${exportCounts.planning} candidatos</span>
+        <span class="planning-pill emphasis">${exportCounts.land} hotspots</span>
+        <span class="planning-pill emphasis">${exportCounts.hydrology} sectores hidricos</span>
+      </div>
+      <div class="action-row analysis-actions">
+        <button class="secondary-button" type="button" data-export-format="report">Abrir informe</button>
+        <button class="ghost-button" type="button" data-export-format="csv">Descargar CSV</button>
+        <button class="ghost-button" type="button" data-export-format="geojson">Descargar GeoJSON</button>
+      </div>
+    </article>
+  `);
+}
+
+function renderTerritorialDecisionSupport() {
+  renderTerritorialDecisionBoard();
+  renderTerritorialSectorSheets();
+  renderTerritorialExportPanel();
 }
 
 function createTerritorialBufferFeature(feature, distanceKm, properties = {}) {

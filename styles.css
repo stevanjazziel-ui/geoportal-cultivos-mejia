@@ -1548,7 +1548,10 @@ button {
 }
 
 .scenario-compare,
-.territorial-readout {
+.territorial-readout,
+.territorial-decision-board,
+.territorial-sector-sheets,
+.territorial-export-panel {
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -1556,7 +1559,10 @@ button {
 }
 
 .scenario-compare.has-data,
-.territorial-readout.has-data {
+.territorial-readout.has-data,
+.territorial-decision-board.has-data,
+.territorial-sector-sheets.has-data,
+.territorial-export-panel.has-data {
   padding: 0;
   background: transparent;
   border: 0;
@@ -1716,6 +1722,121 @@ button {
 
 .territorial-readout-card.tone-solar {
   border-color: rgba(58, 111, 143, 0.14);
+}
+
+.territorial-decision-hero,
+.territorial-decision-card,
+.territorial-sector-sheet,
+.territorial-export-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(47, 61, 50, 0.1);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.territorial-decision-hero {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.territorial-decision-score {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+}
+
+.territorial-decision-score strong {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 2vw, 2rem);
+}
+
+.territorial-decision-score span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.territorial-decision-grid,
+.territorial-sector-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.territorial-decision-card-head,
+.territorial-sector-head,
+.territorial-export-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.territorial-decision-card h5,
+.territorial-sector-head h4,
+.territorial-export-head h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  line-height: 1.2;
+}
+
+.territorial-decision-note {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+  font-size: 0.92rem;
+}
+
+.territorial-sector-metric {
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(47, 61, 50, 0.08);
+  background: rgba(249, 248, 243, 0.92);
+}
+
+.territorial-sector-metric span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.territorial-sector-metric strong {
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.territorial-export-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.territorial-decision-hero.tone-good,
+.territorial-decision-card.tone-good,
+.territorial-sector-sheet.tone-high {
+  border-color: rgba(47, 127, 95, 0.18);
+}
+
+.territorial-decision-hero.tone-watch,
+.territorial-decision-card.tone-watch,
+.territorial-sector-sheet.tone-mid {
+  border-color: rgba(203, 148, 64, 0.18);
+}
+
+.territorial-decision-hero.tone-critical,
+.territorial-decision-card.tone-critical,
+.territorial-sector-sheet.tone-low {
+  border-color: rgba(153, 79, 79, 0.18);
+}
+
+.territorial-decision-hero.tone-pending,
+.territorial-decision-card.tone-pending,
+.territorial-sector-sheet.tone-base {
+  border-color: rgba(95, 108, 118, 0.18);
 }
 
 .territorial-readout-pills {
@@ -3533,6 +3654,14 @@ button {
 
   .planning-candidate-head {
     flex-direction: column;
+  }
+
+  .territorial-decision-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .territorial-decision-score {
+    justify-items: start;
   }
 
   .land-change-head,
