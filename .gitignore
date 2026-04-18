@@ -6,3 +6,5 @@ chrome-headless/
 *_dom.html
 debug_runner.html
 planning3d_photo_index.json
+tmp/
+tmptiles/

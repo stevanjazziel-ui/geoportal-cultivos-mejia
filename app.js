@@ -1266,7 +1266,7 @@ const planning3dPublishedView = {
 };
 
 const planning3dPublishedSatelliteFallback = {
-  url: "./public-data/planning3d/machachi_orthophoto_full.jpg",
+  url: "./public-data/planning3d/machachi_orthophoto_full_web.jpg",
   coordinates: [
     [planning3dPublishedOrthophotoBounds[0], planning3dPublishedOrthophotoBounds[3]],
     [planning3dPublishedOrthophotoBounds[2], planning3dPublishedOrthophotoBounds[3]],
@@ -6039,8 +6039,6 @@ function preloadPlanning3dBasemap(baseId = planning3dState.currentBase) {
 
 function createPlanning3dStyle(baseId = planning3dState.currentBase) {
   const isSatellite = baseId === "satellite";
-  const hasPublishedOrthophotoTiles = Array.isArray(planning3dPublishedOrthophotoTiles.tiles)
-    && planning3dPublishedOrthophotoTiles.tiles.length > 0;
   const style = {
     version: 8,
     sources: {
@@ -6103,10 +6101,10 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
         type: "raster",
         source: "planning3d-basemap-satellite",
         layout: {
-          visibility: isSatellite && !hasPublishedOrthophotoTiles ? "visible" : "none",
+          visibility: isSatellite ? "visible" : "none",
         },
         paint: {
-          "raster-opacity": 0.18,
+          "raster-opacity": 0.42,
           "raster-saturation": 0.1,
           "raster-contrast": 0.1,
           "raster-brightness-min": 0.06,
@@ -6180,8 +6178,6 @@ function updatePlanning3dBasemapStyle() {
   }
 
   const isSatellite = planning3dState.currentBase === "satellite";
-  const showRemoteSatellite = isSatellite && !(Array.isArray(planning3dPublishedOrthophotoTiles.tiles)
-    && planning3dPublishedOrthophotoTiles.tiles.length > 0);
   syncPlanning3dImageBackdrop();
   if (dom.planning3dMap) {
     dom.planning3dMap.classList.toggle("satellite-mode", isSatellite);
@@ -6198,7 +6194,7 @@ function updatePlanning3dBasemapStyle() {
 
   [
     ["planning3d-basemap-light", !isSatellite],
-    ["planning3d-basemap-satellite", showRemoteSatellite],
+    ["planning3d-basemap-satellite", isSatellite],
     ["planning3d-basemap-orthophoto", isSatellite],
     ["planning3d-basemap-satellite-preview", isSatellite],
   ].forEach(([layerId, visible]) => {
@@ -6280,13 +6276,13 @@ function addPlanning3dRuntimeLayers() {
         ["linear"],
         ["zoom"],
         9,
-        0.42,
+        0.58,
         12,
-        0.38,
+        0.52,
         15,
-        0.34,
+        0.46,
         17,
-        0.3,
+        0.4,
       ],
     },
   });
@@ -6320,9 +6316,9 @@ function addPlanning3dRuntimeLayers() {
         ["linear"],
         ["zoom"],
         10,
-        1.4,
+        1.8,
         15,
-        2.2,
+        2.8,
       ],
       "line-opacity": 0.9,
     },
@@ -6340,9 +6336,9 @@ function addPlanning3dRuntimeLayers() {
         ["linear"],
         ["zoom"],
         10,
-        0.8,
+        1.1,
         15,
-        1.35,
+        1.8,
       ],
       "line-opacity": 0.95,
     },
@@ -7370,14 +7366,14 @@ function isPlanning3dOrthographicView() {
 function shouldRenderPlanning3dSvgScene() {
   const buildingCount = planning3dState.sourceData.buildings?.features?.length || 0;
   const zoom = planning3dState.map?.getZoom?.() || 0;
+  const orthographic = isPlanning3dOrthographicView();
   return Boolean(
     dom.planning3dMap
     && planning3dState.modalOpen
     && planning3dState.buildingsVisible
     && buildingCount
-    && zoom >= 16
-    && buildingCount <= 520
-    && !isPlanning3dOrthographicView()
+    && zoom >= (orthographic ? 15 : 16)
+    && (orthographic || buildingCount <= 520)
   );
 }
 
@@ -7400,8 +7396,16 @@ function getPlanning3dPixelsPerMeter(lat = -0.5065) {
 }
 
 function getPlanning3dExtrusionVector(heightPx) {
-  const bearingRad = ((planning3dState.map?.getBearing?.() || -18) * Math.PI) / 180;
-  const pitchFactor = clamp((planning3dState.map?.getPitch?.() || 52) / 60, 0.58, 1.35);
+  const pitch = planning3dState.map?.getPitch?.() ?? planning3dPublishedView.pitch ?? 0;
+  if (Math.abs(pitch) <= 5) {
+    return {
+      dx: 0,
+      dy: 0,
+    };
+  }
+  const bearing = planning3dState.map?.getBearing?.() ?? -18;
+  const bearingRad = (bearing * Math.PI) / 180;
+  const pitchFactor = clamp(pitch / 60, 0.58, 1.35);
   return {
     dx: (Math.sin(bearingRad + 0.58) * heightPx * 0.28) + (heightPx * 0.14),
     dy: -heightPx * (0.72 + (pitchFactor * 0.14)) + (Math.cos(bearingRad) * heightPx * 0.06),
@@ -7583,6 +7587,7 @@ function renderPlanning3dSvgScene() {
   overlay.setAttribute("preserveAspectRatio", "none");
 
   const useDetailedMaterials = shouldUsePlanning3dDetailedSvgScene();
+  const orthographic = isPlanning3dOrthographicView();
   if (useDetailedMaterials) {
     const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
     defs.innerHTML = createPlanning3dTextureDefsMarkup();
@@ -7601,7 +7606,10 @@ function renderPlanning3dSvgScene() {
     const profileId = props.facadeProfileId || planning3dFallbackTextureCatalog.profiles[0].id;
 
     const group = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    group.setAttribute("class", `planning-3d-svg-building${useDetailedMaterials ? " detailed" : " simple"}${active ? " active" : ""}`);
+    group.setAttribute(
+      "class",
+      `planning-3d-svg-building${useDetailedMaterials ? " detailed" : " simple"}${orthographic ? " orthographic" : ""}${active ? " active" : ""}`
+    );
     group.setAttribute("data-feature-id", String(feature.id ?? props.recordIndex ?? ""));
     group.setAttribute("tabindex", "0");
     group.setAttribute("role", "button");
@@ -7610,24 +7618,40 @@ function renderPlanning3dSvgScene() {
       `Construccion ${props.buildingId || feature.id || "sin id"} con ${props.floors || 1} pisos en lote georreferenciado`
     );
 
-    group.appendChild(createPlanning3dSvgPolygon(shadow, "planning-3d-svg-shadow"));
-    group.appendChild(createPlanning3dSvgPolygon(bottom, "planning-3d-svg-footprint", {
-      fill: props.facadeFront || "#6e8ea3",
-    }));
-
-    sideFaces.forEach((face) => {
-      group.appendChild(createPlanning3dSvgPolygon(face.points, "planning-3d-svg-side", {
-        fill: useDetailedMaterials
-          ? `url(#planning3d-facade-${profileId})`
-          : (props.facadeSide || "#4f6d82"),
+    if (orthographic) {
+      const orthographicShadowOffset = clamp(
+        ((Number(props.heightM) || 4.2) * planning3dState.heightScale) * 0.22,
+        1.4,
+        6.4
+      );
+      const orthographicShadow = bottom.map((point) => [
+        point[0] + (orthographicShadowOffset * 0.55),
+        point[1] + orthographicShadowOffset,
+      ]);
+      group.appendChild(createPlanning3dSvgPolygon(orthographicShadow, "planning-3d-svg-shadow"));
+      group.appendChild(createPlanning3dSvgPolygon(bottom, "planning-3d-svg-top", {
+        fill: props.facadeTop || "#d7e3d6",
       }));
-    });
+    } else {
+      group.appendChild(createPlanning3dSvgPolygon(shadow, "planning-3d-svg-shadow"));
+      group.appendChild(createPlanning3dSvgPolygon(bottom, "planning-3d-svg-footprint", {
+        fill: props.facadeFront || "#6e8ea3",
+      }));
 
-    group.appendChild(createPlanning3dSvgPolygon(top, "planning-3d-svg-top", {
-      fill: useDetailedMaterials
-        ? `url(#planning3d-roof-${profileId})`
-        : (props.facadeTop || "#a8c0cf"),
-    }));
+      sideFaces.forEach((face) => {
+        group.appendChild(createPlanning3dSvgPolygon(face.points, "planning-3d-svg-side", {
+          fill: useDetailedMaterials
+            ? `url(#planning3d-facade-${profileId})`
+            : (props.facadeSide || "#4f6d82"),
+        }));
+      });
+
+      group.appendChild(createPlanning3dSvgPolygon(top, "planning-3d-svg-top", {
+        fill: useDetailedMaterials
+          ? `url(#planning3d-roof-${profileId})`
+          : (props.facadeTop || "#a8c0cf"),
+      }));
+    }
 
     group.addEventListener("click", (event) => {
       event.preventDefault();
@@ -7773,6 +7797,13 @@ function syncPlanning3dLayerVisibility() {
   if (planning3dState.map?.getLayer("planning3d-buildings-footprint")) {
     planning3dState.map.setLayoutProperty(
       "planning3d-buildings-footprint",
+      "visibility",
+      planning3dState.buildingsVisible ? "visible" : "none"
+    );
+  }
+  if (planning3dState.map?.getLayer("planning3d-buildings-outline-glow")) {
+    planning3dState.map.setLayoutProperty(
+      "planning3d-buildings-outline-glow",
       "visibility",
       planning3dState.buildingsVisible ? "visible" : "none"
     );
