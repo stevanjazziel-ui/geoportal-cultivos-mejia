@@ -1632,7 +1632,7 @@ const planning3dCatalog = {
     shortLabel: "Construcciones 3D",
     basePath: "./construcciones%2031/construcciones_31oct",
     previewDataPath: "./public-data/planning3d/buildings_orthophoto.geojson",
-    publicDataPath: "./public-data/planning3d/buildings_public.geojson",
+    publicDataPath: "./public-data/planning3d/buildings_orthophoto.geojson",
     publicRecordCount: 17223,
     color: "#78a36d",
     description: "Construcciones reales de Machachi dentro del ambito urbano publicado para navegacion 3D.",
@@ -1643,18 +1643,18 @@ const planning3dCatalog = {
     shortLabel: "Predios",
     basePath: "./CATASTRO%202026/CATASTRO_2026",
     previewDataPath: "./public-data/planning3d/parcels_orthophoto.geojson",
-    publicDataPath: "./public-data/planning3d/parcels_public.geojson",
+    publicDataPath: "./public-data/planning3d/parcels_orthophoto.geojson",
     publicRecordCount: 11820,
     color: "#cb9440",
     description: "Predios reales de Machachi listos para referencia parcelaria dentro del visor 3D.",
   },
 };
 
-const planning3dPublishedBounds = [-78.581347, -0.534320, -78.545394, -0.490360];
+const planning3dPublishedBounds = [-78.5718, -0.5264, -78.5488, -0.5060];
 
 const planning3dPublishedView = {
-  center: [-78.563371, -0.51234],
-  zoom: 16.6,
+  center: [-78.5603, -0.5162],
+  zoom: 17.15,
   pitch: 58,
   bearing: -18,
 };
@@ -7365,6 +7365,33 @@ function estimatePlanning3dMetrics(geometry) {
   };
 }
 
+function isPlanning3dRenderablePublicGeometry(geometry) {
+  if (!geometry || !["Polygon", "MultiPolygon"].includes(geometry.type)) {
+    return false;
+  }
+
+  const ring = getPlanning3dPrimaryRing(geometry);
+  return Array.isArray(ring) && ring.length >= 4;
+}
+
+function isPlanning3dBoundsInsidePublishedWindow(bounds, margin = 0.0026) {
+  if (!Array.isArray(bounds) || bounds.length !== 4) {
+    return false;
+  }
+
+  const [minLon, minLat, maxLon, maxLat] = bounds.map((value) => Number(value));
+  if (![minLon, minLat, maxLon, maxLat].every(Number.isFinite)) {
+    return false;
+  }
+
+  return !(
+    maxLon < (planning3dPublishedBounds[0] - margin)
+    || minLon > (planning3dPublishedBounds[2] + margin)
+    || maxLat < (planning3dPublishedBounds[1] - margin)
+    || minLat > (planning3dPublishedBounds[3] + margin)
+  );
+}
+
 async function loadPlanning3dShapefile(basePath) {
   if (!window.shp?.parseShp) {
     throw new Error("La libreria de shapefile no esta disponible.");
@@ -7397,7 +7424,13 @@ function normalizePlanning3dPublicCollection(datasetKey, collection) {
       type: "FeatureCollection",
       features: features.map((feature, index) => {
         const geometry = feature?.geometry;
+        if (!isPlanning3dRenderablePublicGeometry(geometry)) {
+          return null;
+        }
         const estimate = estimatePlanning3dMetrics(geometry);
+        if (!isPlanning3dBoundsInsidePublishedWindow(estimate.bounds)) {
+          return null;
+        }
         const props = feature?.properties || {};
         const floors = Math.max(1, parsePlanning3dFloorValue(props.n_piso) || estimate.floors || 1);
         const buildingId = Number(props.id) || index + 1;
@@ -7419,15 +7452,21 @@ function normalizePlanning3dPublicCollection(datasetKey, collection) {
           },
           geometry,
         };
-      }),
+      }).filter(Boolean),
     });
   }
 
   return {
     type: "FeatureCollection",
     features: features.map((feature, index) => {
+      if (!isPlanning3dRenderablePublicGeometry(feature?.geometry)) {
+        return null;
+      }
       const props = feature?.properties || {};
       const estimate = estimatePlanning3dMetrics(feature?.geometry);
+      if (!isPlanning3dBoundsInsidePublishedWindow(estimate.bounds)) {
+        return null;
+      }
       const parcelId = Number(props.id) || index + 1;
       return {
         type: "Feature",
@@ -7441,7 +7480,7 @@ function normalizePlanning3dPublicCollection(datasetKey, collection) {
         },
         geometry: feature?.geometry,
       };
-    }),
+    }).filter(Boolean),
   };
 }
 
@@ -7979,7 +8018,23 @@ function ensurePlanning3dDomOverlay() {
 }
 
 function shouldRenderPlanning3dDomMarkers() {
-  return false;
+  const buildingCount = planning3dState.sourceData.buildings?.features?.length || 0;
+  const zoom = planning3dState.map?.getZoom?.() || 0;
+  if (
+    !dom.planning3dMap
+    || !planning3dState.modalOpen
+    || !planning3dState.buildingsVisible
+    || !buildingCount
+    || zoom < 14.8
+  ) {
+    return false;
+  }
+
+  if (!shouldRenderPlanning3dSvgScene()) {
+    return true;
+  }
+
+  return getPlanning3dSvgSceneFeatures().length === 0;
 }
 
 function buildPlanning3dDomMarkerElement(feature) {
@@ -9088,10 +9143,14 @@ function focusPlanning3dDataset() {
 
   const manifest = getPlanning3dManifest();
   if (!manifest.viaBackend && planning3dState.backendMode === "public") {
+    const publicFocusFeature = planning3dState.sourceData.buildings?.features?.length
+      ? planning3dState.sourceData.buildings
+      : (planning3dState.sourceData.parcels?.features?.length ? planning3dState.sourceData.parcels : null);
     const hasDesktopOverlay = typeof window !== "undefined" && window.innerWidth > 900;
+    const focusBounds = publicFocusFeature ? turf.bbox(publicFocusFeature) : planning3dPublishedBounds;
     planning3dState.map.fitBounds([
-      [planning3dPublishedBounds[0], planning3dPublishedBounds[1]],
-      [planning3dPublishedBounds[2], planning3dPublishedBounds[3]],
+      [focusBounds[0], focusBounds[1]],
+      [focusBounds[2], focusBounds[3]],
     ], {
       padding: hasDesktopOverlay
         ? { top: 72, right: 380, bottom: 72, left: 72 }
@@ -9099,7 +9158,7 @@ function focusPlanning3dDataset() {
       duration: 720,
       pitch: planning3dPublishedView.pitch,
       bearing: planning3dPublishedView.bearing,
-      maxZoom: planning3dPublishedView.zoom,
+      maxZoom: publicFocusFeature ? 17.6 : planning3dPublishedView.zoom,
       essential: true,
     });
     planning3dState.map.once("moveend", () => {
