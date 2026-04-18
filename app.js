@@ -13016,22 +13016,77 @@ function clearHydrologyOverlay() {
   }
 }
 
+function buildBoundsFromFeatures(features) {
+  const validFeatures = (features || []).filter((feature) => feature?.geometry);
+  if (!validFeatures.length) {
+    return null;
+  }
+
+  const bounds = L.geoJSON({
+    type: "FeatureCollection",
+    features: validFeatures,
+  }).getBounds();
+
+  return bounds?.isValid?.() ? bounds : null;
+}
+
+function getPlanningFocusBounds() {
+  const candidates = state.planningData?.candidates?.filter((candidate) => candidate?.feature?.geometry) || [];
+  if (!candidates.length) {
+    return mapState.planningLayer?.getBounds?.() || mapState.planningCandidatesLayer?.getBounds?.() || null;
+  }
+
+  const highlightedId = state.planningHighlightId || candidates[0]?.id || null;
+  const orderedCandidates = [...candidates].sort((left, right) => {
+    if (left.id === highlightedId) {
+      return -1;
+    }
+    if (right.id === highlightedId) {
+      return 1;
+    }
+    return left.rank - right.rank;
+  });
+
+  const featuredCluster = orderedCandidates.slice(0, Math.min(3, orderedCandidates.length)).map((candidate) => candidate.feature);
+  const allCandidateFeatures = orderedCandidates.map((candidate) => candidate.feature);
+
+  return buildBoundsFromFeatures(featuredCluster)
+    || buildBoundsFromFeatures(allCandidateFeatures)
+    || mapState.planningLayer?.getBounds?.()
+    || mapState.planningCandidatesLayer?.getBounds?.()
+    || null;
+}
+
+function openPlanningCandidatePopup(candidateId) {
+  if (!candidateId || !mapState.planningCandidatesLayer) {
+    return;
+  }
+
+  mapState.planningCandidatesLayer.eachLayer((layer) => {
+    if (layer.feature?.properties?.candidateId === candidateId) {
+      layer.openPopup();
+    }
+  });
+}
+
 function focusPlanningCandidates() {
-  if (!mapState.map || (!mapState.planningCandidatesLayer && !mapState.planningLayer && !mapState.planningCoverageLayer)) {
+  if (!mapState.map || !state.planningData?.candidates?.length) {
     return;
   }
 
   state.territorialFocus = "planning";
+  state.planningHighlightId = state.planningHighlightId || state.planningData.candidates[0]?.id || null;
+  renderPlanningCandidates(state.planningData);
+  renderPlanningOverlay(state.planningData);
   updateMapSummary();
-  const bounds = mapState.planningCoverageLayer?.getBounds?.()
-    || mapState.planningLayer?.getBounds?.()
-    || mapState.planningCandidatesLayer?.getBounds?.();
+  const bounds = getPlanningFocusBounds();
   if (bounds?.isValid?.()) {
     mapState.map.fitBounds(bounds, {
-      padding: [48, 48],
-      maxZoom: 13,
+      padding: [56, 56],
+      maxZoom: 14,
     });
   }
+  openPlanningCandidatePopup(state.planningHighlightId);
 }
 
 function focusLandChangeStudy() {
@@ -13084,13 +13139,7 @@ function focusPlanningCandidate(candidateId) {
     padding: [54, 54],
     maxZoom: 14,
   });
-  if (mapState.planningCandidatesLayer) {
-    mapState.planningCandidatesLayer.eachLayer((layer) => {
-      if (layer.feature?.properties?.candidateId === candidateId) {
-        layer.openPopup();
-      }
-    });
-  }
+  openPlanningCandidatePopup(candidateId);
 }
 
 function focusLandChangeSector(sectorId) {
