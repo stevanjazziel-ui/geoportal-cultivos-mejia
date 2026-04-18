@@ -1929,6 +1929,11 @@ function setPlanning3dViewMode(mode = "perspective", options = {}) {
     duration: options.duration ?? 620,
     essential: true,
   });
+  if (options.recenter) {
+    stabilizePlanning3dViewport({ focus: true });
+  } else {
+    stabilizePlanning3dViewport({ focus: false });
+  }
 }
 
 const planning3dBasemapWarmup = {
@@ -9030,22 +9035,21 @@ function ensurePlanning3dDomOverlay() {
 function shouldRenderPlanning3dDomMarkers() {
   const buildingCount = planning3dState.sourceData.buildings?.features?.length || 0;
   const zoom = planning3dState.map?.getZoom?.() || 0;
-  const hasExtrusionLayer = Boolean(planning3dState.map?.getLayer?.("planning3d-buildings-fill"));
   if (
     !dom.planning3dMap
     || !planning3dState.modalOpen
     || !planning3dState.buildingsVisible
     || !buildingCount
-    || zoom < 16.4
+    || zoom < 14.2
   ) {
     return false;
   }
 
-  if (hasExtrusionLayer) {
+  if (shouldRenderPlanning3dSvgScene()) {
     return false;
   }
 
-  return buildingCount <= 900;
+  return buildingCount <= 1800;
 }
 
 function hasPlanning3dNativeBuildingScene() {
@@ -9235,16 +9239,20 @@ function isPlanning3dOrthographicView() {
 function shouldRenderPlanning3dSvgScene() {
   const buildingCount = planning3dState.sourceData.buildings?.features?.length || 0;
   const zoom = planning3dState.map?.getZoom?.() || 0;
-  if (hasPlanning3dNativeBuildingScene()) {
-    return false;
-  }
+  const orthographic = isPlanning3dOrthographicView();
   return Boolean(
     dom.planning3dMap
     && planning3dState.modalOpen
     && planning3dState.buildingsVisible
     && buildingCount
-    && zoom >= 15.6
-    && (buildingCount <= 6000 || planning3dState.selectedFeatureId != null)
+    && zoom >= (orthographic ? 13.6 : 14.6)
+    && (
+      orthographic
+      || planning3dState.backendMode === "public"
+      || buildingCount <= 12000
+      || planning3dState.selectedFeatureId != null
+      || !hasPlanning3dNativeBuildingScene()
+    )
   );
 }
 
@@ -10244,6 +10252,29 @@ function focusPlanning3dDataset() {
   });
 }
 
+function stabilizePlanning3dViewport({ focus = false } = {}) {
+  if (!planning3dState.map) {
+    return;
+  }
+
+  const run = () => {
+    planning3dState.map?.resize?.();
+    planning3dState.map?.triggerRepaint?.();
+    if (focus) {
+      focusPlanning3dDataset();
+    }
+    queuePlanning3dSvgSceneSync();
+    queuePlanning3dDomMarkerPositionSync();
+    renderPlanning3dDomMarkers();
+  };
+
+  run();
+  if (typeof window !== "undefined") {
+    window.setTimeout(run, 160);
+    window.setTimeout(run, 420);
+  }
+}
+
 function setPlanning3dBase(baseId = "satellite") {
   planning3dState.currentBase = baseId;
   syncPlanning3dBaseButtons();
@@ -10253,6 +10284,7 @@ function setPlanning3dBase(baseId = "satellite") {
   }
   updatePlanning3dBasemapStyle();
   queuePlanning3dSvgSceneSync();
+  stabilizePlanning3dViewport({ focus: false });
 }
 
 async function openPlanning3dViewer() {
@@ -10308,7 +10340,7 @@ async function openPlanning3dViewer() {
     renderPlanning3dSvgScene();
     renderPlanning3dDomMarkers();
     setPlanning3dViewMode(planning3dState.viewMode, { recenter: false, duration: 0 });
-    focusPlanning3dDataset();
+    stabilizePlanning3dViewport({ focus: true });
   } catch (error) {
     renderPlanning3dSvgScene();
     renderPlanning3dDomMarkers();
