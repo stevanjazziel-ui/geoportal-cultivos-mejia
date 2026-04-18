@@ -28,7 +28,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260418-10">
+  <link rel="stylesheet" href="./styles.css?v=20260418-11">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -648,6 +648,22 @@
             <article class="module-card planning-card hidden" data-module-track="planificacion">
               <div class="module-head">
                 <div>
+                  <p class="module-kicker">Monitoreo</p>
+                  <h3>Alertas territoriales</h3>
+                </div>
+              </div>
+              <p class="module-copy">
+                Reune alertas operativas sobre ocupacion en quebradas, deficit de servicios,
+                tension hidrica y sectores que requieren contencion o intervencion inmediata.
+              </p>
+              <div id="territorialAlertsPanel" class="territorial-alerts-panel empty-state">
+                Ejecuta los estudios territoriales para activar alertas y prioridades de seguimiento.
+              </div>
+            </article>
+
+            <article class="module-card planning-card hidden" data-module-track="planificacion">
+              <div class="module-head">
+                <div>
                   <p class="module-kicker">Visualizador urbano</p>
                   <h3>Visor 3D de construcciones</h3>
                 </div>
@@ -753,7 +769,9 @@
           </p>
         </div>
         <div class="planning-3d-header-actions">
-          <button id="planning3dResetViewBtn" class="ghost-button" type="button">Vista general</button>
+          <button id="planning3dPerspectiveBtn" class="ghost-button" type="button">Vista 3D</button>
+          <button id="planning3dOrthographicBtn" class="ghost-button" type="button">Vista ortogonal</button>
+          <button id="planning3dResetViewBtn" class="ghost-button" type="button">Recentrar</button>
           <button id="planning3dCloseBtn" class="secondary-button" type="button">Cerrar</button>
         </div>
       </header>
@@ -846,6 +864,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260418-17" defer></script>
+  <script src="./app.js?v=20260418-18" defer></script>
 </body>
 </html>

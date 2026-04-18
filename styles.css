@@ -1737,7 +1737,8 @@ button {
 .territorial-decision-hero,
 .territorial-decision-card,
 .territorial-sector-sheet,
-.territorial-export-card {
+.territorial-export-card,
+.territorial-alert-card {
   display: grid;
   gap: 12px;
   padding: 16px;
@@ -1825,6 +1826,11 @@ button {
   gap: 10px;
 }
 
+.territorial-alerts-panel {
+  display: grid;
+  gap: 14px;
+}
+
 .territorial-decision-hero.tone-good,
 .territorial-decision-card.tone-good,
 .territorial-sector-sheet.tone-high {
@@ -1847,6 +1853,14 @@ button {
 .territorial-decision-card.tone-pending,
 .territorial-sector-sheet.tone-base {
   border-color: rgba(95, 108, 118, 0.18);
+}
+
+.territorial-alert-card.tone-critical {
+  border-color: rgba(153, 79, 79, 0.24);
+}
+
+.territorial-alert-card.tone-watch {
+  border-color: rgba(203, 148, 64, 0.22);
 }
 
 .territorial-readout-pills {
@@ -2827,6 +2841,14 @@ button {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: end;
+}
+
+.planning-3d-header-actions .ghost-button.active {
+  background: rgba(140, 92, 60, 0.16);
+  border-color: rgba(140, 92, 60, 0.34);
+  color: var(--ink-strong);
 }
 
 .planning-3d-toolbar {
