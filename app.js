@@ -543,9 +543,10 @@ const studyArea = {
   geometry: {
     type: "Polygon",
     coordinates: [[
-      [-78.735, -0.384],
-      [-78.648, -0.374],
-      [-78.548, -0.396],
+      [-78.735, -0.333],
+      [-78.648, -0.326],
+      [-78.548, -0.336],
+      [-78.452, -0.382],
       [-78.452, -0.442],
       [-78.41, -0.515],
       [-78.432, -0.607],
@@ -553,8 +554,49 @@ const studyArea = {
       [-78.628, -0.646],
       [-78.724, -0.585],
       [-78.759, -0.472],
-      [-78.735, -0.384],
+      [-78.735, -0.333],
     ]],
+  },
+};
+
+const territorialAreaCatalog = {
+  mejia: {
+    id: "mejia",
+    label: "Todo Mejia",
+    shortLabel: "Mejia",
+    scopeLabel: "Canton Mejia",
+    planning3dAreaId: "machachi",
+    feature: studyArea,
+  },
+  machachi: {
+    id: "machachi",
+    label: "Machachi",
+    shortLabel: "Machachi",
+    scopeLabel: "Machachi",
+    planning3dAreaId: "machachi",
+    feature: polygonFeature("Machachi", [
+      [-78.612, -0.486],
+      [-78.546, -0.486],
+      [-78.538, -0.522],
+      [-78.556, -0.548],
+      [-78.603, -0.548],
+      [-78.621, -0.515],
+    ], { category: "territorio", territoryId: "machachi" }),
+  },
+  cutuglagua: {
+    id: "cutuglagua",
+    label: "Cutuglagua",
+    shortLabel: "Cutuglagua",
+    scopeLabel: "Cutuglagua",
+    planning3dAreaId: "cutuglagua",
+    feature: polygonFeature("Cutuglagua", [
+      [-78.621, -0.341],
+      [-78.579, -0.338],
+      [-78.563, -0.353],
+      [-78.567, -0.383],
+      [-78.607, -0.387],
+      [-78.624, -0.362],
+    ], { category: "territorio", territoryId: "cutuglagua" }),
   },
 };
 
@@ -584,6 +626,14 @@ const geoSources = {
         [-78.68, -0.53],
         [-78.74, -0.484],
       ], { category: "parroquia" }),
+      polygonFeature("Cutuglagua", [
+        [-78.626, -0.339],
+        [-78.579, -0.336],
+        [-78.557, -0.356],
+        [-78.562, -0.388],
+        [-78.607, -0.389],
+        [-78.629, -0.364],
+      ], { category: "parroquia" }),
     ],
   },
   vias: {
@@ -599,6 +649,12 @@ const geoSources = {
         [-78.57, -0.43],
         [-78.51, -0.45],
         [-78.46, -0.49],
+      ], { category: "vial" }),
+      lineFeature("Eje Cutuglagua", [
+        [-78.617, -0.343],
+        [-78.603, -0.352],
+        [-78.591, -0.364],
+        [-78.576, -0.381],
       ], { category: "vial" }),
     ],
   },
@@ -616,6 +672,12 @@ const geoSources = {
         [-78.61, -0.55],
         [-78.54, -0.56],
         [-78.47, -0.58],
+      ], { category: "hidrico" }),
+      lineFeature("Quebrada Cutuglagua", [
+        [-78.62, -0.342],
+        [-78.607, -0.352],
+        [-78.594, -0.366],
+        [-78.581, -0.382],
       ], { category: "hidrico" }),
     ],
   },
@@ -663,6 +725,7 @@ const geoSources = {
       pointFeature("EMA Machachi", [-78.58, -0.49], { category: "meteo" }),
       pointFeature("EMA Aloag", [-78.68, -0.47], { category: "meteo" }),
       pointFeature("EMA Tambillo", [-78.52, -0.45], { category: "meteo" }),
+      pointFeature("EMA Cutuglagua", [-78.594, -0.366], { category: "meteo" }),
     ],
   },
   manchaUrbana: {
@@ -728,6 +791,30 @@ const geoSources = {
         growthRate: 0.62,
         hierarchy: "barrial",
       }),
+      polygonFeature("Cutuglagua central", [
+        [-78.607, -0.36],
+        [-78.589, -0.355],
+        [-78.574, -0.365],
+        [-78.577, -0.382],
+        [-78.595, -0.386],
+        [-78.61, -0.374],
+      ], {
+        category: "urbano",
+        growthRate: 0.88,
+        hierarchy: "subcentro",
+      }),
+      polygonFeature("Cutuglagua oriental", [
+        [-78.591, -0.358],
+        [-78.578, -0.355],
+        [-78.57, -0.366],
+        [-78.574, -0.379],
+        [-78.586, -0.382],
+        [-78.596, -0.372],
+      ], {
+        category: "urbano",
+        growthRate: 0.73,
+        hierarchy: "barrial",
+      }),
     ],
   },
   equipamientos: {
@@ -764,6 +851,21 @@ const geoSources = {
         level: "barrial",
       }),
       pointFeature("Nodo comunitario Tambillo", [-78.533, -0.463], {
+        category: "equipamiento",
+        serviceType: "equipamiento",
+        level: "barrial",
+      }),
+      pointFeature("Centro de Salud Cutuglagua", [-78.593, -0.367], {
+        category: "equipamiento",
+        serviceType: "hospital",
+        level: "parroquial",
+      }),
+      pointFeature("Unidad Educativa Cutuglagua", [-78.586, -0.364], {
+        category: "equipamiento",
+        serviceType: "escuela",
+        level: "parroquial",
+      }),
+      pointFeature("Nodo de servicios Cutuglagua", [-78.598, -0.372], {
         category: "equipamiento",
         serviceType: "equipamiento",
         level: "barrial",
@@ -913,6 +1015,53 @@ const geoSources = {
         urbanPressure: 0.26,
         irrigationPressure: 0.84,
         transferDependency: 0.2,
+      }),
+      polygonFeature("Cutuglagua alta", [
+        [-78.625, -0.341],
+        [-78.587, -0.339],
+        [-78.569, -0.357],
+        [-78.582, -0.381],
+        [-78.616, -0.383],
+        [-78.63, -0.361],
+      ], {
+        category: "hidrico",
+        hydroRole: "Cabecera periurbana de Cutuglagua",
+        precipBaseMm: 1185,
+        petBaseMm: 872,
+        rechargeCoeff: 0.27,
+        runoffCoeff: 0.37,
+        domesticBaseHm3: 1.8,
+        irrigationBaseHm3: 0.9,
+        productiveBaseHm3: 0.4,
+        ecologicalFlowHm3: 2.3,
+        floodSensitivity: 0.61,
+        storageOpportunity: 0.41,
+        urbanPressure: 0.76,
+        irrigationPressure: 0.18,
+        transferDependency: 0.22,
+      }),
+      polygonFeature("Quebradas de Cutuglagua", [
+        [-78.606, -0.349],
+        [-78.573, -0.349],
+        [-78.567, -0.372],
+        [-78.582, -0.384],
+        [-78.611, -0.383],
+      ], {
+        category: "hidrico",
+        hydroRole: "Quebradas y drenaje urbano",
+        precipBaseMm: 1160,
+        petBaseMm: 878,
+        rechargeCoeff: 0.23,
+        runoffCoeff: 0.41,
+        domesticBaseHm3: 2.2,
+        irrigationBaseHm3: 0.6,
+        productiveBaseHm3: 0.5,
+        ecologicalFlowHm3: 2.1,
+        floodSensitivity: 0.72,
+        storageOpportunity: 0.34,
+        urbanPressure: 0.83,
+        irrigationPressure: 0.14,
+        transferDependency: 0.26,
       }),
     ],
   },
@@ -1650,14 +1799,79 @@ const planning3dCatalog = {
   },
 };
 
-const planning3dPublishedBounds = [-78.5718, -0.5264, -78.5488, -0.5060];
+const planning3dAreaCatalog = {
+  machachi: {
+    id: "machachi",
+    label: "Machachi",
+    shortLabel: "Machachi",
+    subtitle: "Huellas reales de construcciones extruidas por n_piso, soporte catastral y base OpenStreetMap para lectura urbana en Machachi.",
+    buildingsPath: "./public-data/planning3d/buildings_orthophoto.geojson",
+    parcelsPath: "./public-data/planning3d/parcels_orthophoto.geojson",
+    buildingsCount: 17223,
+    parcelsCount: 11820,
+    buildingsDescription: "Construcciones reales de Machachi dentro del ambito urbano publicado para navegacion 3D.",
+    parcelsDescription: "Predios reales de Machachi listos para referencia parcelaria dentro del visor 3D.",
+    bounds: [-78.5718, -0.5264, -78.5488, -0.5060],
+    view: {
+      center: [-78.5603, -0.5162],
+      zoom: 16.5,
+      pitch: 54,
+      bearing: -14,
+    },
+  },
+  cutuglagua: {
+    id: "cutuglagua",
+    label: "Cutuglagua",
+    shortLabel: "Cutuglagua",
+    subtitle: "Huellas reales de construcciones extruidas por n_piso, soporte catastral y base OpenStreetMap para lectura urbana en Cutuglagua.",
+    buildingsPath: "./public-data/planning3d/buildings_cutuglagua.geojson",
+    parcelsPath: "./public-data/planning3d/parcels_cutuglagua.geojson",
+    buildingsCount: 2523,
+    parcelsCount: 2676,
+    buildingsDescription: "Construcciones reales de Cutuglagua listas para navegacion 3D publicada.",
+    parcelsDescription: "Predios reales de Cutuglagua listos para referencia parcelaria dentro del visor 3D.",
+    bounds: [-78.6210, -0.3830, -78.5670, -0.3530],
+    view: {
+      center: [-78.5940, -0.3680],
+      zoom: 15.8,
+      pitch: 54,
+      bearing: -14,
+    },
+  },
+};
 
-const planning3dPublishedView = {
+let planning3dPublishedBounds = [-78.5718, -0.5264, -78.5488, -0.5060];
+
+let planning3dPublishedView = {
   center: [-78.5603, -0.5162],
   zoom: 16.5,
   pitch: 54,
   bearing: -14,
 };
+
+function getPlanning3dAreaProfile(areaId = planning3dState?.areaId || "machachi") {
+  return planning3dAreaCatalog[areaId] || planning3dAreaCatalog.machachi;
+}
+
+function applyPlanning3dAreaProfile(areaId = planning3dState?.areaId || "machachi") {
+  const profile = getPlanning3dAreaProfile(areaId);
+  planning3dCatalog.buildings.previewDataPath = profile.buildingsPath;
+  planning3dCatalog.buildings.publicDataPath = profile.buildingsPath;
+  planning3dCatalog.buildings.publicRecordCount = profile.buildingsCount;
+  planning3dCatalog.buildings.description = profile.buildingsDescription;
+  planning3dCatalog.parcels.previewDataPath = profile.parcelsPath;
+  planning3dCatalog.parcels.publicDataPath = profile.parcelsPath;
+  planning3dCatalog.parcels.publicRecordCount = profile.parcelsCount;
+  planning3dCatalog.parcels.description = profile.parcelsDescription;
+  planning3dPublishedBounds = [...profile.bounds];
+  planning3dPublishedView = {
+    ...planning3dPublishedView,
+    ...profile.view,
+  };
+  return profile;
+}
+
+applyPlanning3dAreaProfile("machachi");
 
 const planning3dBasemapWarmup = {
   satellite: null,
@@ -1781,6 +1995,7 @@ const state = {
   analysisData: null,
   compareAnalysis: null,
   changeAnalysis: null,
+  territorialAreaId: "mejia",
   planningUseId: "vis",
   planningImageryId: "sentinel2Urban",
   planningHorizonId: "medio",
@@ -1861,6 +2076,7 @@ const planning3dState = {
   sunDate: "",
   sunTime: "",
   sunPosition: null,
+  areaId: "machachi",
   map: null,
   readyPromise: null,
   eventsBound: false,
@@ -2185,10 +2401,10 @@ function getHydrologySourceFeatures() {
   const features = Array.isArray(geoSources.hidrozonas?.features)
     ? geoSources.hidrozonas.features
     : [];
-  return features.filter((feature) => {
+  return filterFeaturesByTerritorialArea(features.filter((feature) => {
     const geometryType = feature?.geometry?.type;
     return geometryType === "Polygon" || geometryType === "MultiPolygon";
-  });
+  }));
 }
 
 function readHydrologyNumericValue(properties, key, fallback = 0) {
@@ -2216,6 +2432,89 @@ function getLandChangeScenarioProfile(scenarioId = state.landChangeScenarioId) {
 
 function getLandChangeLensProfile(lensId = state.landChangeLensId) {
   return landChangeLensCatalog[lensId] || landChangeLensCatalog.mixto;
+}
+
+function syncTerritorialAreaSelects() {
+  (dom.territorialAreaSelects || []).forEach((select) => {
+    if (select.value !== state.territorialAreaId) {
+      select.value = state.territorialAreaId;
+    }
+  });
+  if (dom.planning3dTerritorySelect && dom.planning3dTerritorySelect.value !== planning3dState.areaId) {
+    dom.planning3dTerritorySelect.value = planning3dState.areaId;
+  }
+}
+
+function setPlanning3dArea(areaId = planning3dState.areaId, options = {}) {
+  const nextAreaId = planning3dAreaCatalog[areaId] ? areaId : "machachi";
+  if (planning3dState.areaId === nextAreaId && !options.force) {
+    syncTerritorialAreaSelects();
+    return false;
+  }
+
+  planning3dState.areaId = nextAreaId;
+  const profile = applyPlanning3dAreaProfile(nextAreaId);
+  syncTerritorialAreaSelects();
+
+  if (dom.planning3dSubtitle) {
+    setTextIfChanged(dom.planning3dSubtitle, profile.subtitle);
+  }
+
+  if (planning3dState.map) {
+    planning3dState.map.jumpTo({
+      center: planning3dPublishedView.center,
+      zoom: planning3dPublishedView.zoom,
+      pitch: planning3dPublishedView.pitch,
+      bearing: planning3dPublishedView.bearing,
+    });
+  }
+
+  if (options.reload !== false) {
+    reloadPlanning3dData();
+  } else {
+    renderPlanning3dPanel();
+    renderPlanning3dSummary();
+    renderPlanning3dProgress();
+  }
+
+  return true;
+}
+
+function setTerritorialArea(areaId = state.territorialAreaId, options = {}) {
+  const nextAreaId = territorialAreaCatalog[areaId] ? areaId : "mejia";
+  const changed = state.territorialAreaId !== nextAreaId;
+  state.territorialAreaId = nextAreaId;
+
+  const areaProfile = getTerritorialAreaProfile(nextAreaId);
+  if (nextAreaId !== "mejia") {
+    setPlanning3dArea(areaProfile.planning3dAreaId || nextAreaId, {
+      reload: options.reload3d ?? planning3dState.modalOpen,
+      force: options.force3d,
+    });
+  } else {
+    syncTerritorialAreaSelects();
+  }
+
+  renderPlanningModule();
+  updateMapSummary();
+
+  if (options.rerun !== false) {
+    if (state.planningData) {
+      runPlanningAnalysis(true);
+    }
+    if (state.landChangeData) {
+      runLandChangeAnalysis(true);
+    }
+    if (state.hydrologyData) {
+      runHydrologyAnalysis(true);
+    }
+  }
+
+  if (!options.silent && changed) {
+    setStatus(`Ambito territorial ajustado a ${areaProfile.scopeLabel}. El visor y los modulos ya pueden trabajar sobre este nucleo.`);
+  }
+
+  return changed;
 }
 
 function getPlanning3dFallbackManifest() {
@@ -3127,18 +3426,21 @@ function cacheDom() {
   dom.planningUseSelect = document.querySelector("#planningUseSelect");
   dom.planningHorizonSelect = document.querySelector("#planningHorizonSelect");
   dom.planningGrowthSelect = document.querySelector("#planningGrowthSelect");
+  dom.territorialAreaSelects = Array.from(document.querySelectorAll("[data-territorial-area-select]"));
   dom.runLandChangeBtn = document.querySelector("#runLandChangeBtn");
   dom.focusLandChangeBtn = document.querySelector("#focusLandChangeBtn");
   dom.clearLandChangeBtn = document.querySelector("#clearLandChangeBtn");
   dom.landChangePeriodSelect = document.querySelector("#landChangePeriodSelect");
   dom.landChangeScenarioSelect = document.querySelector("#landChangeScenarioSelect");
   dom.landChangeLensSelect = document.querySelector("#landChangeLensSelect");
+  dom.landChangeScopeInput = document.querySelector("#landChangeScopeInput");
   dom.runHydrologyBtn = document.querySelector("#runHydrologyBtn");
   dom.focusHydrologyBtn = document.querySelector("#focusHydrologyBtn");
   dom.clearHydrologyBtn = document.querySelector("#clearHydrologyBtn");
   dom.hydrologyClimateSelect = document.querySelector("#hydrologyClimateSelect");
   dom.hydrologyHorizonSelect = document.querySelector("#hydrologyHorizonSelect");
   dom.hydrologyDemandSelect = document.querySelector("#hydrologyDemandSelect");
+  dom.hydrologyScopeInput = document.querySelector("#hydrologyScopeInput");
   dom.intraloteResults = document.querySelector("#intraloteResults");
   dom.intraloteVisual = document.querySelector("#intraloteVisual");
   dom.demResults = document.querySelector("#demResults");
@@ -3190,6 +3492,7 @@ function cacheDom() {
   dom.planning3dBuildingsToggle = document.querySelector("#planning3dBuildingsToggle");
   dom.planning3dParcelsToggle = document.querySelector("#planning3dParcelsToggle");
   dom.planning3dShadowsToggle = document.querySelector("#planning3dShadowsToggle");
+  dom.planning3dTerritorySelect = document.querySelector("#planning3dTerritorySelect");
   dom.planning3dDate = document.querySelector("#planning3dDate");
   dom.planning3dTime = document.querySelector("#planning3dTime");
   dom.planning3dBaseButtons = Array.from(document.querySelectorAll("[data-planning-base]"));
@@ -3212,6 +3515,7 @@ function cacheDom() {
 function bootstrapApp() {
   setDefaultDates();
   setPlanning3dSunDefaults();
+  applyPlanning3dAreaProfile(planning3dState.areaId);
   bindUI();
   ensureSelectedIndex();
   updateSensorControls();
@@ -3227,6 +3531,7 @@ function bootstrapApp() {
   renderCompareSummary();
   filterSentinelImages();
   hydratePlanning3dManifest();
+  setTerritorialArea(state.territorialAreaId, { rerun: false, reload3d: false, silent: true });
   applyRouteFromUrl();
 }
 
@@ -3466,6 +3771,15 @@ function bindUI() {
     }
   });
 
+  (dom.territorialAreaSelects || []).forEach((select) => {
+    select.addEventListener("change", () => {
+      setTerritorialArea(select.value || "mejia", {
+        rerun: true,
+        reload3d: planning3dState.modalOpen,
+      });
+    });
+  });
+
   dom.territorialSolarDate?.addEventListener("change", () => {
     planning3dState.sunDate = dom.territorialSolarDate.value || planning3dState.sunDate;
     updatePlanning3dSunModel();
@@ -3544,6 +3858,12 @@ function bindUI() {
 
   dom.openPlanning3dBtn?.addEventListener("click", () => {
     openPlanning3dViewer();
+  });
+  dom.planning3dTerritorySelect?.addEventListener("change", () => {
+    setPlanning3dArea(dom.planning3dTerritorySelect.value || "machachi", {
+      reload: planning3dState.modalOpen,
+      force: true,
+    });
   });
   dom.reloadPlanning3dBtn?.addEventListener("click", () => {
     reloadPlanning3dData();
@@ -5125,6 +5445,61 @@ function getCurrentAnalysisTarget() {
     scopeType: state.currentPlot ? "plot" : "studyArea",
     targetKey: getFeatureKey(feature),
   };
+}
+
+function getTerritorialAreaProfile(areaId = state.territorialAreaId) {
+  return territorialAreaCatalog[areaId] || territorialAreaCatalog.mejia;
+}
+
+function getTerritorialAreaFeature(areaId = state.territorialAreaId) {
+  return cloneFeature(getTerritorialAreaProfile(areaId).feature || studyArea);
+}
+
+function getCurrentTerritorialTarget() {
+  const profile = getTerritorialAreaProfile();
+  const feature = getTerritorialAreaFeature(profile.id);
+  return {
+    feature,
+    scopeLabel: profile.scopeLabel,
+    scopeType: profile.id === "mejia" ? "studyArea" : "territory",
+    targetKey: `${profile.id}:${getFeatureKey(feature)}`,
+  };
+}
+
+function doesFeatureIntersectTerritorialArea(feature, areaFeature) {
+  if (!feature?.geometry || !areaFeature?.geometry) {
+    return false;
+  }
+
+  try {
+    if (feature.geometry.type === "Point") {
+      return turf.booleanPointInPolygon(feature, areaFeature);
+    }
+    return turf.booleanIntersects(feature, areaFeature);
+  } catch (error) {
+    try {
+      const featureBbox = turf.bbox(feature);
+      const areaBbox = turf.bbox(areaFeature);
+      return !(
+        featureBbox[2] < areaBbox[0]
+        || featureBbox[0] > areaBbox[2]
+        || featureBbox[3] < areaBbox[1]
+        || featureBbox[1] > areaBbox[3]
+      );
+    } catch (bboxError) {
+      return false;
+    }
+  }
+}
+
+function filterFeaturesByTerritorialArea(features, areaId = state.territorialAreaId) {
+  const featureList = Array.isArray(features) ? features.filter((feature) => !!feature?.geometry) : [];
+  if (areaId === "mejia") {
+    return featureList;
+  }
+
+  const areaFeature = getTerritorialAreaFeature(areaId);
+  return featureList.filter((feature) => doesFeatureIntersectTerritorialArea(feature, areaFeature));
 }
 
 function resolveAnalysisForTarget(image, targetInfo) {
@@ -6767,6 +7142,8 @@ function renderPlanning3dPanel() {
     renderPlanning3dProgress();
     return;
   }
+  const areaProfile = getPlanning3dAreaProfile();
+  syncTerritorialAreaSelects();
 
   if (planning3dState.manifestLoading && !planning3dState.manifest) {
     dom.planning3dAvailability.classList.add("empty-state");
@@ -6782,10 +7159,14 @@ function renderPlanning3dPanel() {
   const stats = manifest.buildings?.stats || null;
   const usingPublishedRealData = !manifest.viaBackend && planning3dState.backendMode === "public";
   const backendCopy = manifest.viaBackend
-    ? "Backend local activo: pisos y alturas reales leidos desde el DBF de construcciones."
+    ? `Backend local activo sobre ${areaProfile.label}: pisos y alturas reales leidos desde el DBF de construcciones.`
     : usingPublishedRealData
-      ? "Modo publicado con GeoJSON real: huellas de construcciones y catastro servidas como capas publicas listas para una base urbana clara."
-      : "Modo publicado: si no activas server.ps1 el visor usa alturas estimadas y, si hace falta, una muestra 3D ligera para no bloquear la carga.";
+      ? `Modo publicado con GeoJSON real: huellas de construcciones y catastro de ${areaProfile.label} servidas como capas publicas listas para una base urbana clara.`
+      : `Modo publicado para ${areaProfile.label}: si no activas server.ps1 el visor usa alturas estimadas y, si hace falta, una muestra 3D ligera para no bloquear la carga.`;
+
+  if (dom.planning3dSubtitle) {
+    setTextIfChanged(dom.planning3dSubtitle, areaProfile.subtitle);
+  }
 
   dom.planning3dAvailability.classList.remove("empty-state");
   dom.planning3dAvailability.classList.add("has-data");
@@ -9589,6 +9970,14 @@ function setPlanning3dBase(baseId = "satellite") {
 }
 
 async function openPlanning3dViewer() {
+  const territorialArea = getTerritorialAreaProfile();
+  if (territorialArea.id !== "mejia" && planning3dState.areaId !== territorialArea.planning3dAreaId) {
+    setPlanning3dArea(territorialArea.planning3dAreaId, {
+      reload: false,
+      force: true,
+      silent: true,
+    });
+  }
   planning3dState.modalOpen = true;
   dom.planning3dModal?.classList.remove("hidden");
   if (dom.planning3dModal) {
@@ -9615,7 +10004,7 @@ async function openPlanning3dViewer() {
     if (dom.planning3dSubtitle) {
       setTextIfChanged(
         dom.planning3dSubtitle,
-        "Huellas reales de construcciones extruidas por n_piso, soporte catastral y base urbana clara para lectura espacial tridimensional."
+        getPlanning3dAreaProfile().subtitle
       );
     }
     await ensurePlanning3dDataset("buildings", !planning3dState.sourceData.buildings?.features?.length);
@@ -9705,6 +10094,7 @@ async function reloadPlanning3dData() {
 
 function renderPlanningModule() {
   const imageryProfile = getPlanningImageryProfile();
+  const areaProfile = getTerritorialAreaProfile();
   renderPlanningVariableMatrix();
   renderLandChangeModule();
   renderHydrologyModule();
@@ -9712,6 +10102,7 @@ function renderPlanningModule() {
   renderPlanningTerritoryReadout();
   renderTerritorialDecisionSupport();
   renderPlanning3dPanel();
+  syncTerritorialAreaSelects();
   if (dom.planningImagerySelect) {
     dom.planningImagerySelect.value = state.planningImageryId;
   }
@@ -9723,6 +10114,12 @@ function renderPlanningModule() {
   }
   if (dom.planningGrowthSelect) {
     dom.planningGrowthSelect.value = state.planningGrowthScenarioId;
+  }
+  if (dom.landChangeScopeInput) {
+    setValueIfChanged(dom.landChangeScopeInput, areaProfile.scopeLabel);
+  }
+  if (dom.hydrologyScopeInput) {
+    setValueIfChanged(dom.hydrologyScopeInput, areaProfile.scopeLabel);
   }
   if (dom.focusPlanningBtn) {
     dom.focusPlanningBtn.disabled = !(state.planningData?.candidates?.length);
@@ -9767,7 +10164,7 @@ function renderPlanningModule() {
     dom.clearHydrologyBtn.disabled = !state.hydrologyData;
   }
   if (dom.planningSourceNote) {
-    setTextIfChanged(dom.planningSourceNote, `${imageryProfile.label}: ${imageryProfile.useCopy} Resolucion ${imageryProfile.spatialLabel} y frecuencia ${imageryProfile.temporalLabel}. El visor 3D urbano ahora prioriza una base clara oblicua para leer volumenes, calles y sombras con mas limpieza.`);
+    setTextIfChanged(dom.planningSourceNote, `${imageryProfile.label}: ${imageryProfile.useCopy} Resolucion ${imageryProfile.spatialLabel} y frecuencia ${imageryProfile.temporalLabel}. La corrida actual esta enfocada en ${areaProfile.scopeLabel} y el visor 3D puede saltar a este mismo nucleo para leer volumenes, calles y sombras con mas limpieza.`);
   }
   if (dom.landChangeSourceNote) {
     const period = getLandChangePeriodProfile();
@@ -9775,7 +10172,7 @@ function renderPlanningModule() {
     const lens = getLandChangeLensProfile();
     setTextIfChanged(
       dom.landChangeSourceNote,
-      `Replica metodologica inspirada en estudios de transformacion del suelo rural y prevencion del riesgo: huella urbana ${period.shortLabel}, lectura ${lens.headline.toLowerCase()} y escenario ${scenario.label.toLowerCase()} para Mejia. Aqui el crecimiento se interpreta con una regla base: el agua busca su cauce y la planificacion debe preceder a la ocupacion.`
+      `Replica metodologica inspirada en estudios de transformacion del suelo rural y prevencion del riesgo: huella urbana ${period.shortLabel}, lectura ${lens.headline.toLowerCase()} y escenario ${scenario.label.toLowerCase()} para ${areaProfile.scopeLabel}. Aqui el crecimiento se interpreta con una regla base: el agua busca su cauce y la planificacion debe preceder a la ocupacion.`
     );
   }
   if (dom.hydrologySourceNote) {
@@ -9784,7 +10181,7 @@ function renderPlanningModule() {
     const demand = getHydrologyDemandProfile();
     setTextIfChanged(
       dom.hydrologySourceNote,
-      `Replica metodologica inspirada en el estudio hidrico del DMQ: cubo hidroclimatico, modelo semidistribuido tipo GR4, demanda 2020-2100 y sesgo climatico corregido. En esta fase el geoportal usa una simulacion territorial sintetica para Mejia con ${climate.label}, ${horizon.label} y ${demand.label}.`
+      `Replica metodologica inspirada en el estudio hidrico del DMQ: cubo hidroclimatico, modelo semidistribuido tipo GR4, demanda 2020-2100 y sesgo climatico corregido. En esta fase el geoportal usa una simulacion territorial sintetica para ${areaProfile.scopeLabel} con ${climate.label}, ${horizon.label} y ${demand.label}.`
     );
   }
   if (state.entryRoute === "planificacion" && !state.planningData) {
@@ -9792,13 +10189,13 @@ function renderPlanningModule() {
   }
 
   if (!state.planningData) {
-    resetMetricGrid(dom.planningResults, "Ejecuta el modulo para obtener celdas aptas y candidatos priorizados.");
+    resetMetricGrid(dom.planningResults, `Ejecuta el modulo para obtener celdas aptas y candidatos priorizados en ${areaProfile.scopeLabel}.`);
     dom.planningWeights.classList.add("empty-state");
     dom.planningWeights.classList.remove("has-data");
     setTextIfChanged(dom.planningWeights, "La ponderacion se ajusta automaticamente segun el tipo de equipamiento, la fuente satelital y el escenario de crecimiento.");
     dom.planningCandidates.classList.add("empty-state");
     dom.planningCandidates.classList.remove("has-data");
-    setTextIfChanged(dom.planningCandidates, "Aqui apareceran los sectores recomendados para implantacion territorial.");
+    setTextIfChanged(dom.planningCandidates, `Aqui apareceran los sectores recomendados para implantacion territorial en ${areaProfile.scopeLabel}.`);
   }
 }
 
@@ -9849,8 +10246,9 @@ function renderPlanningVariableMatrix() {
 }
 
 function renderLandChangeModule() {
+  const areaProfile = getTerritorialAreaProfile();
   if (!state.landChangeData) {
-    resetMetricGrid(dom.landChangeResults, "Ejecuta el estudio para ver huella urbana, suelo rural transformado, poblacion estimada y presion territorial.");
+    resetMetricGrid(dom.landChangeResults, `Ejecuta el estudio para ver huella urbana, suelo rural transformado, poblacion estimada y presion territorial en ${areaProfile.scopeLabel}.`);
     renderLandChangeDoctrine();
     dom.landChangeDrivers?.classList.add("empty-state");
     dom.landChangeDrivers?.classList.remove("has-data");
@@ -9865,7 +10263,7 @@ function renderLandChangeModule() {
     dom.landChangeSectors?.classList.add("empty-state");
     dom.landChangeSectors?.classList.remove("has-data");
     if (dom.landChangeSectors) {
-      setTextIfChanged(dom.landChangeSectors, "Aqui apareceran los hotspots de transformacion rural, riesgo y ocupacion territorial para Mejia.");
+      setTextIfChanged(dom.landChangeSectors, `Aqui apareceran los hotspots de transformacion rural, riesgo y ocupacion territorial para ${areaProfile.scopeLabel}.`);
     }
     return;
   }
@@ -9882,6 +10280,7 @@ function renderLandChangeDoctrine(analysis = null) {
   }
 
   const activeAnalysis = analysis || null;
+  const areaProfile = activeAnalysis?.context ? { scopeLabel: activeAnalysis.context.scopeLabel } : getTerritorialAreaProfile();
   const period = activeAnalysis?.period || getLandChangePeriodProfile();
   const scenario = activeAnalysis?.scenario || getLandChangeScenarioProfile();
   const lens = activeAnalysis?.lens || getLandChangeLensProfile();
@@ -9892,9 +10291,9 @@ function renderLandChangeDoctrine(analysis = null) {
   const riskFocus = lens.id === "quebradas" || (activeAnalysis?.summary?.meanScore || 0) >= 70;
   const lead = activeAnalysis
     ? riskFocus
-      ? `${period.shortLabel} bajo ${scenario.label.toLowerCase()}: ${formatLandChangeHa(riskHa)} ha quedan en vigilancia por quebradas y drenaje. ${hotspot?.name || "El frente dominante"} exige ordenamiento previo, no ocupacion espontanea.`
-      : `${period.shortLabel} bajo ${scenario.label.toLowerCase()}: ${formatLandChangeHa(transformedHa)} ha cambian de huella y ${formatLandChangeHa(productiveLossHa)} ha de suelo rural entran en tension. La lectura territorial debe anticiparse a la ocupacion.`
-    : "Marco preventivo para Mejia: la urbanizacion de quebradas no es solo crecimiento urbano, es exposicion al riesgo. La planificacion debe preceder a la ocupacion.";
+      ? `${period.shortLabel} bajo ${scenario.label.toLowerCase()} en ${areaProfile.scopeLabel}: ${formatLandChangeHa(riskHa)} ha quedan en vigilancia por quebradas y drenaje. ${hotspot?.name || "El frente dominante"} exige ordenamiento previo, no ocupacion espontanea.`
+      : `${period.shortLabel} bajo ${scenario.label.toLowerCase()} en ${areaProfile.scopeLabel}: ${formatLandChangeHa(transformedHa)} ha cambian de huella y ${formatLandChangeHa(productiveLossHa)} ha de suelo rural entran en tension. La lectura territorial debe anticiparse a la ocupacion.`
+    : `Marco preventivo para ${areaProfile.scopeLabel}: la urbanizacion de quebradas no es solo crecimiento urbano, es exposicion al riesgo. La planificacion debe preceder a la ocupacion.`;
 
   dom.landChangeDoctrine.classList.remove("empty-state");
   dom.landChangeDoctrine.classList.add("has-data");
@@ -9981,7 +10380,7 @@ function runLandChangeAnalysis(silent = false) {
 
     if (!silent) {
       setStatus(
-        `Estudio de transformacion del suelo listo para Mejia: ${analysis.period.shortLabel}, ${analysis.scenario.label} y enfoque ${analysis.lens.label.toLowerCase()}. ${formatLandChangeHa(analysis.summary.transformedHa)} ha de suelo rural pasan a vigilancia.`
+        `Estudio de transformacion del suelo listo para ${analysis.context.scopeLabel}: ${analysis.period.shortLabel}, ${analysis.scenario.label} y enfoque ${analysis.lens.label.toLowerCase()}. ${formatLandChangeHa(analysis.summary.transformedHa)} ha de suelo rural pasan a vigilancia.`
       );
     }
 
@@ -10016,27 +10415,24 @@ function clearLandChangeAnalysis() {
       : "planning";
   renderPlanningModule();
   updateMapSummary();
-  setStatus("Estudio de transformacion del suelo limpiado. Puedes correr una nueva lectura territorial para Mejia.");
+  setStatus(`Estudio de transformacion del suelo limpiado. Puedes correr una nueva lectura territorial para ${getTerritorialAreaProfile().scopeLabel}.`);
 }
 
 function buildLandChangeAnalysis(options = {}) {
   const period = getLandChangePeriodProfile(options.periodId);
   const scenario = getLandChangeScenarioProfile(options.scenarioId);
   const lens = getLandChangeLensProfile(options.lensId);
-  const series = buildLandChangeSettlementSeries(scenario);
+  const target = getCurrentTerritorialTarget();
+  const series = buildLandChangeSettlementSeries(scenario, state.territorialAreaId);
   const timeline = buildLandChangeTimelineData(series, scenario);
   const sectors = buildLandChangeSectors(series, period, scenario, lens);
   const summary = summarizeLandChangeAnalysis(series, sectors, period, scenario, lens);
   const prioritySectors = selectLandChangePrioritySectors(sectors);
   const surface = buildLandChangeSurface(series, period);
-  const pressureSurface = buildLandChangePressureSurface(lens, scenario);
+  const pressureSurface = buildLandChangePressureSurface(lens, scenario, state.territorialAreaId);
 
   return {
-    context: {
-      scopeLabel: "Canton Mejia",
-      scopeType: "studyArea",
-      feature: cloneFeature(studyArea),
-    },
+    context: target,
     period,
     scenario,
     lens,
@@ -10050,9 +10446,10 @@ function buildLandChangeAnalysis(options = {}) {
   };
 }
 
-function buildLandChangeSettlementSeries(scenario) {
+function buildLandChangeSettlementSeries(scenario, areaId = state.territorialAreaId) {
   const yearSequence = [2010, 2016, 2022, 2030];
-  const settlementSeries = geoSources.manchaUrbana.features.map((sourceFeature, index) => {
+  const settlementSources = filterFeaturesByTerritorialArea(geoSources.manchaUrbana.features, areaId);
+  const settlementSeries = settlementSources.map((sourceFeature, index) => {
     const baseName = sourceFeature.properties?.name || `Centro ${index + 1}`;
     const hierarchy = sourceFeature.properties?.hierarchy || "barrial";
     const growthRate = Number(sourceFeature.properties?.growthRate) || 0.68;
@@ -10416,10 +10813,12 @@ function markLandChangeSurfaceFeature(feature, classId, stageLabel) {
   return cloned;
 }
 
-function buildLandChangePressureSurface(lens, scenario) {
+function buildLandChangePressureSurface(lens, scenario, areaId = state.territorialAreaId) {
   const features = [];
+  const canalFeatures = filterFeaturesByTerritorialArea(geoSources.canales.features, areaId);
+  const roadFeatures = filterFeaturesByTerritorialArea(geoSources.vias.features, areaId);
   if (lens.id === "mixto" || lens.id === "quebradas") {
-    geoSources.canales.features.forEach((feature, index) => {
+    canalFeatures.forEach((feature, index) => {
       try {
         const buffered = turf.buffer(feature, 0.16 * scenario.riskMultiplier, { units: "kilometers" });
         buffered.properties = {
@@ -10436,7 +10835,7 @@ function buildLandChangePressureSurface(lens, scenario) {
     });
   }
   if (lens.id === "mixto" || lens.id === "corredores") {
-    geoSources.vias.features.forEach((feature, index) => {
+    roadFeatures.forEach((feature, index) => {
       try {
         const buffered = turf.buffer(feature, 0.22, { units: "kilometers" });
         buffered.properties = {
@@ -10498,7 +10897,7 @@ function renderLandChangeTimeline(analysis) {
       <div>
         <p class="section-kicker">Serie temporal</p>
         <h4>Huella urbana y poblacion sintetica</h4>
-        <p>Replica visual del estudio con cortes 2010, 2016, 2022 y una proyeccion 2030 para interpretar ocupacion, suelo rural y ordenamiento preventivo.</p>
+        <p>Replica visual del estudio con cortes 2010, 2016, 2022 y una proyeccion 2030 para interpretar ocupacion, suelo rural y ordenamiento preventivo en ${analysis.context.scopeLabel}.</p>
       </div>
       <span class="land-change-pill tone-${getLandChangeScoreTone(analysis.summary.meanScore)}">${analysis.period.headline}</span>
     </div>
@@ -10600,8 +10999,9 @@ function formatLandChangePopulation(value) {
 }
 
 function renderHydrologyModule() {
+  const areaProfile = getTerritorialAreaProfile();
   if (!state.hydrologyData) {
-    resetMetricGrid(dom.hydrologyResults, "Ejecuta el estudio hidrico para ver oferta, demanda, balance, resiliencia y prioridades territoriales.");
+    resetMetricGrid(dom.hydrologyResults, `Ejecuta el estudio hidrico para ver oferta, demanda, balance, resiliencia y prioridades territoriales en ${areaProfile.scopeLabel}.`);
     dom.hydrologyDrivers?.classList.add("empty-state");
     dom.hydrologyDrivers?.classList.remove("has-data");
     if (dom.hydrologyDrivers) {
@@ -10610,7 +11010,7 @@ function renderHydrologyModule() {
     dom.hydrologyTimeline?.classList.add("empty-state");
     dom.hydrologyTimeline?.classList.remove("has-data");
     if (dom.hydrologyTimeline) {
-      setTextIfChanged(dom.hydrologyTimeline, "La serie prospectiva mostrara como cambia el balance hidrico de Mejia bajo cada escenario.");
+      setTextIfChanged(dom.hydrologyTimeline, `La serie prospectiva mostrara como cambia el balance hidrico de ${areaProfile.scopeLabel} bajo cada escenario.`);
     }
     dom.hydrologySectors?.classList.add("empty-state");
     dom.hydrologySectors?.classList.remove("has-data");
@@ -10686,7 +11086,7 @@ function runHydrologyAnalysis(silent = false) {
 
     if (!silent) {
       setStatus(
-        `Estudio hidrico de Mejia listo con ${hydrology.climate.shortLabel}, ${hydrology.horizon.label} y ${hydrology.demand.label}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "positivo" : "ajustado"} de ${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio.`
+        `Estudio hidrico de ${hydrology.context.scopeLabel} listo con ${hydrology.climate.shortLabel}, ${hydrology.horizon.label} y ${hydrology.demand.label}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "positivo" : "ajustado"} de ${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio.`
       );
     }
 
@@ -10720,7 +11120,7 @@ function clearHydrologyAnalysis() {
       : "planning";
   renderPlanningModule();
   updateMapSummary();
-  setStatus("Estudio hidrico limpiado. Puedes correr un nuevo escenario para Mejia.");
+  setStatus(`Estudio hidrico limpiado. Puedes correr un nuevo escenario para ${getTerritorialAreaProfile().scopeLabel}.`);
 }
 
 function buildHydrologyAnalysis(options = {}) {
@@ -10728,6 +11128,7 @@ function buildHydrologyAnalysis(options = {}) {
   const horizon = getHydrologyHorizonProfile(options.horizonId || options.horizonOverride || state.hydrologyHorizonId);
   const demand = getHydrologyDemandProfile(options.demandId);
   const sourceFeatures = options.sourceFeatures || getHydrologySourceFeatures();
+  const target = getCurrentTerritorialTarget();
   const sectors = sourceFeatures.map((feature, index) =>
     simulateHydrologySectorFeature(feature, climate, horizon, demand, index)
   ).filter(Boolean);
@@ -10736,11 +11137,7 @@ function buildHydrologyAnalysis(options = {}) {
   const prioritySectors = selectHydrologyPrioritySectors(sectors);
 
   return {
-    context: {
-      scopeLabel: "Canton Mejia",
-      scopeType: "studyArea",
-      feature: cloneFeature(studyArea),
-    },
+    context: target,
     climate,
     horizon,
     demand,
@@ -11051,7 +11448,7 @@ function renderHydrologyTimeline(hydrology) {
       <div>
         <p class="section-kicker">Serie prospectiva</p>
         <h4>Oferta y demanda hasta 2100</h4>
-        <p>Replica el flujo del estudio: oferta hidrica, demanda proyectada y balance neto por horizonte para Mejia.</p>
+        <p>Replica el flujo del estudio: oferta hidrica, demanda proyectada y balance neto por horizonte para ${hydrology.context.scopeLabel}.</p>
       </div>
       <span class="hydrology-balance-pill tone-${getHydrologyBalanceTone(hydrology.summary.balanceHm3)}">${hydrology.summary.balanceLabel}</span>
     </div>
@@ -11284,7 +11681,7 @@ function buildPlanningAnalysis(options = {}) {
   const imageryProfile = getPlanningImageryProfile(options.imageryId);
   const horizon = getPlanningHorizon(options.horizonId);
   const scenario = getPlanningScenario(options.scenarioId);
-  const target = options.target || getCurrentAnalysisTarget();
+  const target = options.target || getCurrentTerritorialTarget();
   const urbanFeatures = geoSources.manchaUrbana.features;
   const roadFeatures = geoSources.vias.features;
   const canalFeatures = geoSources.canales.features;
@@ -11639,7 +12036,7 @@ function buildTerritorialScenarioCompareData() {
     return null;
   }
 
-  const target = state.planningData?.context || getCurrentAnalysisTarget();
+  const territorialTarget = state.planningData?.context || getCurrentTerritorialTarget();
   const planningScenarioIds = ["conservador", "balanceado", "expansivo"];
   const landScenarioIds = ["contencion", "tendencial", "expansivo"];
   const hydrologyClimateIds = ["historico", "rcp26", "rcp85"];
@@ -11652,7 +12049,7 @@ function buildTerritorialScenarioCompareData() {
           imageryId: state.planningImageryId,
           horizonId: state.planningHorizonId,
           scenarioId,
-          target,
+          target: territorialTarget,
         });
     return {
       id: scenarioId,

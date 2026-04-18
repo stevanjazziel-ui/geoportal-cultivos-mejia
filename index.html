@@ -356,6 +356,14 @@
               </p>
               <div class="planning-toolbar">
                 <label class="field">
+                  <span>Ambito territorial</span>
+                  <select data-territorial-area-select>
+                    <option value="mejia">Todo Mejia</option>
+                    <option value="machachi">Machachi</option>
+                    <option value="cutuglagua">Cutuglagua</option>
+                  </select>
+                </label>
+                <label class="field">
                   <span>Fuente satelital</span>
                   <select id="planningImagerySelect">
                     <option value="sentinel2Urban">Sentinel-2 urbano 10 m</option>
@@ -412,6 +420,14 @@
               </p>
               <div class="planning-toolbar hydrology-toolbar">
                 <label class="field">
+                  <span>Ambito territorial</span>
+                  <select data-territorial-area-select>
+                    <option value="mejia">Todo Mejia</option>
+                    <option value="machachi">Machachi</option>
+                    <option value="cutuglagua">Cutuglagua</option>
+                  </select>
+                </label>
+                <label class="field">
                   <span>Escenario climatico</span>
                   <select id="hydrologyClimateSelect">
                     <option value="historico">Historico 2000-2025</option>
@@ -438,7 +454,7 @@
                 </label>
                 <label class="field">
                   <span>Escala</span>
-                  <input type="text" value="Canton Mejia" readonly>
+                  <input id="hydrologyScopeInput" type="text" value="Canton Mejia" readonly>
                 </label>
               </div>
               <p id="hydrologySourceNote" class="service-note">
@@ -477,6 +493,14 @@
               </p>
               <div class="planning-toolbar land-change-toolbar">
                 <label class="field">
+                  <span>Ambito territorial</span>
+                  <select data-territorial-area-select>
+                    <option value="mejia">Todo Mejia</option>
+                    <option value="machachi">Machachi</option>
+                    <option value="cutuglagua">Cutuglagua</option>
+                  </select>
+                </label>
+                <label class="field">
                   <span>Periodo</span>
                   <select id="landChangePeriodSelect">
                     <option value="2010_2016">Huella 2010-2016</option>
@@ -504,7 +528,7 @@
                 </label>
                 <label class="field">
                   <span>Escala</span>
-                  <input type="text" value="Canton Mejia" readonly>
+                  <input id="landChangeScopeInput" type="text" value="Canton Mejia" readonly>
                 </label>
               </div>
               <p id="landChangeSourceNote" class="service-note">
@@ -751,6 +775,13 @@
           <input id="planning3dShadowsToggle" type="checkbox">
           <span>Sombras</span>
         </label>
+        <label class="field planning-3d-territory-field">
+          <span>Nucleo 3D</span>
+          <select id="planning3dTerritorySelect">
+            <option value="machachi">Machachi</option>
+            <option value="cutuglagua">Cutuglagua</option>
+          </select>
+        </label>
         <label class="field planning-3d-sun-field">
           <span>Fecha solar</span>
           <input id="planning3dDate" type="date">
@@ -815,6 +846,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260418-15" defer></script>
+  <script src="./app.js?v=20260418-16" defer></script>
 </body>
 </html>
