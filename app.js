@@ -1822,11 +1822,14 @@ const mapState = {
   managementLayer: null,
   planningLayer: null,
   planningCandidatesLayer: null,
+  planningCoverageLayer: null,
   landChangeLayer: null,
   landChangePressureLayer: null,
   landChangeHotspotLayer: null,
+  landChangeHeatLayer: null,
   hydrologyLayer: null,
   hydrologyPriorityLayer: null,
+  hydrologyBufferLayer: null,
   studyAreaLayer: null,
   currentPlotLayer: null,
 };
@@ -11789,18 +11792,251 @@ function renderPlanningCandidates(planning) {
     .join(""));
 }
 
+function createTerritorialBufferFeature(feature, distanceKm, properties = {}) {
+  if (!feature?.geometry || !Number.isFinite(distanceKm) || distanceKm <= 0) {
+    return null;
+  }
+
+  try {
+    const buffered = turf.buffer(feature, distanceKm, { units: "kilometers" });
+    if (!buffered?.geometry) {
+      return null;
+    }
+    buffered.properties = {
+      ...(feature.properties || {}),
+      ...properties,
+      bufferKm: Number(distanceKm.toFixed(2)),
+    };
+    return buffered;
+  } catch (error) {
+    return null;
+  }
+}
+
+function getPlanningCoverageProfile(programId) {
+  const profiles = {
+    vis: [
+      { km: 0.9, label: "Halo residencial extendido", zone: "outer" },
+      { km: 0.55, label: "Cobertura barrial", zone: "mid" },
+      { km: 0.22, label: "Nucleo de implantacion", zone: "inner" },
+    ],
+    escuela: [
+      { km: 1.4, label: "Cobertura educativa extendida", zone: "outer" },
+      { km: 0.82, label: "Cobertura caminable", zone: "mid" },
+      { km: 0.28, label: "Nucleo escolar", zone: "inner" },
+    ],
+    hospital: [
+      { km: 2.2, label: "Radio de referencia sanitaria", zone: "outer" },
+      { km: 1.24, label: "Acceso estrategico", zone: "mid" },
+      { km: 0.42, label: "Nucleo hospitalario", zone: "inner" },
+    ],
+    equipamiento: [
+      { km: 0.8, label: "Area de influencia barrial", zone: "outer" },
+      { km: 0.44, label: "Cobertura de proximidad", zone: "mid" },
+      { km: 0.18, label: "Nucleo barrial", zone: "inner" },
+    ],
+  };
+  return profiles[programId] || profiles.vis;
+}
+
+function buildPlanningFootprintFeatures(planning) {
+  return planning.candidates
+    .map((candidate) => {
+      const feature = cloneFeature(candidate.feature);
+      if (!feature?.geometry) {
+        return null;
+      }
+      feature.properties = {
+        ...(feature.properties || {}),
+        candidateId: candidate.id,
+        candidateRank: candidate.rank,
+        title: candidate.title,
+        score: candidate.score,
+        summary: candidate.summary,
+      };
+      return feature;
+    })
+    .filter(Boolean);
+}
+
+function buildPlanningCoverageFeatures(planning) {
+  const profile = getPlanningCoverageProfile(planning.program.id);
+  const features = [];
+
+  planning.candidates.forEach((candidate) => {
+    profile.forEach((ring, index) => {
+      const buffered = createTerritorialBufferFeature(candidate.feature, ring.km, {
+        candidateId: candidate.id,
+        candidateRank: candidate.rank,
+        title: candidate.title,
+        score: candidate.score,
+        summary: candidate.summary,
+        coverageLabel: ring.label,
+        coverageZone: ring.zone,
+        coverageLevel: index,
+      });
+      if (buffered) {
+        features.push(buffered);
+      }
+    });
+  });
+
+  return {
+    type: "FeatureCollection",
+    features,
+  };
+}
+
+function buildLandChangeHeatFeatures(analysis) {
+  const features = [];
+  const multiplier = Number(analysis?.scenario?.growthMultiplier) || 1;
+
+  analysis.prioritySectors.forEach((sector) => {
+    const ringDistances = [
+      0.44 * multiplier,
+      0.24 * multiplier,
+    ];
+
+    ringDistances.forEach((distanceKm, index) => {
+      const buffered = createTerritorialBufferFeature(sector.feature, distanceKm, {
+        landChangeSectorId: sector.id,
+        rank: sector.rank,
+        name: sector.name,
+        score: sector.score,
+        pressureLabel: sector.pressureLabel,
+        summary: sector.summary,
+        heatZone: index === 0 ? "outer" : "inner",
+        heatLevel: index,
+      });
+      if (buffered) {
+        features.push(buffered);
+      }
+    });
+  });
+
+  return {
+    type: "FeatureCollection",
+    features,
+  };
+}
+
+function getHydrologyBufferProfile(sector) {
+  const roleLabel = String(sector?.role || "").toLowerCase();
+  if (roleLabel.includes("recarga")) {
+    return {
+      kind: "protection",
+      label: "Franja de proteccion de recarga",
+      rings: [0.54, 0.28],
+    };
+  }
+  if ((sector?.floodRisk || 0) >= (sector?.droughtRisk || 0)) {
+    return {
+      kind: "flood",
+      label: "Franja de vigilancia por crecida",
+      rings: [0.48, 0.24],
+    };
+  }
+  return {
+    kind: "stress",
+    label: "Franja de gestion por estiaje",
+    rings: [0.46, 0.22],
+  };
+}
+
+function buildHydrologyBufferFeatures(hydrology) {
+  const features = [];
+
+  hydrology.prioritySectors.forEach((sector) => {
+    const profile = getHydrologyBufferProfile(sector);
+    const scale = clamp((sector.stressScore || 0) / 100, 0.62, 1.18);
+
+    profile.rings.forEach((distanceKm, index) => {
+      const buffered = createTerritorialBufferFeature(sector.feature, distanceKm * scale, {
+        hydrologySectorId: sector.id,
+        rank: sector.rank,
+        name: sector.name,
+        summary: sector.summary,
+        balanceLabel: sector.balanceLabel,
+        resilience: sector.resilience,
+        bufferKind: profile.kind,
+        bufferLabel: profile.label,
+        bufferLevel: index,
+      });
+      if (buffered) {
+        features.push(buffered);
+      }
+    });
+  });
+
+  return {
+    type: "FeatureCollection",
+    features,
+  };
+}
+
 function renderPlanningOverlay(planning) {
   clearPlanningOverlay();
   if (!mapState.map) {
     return;
   }
 
+  const coverageCollection = buildPlanningCoverageFeatures(planning);
+  const footprintCollection = {
+    type: "FeatureCollection",
+    features: buildPlanningFootprintFeatures(planning),
+  };
   const candidatePoints = planning.candidates.map((candidate) => pointFeature(candidate.title, candidate.centroid, {
     candidateId: candidate.id,
     candidateRank: candidate.rank,
     score: candidate.score,
     summary: candidate.summary,
   }));
+
+  if (coverageCollection.features.length) {
+    mapState.planningCoverageLayer = L.geoJSON(coverageCollection, {
+      style: (feature) => {
+        const active = feature.properties?.candidateId === state.planningHighlightId;
+        const zone = feature.properties?.coverageZone || "outer";
+        const fillOpacity = zone === "inner"
+          ? (active ? 0.16 : 0.1)
+          : zone === "mid"
+            ? (active ? 0.11 : 0.07)
+            : (active ? 0.08 : 0.045);
+        return {
+          color: planning.program.markerColor,
+          weight: zone === "inner" ? 1.3 : 1,
+          fillColor: planning.program.markerColor,
+          fillOpacity,
+          dashArray: zone === "inner" ? null : "8 8",
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          `<h3 class="popup-title">${feature.properties?.title || "Cobertura territorial"}</h3><p class="popup-copy">${feature.properties?.coverageLabel || "Franja de influencia"} a ${feature.properties?.bufferKm || 0} km para ${planning.program.longLabel.toLowerCase()}. Puntaje ${feature.properties?.score || 0}/100.</p>`
+        );
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (footprintCollection.features.length) {
+    mapState.planningLayer = L.geoJSON(footprintCollection, {
+      style: (feature) => {
+        const active = feature.properties?.candidateId === state.planningHighlightId;
+        return {
+          color: active ? "#fff7ef" : planning.program.markerColor,
+          weight: active ? 2.4 : 1.5,
+          fillColor: planning.program.markerColor,
+          fillOpacity: active ? 0.26 : 0.14,
+          dashArray: active ? null : "5 5",
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          `<h3 class="popup-title">${feature.properties?.title || "Sector candidato"}</h3><p class="popup-copy">${feature.properties?.summary || ""} Delimitacion priorizada para ${planning.program.longLabel.toLowerCase()} con puntaje ${feature.properties?.score || 0}/100.</p>`
+        );
+      },
+    }).addTo(mapState.map);
+  }
 
   mapState.planningCandidatesLayer = L.geoJSON({
     type: "FeatureCollection",
@@ -11823,6 +12059,12 @@ function renderPlanningOverlay(planning) {
     },
   }).addTo(mapState.map);
 
+  if (mapState.planningCoverageLayer?.bringToBack) {
+    mapState.planningCoverageLayer.bringToBack();
+  }
+  if (mapState.planningLayer?.bringToFront) {
+    mapState.planningLayer.bringToFront();
+  }
   if (mapState.currentPlotLayer) {
     mapState.currentPlotLayer.bringToFront();
   }
@@ -11839,6 +12081,8 @@ function renderLandChangeOverlay(analysis) {
   if (!mapState.map) {
     return;
   }
+
+  const heatCollection = buildLandChangeHeatFeatures(analysis);
 
   mapState.landChangeLayer = L.geoJSON(analysis.surface, {
     style: (feature) => {
@@ -11903,6 +12147,29 @@ function renderLandChangeOverlay(analysis) {
     }).addTo(mapState.map);
   }
 
+  if (heatCollection.features.length) {
+    mapState.landChangeHeatLayer = L.geoJSON(heatCollection, {
+      style: (feature) => {
+        const active = feature.properties?.landChangeSectorId === state.landChangeHighlightId;
+        const zone = feature.properties?.heatZone || "outer";
+        return {
+          color: zone === "inner" ? "#c45f1c" : "#ff9724",
+          weight: zone === "inner" ? 1.2 : 0.9,
+          fillColor: zone === "inner" ? "#ff7b3f" : "#ffb347",
+          fillOpacity: zone === "inner"
+            ? (active ? 0.18 : 0.12)
+            : (active ? 0.12 : 0.07),
+          dashArray: zone === "inner" ? null : "8 8",
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          `<h3 class="popup-title">${feature.properties?.name || "Hotspot territorial"}</h3><p class="popup-copy">${feature.properties?.pressureLabel || "Presion territorial"} con halo ${feature.properties?.heatZone === "inner" ? "intensivo" : "extendido"} a ${feature.properties?.bufferKm || 0} km. Puntaje ${feature.properties?.score || 0}/100.</p>`
+        );
+      },
+    }).addTo(mapState.map);
+  }
+
   const hotspotPoints = analysis.prioritySectors.map((sector) => pointFeature(sector.name, sector.centroid, {
     landChangeSectorId: sector.id,
     rank: sector.rank,
@@ -11935,6 +12202,9 @@ function renderLandChangeOverlay(analysis) {
   if (mapState.landChangePressureLayer?.bringToBack) {
     mapState.landChangePressureLayer.bringToBack();
   }
+  if (mapState.landChangeHeatLayer?.bringToFront) {
+    mapState.landChangeHeatLayer.bringToFront();
+  }
   if (mapState.landChangeLayer?.bringToFront) {
     mapState.landChangeLayer.bringToFront();
   }
@@ -11953,6 +12223,37 @@ function renderHydrologyOverlay(hydrology) {
   clearHydrologyOverlay();
   if (!mapState.map) {
     return;
+  }
+
+  const bufferCollection = buildHydrologyBufferFeatures(hydrology);
+
+  if (bufferCollection.features.length) {
+    mapState.hydrologyBufferLayer = L.geoJSON(bufferCollection, {
+      style: (feature) => {
+        const active = feature.properties?.hydrologySectorId === state.hydrologyHighlightId;
+        const kind = feature.properties?.bufferKind || "stress";
+        const level = feature.properties?.bufferLevel || 0;
+        const palette = kind === "protection"
+          ? { stroke: "#2f7f5f", fill: "#7fc7a1" }
+          : kind === "flood"
+            ? { stroke: "#4c8eab", fill: "#8fd9e0" }
+            : { stroke: "#cb9440", fill: "#efc36b" };
+        return {
+          color: palette.stroke,
+          weight: level === 0 ? 1 : 1.3,
+          fillColor: palette.fill,
+          fillOpacity: level === 0
+            ? (active ? 0.12 : 0.08)
+            : (active ? 0.17 : 0.11),
+          dashArray: level === 0 ? "8 8" : null,
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          `<h3 class="popup-title">${feature.properties?.name || "Franja hidrica"}</h3><p class="popup-copy">${feature.properties?.bufferLabel || "Franja hidrica"} a ${feature.properties?.bufferKm || 0} km. ${feature.properties?.summary || ""}</p>`
+        );
+      },
+    }).addTo(mapState.map);
   }
 
   mapState.hydrologyLayer = L.geoJSON(hydrology.surface, {
@@ -12010,6 +12311,9 @@ function renderHydrologyOverlay(hydrology) {
   if (mapState.hydrologyLayer?.bringToBack) {
     mapState.hydrologyLayer.bringToBack();
   }
+  if (mapState.hydrologyBufferLayer?.bringToFront) {
+    mapState.hydrologyBufferLayer.bringToFront();
+  }
   if (mapState.hydrologyPriorityLayer?.bringToFront) {
     mapState.hydrologyPriorityLayer.bringToFront();
   }
@@ -12022,6 +12326,10 @@ function clearPlanningOverlay() {
   if (mapState.planningLayer) {
     mapState.map.removeLayer(mapState.planningLayer);
     mapState.planningLayer = null;
+  }
+  if (mapState.planningCoverageLayer) {
+    mapState.map.removeLayer(mapState.planningCoverageLayer);
+    mapState.planningCoverageLayer = null;
   }
   if (mapState.planningCandidatesLayer) {
     mapState.map.removeLayer(mapState.planningCandidatesLayer);
@@ -12042,6 +12350,10 @@ function clearLandChangeOverlay() {
     mapState.map.removeLayer(mapState.landChangeHotspotLayer);
     mapState.landChangeHotspotLayer = null;
   }
+  if (mapState.landChangeHeatLayer) {
+    mapState.map.removeLayer(mapState.landChangeHeatLayer);
+    mapState.landChangeHeatLayer = null;
+  }
 }
 
 function clearHydrologyOverlay() {
@@ -12053,17 +12365,23 @@ function clearHydrologyOverlay() {
     mapState.map.removeLayer(mapState.hydrologyPriorityLayer);
     mapState.hydrologyPriorityLayer = null;
   }
+  if (mapState.hydrologyBufferLayer) {
+    mapState.map.removeLayer(mapState.hydrologyBufferLayer);
+    mapState.hydrologyBufferLayer = null;
+  }
 }
 
 function focusPlanningCandidates() {
-  if (!mapState.map || !mapState.planningCandidatesLayer) {
+  if (!mapState.map || (!mapState.planningCandidatesLayer && !mapState.planningLayer && !mapState.planningCoverageLayer)) {
     return;
   }
 
   state.territorialFocus = "planning";
   updateMapSummary();
-  const bounds = mapState.planningCandidatesLayer.getBounds();
-  if (bounds.isValid()) {
+  const bounds = mapState.planningCoverageLayer?.getBounds?.()
+    || mapState.planningLayer?.getBounds?.()
+    || mapState.planningCandidatesLayer?.getBounds?.();
+  if (bounds?.isValid?.()) {
     mapState.map.fitBounds(bounds, {
       padding: [48, 48],
       maxZoom: 13,
@@ -12072,13 +12390,15 @@ function focusPlanningCandidates() {
 }
 
 function focusLandChangeStudy() {
-  if (!mapState.map || (!mapState.landChangeLayer && !mapState.landChangeHotspotLayer)) {
+  if (!mapState.map || (!mapState.landChangeLayer && !mapState.landChangeHotspotLayer && !mapState.landChangeHeatLayer)) {
     return;
   }
 
   state.territorialFocus = "landChange";
   updateMapSummary();
-  const bounds = mapState.landChangeLayer?.getBounds?.() || mapState.landChangeHotspotLayer?.getBounds?.();
+  const bounds = mapState.landChangeHeatLayer?.getBounds?.()
+    || mapState.landChangeLayer?.getBounds?.()
+    || mapState.landChangeHotspotLayer?.getBounds?.();
   if (bounds?.isValid?.()) {
     mapState.map.fitBounds(bounds, {
       padding: [44, 44],
@@ -12088,14 +12408,14 @@ function focusLandChangeStudy() {
 }
 
 function focusHydrologyStudy() {
-  if (!mapState.map || !mapState.hydrologyLayer) {
+  if (!mapState.map || (!mapState.hydrologyLayer && !mapState.hydrologyBufferLayer)) {
     return;
   }
 
   state.territorialFocus = "hydrology";
   updateMapSummary();
-  const bounds = mapState.hydrologyLayer.getBounds();
-  if (bounds.isValid()) {
+  const bounds = mapState.hydrologyBufferLayer?.getBounds?.() || mapState.hydrologyLayer?.getBounds?.();
+  if (bounds?.isValid?.()) {
     mapState.map.fitBounds(bounds, {
       padding: [44, 44],
       maxZoom: 11,
@@ -13083,26 +13403,26 @@ function updateMapSummary(force = false) {
       setTextIfChanged(dom.mapTitle, `Transformacion del suelo rural sobre ${landChange.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `${landChangePeriod.shortLabel}, ${landChangeScenario.label} y enfoque ${landChangeLens.label.toLowerCase()}. ${formatLandChangeHa(landChange.summary.transformedHa)} ha de suelo rural transformado y hotspot ${landChange.summary.hotspotLabel}.`
+        `${landChangePeriod.shortLabel}, ${landChangeScenario.label} y enfoque ${landChangeLens.label.toLowerCase()}. ${formatLandChangeHa(landChange.summary.transformedHa)} ha de suelo rural transformado con hotspots, calor de presion y buffers de vigilancia sobre ${landChange.summary.hotspotLabel}.`
       );
     } else if (showHydrology) {
       setTextIfChanged(dom.overlayIndex, "Balance");
       setTextIfChanged(dom.mapTitle, `Disponibilidad hidrica sobre ${hydrology.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `${hydrologyClimate.shortLabel}, ${hydrologyHorizon.label} y ${hydrologyDemand.label}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio con ${hydrology.prioritySectors.length} sectores en vigilancia.`
+        `${hydrologyClimate.shortLabel}, ${hydrologyHorizon.label} y ${hydrologyDemand.label}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio con ${hydrology.prioritySectors.length} sectores en vigilancia, buffers de proteccion y franjas de atencion hidrica.`
       );
     } else if (planning) {
       setTextIfChanged(dom.mapTitle, `${planning.program.longLabel} sobre ${planning.context.scopeLabel}`);
-      setTextIfChanged(dom.mapSubtitle, `Fuente ${planning.imageryProfile.shortLabel}, horizonte ${planning.horizon.label}, escenario ${planning.scenario.label} y ${planning.candidates.length} candidatos priorizados.`);
+      setTextIfChanged(dom.mapSubtitle, `Fuente ${planning.imageryProfile.shortLabel}, horizonte ${planning.horizon.label}, escenario ${planning.scenario.label}, ${planning.candidates.length} candidatos priorizados y halos de cobertura con delimitacion de implantacion.`);
     } else if (hydrology) {
       setTextIfChanged(dom.overlayIndex, "Balance");
       setTextIfChanged(dom.mapTitle, "Estudio hidrico de Mejia listo");
-      setTextIfChanged(dom.mapSubtitle, `${hydrology.climate.shortLabel}, ${hydrology.horizon.label} y ${hydrology.demand.label} con balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio.`);
+      setTextIfChanged(dom.mapSubtitle, `${hydrology.climate.shortLabel}, ${hydrology.horizon.label} y ${hydrology.demand.label} con balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio y franjas de proteccion activas.`);
     } else if (landChange) {
       setTextIfChanged(dom.overlayIndex, "Huella");
       setTextIfChanged(dom.mapTitle, "Estudio de transformacion del suelo listo");
-      setTextIfChanged(dom.mapSubtitle, `${landChange.period.shortLabel} con ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas, ${landChange.summary.riskLabel.toLowerCase()} y foco ${landChange.summary.hotspotLabel}.`);
+      setTextIfChanged(dom.mapSubtitle, `${landChange.period.shortLabel} con ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas, ${landChange.summary.riskLabel.toLowerCase()} y foco ${landChange.summary.hotspotLabel} con halos de presion.`);
     } else {
       setTextIfChanged(dom.mapTitle, "Planificacion territorial lista");
       setTextIfChanged(dom.mapSubtitle, `Elige ${imageryProfile.label} para aptitud territorial o ejecuta los estudios de suelo e hidrologia para simular transformacion, oferta, demanda y resiliencia de Mejia.`);
@@ -13198,6 +13518,10 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
                 : "exact",
             label: landChange.summary.riskLabel,
           },
+          {
+            tone: "neutral",
+            label: "Calor + buffers",
+          },
         ]
       : state.territorialFocus === "hydrology" && hydrology
       ? [
@@ -13221,6 +13545,10 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
                 : "compare",
             label: hydrology.summary.balanceLabel,
           },
+          {
+            tone: "neutral",
+            label: "Buffers",
+          },
         ]
       : [
           {
@@ -13235,6 +13563,25 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
             tone: "neutral",
             label: imageryProfile.spatialLabel,
           },
+          planning
+            ? {
+                tone: "neutral",
+                label: "Halos",
+              }
+            : hydrology
+              ? {
+                  tone: "neutral",
+                  label: "Vigilancia",
+                }
+              : landChange
+                ? {
+                    tone: "neutral",
+                    label: "Calor",
+                  }
+                : {
+                    tone: "muted",
+                    label: "Listo",
+                  },
           planning
             ? {
                 tone: "analysis",
