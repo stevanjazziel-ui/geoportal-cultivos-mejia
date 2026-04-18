@@ -1,0 +1,4562 @@
+{
+  "generatedAt": "2026-04-18T23:30:20Z",
+  "sourceRoot": "E:\\info de campo",
+  "summary": {
+    "fieldSectorCount": 14,
+    "hydrometStationCount": 8,
+    "climateSeriesCount": 9,
+    "historicalRasterCount": 2,
+    "terrainRasterCount": 2,
+    "inventoryCategoryCount": 11,
+    "inventoryItemCount": 32,
+    "sectorTypes": {
+      "Quebrada": 11,
+      "Rio": 1,
+      "Sector de campo": 1,
+      "Quebrada / sector lineal": 1
+    },
+    "stationTypes": {
+      "caudal": 2,
+      "precipitacion": 6
+    }
+  },
+  "sectors": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "id": "1-q-cuscungo",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.599657,
+                -0.434325
+              ],
+              [
+                -78.543945,
+                -0.434307
+              ],
+              [
+                -78.543942,
+                -0.446373
+              ],
+              [
+                -78.599654,
+                -0.446392
+              ],
+              [
+                -78.599657,
+                -0.434325
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "1. Q. Cuscungo",
+          "sectorType": "Quebrada",
+          "sectorLabel": "Q. Cuscungo",
+          "rasterCount": 5,
+          "hasOrthomosaic": true,
+          "hasDtm": true,
+          "orthomosaicName": "linea 1_transparent_mosaic_group1.tif",
+          "dtmName": "linea 1_dtm.tif",
+          "orthomosaicMb": 814.1,
+          "dtmMb": 35.4,
+          "coverageHa": 828.25,
+          "bboxUtm": [
+            767169.092,
+            9950616.676,
+            773373.865,
+            9951951.543
+          ],
+          "sourceGroup": "informacion_campo",
+          "summary": "1. Q. Cuscungo: 5 rasters detectados, ortomosaico, DTM y cobertura aproximada de 828.25 ha."
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "10-r-san-pedro-plyg",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.551283,
+                -0.464925
+              ],
+              [
+                -78.543241,
+                -0.464922
+              ],
+              [
+                -78.543237,
+                -0.478223
+              ],
+              [
+                -78.551278,
+                -0.478226
+              ],
+              [
+                -78.551283,
+                -0.464925
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "10. R. San pedro plyg",
+          "sectorType": "Rio",
+          "sectorLabel": "R. San pedro plyg",
+          "rasterCount": 4,
+          "hasOrthomosaic": true,
+          "hasDtm": true,
+          "orthomosaicName": "zona 5_transparent_mosaic_group1.tif",
+          "dtmName": "zona 5_dtm.tif",
+          "orthomosaicMb": 690.1,
+          "dtmMb": 22.5,
+          "coverageHa": 131.78,
+          "bboxUtm": [
+            772555.568,
+            9947093.064,
+            773451.137,
+            9948564.519
+          ],
+          "sourceGroup": "informacion_campo",
+          "summary": "10. R. San pedro plyg: 4 rasters detectados, ortomosaico, DTM y cobertura aproximada de 131.78 ha."
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "11-q-sn-2",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.600852,
+                -0.50281
+              ],
+              [
+                -78.596046,
+                -0.502808
+              ],
+              [
+                -78.596044,
+                -0.50863
+              ],
+              [
+                -78.60085,
+                -0.508632
+              ],
+              [
+                -78.600852,
+                -0.50281
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "11. Q. sn 2",
+          "sectorType": "Quebrada",
+          "sectorLabel": "Q. sn 2",
+          "rasterCount": 2,
+          "hasOrthomosaic": true,
+          "hasDtm": true,
+          "orthomosaicName": "zona 2_transparent_mosaic_group1.tif",
+          "dtmName": "zona 2_dtm.tif",
+          "orthomosaicMb": 357.5,
+          "dtmMb": 10.6,
+          "coverageHa": 34.47,
+          "bboxUtm": [
+            767033.41,
+            9943731.259,
+            767568.699,
+            9944375.281
+          ],
+          "sourceGroup": "informacion_campo",
+          "summary": "11. Q. sn 2: 2 rasters detectados, ortomosaico, DTM y cobertura aproximada de 34.47 ha."
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "12-q-tamajera",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.586027,
+                -0.503789
+              ],
+              [
+                -78.572315,
+                -0.503784
+              ],
+              [
+                -78.572311,
+                -0.514302
+              ],
+              [
+                -78.586023,
+                -0.514307
+              ],
+              [
+                -78.586027,
+                -0.503789
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "12. Q. Tamajera",
+          "sectorType": "Quebrada",
+          "sectorLabel": "Q. Tamajera",
+          "rasterCount": 4,
+          "hasOrthomosaic": true,
+          "hasDtm": true,
+          "orthomosaicName": "linea 10_transparent_mosaic_group1.tif",
+          "dtmName": "linea 10_dtm.tif",
+          "orthomosaicMb": 436.6,
+          "dtmMb": 16.1,
+          "coverageHa": 177.69,
+          "bboxUtm": [
+            768684.437,
+            9943102.794,
+            770211.548,
+            9944266.371
+          ],
+          "sourceGroup": "informacion_campo",
+          "summary": "12. Q. Tamajera: 4 rasters detectados, ortomosaico, DTM y cobertura aproximada de 177.69 ha."
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "13-q-sn-3",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.57618,
+                -0.514949
+              ],
+              [
+                -78.557663,
+                -0.514942
+              ],
+              [
+                -78.557656,
+                -0.533602
+              ],
+              [
+                -78.576173,
+                -0.533609
+              ],
+              [
+                -78.57618,
+                -0.514949
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "13. Q. SN 3",
+          "sectorType": "Quebrada",
+          "sectorLabel": "Q. SN 3",
+          "rasterCount": 6,
+          "hasOrthomosaic": true,
+          "hasDtm": true,
+          "orthomosaicName": "linea 6_transparent_mosaic_group1.tif",
+          "dtmName": "linea 6_dtm.tif",
+          "orthomosaicMb": 917.6,
+          "dtmMb": 31.7,
+          "coverageHa": 425.72,
+          "bboxUtm": [
+            769780.702,
+            9940966.993,
+            771842.964,
+            9943031.32
+          ],
+          "sourceGroup": "informacion_campo",
+          "summary": "13. Q. SN 3: 6 rasters detectados, ortomosaico, DTM y cobertura aproximada de 425.72 ha."
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "14-r-naranjal",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.756467,
+                -0.430745
+              ],
+              [
+                -78.727883,
+                -0.430736
+              ],
+              [
+                -78.72788,
+                -0.440352
+              ],
+              [
+                -78.756465,
+                -0.44036
+              ],
+              [
+                -78.756467,
+                -0.430745
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "14. R Naranjal",
+          "sectorType": "Sector de campo",
+          "sectorLabel": "R Naranjal",
+          "rasterCount": 4,
+          "hasOrthomosaic": true,
+          "hasDtm": true,
+          "orthomosaicName": "linea 11_transparent_mosaic_group1.tif",
+          "dtmName": "linea 11_dtm.tif",
+          "orthomosaicMb": 323.0,
+          "dtmMb": 12.5,
+          "coverageHa": 338.56,
+          "bboxUtm": [
+            749706.243,
+            9951289.365,
+            752889.346,
+            9952352.982
+          ],
+          "sourceGroup": "informacion_campo",
+          "summary": "14. R Naranjal: 4 rasters detectados, ortomosaico, DTM y cobertura aproximada de 338.56 ha."
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "2-q-huacagyaco",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.571857,
+                -0.440814
+              ],
+              [
+                -78.545877,
+                -0.440806
+              ],
+              [
+                -78.545867,
+                -0.470177
+              ],
+              [
+                -78.571847,
+                -0.470186
+              ],
+              [
+                -78.571857,
+                -0.440814
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "2. Q. Huacagyaco",
+          "sectorType": "Quebrada",
+          "sectorLabel": "Q. Huacagyaco",
+          "rasterCount": 11,
+          "hasOrthomosaic": true,
+          "hasDtm": true,
+          "orthomosaicName": "linea3_transparent_mosaic_group1.tif",
+          "dtmName": "linea3_dtm.tif",
+          "orthomosaicMb": 1142.2,
+          "dtmMb": 42.4,
+          "coverageHa": 940.21,
+          "bboxUtm": [
+            770265.065,
+            9947983.266,
+            773158.546,
+            9951232.687
+          ],
+          "sourceGroup": "informacion_campo",
+          "summary": "2. Q. Huacagyaco: 11 rasters detectados, ortomosaico, DTM y cobertura aproximada de 940.21 ha."
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "3-q-casca",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.600356,
+                -0.460314
+              ],
+              [
+                -78.58126,
+                -0.460308
+              ],
+              [
+                -78.581258,
+                -0.467532
+              ],
+              [
+                -78.600354,
+                -0.467539
+              ],
+              [
+                -78.600356,
+                -0.460314
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "3. Q. Casca",
+          "sectorType": "Quebrada",
+          "sectorLabel": "Q. Casca",
+          "rasterCount": 2,
+          "hasOrthomosaic": true,
+          "hasDtm": true,
+          "orthomosaicName": "Quebrada_lineal4_transparent_mosaic_group1.tif",
+          "dtmName": "Quebrada_lineal4_dtm.tif",
+          "orthomosaicMb": 539.3,
+          "dtmMb": 18.7,
+          "coverageHa": 169.97,
+          "bboxUtm": [
+            767090.294,
+            9948277.271,
+            769217.045,
+            9949076.46
+          ],
+          "sourceGroup": "informacion_campo",
+          "summary": "3. Q. Casca: 2 rasters detectados, ortomosaico, DTM y cobertura aproximada de 169.97 ha."
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "4-q-sn",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.57073,
+                -0.485409
+              ],
+              [
+                -78.549764,
+                -0.485401
+              ],
+              [
+                -78.549758,
+                -0.50155
+              ],
+              [
+                -78.570724,
+                -0.501558
+              ],
+              [
+                -78.57073,
+                -0.485409
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "4. Q. SN",
+          "sectorType": "Quebrada",
+          "sectorLabel": "Q. SN",
+          "rasterCount": 8,
+          "hasOrthomosaic": true,
+          "hasDtm": true,
+          "orthomosaicName": "lineal 5cd _transparent_mosaic_group1.tif",
+          "dtmName": "lineal 5cd _dtm.tif",
+          "orthomosaicMb": 972.2,
+          "dtmMb": 34.6,
+          "coverageHa": 417.17,
+          "bboxUtm": [
+            770388.899,
+            9944512.56,
+            772723.945,
+            9946299.126
+          ],
+          "sourceGroup": "informacion_campo",
+          "summary": "4. Q. SN: 8 rasters detectados, ortomosaico, DTM y cobertura aproximada de 417.17 ha."
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "5-q-el-timbo",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.576722,
+                -0.48488
+              ],
+              [
+                -78.548737,
+                -0.484869
+              ],
+              [
+                -78.548725,
+                -0.516693
+              ],
+              [
+                -78.57671,
+                -0.516704
+              ],
+              [
+                -78.576722,
+                -0.48488
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "5. Q. el timbo",
+          "sectorType": "Quebrada",
+          "sectorLabel": "Q. el timbo",
+          "rasterCount": 11,
+          "hasOrthomosaic": true,
+          "hasDtm": true,
+          "orthomosaicName": "lineal 7vf_transparent_mosaic_group1.tif",
+          "dtmName": "lineal 7vf_dtm.tif",
+          "orthomosaicMb": 1169.4,
+          "dtmMb": 43.6,
+          "coverageHa": 1097.31,
+          "bboxUtm": [
+            769721.565,
+            9942837.188,
+            772838.27,
+            9946357.93
+          ],
+          "sourceGroup": "informacion_campo",
+          "summary": "5. Q. el timbo: 11 rasters detectados, ortomosaico, DTM y cobertura aproximada de 1097.31 ha."
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "6-q-r-san-pedro-lineal",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.550289,
+                -0.481471
+              ],
+              [
+                -78.538506,
+                -0.481466
+              ],
+              [
+                -78.538489,
+                -0.525633
+              ],
+              [
+                -78.550273,
+                -0.525638
+              ],
+              [
+                -78.550289,
+                -0.481471
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "6. Q. R San Pedro lineal",
+          "sectorType": "Quebrada",
+          "sectorLabel": "Q. R San Pedro lineal",
+          "rasterCount": 10,
+          "hasOrthomosaic": true,
+          "hasDtm": true,
+          "orthomosaicName": "linea 8_transparent_mosaic_group1.tif",
+          "dtmName": "linea 8_dtm.tif",
+          "orthomosaicMb": 1231.4,
+          "dtmMb": 53.0,
+          "coverageHa": 641.26,
+          "bboxUtm": [
+            772665.572,
+            9941847.708,
+            773977.938,
+            9946734.021
+          ],
+          "sourceGroup": "informacion_campo",
+          "summary": "6. Q. R San Pedro lineal: 10 rasters detectados, ortomosaico, DTM y cobertura aproximada de 641.26 ha."
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "7-q-moya",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.588068,
+                -0.511581
+              ],
+              [
+                -78.582378,
+                -0.511579
+              ],
+              [
+                -78.582373,
+                -0.524672
+              ],
+              [
+                -78.588063,
+                -0.524674
+              ],
+              [
+                -78.588068,
+                -0.511581
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "7. Q. Moya",
+          "sectorType": "Quebrada",
+          "sectorLabel": "Q. Moya",
+          "rasterCount": 4,
+          "hasOrthomosaic": true,
+          "hasDtm": true,
+          "orthomosaicName": "linea 9_transparent_mosaic_group1.tif",
+          "dtmName": "linea 9_dtm.tif",
+          "orthomosaicMb": 532.4,
+          "dtmMb": 19.3,
+          "coverageHa": 91.79,
+          "bboxUtm": [
+            768456.803,
+            9941955.937,
+            769090.509,
+            9943404.477
+          ],
+          "sourceGroup": "informacion_campo",
+          "summary": "7. Q. Moya: 4 rasters detectados, ortomosaico, DTM y cobertura aproximada de 91.79 ha."
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "8-uyumbicho",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.532202,
+                -0.382875
+              ],
+              [
+                -78.51525,
+                -0.38287
+              ],
+              [
+                -78.515246,
+                -0.39656
+              ],
+              [
+                -78.532198,
+                -0.396565
+              ],
+              [
+                -78.532202,
+                -0.382875
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "8. Uyumbicho",
+          "sectorType": "Quebrada / sector lineal",
+          "sectorLabel": "Uyumbicho",
+          "rasterCount": 3,
+          "hasOrthomosaic": true,
+          "hasDtm": true,
+          "orthomosaicName": "zona 3 uyumbicho_transparent_mosaic_group1.tif",
+          "dtmName": "zona 3 uyumbicho_dtm.tif",
+          "orthomosaicMb": 500.9,
+          "dtmMb": 17.5,
+          "coverageHa": 285.96,
+          "bboxUtm": [
+            774683.513,
+            9956126.697,
+            776571.575,
+            9957641.254
+          ],
+          "sourceGroup": "informacion_campo",
+          "summary": "8. Uyumbicho: 3 rasters detectados, ortomosaico, DTM y cobertura aproximada de 285.96 ha."
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "9-q-ushco",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.552199,
+                -0.420532
+              ],
+              [
+                -78.540664,
+                -0.420529
+              ],
+              [
+                -78.540661,
+                -0.429333
+              ],
+              [
+                -78.552196,
+                -0.429337
+              ],
+              [
+                -78.552199,
+                -0.420532
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "9. Q. Ushco",
+          "sectorType": "Quebrada",
+          "sectorLabel": "Q. Ushco",
+          "rasterCount": 4,
+          "hasOrthomosaic": true,
+          "hasDtm": true,
+          "orthomosaicName": "zona4 tambillo_transparent_mosaic_group1.tif",
+          "dtmName": "zona4 tambillo_dtm.tif",
+          "orthomosaicMb": 709.7,
+          "dtmMb": 21.8,
+          "coverageHa": 125.14,
+          "bboxUtm": [
+            772455.115,
+            9952501.718,
+            773739.816,
+            9953475.796
+          ],
+          "sourceGroup": "informacion_campo",
+          "summary": "9. Q. Ushco: 4 rasters detectados, ortomosaico, DTM y cobertura aproximada de 125.14 ha."
+        }
+      }
+    ]
+  },
+  "hydrometStations": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "id": "atp01hi01",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -78.387785,
+            -0.612124
+          ]
+        },
+        "properties": {
+          "code": "ATP01HI01",
+          "name": "Tungurahua",
+          "stationKind": "caudal",
+          "annualMetric": 38.1,
+          "annualMetricLabel": "38.1 l/s medios",
+          "historicalMetric": 35.3,
+          "historicalMetricLabel": "35.3 l/s historicos",
+          "peakMetric": 1136.6,
+          "peakMetricLabel": "1136.6 l/s max",
+          "lowMetric": 6.25,
+          "rainyDays": null,
+          "altitudeM": null,
+          "utmNorthing": 9932271.0,
+          "utmEasting": 790759.0,
+          "headline": "Caudal medio anual",
+          "monthlyRecords": [
+            {
+              "month": "ENE",
+              "maxLs": 1136.6,
+              "minLs": 44.5,
+              "meanLs": 69.5,
+              "historicalLs": 62.1
+            },
+            {
+              "month": "FEB",
+              "maxLs": 186.6,
+              "minLs": 44.1,
+              "meanLs": 55.4,
+              "historicalLs": 64.1
+            },
+            {
+              "month": "MAR",
+              "maxLs": 970.4,
+              "minLs": 51.6,
+              "meanLs": 85.0,
+              "historicalLs": 65.1
+            },
+            {
+              "month": "ABR",
+              "maxLs": 330.3,
+              "minLs": 65.1,
+              "meanLs": 80.9,
+              "historicalLs": 65.3
+            },
+            {
+              "month": "MAY",
+              "maxLs": 198.8,
+              "minLs": 55.7,
+              "meanLs": 65.5,
+              "historicalLs": 68.5
+            },
+            {
+              "month": "JUN",
+              "maxLs": null,
+              "minLs": null,
+              "meanLs": null,
+              "historicalLs": 63.1
+            },
+            {
+              "month": "JUL",
+              "maxLs": null,
+              "minLs": null,
+              "meanLs": null,
+              "historicalLs": 62.7
+            },
+            {
+              "month": "AGO",
+              "maxLs": null,
+              "minLs": null,
+              "meanLs": null,
+              "historicalLs": 55.3
+            },
+            {
+              "month": "SEP",
+              "maxLs": 73.7,
+              "minLs": 48.1,
+              "meanLs": 53.3,
+              "historicalLs": 52.5
+            },
+            {
+              "month": "OCT",
+              "maxLs": 82.5,
+              "minLs": 47.1,
+              "meanLs": 51.8,
+              "historicalLs": 61.1
+            },
+            {
+              "month": "NOV",
+              "maxLs": 230.6,
+              "minLs": 47.6,
+              "meanLs": 58.7,
+              "historicalLs": 60.0
+            },
+            {
+              "month": "DIC",
+              "maxLs": 754.3,
+              "minLs": 53.4,
+              "meanLs": 86.0,
+              "historicalLs": 63.6
+            },
+            {
+              "month": "ENE",
+              "maxLs": 9.81,
+              "minLs": 6.25,
+              "meanLs": 8.29,
+              "historicalLs": 8.7
+            },
+            {
+              "month": "FEB",
+              "maxLs": 10.63,
+              "minLs": 7.25,
+              "meanLs": 8.84,
+              "historicalLs": 9.1
+            },
+            {
+              "month": "MAR",
+              "maxLs": 10.38,
+              "minLs": 7.06,
+              "meanLs": 8.84,
+              "historicalLs": 9.1
+            },
+            {
+              "month": "ABR",
+              "maxLs": 10.25,
+              "minLs": 7.31,
+              "meanLs": 8.94,
+              "historicalLs": 9.0
+            },
+            {
+              "month": "MAY",
+              "maxLs": 10.5,
+              "minLs": 7.56,
+              "meanLs": 9.04,
+              "historicalLs": 9.0
+            },
+            {
+              "month": "JUN",
+              "maxLs": null,
+              "minLs": null,
+              "meanLs": null,
+              "historicalLs": 8.5
+            },
+            {
+              "month": "JUL",
+              "maxLs": null,
+              "minLs": null,
+              "meanLs": null,
+              "historicalLs": 8.2
+            },
+            {
+              "month": "AGO",
+              "maxLs": null,
+              "minLs": null,
+              "meanLs": null,
+              "historicalLs": 8.0
+            },
+            {
+              "month": "SEP",
+              "maxLs": 9.75,
+              "minLs": 6.69,
+              "meanLs": 8.23,
+              "historicalLs": 8.1
+            },
+            {
+              "month": "OCT",
+              "maxLs": 10.06,
+              "minLs": 7.19,
+              "meanLs": 8.83,
+              "historicalLs": 8.4
+            },
+            {
+              "month": "NOV",
+              "maxLs": 10.31,
+              "minLs": 7.38,
+              "meanLs": 9.06,
+              "historicalLs": 8.8
+            },
+            {
+              "month": "DIC",
+              "maxLs": 11.38,
+              "minLs": 7.25,
+              "meanLs": 9.26,
+              "historicalLs": 8.7
+            }
+          ],
+          "summary": "Tungurahua (ATP01HI01) registra 38.1 l/s medios frente a 35.3 l/s historicos.",
+          "sourceGroup": "fonag"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "atp01pt01",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -78.360811,
+            -0.603932
+          ]
+        },
+        "properties": {
+          "code": "ATP01PT01",
+          "name": "PT01 (Tungurahua)",
+          "stationKind": "precipitacion",
+          "annualMetric": 2143.3,
+          "annualMetricLabel": "2143.3 mm/anio",
+          "historicalMetric": 2015.3,
+          "historicalMetricLabel": "2015.3 mm/anio historicos",
+          "peakMetric": 28.0,
+          "peakMetricLabel": "28.0 mm max 24h",
+          "lowMetric": null,
+          "rainyDays": 710,
+          "altitudeM": null,
+          "utmNorthing": 9933176.0,
+          "utmEasting": 793764.0,
+          "headline": "DIC",
+          "monthlyRecords": [
+            {
+              "month": "ENE",
+              "monthlyMm": 87.9,
+              "max24hMm": 17.4,
+              "maxDay": 11.0,
+              "rainyDays": 24.0,
+              "historicalMm": 60.5
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 61.3,
+              "max24hMm": 13.9,
+              "maxDay": 21.0,
+              "rainyDays": 22.0,
+              "historicalMm": 78.4
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 88.1,
+              "max24hMm": 16.3,
+              "maxDay": 7.0,
+              "rainyDays": 23.0,
+              "historicalMm": 67.9
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 77.3,
+              "max24hMm": 12.4,
+              "maxDay": 22.0,
+              "rainyDays": 27.0,
+              "historicalMm": 77.2
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 58.7,
+              "max24hMm": 9.5,
+              "maxDay": 16.0,
+              "rainyDays": 26.0,
+              "historicalMm": 80.0
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 36.2,
+              "max24hMm": 6.4,
+              "maxDay": 16.0,
+              "rainyDays": 25.0,
+              "historicalMm": 70.8
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 58.6,
+              "max24hMm": 10.0,
+              "maxDay": 9.0,
+              "rainyDays": 30.0,
+              "historicalMm": 58.3
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 53.9,
+              "max24hMm": 19.0,
+              "maxDay": 21.0,
+              "rainyDays": 19.0,
+              "historicalMm": 43.0
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 32.6,
+              "max24hMm": 12.5,
+              "maxDay": 28.0,
+              "rainyDays": 14.0,
+              "historicalMm": 53.7
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 39.9,
+              "max24hMm": 18.4,
+              "maxDay": 6.0,
+              "rainyDays": 18.0,
+              "historicalMm": 72.3
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 75.4,
+              "max24hMm": 23.7,
+              "maxDay": 23.0,
+              "rainyDays": 18.0,
+              "historicalMm": 85.8
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 103.7,
+              "max24hMm": 24.8,
+              "maxDay": 28.0,
+              "rainyDays": 24.0,
+              "historicalMm": 78.6
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 14.36,
+              "max24hMm": 28.0,
+              "maxDay": -1.93,
+              "rainyDays": 29.0,
+              "historicalMm": 5.8592049
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 14.49,
+              "max24hMm": 19.0,
+              "maxDay": -1.96,
+              "rainyDays": 25.0,
+              "historicalMm": 6.6715104
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 14.27,
+              "max24hMm": 8.0,
+              "maxDay": -0.574,
+              "rainyDays": 21.0,
+              "historicalMm": 6.4722639
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 13.09,
+              "max24hMm": 4.0,
+              "maxDay": -0.176,
+              "rainyDays": 25.0,
+              "historicalMm": 6.7584271
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 13.67,
+              "max24hMm": 19.0,
+              "maxDay": -0.331,
+              "rainyDays": 8.0,
+              "historicalMm": 7.2261944
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 11.43,
+              "max24hMm": 19.0,
+              "maxDay": -1.69,
+              "rainyDays": 19.0,
+              "historicalMm": 5.8190868
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 13.23,
+              "max24hMm": 26.0,
+              "maxDay": -0.715,
+              "rainyDays": 26.0,
+              "historicalMm": 6.1736215
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 14.76,
+              "max24hMm": 19.0,
+              "maxDay": -3.263,
+              "rainyDays": 23.0,
+              "historicalMm": 7.1840174
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 14.21,
+              "max24hMm": 27.0,
+              "maxDay": -3.727,
+              "rainyDays": 17.0,
+              "historicalMm": 5.6804826
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 15.16,
+              "max24hMm": 4.0,
+              "maxDay": -0.841,
+              "rainyDays": 3.0,
+              "historicalMm": 6.9856806
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 14.99,
+              "max24hMm": 3.0,
+              "maxDay": -1.677,
+              "rainyDays": 3.0,
+              "historicalMm": 7.2042292
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 16.01,
+              "max24hMm": 18.0,
+              "maxDay": -0.05,
+              "rainyDays": 30.0,
+              "historicalMm": 7.7846424
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 100.0,
+              "max24hMm": 1.0,
+              "maxDay": 41.0,
+              "rainyDays": 28.0,
+              "historicalMm": 90.0
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 100.0,
+              "max24hMm": 1.0,
+              "maxDay": 53.0,
+              "rainyDays": 26.0,
+              "historicalMm": 91.0
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 100.0,
+              "max24hMm": 1.0,
+              "maxDay": 49.0,
+              "rainyDays": 19.0,
+              "historicalMm": 93.0
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 100.0,
+              "max24hMm": 1.0,
+              "maxDay": 58.0,
+              "rainyDays": 11.0,
+              "historicalMm": 92.0
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 100.0,
+              "max24hMm": 1.0,
+              "maxDay": 60.0,
+              "rainyDays": 23.0,
+              "historicalMm": 93.0
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 100.0,
+              "max24hMm": 1.0,
+              "maxDay": 64.0,
+              "rainyDays": 19.0,
+              "historicalMm": 95.0
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 100.0,
+              "max24hMm": 1.0,
+              "maxDay": 60.0,
+              "rainyDays": 26.0,
+              "historicalMm": 95.0
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 100.0,
+              "max24hMm": 1.0,
+              "maxDay": 33.0,
+              "rainyDays": 26.0,
+              "historicalMm": 93.0
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 100.0,
+              "max24hMm": 1.0,
+              "maxDay": 38.0,
+              "rainyDays": 8.0,
+              "historicalMm": 91.0
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 100.0,
+              "max24hMm": 1.0,
+              "maxDay": 46.0,
+              "rainyDays": 4.0,
+              "historicalMm": 91.0
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 100.0,
+              "max24hMm": 1.0,
+              "maxDay": 30.0,
+              "rainyDays": 18.0,
+              "historicalMm": 91.0
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 100.0,
+              "max24hMm": 1.0,
+              "maxDay": 43.0,
+              "rainyDays": 3.0,
+              "historicalMm": 94.0
+            }
+          ],
+          "summary": "PT01 (Tungurahua) (ATP01PT01) registra 2143.3 mm/anio frente a 2015.3 mm/anio historicos.",
+          "sourceGroup": "fonag"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "h5025",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -78.383508,
+            -0.619497
+          ]
+        },
+        "properties": {
+          "code": "H5025",
+          "name": "Pita en Campo Alegre",
+          "stationKind": "caudal",
+          "annualMetric": 569.9,
+          "annualMetricLabel": "569.9 l/s medios",
+          "historicalMetric": 701.9,
+          "historicalMetricLabel": "701.9 l/s historicos",
+          "peakMetric": 10646.4,
+          "peakMetricLabel": "10646.4 l/s max",
+          "lowMetric": 5.52,
+          "rainyDays": null,
+          "altitudeM": null,
+          "utmNorthing": 9931455.0,
+          "utmEasting": 791235.0,
+          "headline": "Caudal medio anual",
+          "monthlyRecords": [
+            {
+              "month": "ENE",
+              "maxLs": 6984.6,
+              "minLs": 699.2,
+              "meanLs": 1075.1,
+              "historicalLs": 1027.7
+            },
+            {
+              "month": "FEB",
+              "maxLs": 4505.6,
+              "minLs": 699.2,
+              "meanLs": 906.2,
+              "historicalLs": 1134.4
+            },
+            {
+              "month": "MAR",
+              "maxLs": 5552.6,
+              "minLs": 710.9,
+              "meanLs": 1201.0,
+              "historicalLs": 1232.8
+            },
+            {
+              "month": "ABR",
+              "maxLs": 7448.4,
+              "minLs": 763.3,
+              "meanLs": 1250.1,
+              "historicalLs": 1358.9
+            },
+            {
+              "month": "MAY",
+              "maxLs": 5983.8,
+              "minLs": 903.0,
+              "meanLs": 1306.6,
+              "historicalLs": 1660.2
+            },
+            {
+              "month": "JUN",
+              "maxLs": 2795.1,
+              "minLs": 954.8,
+              "meanLs": 1323.0,
+              "historicalLs": 1748.4
+            },
+            {
+              "month": "JUL",
+              "maxLs": 5262.1,
+              "minLs": 884.7,
+              "meanLs": 1477.6,
+              "historicalLs": 1887.0
+            },
+            {
+              "month": "AGO",
+              "maxLs": 4739.7,
+              "minLs": 844.4,
+              "meanLs": 1253.6,
+              "historicalLs": 1511.9
+            },
+            {
+              "month": "SEP",
+              "maxLs": 3196.5,
+              "minLs": 771.6,
+              "meanLs": 929.9,
+              "historicalLs": 1328.5
+            },
+            {
+              "month": "OCT",
+              "maxLs": 1605.5,
+              "minLs": 683.8,
+              "meanLs": 802.6,
+              "historicalLs": 1308.9
+            },
+            {
+              "month": "NOV",
+              "maxLs": 5142.8,
+              "minLs": 631.5,
+              "meanLs": 872.8,
+              "historicalLs": 1315.9
+            },
+            {
+              "month": "DIC",
+              "maxLs": 10646.4,
+              "minLs": 631.5,
+              "meanLs": 1173.1,
+              "historicalLs": 1226.3
+            },
+            {
+              "month": "ENE",
+              "maxLs": 12.23,
+              "minLs": 5.64,
+              "meanLs": 8.36,
+              "historicalLs": 8.8
+            },
+            {
+              "month": "FEB",
+              "maxLs": 12.6,
+              "minLs": 6.49,
+              "meanLs": 8.86,
+              "historicalLs": 9.2
+            },
+            {
+              "month": "MAR",
+              "maxLs": 12.52,
+              "minLs": 6.45,
+              "meanLs": 8.78,
+              "historicalLs": 9.1
+            },
+            {
+              "month": "ABR",
+              "maxLs": 12.1,
+              "minLs": 6.53,
+              "meanLs": 8.87,
+              "historicalLs": 9.1
+            },
+            {
+              "month": "MAY",
+              "maxLs": 13.03,
+              "minLs": 7.09,
+              "meanLs": 9.17,
+              "historicalLs": 9.2
+            },
+            {
+              "month": "JUN",
+              "maxLs": 12.01,
+              "minLs": 6.42,
+              "meanLs": 8.72,
+              "historicalLs": 8.7
+            },
+            {
+              "month": "JUL",
+              "maxLs": 11.98,
+              "minLs": 6.28,
+              "meanLs": 8.71,
+              "historicalLs": 8.4
+            },
+            {
+              "month": "AGO",
+              "maxLs": 12.77,
+              "minLs": 5.94,
+              "meanLs": 8.66,
+              "historicalLs": 8.2
+            },
+            {
+              "month": "SEP",
+              "maxLs": 12.48,
+              "minLs": 5.52,
+              "meanLs": 8.36,
+              "historicalLs": 8.4
+            },
+            {
+              "month": "OCT",
+              "maxLs": 12.1,
+              "minLs": 6.26,
+              "meanLs": 8.98,
+              "historicalLs": 8.7
+            },
+            {
+              "month": "NOV",
+              "maxLs": 12.44,
+              "minLs": 6.8,
+              "meanLs": 9.1,
+              "historicalLs": 8.9
+            },
+            {
+              "month": "DIC",
+              "maxLs": 12.76,
+              "minLs": 6.97,
+              "meanLs": 9.28,
+              "historicalLs": 8.9
+            }
+          ],
+          "summary": "Pita en Campo Alegre (H5025) registra 569.9 l/s medios frente a 701.9 l/s historicos.",
+          "sourceGroup": "fonag"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "m5026",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -78.443346,
+            -0.563824
+          ]
+        },
+        "properties": {
+          "code": "M5026",
+          "name": "Cotopaxi Control Norte",
+          "stationKind": "precipitacion",
+          "annualMetric": 10483.1,
+          "annualMetricLabel": "10483.1 mm/anio",
+          "historicalMetric": 18897.4,
+          "historicalMetricLabel": "18897.4 mm/anio historicos",
+          "peakMetric": 657.0,
+          "peakMetricLabel": "657.0 mm max 24h",
+          "lowMetric": null,
+          "rainyDays": 20911,
+          "altitudeM": null,
+          "utmNorthing": 9937618.0,
+          "utmEasting": 784573.0,
+          "headline": "MAY",
+          "monthlyRecords": [
+            {
+              "month": "ENE",
+              "monthlyMm": 165.0,
+              "max24hMm": 15.6,
+              "maxDay": 7.0,
+              "rainyDays": 26.0,
+              "historicalMm": 104.6
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 93.3,
+              "max24hMm": 21.4,
+              "maxDay": 21.0,
+              "rainyDays": 14.0,
+              "historicalMm": 114.5
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 151.6,
+              "max24hMm": 18.3,
+              "maxDay": 13.0,
+              "rainyDays": 22.0,
+              "historicalMm": 111.7
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 134.1,
+              "max24hMm": 29.8,
+              "maxDay": 21.0,
+              "rainyDays": 24.0,
+              "historicalMm": 122.8
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 75.6,
+              "max24hMm": 15.1,
+              "maxDay": 21.0,
+              "rainyDays": 18.0,
+              "historicalMm": 75.9
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 9.9,
+              "max24hMm": 5.0,
+              "maxDay": 11.0,
+              "rainyDays": 14.0,
+              "historicalMm": 36.5
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 46.9,
+              "max24hMm": 13.2,
+              "maxDay": 8.0,
+              "rainyDays": 15.0,
+              "historicalMm": 25.2
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 30.3,
+              "max24hMm": 13.2,
+              "maxDay": 21.0,
+              "rainyDays": 7.0,
+              "historicalMm": 28.4
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 37.7,
+              "max24hMm": 18.1,
+              "maxDay": 28.0,
+              "rainyDays": 10.0,
+              "historicalMm": 41.2
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 68.8,
+              "max24hMm": 18.2,
+              "maxDay": 28.0,
+              "rainyDays": 19.0,
+              "historicalMm": 101.3
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 115.1,
+              "max24hMm": 15.1,
+              "maxDay": 14.0,
+              "rainyDays": 20.0,
+              "historicalMm": 120.6
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 199.6,
+              "max24hMm": 25.1,
+              "maxDay": 20.0,
+              "rainyDays": 23.0,
+              "historicalMm": 94.9
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 16.334,
+              "max24hMm": 29.0,
+              "maxDay": -0.21,
+              "rainyDays": 4.0,
+              "historicalMm": 7.7485208
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 15.608,
+              "max24hMm": 9.0,
+              "maxDay": -0.329,
+              "rainyDays": 4.0,
+              "historicalMm": 8.4300764
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 15.271,
+              "max24hMm": 2.0,
+              "maxDay": 0.0,
+              "rainyDays": 21.0,
+              "historicalMm": 8.7330625
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 15.4,
+              "max24hMm": 11.0,
+              "maxDay": 1.8,
+              "rainyDays": 25.0,
+              "historicalMm": 8.4847222
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 16.0,
+              "max24hMm": 8.0,
+              "maxDay": 1.6,
+              "rainyDays": 24.0,
+              "historicalMm": 9.2010417
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 14.7,
+              "max24hMm": 12.0,
+              "maxDay": 1.3,
+              "rainyDays": 24.0,
+              "historicalMm": 8.4923611
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 15.9,
+              "max24hMm": 26.0,
+              "maxDay": -0.2,
+              "rainyDays": 26.0,
+              "historicalMm": 8.3958333
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 17.1,
+              "max24hMm": 18.0,
+              "maxDay": -1.5,
+              "rainyDays": 18.0,
+              "historicalMm": 8.1777778
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 17.3,
+              "max24hMm": 27.0,
+              "maxDay": -1.0,
+              "rainyDays": 17.0,
+              "historicalMm": 8.6232639
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 17.0,
+              "max24hMm": 9.0,
+              "maxDay": 0.2,
+              "rainyDays": 3.0,
+              "historicalMm": 9.246875
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 17.2,
+              "max24hMm": 16.0,
+              "maxDay": -0.9,
+              "rainyDays": 19.0,
+              "historicalMm": 9.9434028
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 16.7,
+              "max24hMm": 3.0,
+              "maxDay": 1.9,
+              "rainyDays": 21.0,
+              "historicalMm": 9.5315972
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 100.0,
+              "max24hMm": 6.0,
+              "maxDay": 36.0,
+              "rainyDays": 29.0,
+              "historicalMm": 95.0
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 100.0,
+              "max24hMm": 20.0,
+              "maxDay": 42.0,
+              "rainyDays": 4.0,
+              "historicalMm": 93.0
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 100.0,
+              "max24hMm": 2.0,
+              "maxDay": 49.0,
+              "rainyDays": 19.0,
+              "historicalMm": 90.0
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 98.0,
+              "max24hMm": 17.0,
+              "maxDay": 43.0,
+              "rainyDays": 11.0,
+              "historicalMm": 85.0
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 98.0,
+              "max24hMm": 22.0,
+              "maxDay": 42.0,
+              "rainyDays": 8.0,
+              "historicalMm": 80.0
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 97.0,
+              "max24hMm": 9.0,
+              "maxDay": 48.0,
+              "rainyDays": 19.0,
+              "historicalMm": 77.0
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 97.0,
+              "max24hMm": 7.0,
+              "maxDay": 46.0,
+              "rainyDays": 13.0,
+              "historicalMm": 79.0
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 98.0,
+              "max24hMm": 20.0,
+              "maxDay": 23.0,
+              "rainyDays": 26.0,
+              "historicalMm": 75.0
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 97.0,
+              "max24hMm": 28.0,
+              "maxDay": 18.0,
+              "rainyDays": 8.0,
+              "historicalMm": 72.0
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 100.0,
+              "max24hMm": 28.0,
+              "maxDay": 31.0,
+              "rainyDays": 4.0,
+              "historicalMm": 80.0
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 99.0,
+              "max24hMm": 23.0,
+              "maxDay": 29.0,
+              "rainyDays": 18.0,
+              "historicalMm": 81.0
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 99.0,
+              "max24hMm": 17.0,
+              "maxDay": 30.0,
+              "rainyDays": 3.0,
+              "historicalMm": 86.0
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 660.0,
+              "max24hMm": 655.0,
+              "maxDay": 658.0,
+              "rainyDays": 657.4,
+              "historicalMm": null
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 660.0,
+              "max24hMm": 655.0,
+              "maxDay": 657.0,
+              "rainyDays": 657.6,
+              "historicalMm": null
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 660.0,
+              "max24hMm": 655.0,
+              "maxDay": 658.0,
+              "rainyDays": 657.9,
+              "historicalMm": null
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 661.0,
+              "max24hMm": 655.0,
+              "maxDay": 658.0,
+              "rainyDays": 658.2,
+              "historicalMm": null
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 662.0,
+              "max24hMm": 656.0,
+              "maxDay": 659.0,
+              "rainyDays": 658.6,
+              "historicalMm": null
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 661.0,
+              "max24hMm": 657.0,
+              "maxDay": 659.0,
+              "rainyDays": 658.3,
+              "historicalMm": null
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 661.0,
+              "max24hMm": 656.0,
+              "maxDay": 659.0,
+              "rainyDays": 658.1,
+              "historicalMm": null
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 661.0,
+              "max24hMm": 655.0,
+              "maxDay": 659.0,
+              "rainyDays": 658.1,
+              "historicalMm": null
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 661.0,
+              "max24hMm": 656.0,
+              "maxDay": 658.0,
+              "rainyDays": 658.0,
+              "historicalMm": null
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 661.0,
+              "max24hMm": 656.0,
+              "maxDay": 659.0,
+              "rainyDays": 657.8,
+              "historicalMm": null
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 661.0,
+              "max24hMm": 655.0,
+              "maxDay": 658.0,
+              "rainyDays": 657.5,
+              "historicalMm": null
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 662.0,
+              "max24hMm": 655.0,
+              "maxDay": 658.0,
+              "rainyDays": 657.4,
+              "historicalMm": null
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 1.28,
+              "max24hMm": 127.11,
+              "maxDay": 516.21,
+              "rainyDays": 937.64,
+              "historicalMm": 1323.49
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 1.29,
+              "max24hMm": 129.67,
+              "maxDay": 566.58,
+              "rainyDays": 1028.5,
+              "historicalMm": 1290.52
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 2.0,
+              "max24hMm": 159.0,
+              "maxDay": 551.0,
+              "rainyDays": 918.0,
+              "historicalMm": 1398.0
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 1.0,
+              "max24hMm": 220.0,
+              "maxDay": 577.0,
+              "rainyDays": 961.0,
+              "historicalMm": 1288.0
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 2.0,
+              "max24hMm": 224.0,
+              "maxDay": 596.0,
+              "rainyDays": 949.0,
+              "historicalMm": 1169.0
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 0.0,
+              "max24hMm": 222.0,
+              "maxDay": 498.0,
+              "rainyDays": 804.0,
+              "historicalMm": 1276.0
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 2.0,
+              "max24hMm": 218.0,
+              "maxDay": 662.0,
+              "rainyDays": 902.0,
+              "historicalMm": 1285.0
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 1.0,
+              "max24hMm": 248.0,
+              "maxDay": 715.0,
+              "rainyDays": 985.0,
+              "historicalMm": 1244.0
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 0.0,
+              "max24hMm": 276.0,
+              "maxDay": 638.0,
+              "rainyDays": 970.0,
+              "historicalMm": 1359.0
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 9.0,
+              "max24hMm": 277.0,
+              "maxDay": 702.0,
+              "rainyDays": 1132.0,
+              "historicalMm": 1400.0
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 7.0,
+              "max24hMm": 365.0,
+              "maxDay": 754.0,
+              "rainyDays": 1151.0,
+              "historicalMm": 1369.0
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 3.0,
+              "max24hMm": 281.0,
+              "maxDay": 744.0,
+              "rainyDays": 965.0,
+              "historicalMm": 1368.0
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 10.53,
+              "rainyDays": 25.03,
+              "historicalMm": 52.58
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 15.15,
+              "rainyDays": 39.41,
+              "historicalMm": 59.0
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 14.0,
+              "rainyDays": 60.0,
+              "historicalMm": 58.0
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 12.0,
+              "rainyDays": 68.0,
+              "historicalMm": 81.0
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 27.0,
+              "rainyDays": 25.0,
+              "historicalMm": 30.0
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 22.0,
+              "rainyDays": 71.0,
+              "historicalMm": 127.0
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 20.0,
+              "rainyDays": 66.0,
+              "historicalMm": 59.0
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 9.0,
+              "rainyDays": 68.0,
+              "historicalMm": 111.0
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 32.0,
+              "rainyDays": 36.0,
+              "historicalMm": 97.0
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 25.0,
+              "rainyDays": 91.0,
+              "historicalMm": 103.0
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 30.0,
+              "rainyDays": 115.0,
+              "historicalMm": 140.0
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 16.0,
+              "rainyDays": 47.0,
+              "historicalMm": 80.0
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 1.5,
+              "max24hMm": 16.42,
+              "maxDay": 1.4,
+              "rainyDays": 3.28,
+              "historicalMm": 3.5
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 1.5,
+              "max24hMm": 7.29,
+              "maxDay": 1.5,
+              "rainyDays": 2.05,
+              "historicalMm": 4.2
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 1.4,
+              "max24hMm": 13.49,
+              "maxDay": 1.4,
+              "rainyDays": 2.39,
+              "historicalMm": 3.4
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 1.4,
+              "max24hMm": 12.05,
+              "maxDay": 1.4,
+              "rainyDays": 2.88,
+              "historicalMm": 3.8
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 1.4,
+              "max24hMm": 5.32,
+              "maxDay": 1.6,
+              "rainyDays": 1.31,
+              "historicalMm": 4.6
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 1.2,
+              "max24hMm": 0.57,
+              "maxDay": 2.0,
+              "rainyDays": 0.45,
+              "historicalMm": 5.1
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 1.5,
+              "max24hMm": 3.98,
+              "maxDay": 2.0,
+              "rainyDays": 0.69,
+              "historicalMm": 5.1
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 1.3,
+              "max24hMm": 1.83,
+              "maxDay": 1.7,
+              "rainyDays": 0.79,
+              "historicalMm": 6.0
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 1.6,
+              "max24hMm": 0.84,
+              "maxDay": 2.3,
+              "rainyDays": 0.69,
+              "historicalMm": 6.3
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 1.6,
+              "max24hMm": 9.15,
+              "maxDay": 1.8,
+              "rainyDays": 1.6,
+              "historicalMm": 4.7
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 1.5,
+              "max24hMm": 11.71,
+              "maxDay": 1.4,
+              "rainyDays": 2.33,
+              "historicalMm": 4.2
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 1.2,
+              "max24hMm": 14.28,
+              "maxDay": 1.2,
+              "rainyDays": 3.15,
+              "historicalMm": 3.3
+            }
+          ],
+          "summary": "Cotopaxi Control Norte (M5026) registra 10483.1 mm/anio frente a 18897.4 mm/anio historicos.",
+          "sourceGroup": "fonag"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "m5027",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -78.661133,
+            -0.576011
+          ]
+        },
+        "properties": {
+          "code": "M5027",
+          "name": "Lomahurco",
+          "stationKind": "precipitacion",
+          "annualMetric": 10815.7,
+          "annualMetricLabel": "10815.7 mm/anio",
+          "historicalMetric": 19066.4,
+          "historicalMetricLabel": "19066.4 mm/anio historicos",
+          "peakMetric": 654.0,
+          "peakMetricLabel": "654.0 mm max 24h",
+          "lowMetric": null,
+          "rainyDays": 21529,
+          "altitudeM": null,
+          "utmNorthing": 9936280.0,
+          "utmEasting": 760317.0,
+          "headline": "MAY",
+          "monthlyRecords": [
+            {
+              "month": "ENE",
+              "monthlyMm": 181.8,
+              "max24hMm": 26.2,
+              "maxDay": 5.0,
+              "rainyDays": 26.0,
+              "historicalMm": 111.5
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 116.9,
+              "max24hMm": 18.8,
+              "maxDay": 21.0,
+              "rainyDays": 19.0,
+              "historicalMm": 122.9
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 174.9,
+              "max24hMm": 20.6,
+              "maxDay": 14.0,
+              "rainyDays": 26.0,
+              "historicalMm": 157.5
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 225.9,
+              "max24hMm": 20.2,
+              "maxDay": 22.0,
+              "rainyDays": 28.0,
+              "historicalMm": 156.7
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 117.8,
+              "max24hMm": 29.7,
+              "maxDay": 10.0,
+              "rainyDays": 19.0,
+              "historicalMm": 132.7
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 47.3,
+              "max24hMm": 13.4,
+              "maxDay": 7.0,
+              "rainyDays": 12.0,
+              "historicalMm": 82.6
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 97.6,
+              "max24hMm": 18.0,
+              "maxDay": 7.0,
+              "rainyDays": 15.0,
+              "historicalMm": 46.7
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 59.9,
+              "max24hMm": 20.5,
+              "maxDay": 22.0,
+              "rainyDays": 9.0,
+              "historicalMm": 32.8
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 55.9,
+              "max24hMm": 11.5,
+              "maxDay": 26.0,
+              "rainyDays": 10.0,
+              "historicalMm": 63.9
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 127.6,
+              "max24hMm": 27.9,
+              "maxDay": 7.0,
+              "rainyDays": 23.0,
+              "historicalMm": 130.6
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 105.1,
+              "max24hMm": 23.5,
+              "maxDay": 29.0,
+              "rainyDays": 21.0,
+              "historicalMm": 88.5
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 160.3,
+              "max24hMm": 18.0,
+              "maxDay": 25.0,
+              "rainyDays": 23.0,
+              "historicalMm": 104.7
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 15.4,
+              "max24hMm": 4.0,
+              "maxDay": 0.8,
+              "rainyDays": 29.0,
+              "historicalMm": 7.8607639
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 15.0,
+              "max24hMm": 19.0,
+              "maxDay": 2.1,
+              "rainyDays": 4.0,
+              "historicalMm": 8.3944444
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 14.0,
+              "max24hMm": 22.0,
+              "maxDay": 1.3,
+              "rainyDays": 21.0,
+              "historicalMm": 7.88125
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 15.4,
+              "max24hMm": 24.0,
+              "maxDay": 2.6,
+              "rainyDays": 23.0,
+              "historicalMm": 8.2753472
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 15.0,
+              "max24hMm": 8.0,
+              "maxDay": 2.7,
+              "rainyDays": 29.0,
+              "historicalMm": 8.7625
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 14.8,
+              "max24hMm": 19.0,
+              "maxDay": 2.5,
+              "rainyDays": 19.0,
+              "historicalMm": 7.840625
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 15.6,
+              "max24hMm": 27.0,
+              "maxDay": 1.4,
+              "rainyDays": 26.0,
+              "historicalMm": 7.8817847
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 15.9,
+              "max24hMm": 18.0,
+              "maxDay": 1.0,
+              "rainyDays": 19.0,
+              "historicalMm": 8.1277778
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 16.8,
+              "max24hMm": 12.0,
+              "maxDay": -0.4,
+              "rainyDays": 17.0,
+              "historicalMm": 8.2027778
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 16.8,
+              "max24hMm": 6.0,
+              "maxDay": 1.6,
+              "rainyDays": 3.0,
+              "historicalMm": 8.7274306
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 16.7,
+              "max24hMm": 10.0,
+              "maxDay": 0.7,
+              "rainyDays": 3.0,
+              "historicalMm": 9.5972222
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 16.5,
+              "max24hMm": 3.0,
+              "maxDay": 2.8,
+              "rainyDays": 29.0,
+              "historicalMm": 9.4326389
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 100.0,
+              "max24hMm": 13.0,
+              "maxDay": 44.0,
+              "rainyDays": 27.0,
+              "historicalMm": 90.0
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 100.0,
+              "max24hMm": 3.0,
+              "maxDay": 49.0,
+              "rainyDays": 4.0,
+              "historicalMm": 89.0
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 100.0,
+              "max24hMm": 8.0,
+              "maxDay": 51.0,
+              "rainyDays": 17.0,
+              "historicalMm": 90.0
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 100.0,
+              "max24hMm": 17.0,
+              "maxDay": 43.0,
+              "rainyDays": 19.0,
+              "historicalMm": 90.0
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 100.0,
+              "max24hMm": 22.0,
+              "maxDay": 50.0,
+              "rainyDays": 17.0,
+              "historicalMm": 88.0
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 100.0,
+              "max24hMm": 15.0,
+              "maxDay": 51.0,
+              "rainyDays": 19.0,
+              "historicalMm": 87.0
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 100.0,
+              "max24hMm": 4.0,
+              "maxDay": 48.0,
+              "rainyDays": 13.0,
+              "historicalMm": 87.0
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 100.0,
+              "max24hMm": 21.0,
+              "maxDay": 32.0,
+              "rainyDays": 10.0,
+              "historicalMm": 81.0
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 100.0,
+              "max24hMm": 30.0,
+              "maxDay": 31.0,
+              "rainyDays": 8.0,
+              "historicalMm": 78.0
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 100.0,
+              "max24hMm": 30.0,
+              "maxDay": 39.0,
+              "rainyDays": 6.0,
+              "historicalMm": 86.0
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 100.0,
+              "max24hMm": 3.0,
+              "maxDay": 38.0,
+              "rainyDays": 2.0,
+              "historicalMm": 87.0
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 100.0,
+              "max24hMm": 16.0,
+              "maxDay": 49.0,
+              "rainyDays": 4.0,
+              "historicalMm": 91.0
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 658.0,
+              "max24hMm": 652.0,
+              "maxDay": 655.0,
+              "rainyDays": 655.1,
+              "historicalMm": null
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 658.0,
+              "max24hMm": 652.0,
+              "maxDay": 655.0,
+              "rainyDays": 655.2,
+              "historicalMm": null
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 658.0,
+              "max24hMm": 652.0,
+              "maxDay": 656.0,
+              "rainyDays": 655.5,
+              "historicalMm": null
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 658.0,
+              "max24hMm": 653.0,
+              "maxDay": 656.0,
+              "rainyDays": 655.7,
+              "historicalMm": null
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 659.0,
+              "max24hMm": 653.0,
+              "maxDay": 656.0,
+              "rainyDays": 656.1,
+              "historicalMm": null
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 658.0,
+              "max24hMm": 654.0,
+              "maxDay": 656.0,
+              "rainyDays": 655.8,
+              "historicalMm": null
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 658.0,
+              "max24hMm": 653.0,
+              "maxDay": 656.0,
+              "rainyDays": 655.7,
+              "historicalMm": null
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 659.0,
+              "max24hMm": 653.0,
+              "maxDay": 656.0,
+              "rainyDays": 655.6,
+              "historicalMm": null
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 658.0,
+              "max24hMm": 654.0,
+              "maxDay": 656.0,
+              "rainyDays": 655.6,
+              "historicalMm": null
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 659.0,
+              "max24hMm": 653.0,
+              "maxDay": 656.0,
+              "rainyDays": 655.4,
+              "historicalMm": null
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 658.0,
+              "max24hMm": 653.0,
+              "maxDay": 656.0,
+              "rainyDays": 655.0,
+              "historicalMm": null
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 659.0,
+              "max24hMm": 653.0,
+              "maxDay": 656.0,
+              "rainyDays": 655.0,
+              "historicalMm": null
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 2.0,
+              "max24hMm": 153.38,
+              "maxDay": 586.0,
+              "rainyDays": 992.58,
+              "historicalMm": 1241.67
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 2.0,
+              "max24hMm": 130.0,
+              "maxDay": 576.0,
+              "rainyDays": 898.0,
+              "historicalMm": 1316.0
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 3.0,
+              "max24hMm": 167.0,
+              "maxDay": 618.0,
+              "rainyDays": 1098.0,
+              "historicalMm": 1400.0
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 2.0,
+              "max24hMm": 222.0,
+              "maxDay": 765.0,
+              "rainyDays": 1073.0,
+              "historicalMm": 1347.0
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 3.0,
+              "max24hMm": 317.0,
+              "maxDay": 656.0,
+              "rainyDays": 1023.0,
+              "historicalMm": 1344.0
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 6.0,
+              "max24hMm": 266.0,
+              "maxDay": 628.0,
+              "rainyDays": 1024.0,
+              "historicalMm": 1308.0
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 1.0,
+              "max24hMm": 205.0,
+              "maxDay": 645.0,
+              "rainyDays": 1019.0,
+              "historicalMm": 1400.0
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 1.0,
+              "max24hMm": 202.0,
+              "maxDay": 658.0,
+              "rainyDays": 1128.0,
+              "historicalMm": 1230.0
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 1.0,
+              "max24hMm": 308.0,
+              "maxDay": 764.0,
+              "rainyDays": 1068.0,
+              "historicalMm": 1294.0
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 8.0,
+              "max24hMm": 408.0,
+              "maxDay": 854.0,
+              "rainyDays": 1101.0,
+              "historicalMm": 1400.0
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 6.0,
+              "max24hMm": 369.0,
+              "maxDay": 784.0,
+              "rainyDays": 1101.0,
+              "historicalMm": 1400.0
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 3.0,
+              "max24hMm": 302.0,
+              "maxDay": 765.0,
+              "rainyDays": 1089.0,
+              "historicalMm": 1400.0
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 5.0,
+              "rainyDays": 32.0,
+              "historicalMm": 38.0
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 6.0,
+              "rainyDays": 18.0,
+              "historicalMm": 65.0
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 9.0,
+              "rainyDays": 26.0,
+              "historicalMm": 46.0
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 5.0,
+              "rainyDays": 31.0,
+              "historicalMm": 39.0
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 14.0,
+              "rainyDays": 12.0,
+              "historicalMm": 20.0
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 7.0,
+              "rainyDays": 31.0,
+              "historicalMm": 50.0
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 9.0,
+              "rainyDays": 33.0,
+              "historicalMm": 56.0
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 5.0,
+              "rainyDays": 19.0,
+              "historicalMm": 40.0
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 13.0,
+              "rainyDays": 31.0,
+              "historicalMm": 54.0
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 15.0,
+              "rainyDays": 46.0,
+              "historicalMm": 53.0
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 15.0,
+              "rainyDays": 56.0,
+              "historicalMm": 71.0
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 17.0,
+              "rainyDays": 38.0,
+              "historicalMm": 53.0
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 1.6,
+              "max24hMm": 7.03,
+              "maxDay": 1.6,
+              "rainyDays": 10.0,
+              "historicalMm": 2.1
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 1.5,
+              "max24hMm": 3.69,
+              "maxDay": 1.7,
+              "rainyDays": 6.86,
+              "historicalMm": 2.2
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 1.8,
+              "max24hMm": 6.8,
+              "maxDay": 1.4,
+              "rainyDays": 9.3,
+              "historicalMm": 1.9
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 1.7,
+              "max24hMm": 6.19,
+              "maxDay": 1.4,
+              "rainyDays": 7.63,
+              "historicalMm": 1.9
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 1.5,
+              "max24hMm": 4.64,
+              "maxDay": 1.4,
+              "rainyDays": 5.61,
+              "historicalMm": 1.9
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 1.1,
+              "max24hMm": 1.32,
+              "maxDay": 1.4,
+              "rainyDays": 1.96,
+              "historicalMm": 1.8
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 1.4,
+              "max24hMm": 3.28,
+              "maxDay": 1.6,
+              "rainyDays": 4.21,
+              "historicalMm": 2.2
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 1.5,
+              "max24hMm": 3.88,
+              "maxDay": 1.6,
+              "rainyDays": 4.02,
+              "historicalMm": 2.3
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 1.7,
+              "max24hMm": 3.52,
+              "maxDay": 1.4,
+              "rainyDays": 3.04,
+              "historicalMm": 2.0
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 1.8,
+              "max24hMm": 8.15,
+              "maxDay": 1.5,
+              "rainyDays": 9.05,
+              "historicalMm": 2.1
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 1.8,
+              "max24hMm": 4.91,
+              "maxDay": 1.7,
+              "rainyDays": 6.93,
+              "historicalMm": 2.2
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 1.4,
+              "max24hMm": 5.44,
+              "maxDay": 1.5,
+              "rainyDays": 7.65,
+              "historicalMm": 2.0
+            }
+          ],
+          "summary": "Lomahurco (M5027) registra 10815.7 mm/anio frente a 19066.4 mm/anio historicos.",
+          "sourceGroup": "fonag"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "m5076",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -78.402247,
+            -0.61684
+          ]
+        },
+        "properties": {
+          "code": "M5076",
+          "name": "PNC - Potrerillos",
+          "stationKind": "precipitacion",
+          "annualMetric": 923.2,
+          "annualMetricLabel": "923.2 mm/anio",
+          "historicalMetric": 887.6,
+          "historicalMetricLabel": "887.6 mm/anio historicos",
+          "peakMetric": 31.1,
+          "peakMetricLabel": "31.1 mm max 24h",
+          "lowMetric": null,
+          "rainyDays": 483,
+          "altitudeM": null,
+          "utmNorthing": 9931750.0,
+          "utmEasting": 789148.0,
+          "headline": "DIC",
+          "monthlyRecords": [
+            {
+              "month": "ENE",
+              "monthlyMm": 95.5,
+              "max24hMm": 18.1,
+              "maxDay": 11.0,
+              "rainyDays": 25.0,
+              "historicalMm": 66.0
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 51.0,
+              "max24hMm": 12.7,
+              "maxDay": 21.0,
+              "rainyDays": 20.0,
+              "historicalMm": 74.5
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 92.2,
+              "max24hMm": 10.6,
+              "maxDay": 23.0,
+              "rainyDays": 24.0,
+              "historicalMm": 92.7
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 86.1,
+              "max24hMm": 15.7,
+              "maxDay": 22.0,
+              "rainyDays": 23.0,
+              "historicalMm": 85.0
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 62.5,
+              "max24hMm": 11.0,
+              "maxDay": 28.0,
+              "rainyDays": 21.0,
+              "historicalMm": 62.5
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 19.3,
+              "max24hMm": 3.2,
+              "maxDay": 25.0,
+              "rainyDays": 20.0,
+              "historicalMm": 67.1
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 49.0,
+              "max24hMm": 9.8,
+              "maxDay": 8.0,
+              "rainyDays": 25.0,
+              "historicalMm": 47.0
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 36.2,
+              "max24hMm": 16.6,
+              "maxDay": 21.0,
+              "rainyDays": 15.0,
+              "historicalMm": 37.0
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 35.1,
+              "max24hMm": 18.0,
+              "maxDay": 28.0,
+              "rainyDays": 15.0,
+              "historicalMm": 43.0
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 30.4,
+              "max24hMm": 7.9,
+              "maxDay": 13.0,
+              "rainyDays": 17.0,
+              "historicalMm": 68.6
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 73.6,
+              "max24hMm": 13.6,
+              "maxDay": 23.0,
+              "rainyDays": 20.0,
+              "historicalMm": 90.2
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 108.3,
+              "max24hMm": 31.1,
+              "maxDay": 28.0,
+              "rainyDays": 23.0,
+              "historicalMm": 60.8
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 15.04941,
+              "max24hMm": 28.0,
+              "maxDay": -3.336179,
+              "rainyDays": 28.0,
+              "historicalMm": 6.6813873
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 14.38979,
+              "max24hMm": 26.0,
+              "maxDay": -1.00911,
+              "rainyDays": 25.0,
+              "historicalMm": 7.5743993
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 13.87343,
+              "max24hMm": 2.0,
+              "maxDay": -1.288214,
+              "rainyDays": 21.0,
+              "historicalMm": 7.8404408
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 14.18173,
+              "max24hMm": 11.0,
+              "maxDay": -0.357405,
+              "rainyDays": 25.0,
+              "historicalMm": 7.4926466
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 15.13493,
+              "max24hMm": 8.0,
+              "maxDay": -0.02259,
+              "rainyDays": 24.0,
+              "historicalMm": 8.3185569
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 13.76167,
+              "max24hMm": 3.0,
+              "maxDay": 0.506362,
+              "rainyDays": 19.0,
+              "historicalMm": 7.3805992
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 15.84123,
+              "max24hMm": 26.0,
+              "maxDay": -0.402613,
+              "rainyDays": 4.0,
+              "historicalMm": 7.5119447
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 15.9926,
+              "max24hMm": 18.0,
+              "maxDay": -2.439584,
+              "rainyDays": 19.0,
+              "historicalMm": 7.3899873
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 16.72908,
+              "max24hMm": 27.0,
+              "maxDay": -2.827614,
+              "rainyDays": 17.0,
+              "historicalMm": 7.1188877
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 16.6739,
+              "max24hMm": 4.0,
+              "maxDay": -0.916629,
+              "rainyDays": 4.0,
+              "historicalMm": 8.0913221
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 15.9302,
+              "max24hMm": 17.0,
+              "maxDay": -1.678338,
+              "rainyDays": 19.0,
+              "historicalMm": 8.8170936
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 16.47431,
+              "max24hMm": 3.0,
+              "maxDay": 0.366302,
+              "rainyDays": 30.0,
+              "historicalMm": 8.9348621
+            }
+          ],
+          "summary": "PNC - Potrerillos (M5076) registra 923.2 mm/anio frente a 887.6 mm/anio historicos.",
+          "sourceGroup": "fonag"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "m5077",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -78.689334,
+            -0.629494
+          ]
+        },
+        "properties": {
+          "code": "M5077",
+          "name": "REI",
+          "stationKind": "precipitacion",
+          "annualMetric": 1364.3,
+          "annualMetricLabel": "1364.3 mm/anio",
+          "historicalMetric": 1298.3,
+          "historicalMetricLabel": "1298.3 mm/anio historicos",
+          "peakMetric": 30.4,
+          "peakMetricLabel": "30.4 mm max 24h",
+          "lowMetric": null,
+          "rainyDays": 426,
+          "altitudeM": null,
+          "utmNorthing": 9930365.0,
+          "utmEasting": 757174.0,
+          "headline": "ABR",
+          "monthlyRecords": [
+            {
+              "month": "ENE",
+              "monthlyMm": 114.4,
+              "max24hMm": 16.1,
+              "maxDay": 30.0,
+              "rainyDays": 28.0,
+              "historicalMm": 112.2
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 106.2,
+              "max24hMm": 22.4,
+              "maxDay": 21.0,
+              "rainyDays": 16.0,
+              "historicalMm": 138.3
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 103.2,
+              "max24hMm": 12.1,
+              "maxDay": 7.0,
+              "rainyDays": 26.0,
+              "historicalMm": 165.1
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 167.0,
+              "max24hMm": 19.2,
+              "maxDay": 22.0,
+              "rainyDays": 27.0,
+              "historicalMm": 150.2
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 86.2,
+              "max24hMm": 15.1,
+              "maxDay": 10.0,
+              "rainyDays": 18.0,
+              "historicalMm": 140.2
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 77.5,
+              "max24hMm": 26.0,
+              "maxDay": 25.0,
+              "rainyDays": 15.0,
+              "historicalMm": 69.0
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 79.6,
+              "max24hMm": 16.3,
+              "maxDay": 8.0,
+              "rainyDays": 13.0,
+              "historicalMm": 38.1
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 61.0,
+              "max24hMm": 26.3,
+              "maxDay": 21.0,
+              "rainyDays": 8.0,
+              "historicalMm": 28.2
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 54.1,
+              "max24hMm": 30.4,
+              "maxDay": 27.0,
+              "rainyDays": 9.0,
+              "historicalMm": 56.3
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 71.8,
+              "max24hMm": 16.0,
+              "maxDay": 8.0,
+              "rainyDays": 21.0,
+              "historicalMm": 109.8
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 122.7,
+              "max24hMm": 17.3,
+              "maxDay": 23.0,
+              "rainyDays": 19.0,
+              "historicalMm": 89.1
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 139.1,
+              "max24hMm": 18.3,
+              "maxDay": 14.0,
+              "rainyDays": 22.0,
+              "historicalMm": 109.9
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 14.71921,
+              "max24hMm": 29.0,
+              "maxDay": -0.247955,
+              "rainyDays": 21.0,
+              "historicalMm": 7.1562124
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 14.75607,
+              "max24hMm": 19.0,
+              "maxDay": 0.819397,
+              "rainyDays": 26.0,
+              "historicalMm": 7.0975591
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 13.88513,
+              "max24hMm": 8.0,
+              "maxDay": 1.144867,
+              "rainyDays": 20.0,
+              "historicalMm": 6.9729447
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 14.22922,
+              "max24hMm": 26.0,
+              "maxDay": 1.141449,
+              "rainyDays": 25.0,
+              "historicalMm": 6.9705666
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 15.07184,
+              "max24hMm": 22.0,
+              "maxDay": 2.264496,
+              "rainyDays": 28.0,
+              "historicalMm": 8.4485335
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 13.3309,
+              "max24hMm": 19.0,
+              "maxDay": 1.486511,
+              "rainyDays": 24.0,
+              "historicalMm": 7.5833947
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 14.41675,
+              "max24hMm": 26.0,
+              "maxDay": 1.297882,
+              "rainyDays": 19.0,
+              "historicalMm": 7.7034309
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 15.26584,
+              "max24hMm": 19.0,
+              "maxDay": 0.644043,
+              "rainyDays": 23.0,
+              "historicalMm": 8.034856
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 15.9382,
+              "max24hMm": 26.0,
+              "maxDay": 0.315704,
+              "rainyDays": 6.0,
+              "historicalMm": 7.4302646
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 16.78363,
+              "max24hMm": 13.0,
+              "maxDay": 1.753693,
+              "rainyDays": 3.0,
+              "historicalMm": 7.9798986
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 15.66364,
+              "max24hMm": 17.0,
+              "maxDay": 0.893463,
+              "rainyDays": 3.0,
+              "historicalMm": 8.2618797
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 17.45724,
+              "max24hMm": 22.0,
+              "maxDay": 2.110291,
+              "rainyDays": 6.0,
+              "historicalMm": 8.3014661
+            }
+          ],
+          "summary": "REI (M5077) registra 1364.3 mm/anio frente a 1298.3 mm/anio historicos.",
+          "sourceGroup": "fonag"
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "m5124",
+        "geometry": {
+          "type": "Point",
+          "coordinates": [
+            -78.388636,
+            -0.61611
+          ]
+        },
+        "properties": {
+          "code": "M5124",
+          "name": "Campo Alegre",
+          "stationKind": "precipitacion",
+          "annualMetric": 9961.2,
+          "annualMetricLabel": "9961.2 mm/anio",
+          "historicalMetric": 18715.9,
+          "historicalMetricLabel": "18715.9 mm/anio historicos",
+          "peakMetric": 641.0,
+          "peakMetricLabel": "641.0 mm max 24h",
+          "lowMetric": null,
+          "rainyDays": 20411,
+          "altitudeM": null,
+          "utmNorthing": 9931830.0,
+          "utmEasting": 790664.0,
+          "headline": "MAY",
+          "monthlyRecords": [
+            {
+              "month": "ENE",
+              "monthlyMm": 84.6,
+              "max24hMm": 18.9,
+              "maxDay": 11.0,
+              "rainyDays": 25.0,
+              "historicalMm": 50.4
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 46.3,
+              "max24hMm": 9.8,
+              "maxDay": 21.0,
+              "rainyDays": 20.0,
+              "historicalMm": 86.6
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 108.1,
+              "max24hMm": 17.9,
+              "maxDay": 8.0,
+              "rainyDays": 24.0,
+              "historicalMm": 84.3
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 85.1,
+              "max24hMm": 14.6,
+              "maxDay": 22.0,
+              "rainyDays": 25.0,
+              "historicalMm": 80.7
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 61.8,
+              "max24hMm": 10.9,
+              "maxDay": 16.0,
+              "rainyDays": 22.0,
+              "historicalMm": 68.4
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 29.5,
+              "max24hMm": 3.8,
+              "maxDay": 6.0,
+              "rainyDays": 25.0,
+              "historicalMm": 77.6
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 56.1,
+              "max24hMm": 10.7,
+              "maxDay": 8.0,
+              "rainyDays": 29.0,
+              "historicalMm": 51.9
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 42.0,
+              "max24hMm": 16.1,
+              "maxDay": 21.0,
+              "rainyDays": 19.0,
+              "historicalMm": 41.8
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 32.7,
+              "max24hMm": 13.4,
+              "maxDay": 28.0,
+              "rainyDays": 19.0,
+              "historicalMm": 53.3
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 37.6,
+              "max24hMm": 7.2,
+              "maxDay": 13.0,
+              "rainyDays": 18.0,
+              "historicalMm": 72.0
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 75.7,
+              "max24hMm": 18.6,
+              "maxDay": 23.0,
+              "rainyDays": 21.0,
+              "historicalMm": 89.8
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 108.6,
+              "max24hMm": 32.3,
+              "maxDay": 28.0,
+              "rainyDays": 25.0,
+              "historicalMm": 66.9
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 15.73,
+              "max24hMm": 29.0,
+              "maxDay": -4.758,
+              "rainyDays": 28.0,
+              "historicalMm": 7.0207188
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 15.079,
+              "max24hMm": 26.0,
+              "maxDay": -2.647,
+              "rainyDays": 4.0,
+              "historicalMm": 7.4623368
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 14.414,
+              "max24hMm": 2.0,
+              "maxDay": -3.989,
+              "rainyDays": 21.0,
+              "historicalMm": 7.8871077
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 14.687,
+              "max24hMm": 11.0,
+              "maxDay": -1.833,
+              "rainyDays": 25.0,
+              "historicalMm": 7.4773785
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 15.364,
+              "max24hMm": 8.0,
+              "maxDay": -1.25,
+              "rainyDays": 24.0,
+              "historicalMm": 8.2039028
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 13.71,
+              "max24hMm": 3.0,
+              "maxDay": 0.337,
+              "rainyDays": 19.0,
+              "historicalMm": 7.2333438
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 15.615,
+              "max24hMm": 4.0,
+              "maxDay": -1.47,
+              "rainyDays": 4.0,
+              "historicalMm": 7.477684
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 16.749,
+              "max24hMm": 19.0,
+              "maxDay": -4.807,
+              "rainyDays": 19.0,
+              "historicalMm": 7.3228993
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 17.063,
+              "max24hMm": 27.0,
+              "maxDay": -3.731,
+              "rainyDays": 17.0,
+              "historicalMm": 7.0517292
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 16.445,
+              "max24hMm": 4.0,
+              "maxDay": -2.342,
+              "rainyDays": 6.0,
+              "historicalMm": 8.1591736
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 16.434,
+              "max24hMm": 17.0,
+              "maxDay": -3.91,
+              "rainyDays": 19.0,
+              "historicalMm": 8.6984757
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 16.989,
+              "max24hMm": 3.0,
+              "maxDay": -0.897,
+              "rainyDays": 21.0,
+              "historicalMm": 8.8100451
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 100.0,
+              "max24hMm": 1.0,
+              "maxDay": 34.0,
+              "rainyDays": 28.0,
+              "historicalMm": 89.0
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 100.0,
+              "max24hMm": 17.0,
+              "maxDay": 44.0,
+              "rainyDays": 9.0,
+              "historicalMm": 87.0
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 100.0,
+              "max24hMm": 7.0,
+              "maxDay": 46.0,
+              "rainyDays": 19.0,
+              "historicalMm": 93.0
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 100.0,
+              "max24hMm": 3.0,
+              "maxDay": 49.0,
+              "rainyDays": 11.0,
+              "historicalMm": 91.0
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 101.0,
+              "max24hMm": 24.0,
+              "maxDay": 44.0,
+              "rainyDays": 8.0,
+              "historicalMm": 90.0
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 101.0,
+              "max24hMm": 1.0,
+              "maxDay": 56.0,
+              "rainyDays": 19.0,
+              "historicalMm": 90.0
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 101.0,
+              "max24hMm": 1.0,
+              "maxDay": 44.0,
+              "rainyDays": 26.0,
+              "historicalMm": 90.0
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 100.0,
+              "max24hMm": 1.0,
+              "maxDay": 30.0,
+              "rainyDays": 26.0,
+              "historicalMm": 86.0
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 100.0,
+              "max24hMm": 5.0,
+              "maxDay": 14.0,
+              "rainyDays": 8.0,
+              "historicalMm": 84.0
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 100.0,
+              "max24hMm": 1.0,
+              "maxDay": 32.0,
+              "rainyDays": 4.0,
+              "historicalMm": 87.0
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 100.0,
+              "max24hMm": 1.0,
+              "maxDay": 28.0,
+              "rainyDays": 18.0,
+              "historicalMm": 89.0
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 100.0,
+              "max24hMm": 1.0,
+              "maxDay": 33.0,
+              "rainyDays": 3.0,
+              "historicalMm": 92.0
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 645.0,
+              "max24hMm": 640.0,
+              "maxDay": 642.0,
+              "rainyDays": 642.4,
+              "historicalMm": null
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 645.0,
+              "max24hMm": 639.0,
+              "maxDay": 642.0,
+              "rainyDays": 642.5,
+              "historicalMm": null
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 645.0,
+              "max24hMm": 640.0,
+              "maxDay": 643.0,
+              "rainyDays": 642.7,
+              "historicalMm": null
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 645.0,
+              "max24hMm": 640.0,
+              "maxDay": 643.0,
+              "rainyDays": 643.0,
+              "historicalMm": null
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 647.0,
+              "max24hMm": 641.0,
+              "maxDay": 644.0,
+              "rainyDays": 643.4,
+              "historicalMm": null
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 646.0,
+              "max24hMm": 641.0,
+              "maxDay": 644.0,
+              "rainyDays": 643.1,
+              "historicalMm": null
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 646.0,
+              "max24hMm": 641.0,
+              "maxDay": 644.0,
+              "rainyDays": 642.9,
+              "historicalMm": null
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 646.0,
+              "max24hMm": 640.0,
+              "maxDay": 643.0,
+              "rainyDays": 643.0,
+              "historicalMm": null
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 646.0,
+              "max24hMm": 641.0,
+              "maxDay": 643.0,
+              "rainyDays": 642.9,
+              "historicalMm": null
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 646.0,
+              "max24hMm": 641.0,
+              "maxDay": 643.0,
+              "rainyDays": 642.6,
+              "historicalMm": null
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 646.0,
+              "max24hMm": 640.0,
+              "maxDay": 643.0,
+              "rainyDays": 642.4,
+              "historicalMm": null
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 646.0,
+              "max24hMm": 640.0,
+              "maxDay": 643.0,
+              "rainyDays": 642.2,
+              "historicalMm": null
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 0.0,
+              "max24hMm": 129.1,
+              "maxDay": 395.97,
+              "rainyDays": 762.33,
+              "historicalMm": 1188.32
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": null,
+              "max24hMm": 84.49,
+              "maxDay": 442.7,
+              "rainyDays": 961.54,
+              "historicalMm": 1344.33
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 0.0,
+              "max24hMm": 136.08,
+              "maxDay": 445.42,
+              "rainyDays": 840.1,
+              "historicalMm": 1342.81
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 0.21,
+              "max24hMm": 184.58,
+              "maxDay": 566.11,
+              "rainyDays": 934.9,
+              "historicalMm": 1407.99
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 0.36,
+              "max24hMm": 198.53,
+              "maxDay": 500.52,
+              "rainyDays": 935.79,
+              "historicalMm": 1298.83
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 0.54,
+              "max24hMm": 201.39,
+              "maxDay": 600.71,
+              "rainyDays": 935.25,
+              "historicalMm": 1245.27
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 1.04,
+              "max24hMm": 148.24,
+              "maxDay": 489.34,
+              "rainyDays": 951.98,
+              "historicalMm": 1198.47
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 0.62,
+              "max24hMm": 203.4,
+              "maxDay": 494.28,
+              "rainyDays": 938.25,
+              "historicalMm": 1227.71
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 1.93,
+              "max24hMm": 241.72,
+              "maxDay": 533.68,
+              "rainyDays": 1001.41,
+              "historicalMm": 1383.24
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 7.86,
+              "max24hMm": 197.02,
+              "maxDay": 618.69,
+              "rainyDays": 1081.06,
+              "historicalMm": 1400.0
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 4.82,
+              "max24hMm": 252.28,
+              "maxDay": 638.3,
+              "rainyDays": 1059.4,
+              "historicalMm": 1378.2
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 1.99,
+              "max24hMm": 199.21,
+              "maxDay": 548.36,
+              "rainyDays": 1013.02,
+              "historicalMm": 1320.12
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 0.0,
+              "max24hMm": -0.49,
+              "maxDay": 7.92,
+              "rainyDays": 22.86,
+              "historicalMm": 44.43
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": null,
+              "max24hMm": 0.02,
+              "maxDay": 16.03,
+              "rainyDays": 66.59,
+              "historicalMm": 113.53
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 9.44,
+              "rainyDays": 60.76,
+              "historicalMm": 43.29
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": -0.21,
+              "max24hMm": -1.0,
+              "maxDay": 17.2,
+              "rainyDays": 55.2,
+              "historicalMm": 103.52
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": -0.23,
+              "max24hMm": -1.0,
+              "maxDay": 16.78,
+              "rainyDays": 16.74,
+              "historicalMm": 17.35
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 14.15,
+              "rainyDays": 43.87,
+              "historicalMm": 118.66
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 8.96,
+              "rainyDays": 48.1,
+              "historicalMm": 67.8
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 5.51,
+              "rainyDays": 53.51,
+              "historicalMm": 100.42
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 10.48,
+              "rainyDays": 33.08,
+              "historicalMm": 43.55
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 22.31,
+              "rainyDays": 99.14,
+              "historicalMm": 108.83
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 26.07,
+              "rainyDays": 63.84,
+              "historicalMm": 120.54
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 0.0,
+              "max24hMm": 0.0,
+              "maxDay": 16.43,
+              "rainyDays": 47.81,
+              "historicalMm": 77.66
+            },
+            {
+              "month": "ENE",
+              "monthlyMm": 2.7,
+              "max24hMm": 7.95,
+              "maxDay": 1.5,
+              "rainyDays": 3.21,
+              "historicalMm": 2.4
+            },
+            {
+              "month": "FEB",
+              "monthlyMm": 2.9,
+              "max24hMm": 1.6,
+              "maxDay": 1.9,
+              "rainyDays": 0.53,
+              "historicalMm": 3.0
+            },
+            {
+              "month": "MAR",
+              "monthlyMm": 3.7,
+              "max24hMm": 12.86,
+              "maxDay": 1.5,
+              "rainyDays": 1.91,
+              "historicalMm": 2.0
+            },
+            {
+              "month": "ABR",
+              "monthlyMm": 3.6,
+              "max24hMm": 7.75,
+              "maxDay": 1.5,
+              "rainyDays": 1.66,
+              "historicalMm": 2.6
+            },
+            {
+              "month": "MAY",
+              "monthlyMm": 2.5,
+              "max24hMm": 1.03,
+              "maxDay": 1.2,
+              "rainyDays": 0.61,
+              "historicalMm": 3.3
+            },
+            {
+              "month": "JUN",
+              "monthlyMm": null,
+              "max24hMm": null,
+              "maxDay": null,
+              "rainyDays": null,
+              "historicalMm": 3.8
+            },
+            {
+              "month": "JUL",
+              "monthlyMm": 2.3,
+              "max24hMm": 0.15,
+              "maxDay": 1.8,
+              "rainyDays": 0.09,
+              "historicalMm": 3.3
+            },
+            {
+              "month": "AGO",
+              "monthlyMm": 2.7,
+              "max24hMm": 0.21,
+              "maxDay": 1.6,
+              "rainyDays": 0.18,
+              "historicalMm": 4.0
+            },
+            {
+              "month": "SEP",
+              "monthlyMm": 3.6,
+              "max24hMm": 0.25,
+              "maxDay": 2.9,
+              "rainyDays": 0.23,
+              "historicalMm": 4.0
+            },
+            {
+              "month": "OCT",
+              "monthlyMm": 4.0,
+              "max24hMm": 3.07,
+              "maxDay": 1.6,
+              "rainyDays": 1.01,
+              "historicalMm": 3.1
+            },
+            {
+              "month": "NOV",
+              "monthlyMm": 3.5,
+              "max24hMm": 4.63,
+              "maxDay": 1.7,
+              "rainyDays": 1.65,
+              "historicalMm": 2.7
+            },
+            {
+              "month": "DIC",
+              "monthlyMm": 2.4,
+              "max24hMm": 4.41,
+              "maxDay": 1.2,
+              "rainyDays": 2.37,
+              "historicalMm": 2.3
+            }
+          ],
+          "summary": "Campo Alegre (M5124) registra 9961.2 mm/anio frente a 18715.9 mm/anio historicos.",
+          "sourceGroup": "fonag"
+        }
+      }
+    ]
+  },
+  "historicalSources": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "id": "cartas-historicas-igm-aloag-georefenciado",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.620519,
+                -0.419438
+              ],
+              [
+                -78.518379,
+                -0.419406
+              ],
+              [
+                -78.51834,
+                -0.528561
+              ],
+              [
+                -78.620482,
+                -0.528601
+              ],
+              [
+                -78.620519,
+                -0.419438
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "ALOAG_GEOREFENCIADO",
+          "sourceGroup": "cartas_historicas_igm",
+          "sourceKind": "historico",
+          "year": null,
+          "coverageHa": 13737.53,
+          "bboxUtm": [
+            764846.277,
+            9941522.951,
+            776221.917,
+            9953599.218
+          ],
+          "fileName": "ALOAG_GEOREFENCIADO.tif",
+          "sizeMb": 38.8,
+          "summary": "ALOAG_GEOREFENCIADO (cartas_historicas_igm) cubre aproximadamente 13737.53 ha."
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "cartas-historicas-igm-machachi-georrefere",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.621897,
+                -0.488312
+              ],
+              [
+                -78.514685,
+                -0.488273
+              ],
+              [
+                -78.514649,
+                -0.578115
+              ],
+              [
+                -78.621862,
+                -0.578162
+              ],
+              [
+                -78.621897,
+                -0.488312
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "MACHACHI_GEORREFERE",
+          "sourceGroup": "cartas_historicas_igm",
+          "sourceKind": "historico",
+          "year": null,
+          "coverageHa": 11868.52,
+          "bboxUtm": [
+            764690.292,
+            9936040.296,
+            776630.743,
+            9945980.052
+          ],
+          "fileName": "MACHACHI_GEORREFERE.tif",
+          "sizeMb": 18.9,
+          "summary": "MACHACHI_GEORREFERE (cartas_historicas_igm) cubre aproximadamente 11868.52 ha."
+        }
+      }
+    ]
+  },
+  "terrainSources": {
+    "type": "FeatureCollection",
+    "features": [
+      {
+        "type": "Feature",
+        "id": "mdt-historico-2000-06-20-00-00-2000-06-20-23-59-dem-mapzen-dem-raw",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.986359,
+                -0.221151
+              ],
+              [
+                -78.276422,
+                -0.221037
+              ],
+              [
+                -78.276215,
+                -0.742203
+              ],
+              [
+                -78.986206,
+                -0.742586
+              ],
+              [
+                -78.986359,
+                -0.221151
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "2000-06-20-00_00_2000-06-20-23_59_DEM_MAPZEN_DEM_(Raw)",
+          "sourceGroup": "mdt_historico",
+          "sourceKind": "dem",
+          "year": 2000,
+          "coverageHa": 455975.37,
+          "bboxUtm": [
+            724112.601,
+            9917870.829,
+            803178.738,
+            9975540.95
+          ],
+          "fileName": "2000-06-20-00_00_2000-06-20-23_59_DEM_MAPZEN_DEM_(Raw).tiff",
+          "sizeMb": 7.4,
+          "summary": "2000-06-20-00_00_2000-06-20-23_59_DEM_MAPZEN_DEM_(Raw) (mdt_historico) cubre aproximadamente 455975.37 ha."
+        }
+      },
+      {
+        "type": "Feature",
+        "id": "mdt-historico-2020-06-20-00-00-2020-06-20-23-59-dem-mapzen-dem-raw",
+        "geometry": {
+          "type": "Polygon",
+          "coordinates": [
+            [
+              [
+                -78.986359,
+                -0.221151
+              ],
+              [
+                -78.276422,
+                -0.221037
+              ],
+              [
+                -78.276215,
+                -0.742203
+              ],
+              [
+                -78.986206,
+                -0.742586
+              ],
+              [
+                -78.986359,
+                -0.221151
+              ]
+            ]
+          ]
+        },
+        "properties": {
+          "name": "2020-06-20-00_00_2020-06-20-23_59_DEM_MAPZEN_DEM_(Raw)",
+          "sourceGroup": "mdt_historico",
+          "sourceKind": "dem",
+          "year": 2020,
+          "coverageHa": 455975.37,
+          "bboxUtm": [
+            724112.601,
+            9917870.829,
+            803178.738,
+            9975540.95
+          ],
+          "fileName": "2020-06-20-00_00_2020-06-20-23_59_DEM_MAPZEN_DEM_(Raw).tiff",
+          "sizeMb": 7.4,
+          "summary": "2020-06-20-00_00_2020-06-20-23_59_DEM_MAPZEN_DEM_(Raw) (mdt_historico) cubre aproximadamente 455975.37 ha."
+        }
+      }
+    ]
+  },
+  "climateHistory": {
+    "stations": [
+      {
+        "stationCode": "M116",
+        "yearStart": 1962,
+        "yearEnd": 2012,
+        "sampleCount": 49,
+        "annualMeanMm": 2981.3,
+        "wettestMonth": "Marzo",
+        "wettestMonthMm": 446.6,
+        "driestMonth": "Agosto",
+        "driestMonthMm": 82.7,
+        "summary": "Serie M116: 1962-2012 con media anual de 2981.3 mm."
+      },
+      {
+        "stationCode": "M354",
+        "yearStart": 1965,
+        "yearEnd": 2011,
+        "sampleCount": 45,
+        "annualMeanMm": 2305.0,
+        "wettestMonth": "Abril",
+        "wettestMonthMm": 307.1,
+        "driestMonth": "Agosto",
+        "driestMonthMm": 99.6,
+        "summary": "Serie M354: 1965-2011 con media anual de 2305.0 mm."
+      },
+      {
+        "stationCode": "M362",
+        "yearStart": 1965,
+        "yearEnd": 2012,
+        "sampleCount": 48,
+        "annualMeanMm": 2106.8,
+        "wettestMonth": "Abril",
+        "wettestMonthMm": 412.3,
+        "driestMonth": "Agosto",
+        "driestMonthMm": 45.1,
+        "summary": "Serie M362: 1965-2012 con media anual de 2106.8 mm."
+      },
+      {
+        "stationCode": "M353",
+        "yearStart": 1964,
+        "yearEnd": 2012,
+        "sampleCount": 48,
+        "annualMeanMm": 1538.6,
+        "wettestMonth": "Marzo",
+        "wettestMonthMm": 207.0,
+        "driestMonth": "Julio",
+        "driestMonthMm": 35.4,
+        "summary": "Serie M353: 1964-2012 con media anual de 1538.6 mm."
+      },
+      {
+        "stationCode": "M364",
+        "yearStart": 1963,
+        "yearEnd": 2012,
+        "sampleCount": 50,
+        "annualMeanMm": 1528.3,
+        "wettestMonth": "Marzo",
+        "wettestMonthMm": 187.8,
+        "driestMonth": "Agosto",
+        "driestMonthMm": 37.7,
+        "summary": "Serie M364: 1963-2012 con media anual de 1528.3 mm."
+      },
+      {
+        "stationCode": "M003",
+        "yearStart": 1962,
+        "yearEnd": 2012,
+        "sampleCount": 51,
+        "annualMeanMm": 1451.5,
+        "wettestMonth": "Abril",
+        "wettestMonthMm": 199.8,
+        "driestMonth": "Julio",
+        "driestMonthMm": 34.4,
+        "summary": "Serie M003: 1962-2012 con media anual de 1451.5 mm."
+      },
+      {
+        "stationCode": "M113",
+        "yearStart": 1964,
+        "yearEnd": 2012,
+        "sampleCount": 48,
+        "annualMeanMm": 1342.4,
+        "wettestMonth": "Abril",
+        "wettestMonthMm": 195.6,
+        "driestMonth": "Julio",
+        "driestMonthMm": 31.4,
+        "summary": "Serie M113: 1964-2012 con media anual de 1342.4 mm."
+      },
+      {
+        "stationCode": "M120",
+        "yearStart": 1960,
+        "yearEnd": 2011,
+        "sampleCount": 46,
+        "annualMeanMm": 1114.5,
+        "wettestMonth": "Abril",
+        "wettestMonthMm": 140.3,
+        "driestMonth": "Agosto",
+        "driestMonthMm": 38.6,
+        "summary": "Serie M120: 1960-2011 con media anual de 1114.5 mm."
+      },
+      {
+        "stationCode": "M363",
+        "yearStart": 1963,
+        "yearEnd": 2012,
+        "sampleCount": 48,
+        "annualMeanMm": 881.0,
+        "wettestMonth": "Abril",
+        "wettestMonthMm": 151.3,
+        "driestMonth": "Agosto",
+        "driestMonthMm": 18.1,
+        "summary": "Serie M363: 1963-2012 con media anual de 881.0 mm."
+      }
+    ]
+  },
+  "inventoryCatalog": {
+    "categories": [
+      {
+        "id": "1",
+        "label": "GAD MUNICIPAL DEL CANTÓN  MEJIA",
+        "itemCount": 4,
+        "items": [
+          {
+            "code": "1.1",
+            "label": "Catastro Urbano y Rural del Cantón"
+          },
+          {
+            "code": "1.2",
+            "label": "Plan de Ordenamiento Territorial (año)"
+          },
+          {
+            "code": "1.3",
+            "label": "Ortofotos Urbanas"
+          },
+          {
+            "code": "1.4",
+            "label": "Ordenanzas"
+          }
+        ]
+      },
+      {
+        "id": "2",
+        "label": "IGM (INSTITUTO GEOGRÁFICO MILITAR )",
+        "itemCount": 5,
+        "items": [
+          {
+            "code": "2.1",
+            "label": "Ortofotos Cantonales"
+          },
+          {
+            "code": "2.2",
+            "label": "Mosaico MDT Cantonal"
+          },
+          {
+            "code": "2.3",
+            "label": "Base geográfica escala 1:5000 (año)"
+          },
+          {
+            "code": "2.4",
+            "label": "Fotografías aéreas históricas"
+          },
+          {
+            "code": "2.5",
+            "label": "Cartas topográficas históricas"
+          }
+        ]
+      },
+      {
+        "id": "3",
+        "label": "INHAMI",
+        "itemCount": 2,
+        "items": [
+          {
+            "code": "3.1",
+            "label": "Datos hidrológicos"
+          },
+          {
+            "code": "3.2",
+            "label": "Datos Meteorológicos"
+          }
+        ]
+      },
+      {
+        "id": "4",
+        "label": "EL CENTRO COMUN DE INVESTIGACIÓN (JOINT RESEARCH CENTRE, JRC) DE LA COMISION EUROPEA",
+        "itemCount": 1,
+        "items": [
+          {
+            "code": "4.1",
+            "label": "Cobertura vegetal - Global forest cover 2020"
+          }
+        ]
+      },
+      {
+        "id": "5",
+        "label": "WORLD CONSERVATION MONITORING CENTER",
+        "itemCount": 1,
+        "items": [
+          {
+            "code": "5.1",
+            "label": "Fisiografia, Litografia(LAND FORMS 2006)"
+          }
+        ]
+      },
+      {
+        "id": "6",
+        "label": "UNITED STATES DEPARTMENT OF AGRICULTURE",
+        "itemCount": 1,
+        "items": [
+          {
+            "code": "6.1",
+            "label": "Curve Number (Capacidad de Escorrentia)"
+          }
+        ]
+      },
+      {
+        "id": "7",
+        "label": "EL CENTRO EUROPEO DE PREVISIONES METEOROLÓGICAS A PLAZO MEDIO (ECMWF)",
+        "itemCount": 3,
+        "items": [
+          {
+            "code": "7.1",
+            "label": "Precipitación media anual"
+          },
+          {
+            "code": "7.2",
+            "label": "Indicadores de escorrentía (Curve Number)"
+          },
+          {
+            "code": "7.3",
+            "label": "Escorrentía media anual"
+          }
+        ]
+      },
+      {
+        "id": "8",
+        "label": "FONAG",
+        "itemCount": 3,
+        "items": [
+          {
+            "code": "8.1",
+            "label": "Plan Estratégico FONAG 2021-2025"
+          },
+          {
+            "code": "8.2",
+            "label": "Guía Práctica de Identificación de Plantas de Ribera"
+          },
+          {
+            "code": "8.3",
+            "label": "Datos Hidrológicos y Meteorológicas"
+          }
+        ]
+      },
+      {
+        "id": "9",
+        "label": "EL MINISTERIO DE AMBIENTE, AGUA Y TRANSICIÓN ECOLÓGICA (MAATE)",
+        "itemCount": 8,
+        "items": [
+          {
+            "code": "9.1",
+            "label": "Mapa Uso y Cobertura de Suelo 2023"
+          },
+          {
+            "code": "9.2",
+            "label": "Aptitud Agrícola 2019"
+          },
+          {
+            "code": "9.3",
+            "label": "Unidades Hidrográficas Pfafstetter Nivel 1"
+          },
+          {
+            "code": "9.4",
+            "label": "Unidades Hidrográficas Pfafstetter Nivel 2"
+          },
+          {
+            "code": "9.5",
+            "label": "Unidades Hidrográficas Pfafstetter Nivel 3"
+          },
+          {
+            "code": "9.6",
+            "label": "Unidades Hidrográficas Pfafstetter Nivel 4"
+          },
+          {
+            "code": "9.7",
+            "label": "Unidades Hidrográficas Pfafstetter Nivel 5"
+          },
+          {
+            "code": "9.8",
+            "label": "Unidades Hidrográficas Pfafstetter Nivel 6"
+          }
+        ]
+      },
+      {
+        "id": "10",
+        "label": "SISTEMA NACIONAL DE INFORMACIÓN DE TIERRAS RURALES E INFRAESTRUCTURA TECNOLÓGICA",
+        "itemCount": 2,
+        "items": [
+          {
+            "code": "10.1",
+            "label": "Ortofotografía año 2012 y 2019"
+          },
+          {
+            "code": "10.2",
+            "label": "Modelo Digital de Terreno"
+          }
+        ]
+      },
+      {
+        "id": "11",
+        "label": "INFORMACIÓN GENERADA POR EL CONSULTOR",
+        "itemCount": 2,
+        "items": [
+          {
+            "code": "11.1",
+            "label": "Ortofotos"
+          },
+          {
+            "code": "11.2",
+            "label": "Modelo Digital de Terreno"
+          }
+        ]
+      }
+    ],
+    "categoryCount": 11,
+    "itemCount": 32
+  }
+}

@@ -2420,6 +2420,66 @@ button {
   font-weight: 700;
 }
 
+.field-evidence-list {
+  display: grid;
+  gap: 12px;
+}
+
+.field-evidence-list.has-data {
+  padding: 0;
+  background: transparent;
+  border: 0;
+}
+
+.field-evidence-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(47, 61, 50, 0.1);
+  background: linear-gradient(180deg, rgba(243, 248, 245, 0.82), rgba(255, 255, 255, 0.78));
+}
+
+.field-evidence-card.active {
+  border-color: rgba(47, 127, 95, 0.28);
+  box-shadow: 0 14px 30px rgba(24, 84, 65, 0.12);
+}
+
+.field-evidence-card.compact {
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.76);
+}
+
+.field-evidence-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.field-evidence-head h4 {
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.field-evidence-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.field-evidence-metrics span {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(47, 61, 50, 0.08);
+  color: var(--leaf-deep);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
 .map-stage {
   position: relative;
   height: 100%;
@@ -3701,7 +3761,8 @@ button {
   .land-change-year-head,
   .hydrology-sector-head,
   .hydrology-timeline-head,
-  .hydrology-timeline-card-head {
+  .hydrology-timeline-card-head,
+  .field-evidence-head {
     flex-direction: column;
   }
 }

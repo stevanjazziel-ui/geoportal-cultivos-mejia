@@ -2075,6 +2075,10 @@ const state = {
   hydrologyDemandId: "eficienciaMedia",
   hydrologyData: null,
   hydrologyHighlightId: null,
+  fieldEvidenceCatalog: null,
+  fieldEvidenceData: null,
+  fieldEvidenceHighlightId: null,
+  fieldEvidenceHighlightType: "sector",
   territorialFocus: "planning",
   entryRoute: "agronomia",
   agronomyOutputs: {
@@ -2113,6 +2117,9 @@ const mapState = {
   hydrologyLayer: null,
   hydrologyPriorityLayer: null,
   hydrologyBufferLayer: null,
+  fieldEvidenceSectorLayer: null,
+  fieldEvidenceStationLayer: null,
+  fieldEvidenceHistoryLayer: null,
   studyAreaLayer: null,
   currentPlotLayer: null,
 };
@@ -2577,6 +2584,9 @@ function setTerritorialArea(areaId = state.territorialAreaId, options = {}) {
     }
     if (state.hydrologyData) {
       runHydrologyAnalysis(true);
+    }
+    if (state.fieldEvidenceData) {
+      runFieldEvidenceAnalysis(true);
     }
   }
 
@@ -3511,6 +3521,9 @@ function cacheDom() {
   dom.hydrologyHorizonSelect = document.querySelector("#hydrologyHorizonSelect");
   dom.hydrologyDemandSelect = document.querySelector("#hydrologyDemandSelect");
   dom.hydrologyScopeInput = document.querySelector("#hydrologyScopeInput");
+  dom.runFieldEvidenceBtn = document.querySelector("#runFieldEvidenceBtn");
+  dom.focusFieldEvidenceBtn = document.querySelector("#focusFieldEvidenceBtn");
+  dom.clearFieldEvidenceBtn = document.querySelector("#clearFieldEvidenceBtn");
   dom.intraloteResults = document.querySelector("#intraloteResults");
   dom.intraloteVisual = document.querySelector("#intraloteVisual");
   dom.demResults = document.querySelector("#demResults");
@@ -3541,9 +3554,15 @@ function cacheDom() {
   dom.hydrologyTimeline = document.querySelector("#hydrologyTimeline");
   dom.hydrologySectors = document.querySelector("#hydrologySectors");
   dom.hydrologySourceNote = document.querySelector("#hydrologySourceNote");
+  dom.fieldEvidenceResults = document.querySelector("#fieldEvidenceResults");
+  dom.fieldEvidenceInventory = document.querySelector("#fieldEvidenceInventory");
+  dom.fieldEvidenceSectors = document.querySelector("#fieldEvidenceSectors");
+  dom.fieldEvidenceStations = document.querySelector("#fieldEvidenceStations");
+  dom.fieldEvidenceHistory = document.querySelector("#fieldEvidenceHistory");
   dom.planningCard = document.querySelector("#planningCard");
   dom.landChangeCard = document.querySelector("#landChangeCard");
   dom.hydrologyCard = document.querySelector("#hydrologyCard");
+  dom.fieldEvidenceCard = document.querySelector("#fieldEvidenceCard");
   dom.planningModuleCards = Array.from(document.querySelectorAll('[data-module-track="planificacion"]'));
   dom.planning3dAvailability = document.querySelector("#planning3dAvailability");
   dom.openPlanning3dBtn = document.querySelector("#openPlanning3dBtn");
@@ -3619,6 +3638,9 @@ function bindUI() {
   dom.planningCandidates?.addEventListener("click", handlePlanningCandidatesInteraction);
   dom.landChangeSectors?.addEventListener("click", handleLandChangeSectorsInteraction);
   dom.hydrologySectors?.addEventListener("click", handleHydrologySectorsInteraction);
+  dom.fieldEvidenceSectors?.addEventListener("click", handleFieldEvidenceInteraction);
+  dom.fieldEvidenceStations?.addEventListener("click", handleFieldEvidenceInteraction);
+  dom.fieldEvidenceHistory?.addEventListener("click", handleFieldEvidenceInteraction);
   dom.territorialScenarioCompare?.addEventListener("click", handleTerritorialScenarioCompareInteraction);
   dom.territorialSectorSheets?.addEventListener("click", handleTerritorialSectorSheetsInteraction);
   dom.territorialExportPanel?.addEventListener("click", handleTerritorialExportInteraction);
@@ -3816,6 +3838,21 @@ function bindUI() {
   });
   dom.focusHydrologyBtn?.addEventListener("click", focusHydrologyStudy);
   dom.clearHydrologyBtn?.addEventListener("click", clearHydrologyAnalysis);
+  dom.runFieldEvidenceBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.fieldEvidenceResults, "Reuniendo evidencia de campo, estaciones y memoria territorial...", [
+      { target: dom.fieldEvidenceInventory, message: "Resumiendo catalogo maestro, fuentes y objetos geograficos disponibles..." },
+      { target: dom.fieldEvidenceSectors, message: "Organizando quebradas, rios y sectores levantados en campo..." },
+      { target: dom.fieldEvidenceStations, message: "Ubicando estaciones FONAG e indicadores hidrometeorologicos..." },
+      { target: dom.fieldEvidenceHistory, message: "Levantando cartas IGM, MDT historico y series climaticas INHAMI..." },
+      { target: dom.territorialDecisionBoard, message: "Incorporando soporte de evidencia territorial al semaforo tecnico..." },
+      { target: dom.territorialSectorSheets, message: "Preparando fichas de campo, estaciones y memoria historica..." },
+      { target: dom.territorialExportPanel, message: "Anexando evidencia de campo a los exportables territoriales..." },
+      { target: dom.territorialAlertsPanel, message: "Detectando sectores con monitoreo de quebradas y estaciones activas..." },
+    ]);
+    return runModuleAction(dom.runFieldEvidenceBtn, "Integrando evidencia...", () => runFieldEvidenceAnalysis());
+  });
+  dom.focusFieldEvidenceBtn?.addEventListener("click", focusFieldEvidenceStudy);
+  dom.clearFieldEvidenceBtn?.addEventListener("click", clearFieldEvidenceAnalysis);
   dom.planningImagerySelect.addEventListener("change", () => {
     state.planningImageryId = dom.planningImagerySelect.value || "sentinel2Urban";
     renderPlanningModule();
@@ -4117,8 +4154,32 @@ function handleHydrologySectorsInteraction(event) {
   focusHydrologySector(button.dataset.hydrologySectorId);
 }
 
+function handleFieldEvidenceInteraction(event) {
+  const button = event.target.closest("[data-field-sector-id], [data-field-station-id], [data-field-history-id]");
+  if (!button) {
+    return;
+  }
+
+  const container = button.closest("#fieldEvidenceSectors, #fieldEvidenceStations, #fieldEvidenceHistory");
+  if (!container) {
+    return;
+  }
+
+  if (button.dataset.fieldSectorId) {
+    focusFieldEvidenceItem("sector", button.dataset.fieldSectorId);
+    return;
+  }
+  if (button.dataset.fieldStationId) {
+    focusFieldEvidenceItem("station", button.dataset.fieldStationId);
+    return;
+  }
+  if (button.dataset.fieldHistoryId) {
+    focusFieldEvidenceItem("history", button.dataset.fieldHistoryId);
+  }
+}
+
 function handleTerritorialSectorSheetsInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id]");
+  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-history-id]");
   if (!button || !dom.territorialSectorSheets?.contains(button)) {
     return;
   }
@@ -4133,11 +4194,23 @@ function handleTerritorialSectorSheetsInteraction(event) {
   }
   if (button.dataset.hydrologySectorId) {
     focusHydrologySector(button.dataset.hydrologySectorId);
+    return;
+  }
+  if (button.dataset.fieldSectorId) {
+    focusFieldEvidenceItem("sector", button.dataset.fieldSectorId);
+    return;
+  }
+  if (button.dataset.fieldStationId) {
+    focusFieldEvidenceItem("station", button.dataset.fieldStationId);
+    return;
+  }
+  if (button.dataset.fieldHistoryId) {
+    focusFieldEvidenceItem("history", button.dataset.fieldHistoryId);
   }
 }
 
 function handleTerritorialAlertInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id]");
+  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-history-id]");
   if (!button || !dom.territorialAlertsPanel?.contains(button)) {
     return;
   }
@@ -4152,6 +4225,18 @@ function handleTerritorialAlertInteraction(event) {
   }
   if (button.dataset.hydrologySectorId) {
     focusHydrologySector(button.dataset.hydrologySectorId);
+    return;
+  }
+  if (button.dataset.fieldSectorId) {
+    focusFieldEvidenceItem("sector", button.dataset.fieldSectorId);
+    return;
+  }
+  if (button.dataset.fieldStationId) {
+    focusFieldEvidenceItem("station", button.dataset.fieldStationId);
+    return;
+  }
+  if (button.dataset.fieldHistoryId) {
+    focusFieldEvidenceItem("history", button.dataset.fieldHistoryId);
   }
 }
 
@@ -4355,6 +4440,9 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     if (state.hydrologyData) {
       renderHydrologyOverlay(state.hydrologyData);
     }
+    if (state.fieldEvidenceData) {
+      renderFieldEvidenceOverlay(state.fieldEvidenceData);
+    }
     setActiveTab("modulos");
     hydratePlanning3dManifest();
     if (dom.sidebarTitle) {
@@ -4378,6 +4466,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   clearPlanningOverlay();
   clearLandChangeOverlay();
   clearHydrologyOverlay();
+  clearFieldEvidenceOverlay();
   if (state.currentPlot) {
     renderCurrentPlotLayer();
   }
@@ -9040,7 +9129,7 @@ function shouldRenderPlanning3dDomMarkers() {
     || !planning3dState.modalOpen
     || !planning3dState.buildingsVisible
     || !buildingCount
-    || zoom < 14.2
+    || zoom < 13.2
   ) {
     return false;
   }
@@ -9049,7 +9138,7 @@ function shouldRenderPlanning3dDomMarkers() {
     return false;
   }
 
-  return buildingCount <= 1800;
+  return true;
 }
 
 function hasPlanning3dNativeBuildingScene() {
@@ -9245,7 +9334,7 @@ function shouldRenderPlanning3dSvgScene() {
     && planning3dState.modalOpen
     && planning3dState.buildingsVisible
     && buildingCount
-    && zoom >= (orthographic ? 13.6 : 14.6)
+    && zoom >= (orthographic ? 12.9 : 13.9)
     && (
       orthographic
       || planning3dState.backendMode === "public"
@@ -10422,6 +10511,7 @@ function renderPlanningModule() {
   renderPlanningVariableMatrix();
   renderLandChangeModule();
   renderHydrologyModule();
+  renderFieldEvidenceModule();
   renderTerritorialScenarioCompare();
   renderPlanningTerritoryReadout();
   renderTerritorialDecisionSupport();
@@ -10486,6 +10576,16 @@ function renderPlanningModule() {
   }
   if (dom.clearHydrologyBtn) {
     dom.clearHydrologyBtn.disabled = !state.hydrologyData;
+  }
+  if (dom.focusFieldEvidenceBtn) {
+    dom.focusFieldEvidenceBtn.disabled = !(
+      state.fieldEvidenceData?.sectorsCollection?.features?.length
+      || state.fieldEvidenceData?.stationCollection?.features?.length
+      || state.fieldEvidenceData?.historyCollection?.features?.length
+    );
+  }
+  if (dom.clearFieldEvidenceBtn) {
+    dom.clearFieldEvidenceBtn.disabled = !state.fieldEvidenceData;
   }
   if (dom.planningSourceNote) {
     setTextIfChanged(dom.planningSourceNote, `${imageryProfile.label}: ${imageryProfile.useCopy} Resolucion ${imageryProfile.spatialLabel} y frecuencia ${imageryProfile.temporalLabel}. La corrida actual esta enfocada en ${areaProfile.scopeLabel} y el visor 3D puede saltar a este mismo nucleo para leer volumenes, calles y sombras con mas limpieza.`);
@@ -11898,6 +11998,454 @@ function formatHydrologyHm3(value) {
   return Number(value || 0).toFixed(1);
 }
 
+async function loadFieldEvidenceCatalog(force = false) {
+  if (state.fieldEvidenceCatalog && !force) {
+    return state.fieldEvidenceCatalog;
+  }
+
+  const response = await fetch("./public-data/field/field_evidence.json", {
+    headers: { Accept: "application/json" },
+  });
+  if (!response.ok) {
+    throw new Error(`No se pudo cargar la evidencia de campo (${response.status}).`);
+  }
+  state.fieldEvidenceCatalog = await response.json();
+  return state.fieldEvidenceCatalog;
+}
+
+function sumFieldEvidenceMetric(features, propertyName) {
+  return (Array.isArray(features) ? features : []).reduce(
+    (sum, feature) => sum + (Number(feature?.properties?.[propertyName]) || 0),
+    0
+  );
+}
+
+function getFieldEvidenceDominantLabel(features, propertyName, fallback = "Sin lectura") {
+  const counts = new Map();
+  (Array.isArray(features) ? features : []).forEach((feature) => {
+    const key = String(feature?.properties?.[propertyName] || "").trim();
+    if (!key) {
+      return;
+    }
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+  return [...counts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] || fallback;
+}
+
+function buildFieldEvidenceAnalysis(catalog = state.fieldEvidenceCatalog) {
+  const target = getCurrentTerritorialTarget();
+  const sectors = filterFeaturesByTerritorialArea(catalog?.sectors?.features || [], state.territorialAreaId).map(cloneFeature);
+  const stations = filterFeaturesByTerritorialArea(catalog?.hydrometStations?.features || [], state.territorialAreaId).map(cloneFeature);
+  const history = [
+    ...filterFeaturesByTerritorialArea(catalog?.historicalSources?.features || [], state.territorialAreaId).map(cloneFeature),
+    ...filterFeaturesByTerritorialArea(catalog?.terrainSources?.features || [], state.territorialAreaId).map(cloneFeature),
+  ];
+  const climateSeries = Array.isArray(catalog?.climateHistory?.stations)
+    ? catalog.climateHistory.stations.slice().sort((left, right) => (right.annualMeanMm || 0) - (left.annualMeanMm || 0))
+    : [];
+  const inventoryCategories = Array.isArray(catalog?.inventoryCatalog?.categories)
+    ? catalog.inventoryCatalog.categories.slice().sort((left, right) => (right.itemCount || 0) - (left.itemCount || 0))
+    : [];
+
+  const topSectors = sectors
+    .slice()
+    .sort((left, right) => (Number(right.properties?.coverageHa) || 0) - (Number(left.properties?.coverageHa) || 0))
+    .slice(0, 6)
+    .map((feature, index) => ({
+      id: feature.id || feature.properties?.name || `sector-${index + 1}`,
+      rank: index + 1,
+      feature,
+      name: feature.properties?.sectorLabel || feature.properties?.name || `Sector ${index + 1}`,
+      summary: feature.properties?.summary || "Sector de campo sin resumen.",
+      areaHa: Number(feature.properties?.coverageHa) || 0,
+      rasterCount: Number(feature.properties?.rasterCount) || 0,
+      sectorType: feature.properties?.sectorType || "Sector de campo",
+      supportLabel: feature.properties?.hasOrthomosaic && feature.properties?.hasDtm
+        ? "Ortomosaico + DTM"
+        : feature.properties?.hasOrthomosaic
+          ? "Ortomosaico"
+          : feature.properties?.hasDtm
+            ? "DTM"
+            : "Rasters base",
+      tone: index === 0 ? "high" : index <= 2 ? "mid" : "base",
+    }));
+
+  const topStations = stations
+    .slice()
+    .sort((left, right) => (Number(right.properties?.annualMetric) || 0) - (Number(left.properties?.annualMetric) || 0))
+    .slice(0, 5)
+    .map((feature, index) => ({
+      id: feature.id || feature.properties?.code || `station-${index + 1}`,
+      rank: index + 1,
+      feature,
+      code: feature.properties?.code || `EST-${index + 1}`,
+      name: feature.properties?.name || `Estacion ${index + 1}`,
+      kind: feature.properties?.stationKind || "hidromet",
+      annualMetricLabel: feature.properties?.annualMetricLabel || "Sin serie",
+      historicalMetricLabel: feature.properties?.historicalMetricLabel || "Sin historico",
+      peakMetricLabel: feature.properties?.peakMetricLabel || "Sin pico",
+      summary: feature.properties?.summary || "Estacion sin resumen.",
+      tone: feature.properties?.stationKind === "caudal" ? "service" : "resilience",
+    }));
+
+  const topHistory = history
+    .slice()
+    .sort((left, right) => (Number(right.properties?.coverageHa) || 0) - (Number(left.properties?.coverageHa) || 0))
+    .slice(0, 6)
+    .map((feature, index) => ({
+      id: feature.id || feature.properties?.name || `history-${index + 1}`,
+      rank: index + 1,
+      feature,
+      name: feature.properties?.name || `Fuente ${index + 1}`,
+      sourceGroup: feature.properties?.sourceGroup || "memoria",
+      sourceKind: feature.properties?.sourceKind || "historico",
+      year: feature.properties?.year || "s/f",
+      areaHa: Number(feature.properties?.coverageHa) || 0,
+      summary: feature.properties?.summary || "Fuente historica sin resumen.",
+    }));
+
+  const summary = {
+    sectorCount: sectors.length,
+    stationCount: stations.length,
+    historyCount: history.length,
+    climateSeriesCount: climateSeries.length,
+    inventoryCategoryCount: inventoryCategories.length,
+    inventoryItemCount: Number(catalog?.inventoryCatalog?.itemCount) || 0,
+    surveyedAreaHa: Number(sumFieldEvidenceMetric(sectors, "coverageHa").toFixed(1)),
+    stationCoverageAltitudeM: Math.round(
+      stations.length
+        ? stations.reduce((sum, feature) => sum + (Number(feature.properties?.altitudeM) || 0), 0) / stations.length
+        : 0
+    ),
+    dominantSectorType: getFieldEvidenceDominantLabel(sectors, "sectorType"),
+    dominantStationType: getFieldEvidenceDominantLabel(stations, "stationKind"),
+  };
+  const supportScore = clamp(
+    Math.round(
+      summary.sectorCount * 4
+      + summary.stationCount * 5
+      + summary.historyCount * 4
+      + summary.climateSeriesCount * 2
+      + Math.min(summary.inventoryCategoryCount * 3, 16)
+    ),
+    0,
+    100
+  );
+
+  return {
+    context: target,
+    summary: {
+      ...summary,
+      supportScore,
+      supportLabel: supportScore >= 80 ? "Soporte muy alto" : supportScore >= 60 ? "Soporte alto" : supportScore >= 40 ? "Soporte medio" : "Soporte inicial",
+      coverageLabel: summary.surveyedAreaHa >= 1200 ? "Cobertura extensa" : summary.surveyedAreaHa >= 500 ? "Cobertura media" : "Cobertura puntual",
+      stationLabel: summary.dominantStationType === "precipitacion" ? "Predomina lluvia observada" : summary.dominantStationType === "caudal" ? "Predomina caudal observado" : "Sin lectura dominante",
+      historicalLabel: summary.historyCount ? "Memoria historica activa" : "Memoria historica pendiente",
+    },
+    sectorsCollection: {
+      type: "FeatureCollection",
+      features: sectors,
+    },
+    stationCollection: {
+      type: "FeatureCollection",
+      features: stations,
+    },
+    historyCollection: {
+      type: "FeatureCollection",
+      features: history,
+    },
+    climateSeries,
+    inventoryCategories,
+    topSectors,
+    topStations,
+    topHistory,
+    sourceSummary: catalog?.summary || {},
+  };
+}
+
+function renderFieldEvidenceModule() {
+  if (!state.fieldEvidenceData) {
+    resetMetricGrid(dom.fieldEvidenceResults, `Integra la evidencia de campo para ver quebradas, estaciones, cartas historicas y MDT disponibles sobre ${getTerritorialAreaProfile().scopeLabel}.`);
+    if (dom.fieldEvidenceInventory) {
+      dom.fieldEvidenceInventory.classList.add("empty-state");
+      dom.fieldEvidenceInventory.classList.remove("has-data");
+      setTextIfChanged(dom.fieldEvidenceInventory, "Aqui apareceran las categorias del catalogo maestro y las fuentes activas del levantamiento.");
+    }
+    if (dom.fieldEvidenceSectors) {
+      dom.fieldEvidenceSectors.classList.add("empty-state");
+      dom.fieldEvidenceSectors.classList.remove("has-data");
+      setTextIfChanged(dom.fieldEvidenceSectors, "Aqui apareceran las quebradas, rios y sectores levantados en campo con ortomosaico y DTM.");
+    }
+    if (dom.fieldEvidenceStations) {
+      dom.fieldEvidenceStations.classList.add("empty-state");
+      dom.fieldEvidenceStations.classList.remove("has-data");
+      setTextIfChanged(dom.fieldEvidenceStations, "Aqui apareceran las estaciones FONAG y sus metricas hidrometeorologicas.");
+    }
+    if (dom.fieldEvidenceHistory) {
+      dom.fieldEvidenceHistory.classList.add("empty-state");
+      dom.fieldEvidenceHistory.classList.remove("has-data");
+      setTextIfChanged(dom.fieldEvidenceHistory, "Aqui apareceran cartas historicas, MDT y series INHAMI conectadas al ambito territorial.");
+    }
+    return;
+  }
+
+  const analysis = state.fieldEvidenceData;
+  const cards = [
+    {
+      label: "Soporte de evidencia",
+      value: `${analysis.summary.supportScore}/100`,
+      copy: `${analysis.summary.supportLabel} con ${analysis.summary.coverageLabel.toLowerCase()} para ${analysis.context.scopeLabel}.`,
+      highlight: true,
+    },
+    {
+      label: "Sectores de campo",
+      value: `${analysis.summary.sectorCount}`,
+      copy: `${analysis.summary.dominantSectorType} dominante y ${analysis.summary.surveyedAreaHa.toFixed(1)} ha de levantamiento aproximado.`,
+    },
+    {
+      label: "Estaciones FONAG",
+      value: `${analysis.summary.stationCount}`,
+      copy: `${analysis.summary.stationLabel}. Altitud media ${analysis.summary.stationCoverageAltitudeM || 0} msnm.`,
+    },
+    {
+      label: "Memoria historica",
+      value: `${analysis.summary.historyCount}`,
+      copy: `${analysis.summary.historicalLabel} entre cartas IGM y MDT historico.`,
+    },
+    {
+      label: "Series INHAMI",
+      value: `${analysis.summary.climateSeriesCount}`,
+      copy: "Series historicas de precipitacion listas para lectura comparativa y validacion.",
+    },
+    {
+      label: "Catalogo maestro",
+      value: `${analysis.summary.inventoryItemCount} objetos`,
+      copy: `${analysis.summary.inventoryCategoryCount} categorias de insumos territoriales documentadas.`,
+    },
+  ];
+  paintMetricGrid(dom.fieldEvidenceResults, cards);
+
+  if (dom.fieldEvidenceInventory) {
+    dom.fieldEvidenceInventory.classList.remove("empty-state");
+    dom.fieldEvidenceInventory.classList.add("has-data");
+    setHtmlIfChanged(dom.fieldEvidenceInventory, analysis.inventoryCategories.slice(0, 8).map((category) => `
+      <span class="planning-pill emphasis"><strong>${category.itemCount}</strong> ${category.label}</span>
+    `).join(""));
+  }
+
+  if (dom.fieldEvidenceSectors) {
+    dom.fieldEvidenceSectors.classList.remove("empty-state");
+    dom.fieldEvidenceSectors.classList.add("has-data");
+    setHtmlIfChanged(dom.fieldEvidenceSectors, analysis.topSectors.map((sector) => `
+      <article class="field-evidence-card ${sector.id === state.fieldEvidenceHighlightId && state.fieldEvidenceHighlightType === "sector" ? "active" : ""}">
+        <div class="field-evidence-head">
+          <div>
+            <p class="candidate-rank">${sector.sectorType}</p>
+            <h4>${sector.name}</h4>
+          </div>
+          <span class="planning-pill emphasis">${sector.supportLabel}</span>
+        </div>
+        <p class="territorial-readout-copy">${sector.summary}</p>
+        <div class="field-evidence-metrics">
+          <span>${sector.areaHa.toFixed(1)} ha</span>
+          <span>${sector.rasterCount} rasters</span>
+          <span>Prioridad ${sector.rank}</span>
+        </div>
+        <button class="ghost-button" type="button" data-field-sector-id="${sector.id}">Ver en mapa</button>
+      </article>
+    `).join(""));
+  }
+
+  if (dom.fieldEvidenceStations) {
+    dom.fieldEvidenceStations.classList.remove("empty-state");
+    dom.fieldEvidenceStations.classList.add("has-data");
+    setHtmlIfChanged(dom.fieldEvidenceStations, analysis.topStations.map((station) => `
+      <article class="field-evidence-card ${station.id === state.fieldEvidenceHighlightId && state.fieldEvidenceHighlightType === "station" ? "active" : ""}">
+        <div class="field-evidence-head">
+          <div>
+            <p class="candidate-rank">${station.kind}</p>
+            <h4>${station.name}</h4>
+          </div>
+          <span class="planning-pill emphasis">${station.code}</span>
+        </div>
+        <p class="territorial-readout-copy">${station.summary}</p>
+        <div class="field-evidence-metrics">
+          <span>${station.annualMetricLabel}</span>
+          <span>${station.historicalMetricLabel}</span>
+          <span>${station.peakMetricLabel}</span>
+        </div>
+        <button class="ghost-button" type="button" data-field-station-id="${station.id}">Ver en mapa</button>
+      </article>
+    `).join(""));
+  }
+
+  if (dom.fieldEvidenceHistory) {
+    dom.fieldEvidenceHistory.classList.remove("empty-state");
+    dom.fieldEvidenceHistory.classList.add("has-data");
+    const historyMarkup = analysis.topHistory.map((item) => `
+      <article class="field-evidence-card ${item.id === state.fieldEvidenceHighlightId && state.fieldEvidenceHighlightType === "history" ? "active" : ""}">
+        <div class="field-evidence-head">
+          <div>
+            <p class="candidate-rank">${item.sourceKind}</p>
+            <h4>${item.name}</h4>
+          </div>
+          <span class="planning-pill emphasis">${item.year || "s/f"}</span>
+        </div>
+        <p class="territorial-readout-copy">${item.summary}</p>
+        <div class="field-evidence-metrics">
+          <span>${item.sourceGroup}</span>
+          <span>${item.areaHa.toFixed(1)} ha</span>
+        </div>
+        <button class="ghost-button" type="button" data-field-history-id="${item.id}">Ver en mapa</button>
+      </article>
+    `).join("");
+    const climateMarkup = analysis.climateSeries.slice(0, 3).map((series) => `
+      <article class="field-evidence-card compact">
+        <div class="field-evidence-head">
+          <div>
+            <p class="candidate-rank">INHAMI</p>
+            <h4>${series.stationCode}</h4>
+          </div>
+          <span class="planning-pill emphasis">${series.yearStart}-${series.yearEnd}</span>
+        </div>
+        <p class="territorial-readout-copy">${series.summary}</p>
+        <div class="field-evidence-metrics">
+          <span>${series.annualMeanMm} mm/anio</span>
+          <span>${series.wettestMonth}: ${series.wettestMonthMm} mm</span>
+          <span>${series.driestMonth}: ${series.driestMonthMm} mm</span>
+        </div>
+      </article>
+    `).join("");
+    setHtmlIfChanged(dom.fieldEvidenceHistory, `${historyMarkup}${climateMarkup}`);
+  }
+}
+
+async function runFieldEvidenceAnalysis(silent = false) {
+  try {
+    const catalog = await loadFieldEvidenceCatalog();
+    const analysis = buildFieldEvidenceAnalysis(catalog);
+    state.fieldEvidenceData = analysis;
+    state.fieldEvidenceHighlightType = analysis.topSectors.length
+      ? "sector"
+      : analysis.topStations.length
+        ? "station"
+        : "history";
+    state.fieldEvidenceHighlightId = analysis.topSectors[0]?.id || analysis.topStations[0]?.id || analysis.topHistory[0]?.id || null;
+    state.territorialFocus = "fieldEvidence";
+    renderFieldEvidenceModule();
+    renderFieldEvidenceOverlay(analysis);
+    renderTerritorialDecisionSupport();
+    updateMapSummary();
+    if (!silent) {
+      setStatus(`Evidencia de campo integrada para ${analysis.context.scopeLabel}: ${analysis.summary.sectorCount} sectores, ${analysis.summary.stationCount} estaciones y ${analysis.summary.historyCount} fuentes historicas visibles en mapa.`);
+    }
+    return analysis;
+  } catch (error) {
+    console.warn("Fallo el modulo de evidencia de campo.", error);
+    state.fieldEvidenceData = null;
+    state.fieldEvidenceHighlightId = null;
+    clearFieldEvidenceOverlay();
+    renderFieldEvidenceModule();
+    renderTerritorialDecisionSupport();
+    updateMapSummary();
+    if (!silent) {
+      setStatus(`Evidencia de campo: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    return null;
+  }
+}
+
+function clearFieldEvidenceAnalysis() {
+  state.fieldEvidenceData = null;
+  state.fieldEvidenceHighlightId = null;
+  state.fieldEvidenceHighlightType = "sector";
+  clearFieldEvidenceOverlay();
+  state.territorialFocus = state.hydrologyData
+    ? "hydrology"
+    : state.landChangeData
+      ? "landChange"
+      : "planning";
+  renderFieldEvidenceModule();
+  renderTerritorialDecisionSupport();
+  updateMapSummary();
+  setStatus("Se limpio la evidencia de campo del mapa territorial.");
+}
+
+function getFieldEvidenceFeatureBounds(feature) {
+  if (!feature?.geometry) {
+    return null;
+  }
+  try {
+    return L.geoJSON(feature).getBounds();
+  } catch (error) {
+    return null;
+  }
+}
+
+function focusFieldEvidenceItem(type, id) {
+  if (!mapState.map || !state.fieldEvidenceData) {
+    return;
+  }
+
+  const collection = type === "station"
+    ? state.fieldEvidenceData.stationCollection?.features
+    : type === "history"
+      ? state.fieldEvidenceData.historyCollection?.features
+      : state.fieldEvidenceData.sectorsCollection?.features;
+  const feature = (collection || []).find((item) => String(item.id || item.properties?.code || item.properties?.name) === String(id));
+  if (!feature) {
+    return;
+  }
+
+  state.fieldEvidenceHighlightType = type;
+  state.fieldEvidenceHighlightId = id;
+  state.territorialFocus = "fieldEvidence";
+  renderFieldEvidenceModule();
+  renderFieldEvidenceOverlay(state.fieldEvidenceData);
+  updateMapSummary();
+
+  if (feature.geometry?.type === "Point") {
+    const [lon, lat] = feature.geometry.coordinates || [];
+    if (Number.isFinite(lon) && Number.isFinite(lat)) {
+      mapState.map.setView([lat, lon], Math.max(mapState.map.getZoom(), 14));
+    }
+    return;
+  }
+
+  const bounds = getFieldEvidenceFeatureBounds(feature);
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, {
+      padding: [48, 48],
+    });
+  }
+}
+
+function focusFieldEvidenceStudy() {
+  if (!mapState.map) {
+    return;
+  }
+  state.territorialFocus = "fieldEvidence";
+  const layers = [
+    mapState.fieldEvidenceSectorLayer,
+    mapState.fieldEvidenceStationLayer,
+    mapState.fieldEvidenceHistoryLayer,
+  ].filter(Boolean);
+  let bounds = null;
+  layers.forEach((layer) => {
+    const layerBounds = layer?.getBounds?.();
+    if (!layerBounds?.isValid?.()) {
+      return;
+    }
+    bounds = bounds ? bounds.extend(layerBounds) : layerBounds;
+  });
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, {
+      padding: [56, 56],
+    });
+  }
+  updateMapSummary();
+}
+
 function runPlanningAnalysis(silent = false) {
   try {
     const planning = buildPlanningAnalysis();
@@ -12775,6 +13323,20 @@ function buildTerritorialDecisionSnapshot() {
     });
   }
 
+  if (state.fieldEvidenceData) {
+    const fieldEvidence = state.fieldEvidenceData;
+    const score = fieldEvidence.summary.supportScore;
+    items.push({
+      id: "fieldEvidence",
+      score,
+      signal: getTerritorialSignalState(score),
+      title: "Soporte de evidencia",
+      metric: `${fieldEvidence.summary.sectorCount} sectores`,
+      copy: `${fieldEvidence.summary.stationCount} estaciones, ${fieldEvidence.summary.historyCount} insumos historicos y ${fieldEvidence.summary.inventoryItemCount} objetos catalogados respaldan la lectura de ${fieldEvidence.context.scopeLabel}.`,
+      note: `${fieldEvidence.summary.supportLabel} con predominio ${fieldEvidence.summary.dominantSectorType.toLowerCase()} y ${fieldEvidence.summary.stationLabel.toLowerCase()}.`,
+    });
+  }
+
   if (!items.length) {
     return null;
   }
@@ -12871,7 +13433,48 @@ function buildTerritorialSectorSheets() {
     });
   }
 
-  return sheets.slice(0, 7);
+  if (state.fieldEvidenceData?.topSectors?.length) {
+    state.fieldEvidenceData.topSectors.slice(0, 2).forEach((sector) => {
+      sheets.push({
+        id: sector.id,
+        module: "Evidencia de campo",
+        title: sector.name,
+        tone: sector.tone,
+        kicker: sector.sectorType,
+        summary: sector.summary,
+        note: `${sector.supportLabel} con ${sector.rasterCount} raster(s) y ${sector.areaHa.toFixed(1)} ha aproximadas de cobertura levantada en campo.`,
+        metrics: [
+          { label: "Cobertura", value: `${sector.areaHa.toFixed(1)} ha` },
+          { label: "Rasters", value: `${sector.rasterCount}` },
+          { label: "Soporte", value: sector.supportLabel },
+          { label: "Prioridad", value: `${sector.rank}` },
+        ],
+        actionAttr: `data-field-sector-id="${sector.id}"`,
+      });
+    });
+  }
+
+  if (state.fieldEvidenceData?.topStations?.length) {
+    const station = state.fieldEvidenceData.topStations[0];
+    sheets.push({
+      id: station.id,
+      module: "Monitoreo",
+      title: station.name,
+      tone: station.tone,
+      kicker: station.kind,
+      summary: station.summary,
+      note: `Estacion ${station.code} con lectura ${station.annualMetricLabel}, historico ${station.historicalMetricLabel} y pico ${station.peakMetricLabel}.`,
+      metrics: [
+        { label: "Codigo", value: station.code },
+        { label: "Tipo", value: station.kind },
+        { label: "Anual", value: station.annualMetricLabel },
+        { label: "Historico", value: station.historicalMetricLabel },
+      ],
+      actionAttr: `data-field-station-id="${station.id}"`,
+    });
+  }
+
+  return sheets.slice(0, 10);
 }
 
 function buildTerritorialAlerts() {
@@ -12930,6 +13533,31 @@ function buildTerritorialAlerts() {
           actionAttr: `data-hydrology-sector-id="${sector.id}"`,
         });
       }
+    });
+  }
+
+  if (state.fieldEvidenceData?.topSectors?.length) {
+    state.fieldEvidenceData.topSectors.slice(0, 2).forEach((sector) => {
+      alerts.push({
+        id: `alert-field-sector-${sector.id}`,
+        tone: sector.sectorType.toLowerCase().includes("rio") ? "critical" : "watch",
+        module: "Evidencia de campo",
+        title: `${sector.name}: seguimiento territorial activo`,
+        copy: `${sector.supportLabel} sobre ${sector.sectorType.toLowerCase()} con ${sector.areaHa.toFixed(1)} ha y ${sector.rasterCount} raster(s) de soporte para control preventivo.`,
+        actionAttr: `data-field-sector-id="${sector.id}"`,
+      });
+    });
+  }
+
+  if (state.fieldEvidenceData?.topStations?.length) {
+    const station = state.fieldEvidenceData.topStations[0];
+    alerts.push({
+      id: `alert-field-station-${station.id}`,
+      tone: "watch",
+      module: "Monitoreo",
+      title: `${station.name}: soporte hidrometeorologico listo`,
+      copy: `${station.annualMetricLabel} y ${station.historicalMetricLabel} disponibles para validar escenarios territoriales en ${state.fieldEvidenceData.context.scopeLabel}.`,
+      actionAttr: `data-field-station-id="${station.id}"`,
     });
   }
 
@@ -13031,6 +13659,42 @@ function buildTerritorialCsvExport() {
     ]);
   });
 
+  (state.fieldEvidenceData?.topSectors || []).forEach((sector) => {
+    rows.push([
+      "evidencia_campo_sector",
+      sector.id,
+      sector.name,
+      sector.supportLabel,
+      `${sector.areaHa.toFixed(1)} ha`,
+      `${sector.rasterCount} raster(s)`,
+      sector.summary,
+    ]);
+  });
+
+  (state.fieldEvidenceData?.topStations || []).forEach((station) => {
+    rows.push([
+      "evidencia_campo_estacion",
+      station.id,
+      station.name,
+      station.kind,
+      station.annualMetricLabel,
+      station.historicalMetricLabel,
+      station.summary,
+    ]);
+  });
+
+  (state.fieldEvidenceData?.topHistory || []).forEach((source) => {
+    rows.push([
+      "evidencia_campo_historia",
+      source.id,
+      source.name,
+      source.sourceKind,
+      `${source.areaHa.toFixed(1)} ha`,
+      `${source.year || "s/f"}`,
+      source.summary,
+    ]);
+  });
+
   buildTerritorialAlerts().forEach((alert) => {
     rows.push([
       "alerta_territorial",
@@ -13114,6 +13778,12 @@ function buildTerritorialGeoJsonExport() {
     });
   }
 
+  if (state.fieldEvidenceData) {
+    pushFeatures(state.fieldEvidenceData.sectorsCollection, "evidencia_campo", "sectores");
+    pushFeatures(state.fieldEvidenceData.stationCollection, "evidencia_campo", "estaciones");
+    pushFeatures(state.fieldEvidenceData.historyCollection, "evidencia_campo", "memoria_historica");
+  }
+
   return {
     type: "FeatureCollection",
     features,
@@ -13150,6 +13820,15 @@ function buildTerritorialJsonExport() {
       demand: state.hydrologyData.demand,
       summary: state.hydrologyData.summary,
       prioritySectors: state.hydrologyData.prioritySectors,
+    } : null,
+    evidenciaCampo: state.fieldEvidenceData ? {
+      summary: state.fieldEvidenceData.summary,
+      topSectors: state.fieldEvidenceData.topSectors,
+      topStations: state.fieldEvidenceData.topStations,
+      topHistory: state.fieldEvidenceData.topHistory,
+      climateSeries: state.fieldEvidenceData.climateSeries,
+      inventoryCategories: state.fieldEvidenceData.inventoryCategories,
+      sourceSummary: state.fieldEvidenceData.sourceSummary,
     } : null,
     alerts: buildTerritorialAlerts(),
   };
@@ -13226,6 +13905,32 @@ function buildTerritorialReportHtml() {
               <p>${escapeHtmlContent(state.planningData.solarReadout.copy)}</p>
             </article>
           </div>
+        </section>
+      ` : ""}
+      ${state.fieldEvidenceData ? `
+        <section>
+          <p class="kicker">Soporte de evidencia</p>
+          <h2>Campo, estaciones y memoria historica</h2>
+          <div class="grid">
+            <article class="card">
+              <p class="kicker">Levantamiento</p>
+              <div class="metric">${escapeHtmlContent(String(state.fieldEvidenceData.summary.sectorCount))}</div>
+              <p>${escapeHtmlContent(`${state.fieldEvidenceData.summary.surveyedAreaHa.toFixed(1)} ha aproximadas con predominio ${state.fieldEvidenceData.summary.dominantSectorType.toLowerCase()}.`)}</p>
+            </article>
+            <article class="card">
+              <p class="kicker">Estaciones</p>
+              <div class="metric">${escapeHtmlContent(String(state.fieldEvidenceData.summary.stationCount))}</div>
+              <p>${escapeHtmlContent(`${state.fieldEvidenceData.summary.stationLabel}. Altitud media ${state.fieldEvidenceData.summary.stationCoverageAltitudeM || 0} msnm.`)}</p>
+            </article>
+            <article class="card">
+              <p class="kicker">Memoria</p>
+              <div class="metric">${escapeHtmlContent(String(state.fieldEvidenceData.summary.historyCount))}</div>
+              <p>${escapeHtmlContent(`${state.fieldEvidenceData.summary.historicalLabel} con ${state.fieldEvidenceData.summary.climateSeriesCount} series climaticas y ${state.fieldEvidenceData.summary.inventoryItemCount} objetos catalogados.`)}</p>
+            </article>
+          </div>
+          <ul>
+            ${state.fieldEvidenceData.topSectors.slice(0, 3).map((sector) => `<li><strong>${escapeHtmlContent(sector.name)}:</strong> ${escapeHtmlContent(sector.summary)}</li>`).join("")}
+          </ul>
         </section>
       ` : ""}
       ${sheets.length ? `
@@ -14084,7 +14789,7 @@ function renderTerritorialExportPanel() {
   }
 
   const areaProfile = getTerritorialAreaProfile();
-  const hasAnyData = Boolean(state.planningData || state.landChangeData || state.hydrologyData);
+  const hasAnyData = Boolean(state.planningData || state.landChangeData || state.hydrologyData || state.fieldEvidenceData);
   if (!hasAnyData) {
     dom.territorialExportPanel.classList.add("empty-state");
     dom.territorialExportPanel.classList.remove("has-data");
@@ -14096,6 +14801,9 @@ function renderTerritorialExportPanel() {
     planning: state.planningData?.candidates?.length || 0,
     land: state.landChangeData?.prioritySectors?.length || 0,
     hydrology: state.hydrologyData?.prioritySectors?.length || 0,
+    fieldEvidence: (state.fieldEvidenceData?.summary?.sectorCount || 0)
+      + (state.fieldEvidenceData?.summary?.stationCount || 0)
+      + (state.fieldEvidenceData?.summary?.historyCount || 0),
   };
   dom.territorialExportPanel.classList.remove("empty-state");
   dom.territorialExportPanel.classList.add("has-data");
@@ -14106,16 +14814,17 @@ function renderTerritorialExportPanel() {
           <p class="section-kicker">Salida tecnica</p>
           <h4>Exportables territoriales de ${areaProfile.scopeLabel}</h4>
         </div>
-        <span class="planning-pill emphasis">${exportCounts.planning + exportCounts.land + exportCounts.hydrology} fichas activas</span>
+        <span class="planning-pill emphasis">${exportCounts.planning + exportCounts.land + exportCounts.hydrology + exportCounts.fieldEvidence} fichas activas</span>
       </div>
       <p class="territorial-readout-copy">
         Descarga un consolidado tabular, una capa GeoJSON combinada, un resumen JSON o abre un informe ejecutivo con semaforo,
-        fichas, alertas y resumen territorial del escenario vigente sobre ${areaProfile.scopeLabel}.
+        fichas, alertas, evidencia de campo y resumen territorial del escenario vigente sobre ${areaProfile.scopeLabel}.
       </p>
       <div class="territorial-export-pills">
         <span class="planning-pill emphasis">${exportCounts.planning} candidatos</span>
         <span class="planning-pill emphasis">${exportCounts.land} hotspots</span>
         <span class="planning-pill emphasis">${exportCounts.hydrology} sectores hidricos</span>
+        <span class="planning-pill emphasis">${exportCounts.fieldEvidence} evidencias</span>
       </div>
       <div class="action-row analysis-actions">
         <button class="secondary-button" type="button" data-export-format="report">Abrir informe</button>
@@ -14773,6 +15482,133 @@ function renderHydrologyOverlay(hydrology) {
   }
   if (mapState.planningCandidatesLayer?.bringToFront) {
     mapState.planningCandidatesLayer.bringToFront();
+  }
+}
+
+function renderFieldEvidenceOverlay(analysis) {
+  clearFieldEvidenceOverlay();
+  if (!mapState.map) {
+    return;
+  }
+
+  const activeType = state.fieldEvidenceHighlightType;
+  const activeId = state.fieldEvidenceHighlightId;
+
+  if (analysis.historyCollection?.features?.length) {
+    mapState.fieldEvidenceHistoryLayer = L.geoJSON(analysis.historyCollection, {
+      style: (feature) => {
+        const highlighted = activeType === "history"
+          && String(feature.id || feature.properties?.name) === String(activeId);
+        const tone = feature.properties?.sourceGroup === "mdt_historico"
+          ? { stroke: "#5c7f95", fill: "#b8d1df" }
+          : { stroke: "#b88444", fill: "#ead09c" };
+        return {
+          color: tone.stroke,
+          weight: highlighted ? 2.2 : 1.2,
+          fillColor: tone.fill,
+          fillOpacity: highlighted ? 0.16 : 0.09,
+          dashArray: feature.properties?.sourceKind === "carta_historica" ? "8 8" : "10 6",
+        };
+      },
+      pointToLayer: (feature, latlng) => {
+        const highlighted = activeType === "history"
+          && String(feature.id || feature.properties?.name) === String(activeId);
+        return L.circleMarker(latlng, {
+          radius: highlighted ? 8 : 6,
+          weight: 2.2,
+          color: "#fff6ea",
+          fillColor: feature.properties?.sourceGroup === "mdt_historico" ? "#5c7f95" : "#b88444",
+          fillOpacity: 0.96,
+        });
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          `<h3 class="popup-title">${feature.properties?.name || "Fuente historica"}</h3><p class="popup-copy">${feature.properties?.summary || "Cobertura historica disponible para soporte territorial."}</p>`
+        );
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (analysis.sectorsCollection?.features?.length) {
+    mapState.fieldEvidenceSectorLayer = L.geoJSON(analysis.sectorsCollection, {
+      style: (feature) => {
+        const highlighted = activeType === "sector"
+          && String(feature.id || feature.properties?.name) === String(activeId);
+        return {
+          color: highlighted ? "#1e725e" : "#2f7f5f",
+          weight: highlighted ? 2.5 : 1.6,
+          fillColor: feature.properties?.hasOrthomosaic && feature.properties?.hasDtm ? "#7fc7a1" : "#9ecfb0",
+          fillOpacity: highlighted ? 0.2 : 0.12,
+          dashArray: feature.properties?.hasOrthomosaic && feature.properties?.hasDtm ? null : "8 8",
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          `<h3 class="popup-title">${feature.properties?.sectorLabel || feature.properties?.name || "Sector de campo"}</h3><p class="popup-copy">${feature.properties?.summary || "Sector de campo disponible para soporte territorial."} ${formatLandChangeHa(feature.properties?.coverageHa || 0)} ha | ${feature.properties?.rasterCount || 0} rasters.</p>`
+        );
+        layer.bindTooltip(
+          `${feature.properties?.sectorType || "Sector"} | ${feature.properties?.sectorLabel || feature.properties?.name || "Campo"}`,
+          { sticky: true }
+        );
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (analysis.stationCollection?.features?.length) {
+    mapState.fieldEvidenceStationLayer = L.geoJSON(analysis.stationCollection, {
+      pointToLayer: (feature, latlng) => {
+        const highlighted = activeType === "station"
+          && String(feature.id || feature.properties?.code || feature.properties?.name) === String(activeId);
+        const isFlow = feature.properties?.stationKind === "caudal";
+        return L.circleMarker(latlng, {
+          radius: highlighted ? 8.4 : 6.8,
+          weight: 2.4,
+          color: "#fff7ee",
+          fillColor: isFlow ? "#4f89aa" : "#5c9869",
+          fillOpacity: 0.98,
+        });
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          `<h3 class="popup-title">${feature.properties?.name || "Estacion FONAG"}</h3><p class="popup-copy">${feature.properties?.summary || "Estacion hidrometeorologica disponible."}</p>`
+        );
+        layer.bindTooltip(
+          `${feature.properties?.code || "EST"} | ${feature.properties?.stationKind || "hidromet"} | ${feature.properties?.annualMetricLabel || ""}`,
+          { sticky: true }
+        );
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (mapState.fieldEvidenceHistoryLayer?.bringToBack) {
+    mapState.fieldEvidenceHistoryLayer.bringToBack();
+  }
+  if (mapState.fieldEvidenceSectorLayer?.bringToFront) {
+    mapState.fieldEvidenceSectorLayer.bringToFront();
+  }
+  if (mapState.fieldEvidenceStationLayer?.bringToFront) {
+    mapState.fieldEvidenceStationLayer.bringToFront();
+  }
+  if (mapState.planningCandidatesLayer?.bringToFront) {
+    mapState.planningCandidatesLayer.bringToFront();
+  }
+}
+
+function clearFieldEvidenceOverlay() {
+  if (!mapState.map) {
+    return;
+  }
+  if (mapState.fieldEvidenceSectorLayer) {
+    mapState.map.removeLayer(mapState.fieldEvidenceSectorLayer);
+    mapState.fieldEvidenceSectorLayer = null;
+  }
+  if (mapState.fieldEvidenceStationLayer) {
+    mapState.map.removeLayer(mapState.fieldEvidenceStationLayer);
+    mapState.fieldEvidenceStationLayer = null;
+  }
+  if (mapState.fieldEvidenceHistoryLayer) {
+    mapState.map.removeLayer(mapState.fieldEvidenceHistoryLayer);
+    mapState.fieldEvidenceHistoryLayer = null;
   }
 }
 
@@ -15910,6 +16746,7 @@ function updateMapSummary(force = false) {
     const planning = state.planningData;
     const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
+    const fieldEvidence = state.fieldEvidenceData;
     const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
     const landChangePeriod = landChange?.period || getLandChangePeriodProfile();
     const landChangeScenario = landChange?.scenario || getLandChangeScenarioProfile();
@@ -15917,11 +16754,19 @@ function updateMapSummary(force = false) {
     const hydrologyClimate = hydrology?.climate || getHydrologyClimateProfile();
     const hydrologyHorizon = hydrology?.horizon || getHydrologyHorizonProfile();
     const hydrologyDemand = hydrology?.demand || getHydrologyDemandProfile();
+    const showFieldEvidence = state.territorialFocus === "fieldEvidence" && fieldEvidence;
     const showLandChange = state.territorialFocus === "landChange" && landChange;
     const showHydrology = state.territorialFocus === "hydrology" && hydrology;
     setTextIfChanged(dom.overlayIndex, planning ? "Aptitud" : imageryProfile.shortLabel);
     renderMapBadges();
-    if (showLandChange) {
+    if (showFieldEvidence) {
+      setTextIfChanged(dom.overlayIndex, "Campo");
+      setTextIfChanged(dom.mapTitle, `Evidencia de campo sobre ${fieldEvidence.context.scopeLabel}`);
+      setTextIfChanged(
+        dom.mapSubtitle,
+        `${fieldEvidence.summary.sectorCount} sectores de campo, ${fieldEvidence.summary.stationCount} estaciones FONAG, ${fieldEvidence.summary.historyCount} coberturas historicas y ${fieldEvidence.summary.climateSeriesCount} series climaticas listas para soporte tecnico sobre ${fieldEvidence.context.scopeLabel}.`
+      );
+    } else if (showLandChange) {
       setTextIfChanged(dom.overlayIndex, "Huella");
       setTextIfChanged(dom.mapTitle, `Transformacion del suelo rural sobre ${landChange.context.scopeLabel}`);
       setTextIfChanged(
@@ -15945,6 +16790,10 @@ function updateMapSummary(force = false) {
       setTextIfChanged(dom.overlayIndex, "Balance");
       setTextIfChanged(dom.mapTitle, "Estudio hidrico de Mejia listo");
       setTextIfChanged(dom.mapSubtitle, `${hydrology.climate.shortLabel}, ${hydrology.horizon.label} y ${hydrology.demand.label} con balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio y franjas de proteccion activas.`);
+    } else if (fieldEvidence) {
+      setTextIfChanged(dom.overlayIndex, "Campo");
+      setTextIfChanged(dom.mapTitle, "Evidencia de campo integrada");
+      setTextIfChanged(dom.mapSubtitle, `${fieldEvidence.summary.supportLabel} con ${fieldEvidence.summary.sectorCount} sectores, ${fieldEvidence.summary.stationCount} estaciones y ${fieldEvidence.summary.historyCount} insumos historicos listos para ${fieldEvidence.context.scopeLabel}.`);
     } else if (landChange) {
       setTextIfChanged(dom.overlayIndex, "Huella");
       setTextIfChanged(dom.mapTitle, "Estudio de transformacion del suelo listo");
@@ -16017,12 +16866,40 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
     const planning = state.planningData;
     const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
+    const fieldEvidence = state.fieldEvidenceData;
     const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
     const landChangePeriod = landChange?.period || getLandChangePeriodProfile();
     const landChangeScenario = landChange?.scenario || getLandChangeScenarioProfile();
     const climate = hydrology?.climate || getHydrologyClimateProfile();
     const horizon = hydrology?.horizon || getHydrologyHorizonProfile();
-    const badges = state.territorialFocus === "landChange" && landChange
+    const badges = state.territorialFocus === "fieldEvidence" && fieldEvidence
+      ? [
+          {
+            tone: "analysis",
+            label: "Campo",
+          },
+          {
+            tone: "neutral",
+            label: `${fieldEvidence.summary.sectorCount} sectores`,
+          },
+          {
+            tone: "neutral",
+            label: `${fieldEvidence.summary.stationCount} estaciones`,
+          },
+          {
+            tone: fieldEvidence.summary.supportScore >= 80
+              ? "exact"
+              : fieldEvidence.summary.supportScore >= 60
+                ? "preview"
+                : "compare",
+            label: fieldEvidence.summary.supportLabel,
+          },
+          {
+            tone: "neutral",
+            label: "IGM + MDT + FONAG + INHAMI",
+          },
+        ]
+      : state.territorialFocus === "landChange" && landChange
       ? [
           {
             tone: "analysis",

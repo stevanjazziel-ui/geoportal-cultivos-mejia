@@ -28,7 +28,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260418-11">
+  <link rel="stylesheet" href="./styles.css?v=20260418-12">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -478,6 +478,39 @@
               </div>
             </article>
 
+            <article id="fieldEvidenceCard" class="module-card planning-card hidden" data-module-track="planificacion">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Soporte territorial</p>
+                  <h3>Evidencia de campo e insumos historicos</h3>
+                </div>
+                <button id="runFieldEvidenceBtn" class="secondary-button" type="button">Integrar evidencia</button>
+              </div>
+              <p class="module-copy">
+                Integra quebradas y rios levantados en campo, estaciones FONAG, series INHAMI, cartas historicas IGM,
+                MDT historico y el catalogo maestro de informacion territorial para Mejia.
+              </p>
+              <div id="fieldEvidenceResults" class="metrics-grid empty-state">
+                Ejecuta el modulo para reunir sectores de campo, estaciones, memoria historica y soporte tecnico del territorio.
+              </div>
+              <div id="fieldEvidenceInventory" class="planning-pills empty-state">
+                Aqui apareceran las categorias del catalogo maestro, fuentes activas y objetos documentados para Mejia.
+              </div>
+              <div id="fieldEvidenceSectors" class="field-evidence-list empty-state">
+                Aqui apareceran quebradas, rios y sectores levantados en campo con ortomosaico y DTM.
+              </div>
+              <div id="fieldEvidenceStations" class="field-evidence-list empty-state">
+                Aqui apareceran estaciones FONAG y sus indicadores hidrometeorologicos.
+              </div>
+              <div id="fieldEvidenceHistory" class="field-evidence-list empty-state">
+                Aqui apareceran cartas historicas IGM, MDT historico y series climaticas de soporte.
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="focusFieldEvidenceBtn" class="secondary-button" type="button">Centrar evidencia</button>
+                <button id="clearFieldEvidenceBtn" class="ghost-button" type="button">Limpiar evidencia</button>
+              </div>
+            </article>
+
             <article id="landChangeCard" class="module-card planning-card hidden" data-module-track="planificacion">
               <div class="module-head">
                 <div>
@@ -864,6 +897,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260418-19" defer></script>
+  <script src="./app.js?v=20260418-20" defer></script>
 </body>
 </html>
