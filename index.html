@@ -28,7 +28,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260418-3">
+  <link rel="stylesheet" href="./styles.css?v=20260418-6">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -501,6 +501,9 @@
               <p id="landChangeSourceNote" class="service-note">
                 La simulacion sintetiza huella urbana 2010-2016-2022, transformacion de suelo rural y riesgo territorial.
               </p>
+              <div id="landChangeDoctrine" class="risk-doctrine empty-state">
+                Aqui apareceran los principios de prevencion territorial y manejo del riesgo para interpretar la huella urbana.
+              </div>
               <div id="landChangeResults" class="metrics-grid empty-state">
                 Ejecuta el estudio para ver huella urbana, suelo rural transformado, poblacion estimada y presion territorial.
               </div>
@@ -739,6 +742,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-<script src="./app.js?v=20260418-3" defer></script>
+  <script src="./app.js?v=20260418-6" defer></script>
 </body>
 </html>

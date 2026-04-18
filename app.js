@@ -1635,7 +1635,7 @@ const planning3dCatalog = {
     publicDataPath: "./public-data/planning3d/buildings_public.geojson",
     publicRecordCount: 17223,
     color: "#78a36d",
-    description: "Construcciones reales de Machachi dentro del ambito completo de la ortofoto publicada.",
+    description: "Construcciones reales de Machachi dentro del ambito urbano publicado para navegacion 3D.",
   },
   parcels: {
     id: "parcels",
@@ -1646,11 +1646,11 @@ const planning3dCatalog = {
     publicDataPath: "./public-data/planning3d/parcels_public.geojson",
     publicRecordCount: 11820,
     color: "#cb9440",
-    description: "Predios reales dentro del ambito completo de la ortofoto publicada.",
+    description: "Predios reales de Machachi listos para referencia parcelaria dentro del visor 3D.",
   },
 };
 
-const planning3dPublishedOrthophotoBounds = [-78.581347, -0.534320, -78.545394, -0.490360];
+const planning3dPublishedBounds = [-78.581347, -0.534320, -78.545394, -0.490360];
 
 const planning3dPublishedView = {
   center: [-78.563371, -0.51234],
@@ -2154,14 +2154,6 @@ function getPlanning3dFallbackManifest() {
       label: planning3dCatalog.parcels.label,
       basePath: planning3dCatalog.parcels.basePath,
       recordCount: planning3dCatalog.parcels.publicRecordCount || null,
-    },
-    orthophoto: {
-      available: true,
-      label: "Ortofoto Machachi",
-      resolutionCm: 5.88,
-      sizeGb: 10.6,
-      previewUrl: "./public-data/planning3d/machachi_orthophoto_center.jpg",
-      message: "Ortofoto local de alta resolucion disponible como preview ligero del centro de Machachi para el visor 3D.",
     },
   };
 }
@@ -3074,6 +3066,7 @@ function cacheDom() {
   dom.planningSourceNote = document.querySelector("#planningSourceNote");
   dom.planningVariableMatrix = document.querySelector("#planningVariableMatrix");
   dom.landChangeResults = document.querySelector("#landChangeResults");
+  dom.landChangeDoctrine = document.querySelector("#landChangeDoctrine");
   dom.landChangeDrivers = document.querySelector("#landChangeDrivers");
   dom.landChangeTimeline = document.querySelector("#landChangeTimeline");
   dom.landChangeSectors = document.querySelector("#landChangeSectors");
@@ -6720,20 +6713,7 @@ function updatePlanning3dBasemapStyle() {
 }
 
 function ensurePlanning3dImageBackdrop() {
-  if (!dom.planning3dMap) {
-    return null;
-  }
-
-  if (planning3dState.imageBackdrop?.isConnected) {
-    return planning3dState.imageBackdrop;
-  }
-
-  const backdrop = document.createElement("div");
-  backdrop.className = "planning-3d-image-backdrop";
-  backdrop.setAttribute("aria-hidden", "true");
-  dom.planning3dMap.appendChild(backdrop);
-  planning3dState.imageBackdrop = backdrop;
-  return backdrop;
+  return null;
 }
 
 function syncPlanning3dImageBackdrop() {
@@ -7283,8 +7263,8 @@ async function initializePlanning3dMap() {
     dragRotate: false,
     pitchWithRotate: false,
     maxBounds: [
-      [planning3dPublishedOrthophotoBounds[0], planning3dPublishedOrthophotoBounds[1]],
-      [planning3dPublishedOrthophotoBounds[2], planning3dPublishedOrthophotoBounds[3]],
+      [planning3dPublishedBounds[0], planning3dPublishedBounds[1]],
+      [planning3dPublishedBounds[2], planning3dPublishedBounds[3]],
     ],
   });
   planning3dState.map.addControl(new window.maplibregl.NavigationControl({ visualizePitch: false }), "top-left");
@@ -8117,11 +8097,12 @@ function getPlanning3dPrimaryRing(geometry) {
 
 function getPlanning3dRenderableFeatureLimit() {
   const zoom = planning3dState.map?.getZoom?.() || 15;
-  if (zoom >= 17.3) return 2200;
-  if (zoom >= 16.6) return 1500;
-  if (zoom >= 15.8) return 900;
-  if (zoom >= 14.8) return 540;
-  return 320;
+  const orthographic = isPlanning3dOrthographicView();
+  if (zoom >= 17.3) return orthographic ? 2600 : 2200;
+  if (zoom >= 16.6) return orthographic ? 1800 : 1500;
+  if (zoom >= 15.8) return orthographic ? 1200 : 900;
+  if (zoom >= 14.8) return orthographic ? 760 : 540;
+  return orthographic ? 420 : 320;
 }
 
 function getPlanning3dSvgSceneFeatures() {
@@ -8186,8 +8167,7 @@ function shouldRenderPlanning3dSvgScene() {
     && planning3dState.modalOpen
     && planning3dState.buildingsVisible
     && buildingCount
-    && zoom >= 17.4
-    && (planning3dState.selectedFeatureId != null || planning3dState.textureCatalog?.derivedFromPhotos)
+    && zoom >= 14.4
   );
 }
 
@@ -9110,8 +9090,8 @@ function focusPlanning3dDataset() {
   if (!manifest.viaBackend && planning3dState.backendMode === "public") {
     const hasDesktopOverlay = typeof window !== "undefined" && window.innerWidth > 900;
     planning3dState.map.fitBounds([
-      [planning3dPublishedOrthophotoBounds[0], planning3dPublishedOrthophotoBounds[1]],
-      [planning3dPublishedOrthophotoBounds[2], planning3dPublishedOrthophotoBounds[3]],
+      [planning3dPublishedBounds[0], planning3dPublishedBounds[1]],
+      [planning3dPublishedBounds[2], planning3dPublishedBounds[3]],
     ], {
       padding: hasDesktopOverlay
         ? { top: 72, right: 380, bottom: 72, left: 72 }
@@ -9216,7 +9196,6 @@ async function openPlanning3dViewer() {
     hydratePlanning3dTextureCatalog();
 
     await manifestPromise;
-    const orthophoto = getPlanning3dManifest().orthophoto || null;
     if (dom.planning3dSubtitle) {
       setTextIfChanged(
         dom.planning3dSubtitle,
@@ -9372,7 +9351,7 @@ function renderPlanningModule() {
     const lens = getLandChangeLensProfile();
     setTextIfChanged(
       dom.landChangeSourceNote,
-      `Replica metodologica inspirada en estudios de transformacion del suelo rural en Ecuador: huella urbana ${period.shortLabel}, lectura ${lens.headline.toLowerCase()} y escenario ${scenario.label.toLowerCase()} para Mejia.`
+      `Replica metodologica inspirada en estudios de transformacion del suelo rural y prevencion del riesgo: huella urbana ${period.shortLabel}, lectura ${lens.headline.toLowerCase()} y escenario ${scenario.label.toLowerCase()} para Mejia. Aqui el crecimiento se interpreta con una regla base: el agua busca su cauce y la planificacion debe preceder a la ocupacion.`
     );
   }
   if (dom.hydrologySourceNote) {
@@ -9448,6 +9427,7 @@ function renderPlanningVariableMatrix() {
 function renderLandChangeModule() {
   if (!state.landChangeData) {
     resetMetricGrid(dom.landChangeResults, "Ejecuta el estudio para ver huella urbana, suelo rural transformado, poblacion estimada y presion territorial.");
+    renderLandChangeDoctrine();
     dom.landChangeDrivers?.classList.add("empty-state");
     dom.landChangeDrivers?.classList.remove("has-data");
     if (dom.landChangeDrivers) {
@@ -9466,9 +9446,54 @@ function renderLandChangeModule() {
     return;
   }
 
+  renderLandChangeDoctrine(state.landChangeData);
   renderLandChangeDrivers(state.landChangeData);
   renderLandChangeTimeline(state.landChangeData);
   renderLandChangeSectors(state.landChangeData);
+}
+
+function renderLandChangeDoctrine(analysis = null) {
+  if (!dom.landChangeDoctrine) {
+    return;
+  }
+
+  const activeAnalysis = analysis || null;
+  const period = activeAnalysis?.period || getLandChangePeriodProfile();
+  const scenario = activeAnalysis?.scenario || getLandChangeScenarioProfile();
+  const lens = activeAnalysis?.lens || getLandChangeLensProfile();
+  const hotspot = activeAnalysis?.prioritySectors?.[0] || null;
+  const transformedHa = activeAnalysis?.summary?.transformedHa || 0;
+  const riskHa = activeAnalysis?.summary?.riskHa || 0;
+  const productiveLossHa = activeAnalysis?.summary?.productiveLossHa || 0;
+  const riskFocus = lens.id === "quebradas" || (activeAnalysis?.summary?.meanScore || 0) >= 70;
+  const lead = activeAnalysis
+    ? riskFocus
+      ? `${period.shortLabel} bajo ${scenario.label.toLowerCase()}: ${formatLandChangeHa(riskHa)} ha quedan en vigilancia por quebradas y drenaje. ${hotspot?.name || "El frente dominante"} exige ordenamiento previo, no ocupacion espontanea.`
+      : `${period.shortLabel} bajo ${scenario.label.toLowerCase()}: ${formatLandChangeHa(transformedHa)} ha cambian de huella y ${formatLandChangeHa(productiveLossHa)} ha de suelo rural entran en tension. La lectura territorial debe anticiparse a la ocupacion.`
+    : "Marco preventivo para Mejia: la urbanizacion de quebradas no es solo crecimiento urbano, es exposicion al riesgo. La planificacion debe preceder a la ocupacion.";
+
+  dom.landChangeDoctrine.classList.remove("empty-state");
+  dom.landChangeDoctrine.classList.add("has-data");
+  setHtmlIfChanged(dom.landChangeDoctrine, `
+    <p class="risk-doctrine-lead">${lead}</p>
+    <div class="risk-doctrine-grid">
+      <article class="risk-doctrine-item">
+        <p class="risk-doctrine-kicker">Principio 1</p>
+        <h4>El agua busca su cauce</h4>
+        <p>No se debe consolidar urbanizacion en quebradas, drenajes ni bordes de escorrentia activa; esos frentes requieren proteccion y control.</p>
+      </article>
+      <article class="risk-doctrine-item">
+        <p class="risk-doctrine-kicker">Principio 2</p>
+        <h4>Planificar antes de ocupar</h4>
+        <p>La huella urbana se interpreta como señal de alerta para ordenar crecimiento, cerrar vacios y evitar saltos dispersos antes de habilitar nuevo suelo.</p>
+      </article>
+      <article class="risk-doctrine-item">
+        <p class="risk-doctrine-kicker">Principio 3</p>
+        <h4>OT como herramienta preventiva</h4>
+        <p>El ordenamiento territorial sirve para definir donde densificar, donde contener y donde declarar no urbanizable por riesgo o valor rural-productivo.</p>
+      </article>
+    </div>
+  `);
 }
 
 function runLandChangeAnalysis(silent = false) {
@@ -9854,7 +9879,7 @@ function buildLandChangeSectorSummary({ name, period, transformedHa, productiveL
 
 function getLandChangeRecommendation({ score, dominantDriver, lens, scenario }) {
   if (dominantDriver === "Quebradas") {
-    return "Accion sugerida: franja de proteccion, drenaje urbano sostenible y control estricto de ocupacion en bordes de quebrada.";
+    return "Accion sugerida: declarar proteccion estricta en quebradas y drenajes, recuperar el cauce libre y exigir ordenamiento previo antes de cualquier licencia u ocupacion.";
   }
   if (dominantDriver === "Corredor vial") {
     return "Accion sugerida: orientar usos mixtos compactos, limitar saltos dispersos y asegurar servicios antes de habilitar nueva ocupacion.";
