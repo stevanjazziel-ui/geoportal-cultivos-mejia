@@ -3290,17 +3290,39 @@ function bindUI() {
     }
   });
 
-  dom.runIntraloteBtn.addEventListener("click", runIntraloteAnalysis);
-  dom.runDemBtn.addEventListener("click", runDemAnalysis);
-  dom.runClimateBtn.addEventListener("click", runClimateAnalysis);
+  dom.runIntraloteBtn.addEventListener("click", () => {
+    setModulePendingState(dom.intraloteResults, "Procesando lote y construyendo zonas de manejo...");
+    return runModuleAction(dom.runIntraloteBtn, "Procesando lote...", () => runIntraloteAnalysis());
+  });
+  dom.runDemBtn.addEventListener("click", () => {
+    setModulePendingState(dom.demResults, "Evaluando pendiente, escorrentia y microrelieve...");
+    return runModuleAction(dom.runDemBtn, "Evaluando relieve...", () => runDemAnalysis());
+  });
+  dom.runClimateBtn.addEventListener("click", () => {
+    setModulePendingState(dom.climateResults, "Actualizando balance hidrico, lluvia y temperatura...");
+    return runModuleAction(dom.runClimateBtn, "Actualizando clima...", () => runClimateAnalysis());
+  });
   dom.runWizardNextBtn?.addEventListener("click", runWizardNextStep);
   dom.runWizardPlanBtn?.addEventListener("click", runWizardPlan);
   dom.useDemoPlotBtn?.addEventListener("click", useWizardDemoPlot);
   dom.resetWizardBtn?.addEventListener("click", () => resetWizardAssistant());
-  dom.runPlanningBtn.addEventListener("click", runPlanningAnalysis);
+  dom.runPlanningBtn.addEventListener("click", () => {
+    setModulePendingState(dom.planningResults, "Calculando aptitud territorial y cruce multicriterio...", [
+      { target: dom.planningWeights, message: "Recalculando ponderacion segun programa, escenario y fuente satelital..." },
+      { target: dom.planningCandidates, message: "Buscando sectores candidatos con mejor ajuste territorial..." },
+    ]);
+    return runModuleAction(dom.runPlanningBtn, "Evaluando aptitud...", () => runPlanningAnalysis());
+  });
   dom.focusPlanningBtn.addEventListener("click", focusPlanningCandidates);
   dom.clearPlanningBtn.addEventListener("click", clearPlanningAnalysis);
-  dom.runHydrologyBtn?.addEventListener("click", runHydrologyAnalysis);
+  dom.runHydrologyBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.hydrologyResults, "Simulando oferta, demanda y balance hidrico territorial...", [
+      { target: dom.hydrologyDrivers, message: "Cargando pilares metodologicos del estudio hidrico..." },
+      { target: dom.hydrologyTimeline, message: "Proyectando horizontes hidricos y sensibilidad climatica..." },
+      { target: dom.hydrologySectors, message: "Priorizando subzonas hidricas y medidas recomendadas..." },
+    ]);
+    return runModuleAction(dom.runHydrologyBtn, "Simulando escenarios...", () => runHydrologyAnalysis());
+  });
   dom.focusHydrologyBtn?.addEventListener("click", focusHydrologyStudy);
   dom.clearHydrologyBtn?.addEventListener("click", clearHydrologyAnalysis);
   dom.planningImagerySelect.addEventListener("change", () => {
@@ -3335,7 +3357,14 @@ function bindUI() {
     }
   });
 
-  dom.runLandChangeBtn?.addEventListener("click", runLandChangeAnalysis);
+  dom.runLandChangeBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.landChangeResults, "Analizando huella urbana, transformacion rural y presion territorial...", [
+      { target: dom.landChangeDrivers, message: "Cargando componentes metodologicos de la lectura de huella urbana..." },
+      { target: dom.landChangeTimeline, message: "Reconstruyendo serie temporal 2010-2016-2022-2030..." },
+      { target: dom.landChangeSectors, message: "Detectando hotspots de ocupacion, riesgo y suelo rural en tension..." },
+    ]);
+    return runModuleAction(dom.runLandChangeBtn, "Analizando huella...", () => runLandChangeAnalysis());
+  });
   dom.focusLandChangeBtn?.addEventListener("click", focusLandChangeStudy);
   dom.clearLandChangeBtn?.addEventListener("click", clearLandChangeAnalysis);
   dom.landChangePeriodSelect?.addEventListener("change", () => {
@@ -6052,6 +6081,120 @@ function syncAnalysisDrivenModules() {
   }
 }
 
+function getDefaultModulePlot() {
+  const feature = geoSources.lotes?.features?.[0];
+  if (!feature) {
+    return null;
+  }
+  return {
+    feature: cloneFeature(feature),
+    label: feature.properties?.name || feature.properties?.crop || "Lote demo",
+  };
+}
+
+function ensureModulePlotContext(moduleLabel, target, silent = false) {
+  if (state.currentPlot) {
+    return true;
+  }
+
+  const fallbackPlot = getDefaultModulePlot();
+  if (!fallbackPlot) {
+    resetMetricGrid(target, `${moduleLabel} requiere un lote activo y no hay un lote demo disponible.`);
+    if (!silent) {
+      setStatus(`${moduleLabel}: no hay lote activo ni lote demo para continuar.`);
+    }
+    return false;
+  }
+
+  setCurrentPlot(fallbackPlot.feature, fallbackPlot.label);
+  if (!silent) {
+    setStatus(`${moduleLabel}: no habia lote activo, se tomo ${fallbackPlot.label} como lote demo.`);
+  }
+  return true;
+}
+
+function ensureModuleSceneContext(moduleLabel, silent = false) {
+  let image = getSelectedImage() || state.filteredImages[0] || null;
+  if (image) {
+    return image;
+  }
+
+  const fallback = getFallbackScene();
+  if (!fallback) {
+    if (!silent) {
+      setStatus(`${moduleLabel}: no hay escena disponible para ejecutar el analisis.`);
+    }
+    return null;
+  }
+
+  state.sentinelMode = "demo";
+  state.sentinelTransport = "demo";
+  state.sentinelError = state.sentinelError || `Se activo una escena demo para ${moduleLabel.toLowerCase()}.`;
+  state.filteredImages = [fallback];
+  state.selectedImageId = fallback.id;
+  state.selectedCompareImageId = null;
+  applySelectedScene();
+  renderSceneControls();
+  renderSentinelSourceStatus();
+  renderSentinelResults();
+  renderLegend();
+  renderAnalysisStatus();
+  renderSentinelOverlay();
+  updateMapSummary();
+
+  image = getSelectedImage() || fallback;
+  if (!silent) {
+    setStatus(`${moduleLabel}: no habia escena activa, se uso una escena demo de ${getSensorForImage(image).label}.`);
+  }
+  return image;
+}
+
+function resetTerritorialModuleState(target, message, extras = []) {
+  resetMetricGrid(target, message);
+  extras.forEach((item) => {
+    if (!item?.target) {
+      return;
+    }
+    item.target.classList.add("empty-state");
+    item.target.classList.remove("has-data");
+    if (item.message) {
+      setTextIfChanged(item.target, item.message);
+    }
+  });
+}
+
+function setModulePendingState(target, message, extras = []) {
+  resetMetricGrid(target, message);
+  extras.forEach((item) => {
+    if (!item?.target) {
+      return;
+    }
+    item.target.classList.add("empty-state");
+    item.target.classList.remove("has-data");
+    if (item.message) {
+      setTextIfChanged(item.target, item.message);
+    }
+  });
+}
+
+async function runModuleAction(button, busyLabel, action) {
+  const idleLabel = button?.dataset.idleLabel || button?.textContent?.trim() || "";
+  if (button) {
+    button.dataset.idleLabel = idleLabel;
+    button.disabled = true;
+    button.textContent = busyLabel;
+  }
+
+  try {
+    return await Promise.resolve(action());
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = idleLabel;
+    }
+  }
+}
+
 function setCurrentPlot(feature, label) {
   state.currentPlot = feature;
   state.currentPlotLabel = label;
@@ -6145,57 +6288,68 @@ function clearCurrentPlot(triggerRefresh = false) {
 }
 
 function runIntraloteAnalysis(silent = false) {
-  if (!ensurePlot("Analisis intralote requiere un lote activo o un poligono dibujado.", silent)) {
+  try {
+    if (!ensureModulePlotContext("Analisis intralote", dom.intraloteResults, silent)) {
+      return null;
+    }
+
+    const image = ensureModuleSceneContext("Analisis intralote", silent);
+    if (!image) {
+      resetMetricGrid(dom.intraloteResults, "No hay escena disponible para calcular el analisis intralote.");
+      return null;
+    }
+    const plotTarget = {
+      feature: state.currentPlot,
+      scopeLabel: state.currentPlotLabel,
+      scopeType: "plot",
+      targetKey: getFeatureKey(state.currentPlot),
+    };
+    const analysis = resolveAnalysisForTarget(image, plotTarget);
+    const zoneStats = renderManagementZones(analysis);
+    const managementText = `Alta ${zoneStats.high}% / Media ${zoneStats.medium}% / Baja ${zoneStats.low}%`;
+
+    const cards = [
+      { label: "Superficie", value: `${analysis.context.areaHa.toFixed(1)} ha`, copy: "Calculada sobre el poligono activo." },
+      { label: "Cobertura util", value: `${analysis.quality.coveragePct}%`, copy: `Confianza ${analysis.quality.confidenceScore}/100 para la escena activa.` },
+      { label: "Zonas de manejo", value: managementText, copy: analysis.management.recommendedAction },
+      ...getSupportedIndexKeys(image).map((indexKey) => ({
+        label: indexConfig[indexKey].label,
+        value: formatValue(analysis.summary[indexKey].mean, indexConfig[indexKey]),
+        copy: `Rango P10 ${formatValue(analysis.summary[indexKey].p10, indexConfig[indexKey])} / P90 ${formatValue(analysis.summary[indexKey].p90, indexConfig[indexKey])}.`,
+      })),
+    ];
+
+    paintMetricGrid(dom.intraloteResults, cards);
+    const result = {
+      image,
+      analysis,
+      zoneStats,
+      cards,
+      scopeLabel: state.currentPlotLabel,
+      managementText,
+      recommendedAction: analysis.management.recommendedAction,
+    };
+    state.agronomyOutputs.intralote = result;
+    if (!silent) {
+      setStatus(
+        `Analisis intralote ejecutado para ${state.currentPlotLabel}. Se actualizaron superficies y zonas de manejo.`
+      );
+    }
+
+    if (state.activeWizard === "Monitoreo" || state.activeWizard === "Diagnostico") {
+      runClimateAnalysis(true);
+    }
+    renderWizardAssistantState();
+    return result;
+  } catch (error) {
+    console.warn("Fallo el modulo de analisis intralote.", error);
+    resetMetricGrid(dom.intraloteResults, "No se pudo calcular el analisis intralote. Revisa lote, escena o vuelve a intentarlo.");
+    if (!silent) {
+      setStatus(`Analisis intralote: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    renderWizardAssistantState();
     return null;
   }
-
-  const image = getSelectedImage() || getFallbackScene();
-  if (!image) {
-    return null;
-  }
-  const plotTarget = {
-    feature: state.currentPlot,
-    scopeLabel: state.currentPlotLabel,
-    scopeType: "plot",
-    targetKey: getFeatureKey(state.currentPlot),
-  };
-  const analysis = resolveAnalysisForTarget(image, plotTarget);
-  const zoneStats = renderManagementZones(analysis);
-  const managementText = `Alta ${zoneStats.high}% / Media ${zoneStats.medium}% / Baja ${zoneStats.low}%`;
-
-  const cards = [
-    { label: "Superficie", value: `${analysis.context.areaHa.toFixed(1)} ha`, copy: "Calculada sobre el poligono activo." },
-    { label: "Cobertura util", value: `${analysis.quality.coveragePct}%`, copy: `Confianza ${analysis.quality.confidenceScore}/100 para la escena activa.` },
-    { label: "Zonas de manejo", value: managementText, copy: analysis.management.recommendedAction },
-    ...getSupportedIndexKeys(image).map((indexKey) => ({
-      label: indexConfig[indexKey].label,
-      value: formatValue(analysis.summary[indexKey].mean, indexConfig[indexKey]),
-      copy: `Rango P10 ${formatValue(analysis.summary[indexKey].p10, indexConfig[indexKey])} / P90 ${formatValue(analysis.summary[indexKey].p90, indexConfig[indexKey])}.`,
-    })),
-  ];
-
-  paintMetricGrid(dom.intraloteResults, cards);
-  const result = {
-    image,
-    analysis,
-    zoneStats,
-    cards,
-    scopeLabel: state.currentPlotLabel,
-    managementText,
-    recommendedAction: analysis.management.recommendedAction,
-  };
-  state.agronomyOutputs.intralote = result;
-  if (!silent) {
-    setStatus(
-      `Analisis intralote ejecutado para ${state.currentPlotLabel}. Se actualizaron superficies y zonas de manejo.`
-    );
-  }
-
-  if (state.activeWizard === "Monitoreo" || state.activeWizard === "Diagnostico") {
-    runClimateAnalysis(true);
-  }
-  renderWizardAssistantState();
-  return result;
 }
 
 function renderManagementZones(analysis) {
@@ -6245,126 +6399,148 @@ function renderManagementZones(analysis) {
 }
 
 function runDemAnalysis(silent = false) {
-  if (!ensurePlot("Analisis DEM requiere un lote activo o un poligono dibujado.", silent)) {
-    return null;
-  }
+  try {
+    if (!ensureModulePlotContext("Analisis DEM", dom.demResults, silent)) {
+      return null;
+    }
 
-  const image = getSelectedImage() || getFallbackScene();
-  if (!image) {
-    return null;
-  }
-  const plotTarget = {
-    feature: state.currentPlot,
-    scopeLabel: state.currentPlotLabel,
-    scopeType: "plot",
-    targetKey: getFeatureKey(state.currentPlot),
-  };
-  const analysis = resolveAnalysisForTarget(image, plotTarget);
-  const centroid = turf.centroid(state.currentPlot).geometry.coordinates;
-  const areaHa = turf.area(state.currentPlot) / 10000;
-  const altitude = 2780 + Math.round((pseudoNoise(centroid[0], centroid[1], 11) + 1) * 140);
-  const meanSlope = clamp(3 + Math.abs(pseudoNoise(centroid[0], centroid[1], 7)) * 12 + areaHa / 14, 2, 18);
-  const maxSlope = clamp(meanSlope + 7 + Math.abs(pseudoNoise(centroid[1], centroid[0], 3)) * 8, 7, 31);
-  const aspect = cardinalFromAngle((pseudoNoise(centroid[0], centroid[1], 13) + 1) * 180);
-  const moistureKey = getMoistureIndexKey(image);
-  const focusKey = getFocusIndexKey(image);
-  const moistureNormalized = normalizeMetricValue(analysis.summary[moistureKey].mean, indexConfig[moistureKey]);
-  const floodRisk = moistureNormalized > 0.58 && meanSlope < 7
-    ? "Medio - Alto"
-    : meanSlope < 10
-      ? "Medio"
-      : "Bajo";
-
-  const cards = [
-    { label: "Altitud media", value: `${Math.round(altitude)} msnm`, copy: "Estimacion basada en relieve de referencia Copernicus GLO-30." },
-    { label: "Pendiente media", value: `${meanSlope.toFixed(1)}%`, copy: "Promedio de inclinacion del lote." },
-    { label: "Pendiente maxima", value: `${maxSlope.toFixed(1)}%`, copy: "Sector de mayor exigencia para mecanizacion." },
-    { label: "Orientacion", value: aspect, copy: "Exposicion dominante del relieve del lote." },
-    { label: "Riesgo de anegamiento", value: floodRisk, copy: "Cruza pendiente y senal de humedad del AOI." },
-    { label: "Lectura operativa", value: meanSlope > 10 ? "Manejo cuidadoso" : "Operacion favorable", copy: `Variabilidad ${indexConfig[focusKey].label} ${analysis.summary[focusKey].variability}%.` },
-  ];
-
-  paintMetricGrid(dom.demResults, cards);
-  const result = {
-    image,
-    analysis,
-    cards,
-    scopeLabel: state.currentPlotLabel,
-    altitude,
-    meanSlope: Number(meanSlope.toFixed(1)),
-    maxSlope: Number(maxSlope.toFixed(1)),
-    aspect,
-    floodRisk,
-    operationLabel: meanSlope > 10 ? "Manejo cuidadoso" : "Operacion favorable",
-  };
-  state.agronomyOutputs.dem = result;
-  if (!silent) {
-    setStatus(`Analisis topografico generado para ${state.currentPlotLabel}.`);
-  }
-  renderWizardAssistantState();
-  return result;
-}
-
-function runClimateAnalysis(silent = false) {
-  const anchorFeature = state.currentPlot || studyArea;
-  const image = getSelectedImage() || getFallbackScene();
-  if (!image) {
-    return null;
-  }
-  const target = state.currentPlot
-    ? {
+    const image = ensureModuleSceneContext("Analisis DEM", silent);
+    if (!image) {
+      resetMetricGrid(dom.demResults, "No hay escena disponible para calcular el analisis topografico.");
+      return null;
+    }
+    const plotTarget = {
       feature: state.currentPlot,
       scopeLabel: state.currentPlotLabel,
       scopeType: "plot",
       targetKey: getFeatureKey(state.currentPlot),
-    }
-    : {
-      feature: studyArea,
-      scopeLabel: "Canton Mejia",
-      scopeType: "studyArea",
-      targetKey: getFeatureKey(studyArea),
     };
-  const analysis = resolveAnalysisForTarget(image, target);
-  const centroid = turf.centroid(anchorFeature).geometry.coordinates;
-  const moistureKey = getMoistureIndexKey(image);
-  const focusKey = getFocusIndexKey(image);
-  const baseline = normalizeMetricValue(analysis.summary[moistureKey].mean, indexConfig[moistureKey]);
-  const vigor = normalizeMetricValue(analysis.summary[focusKey].mean, indexConfig[focusKey]);
-  const rainfall = 9 + Math.round(Math.abs(pseudoNoise(centroid[0], centroid[1], 19)) * 32 + (0.55 - baseline) * 16);
-  const minTemp = 6 + Math.abs(pseudoNoise(centroid[1], centroid[0], 2)) * 3;
-  const maxTemp = 18 + Math.abs(pseudoNoise(centroid[0], centroid[1], 5)) * 7 + (vigor < 0.45 ? 1.2 : 0);
-  const soilMoisture = clamp(24 + baseline * 48 + pseudoNoise(centroid[0], centroid[1], 17) * 8, 24, 72);
-  const lst = clamp(20 + Math.abs(pseudoNoise(centroid[0], centroid[1], 23)) * 10 - baseline * 3, 18, 31);
-  const stress = lst > 27 || vigor < 0.45 ? "Atencion" : "Controlado";
+    const analysis = resolveAnalysisForTarget(image, plotTarget);
+    const centroid = turf.centroid(state.currentPlot).geometry.coordinates;
+    const areaHa = turf.area(state.currentPlot) / 10000;
+    const altitude = 2780 + Math.round((pseudoNoise(centroid[0], centroid[1], 11) + 1) * 140);
+    const meanSlope = clamp(3 + Math.abs(pseudoNoise(centroid[0], centroid[1], 7)) * 12 + areaHa / 14, 2, 18);
+    const maxSlope = clamp(meanSlope + 7 + Math.abs(pseudoNoise(centroid[1], centroid[0], 3)) * 8, 7, 31);
+    const aspect = cardinalFromAngle((pseudoNoise(centroid[0], centroid[1], 13) + 1) * 180);
+    const moistureKey = getMoistureIndexKey(image);
+    const focusKey = getFocusIndexKey(image);
+    const moistureNormalized = normalizeMetricValue(analysis.summary[moistureKey].mean, indexConfig[moistureKey]);
+    const floodRisk = moistureNormalized > 0.58 && meanSlope < 7
+      ? "Medio - Alto"
+      : meanSlope < 10
+        ? "Medio"
+        : "Bajo";
 
-  const cards = [
-    { label: "Lluvia 7 dias", value: `${rainfall} mm`, copy: "Acumulado de referencia tipo ERA5-Land." },
-    { label: "Temperatura aire", value: `${minTemp.toFixed(1)} - ${maxTemp.toFixed(1)} C`, copy: "Rango diario esperado sobre el lote o zona activa." },
-    { label: "Humedad estimada", value: `${soilMoisture.toFixed(0)}%`, copy: `Ajustada con la senal ${indexConfig[moistureKey].label} del AOI.` },
-    { label: "LST MODIS", value: `${lst.toFixed(1)} C`, copy: "Temperatura superficial para seguimiento de estres termico." },
-    { label: "Estado termico", value: stress, copy: `Lectura de vigor: ${analysis.diagnostics.vigorSignal}.` },
-    { label: "Escena base", value: localeDate.format(new Date(`${image.date}T00:00:00`)), copy: `AOI ${analysis.context.scopeLabel}.` },
-  ];
+    const cards = [
+      { label: "Altitud media", value: `${Math.round(altitude)} msnm`, copy: "Estimacion basada en relieve de referencia Copernicus GLO-30." },
+      { label: "Pendiente media", value: `${meanSlope.toFixed(1)}%`, copy: "Promedio de inclinacion del lote." },
+      { label: "Pendiente maxima", value: `${maxSlope.toFixed(1)}%`, copy: "Sector de mayor exigencia para mecanizacion." },
+      { label: "Orientacion", value: aspect, copy: "Exposicion dominante del relieve del lote." },
+      { label: "Riesgo de anegamiento", value: floodRisk, copy: "Cruza pendiente y senal de humedad del AOI." },
+      { label: "Lectura operativa", value: meanSlope > 10 ? "Manejo cuidadoso" : "Operacion favorable", copy: `Variabilidad ${indexConfig[focusKey].label} ${analysis.summary[focusKey].variability}%.` },
+    ];
 
-  paintMetricGrid(dom.climateResults, cards);
-  const result = {
-    image,
-    analysis,
-    cards,
-    scopeLabel: target.scopeLabel,
-    rainfall,
-    minTemp: Number(minTemp.toFixed(1)),
-    maxTemp: Number(maxTemp.toFixed(1)),
-    soilMoisture: Number(soilMoisture.toFixed(0)),
-    lst: Number(lst.toFixed(1)),
-    stress,
-  };
-  state.agronomyOutputs.climate = result;
-  if (!silent) {
-    setStatus("Modulo de clima agricola actualizado con variables de referencia.");
+    paintMetricGrid(dom.demResults, cards);
+    const result = {
+      image,
+      analysis,
+      cards,
+      scopeLabel: state.currentPlotLabel,
+      altitude,
+      meanSlope: Number(meanSlope.toFixed(1)),
+      maxSlope: Number(maxSlope.toFixed(1)),
+      aspect,
+      floodRisk,
+      operationLabel: meanSlope > 10 ? "Manejo cuidadoso" : "Operacion favorable",
+    };
+    state.agronomyOutputs.dem = result;
+    if (!silent) {
+      setStatus(`Analisis topografico generado para ${state.currentPlotLabel}.`);
+    }
+    renderWizardAssistantState();
+    return result;
+  } catch (error) {
+    console.warn("Fallo el modulo DEM.", error);
+    resetMetricGrid(dom.demResults, "No se pudo calcular el analisis topografico. Revisa lote, escena o vuelve a intentarlo.");
+    if (!silent) {
+      setStatus(`Analisis DEM: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    renderWizardAssistantState();
+    return null;
   }
-  renderWizardAssistantState();
-  return result;
+}
+
+function runClimateAnalysis(silent = false) {
+  try {
+    const anchorFeature = state.currentPlot || studyArea;
+    const image = ensureModuleSceneContext("Clima agricola", silent);
+    if (!image) {
+      resetMetricGrid(dom.climateResults, "No hay escena disponible para calcular el clima agricola.");
+      return null;
+    }
+    const target = state.currentPlot
+      ? {
+        feature: state.currentPlot,
+        scopeLabel: state.currentPlotLabel,
+        scopeType: "plot",
+        targetKey: getFeatureKey(state.currentPlot),
+      }
+      : {
+        feature: studyArea,
+        scopeLabel: "Canton Mejia",
+        scopeType: "studyArea",
+        targetKey: getFeatureKey(studyArea),
+      };
+    const analysis = resolveAnalysisForTarget(image, target);
+    const centroid = turf.centroid(anchorFeature).geometry.coordinates;
+    const moistureKey = getMoistureIndexKey(image);
+    const focusKey = getFocusIndexKey(image);
+    const baseline = normalizeMetricValue(analysis.summary[moistureKey].mean, indexConfig[moistureKey]);
+    const vigor = normalizeMetricValue(analysis.summary[focusKey].mean, indexConfig[focusKey]);
+    const rainfall = 9 + Math.round(Math.abs(pseudoNoise(centroid[0], centroid[1], 19)) * 32 + (0.55 - baseline) * 16);
+    const minTemp = 6 + Math.abs(pseudoNoise(centroid[1], centroid[0], 2)) * 3;
+    const maxTemp = 18 + Math.abs(pseudoNoise(centroid[0], centroid[1], 5)) * 7 + (vigor < 0.45 ? 1.2 : 0);
+    const soilMoisture = clamp(24 + baseline * 48 + pseudoNoise(centroid[0], centroid[1], 17) * 8, 24, 72);
+    const lst = clamp(20 + Math.abs(pseudoNoise(centroid[0], centroid[1], 23)) * 10 - baseline * 3, 18, 31);
+    const stress = lst > 27 || vigor < 0.45 ? "Atencion" : "Controlado";
+
+    const cards = [
+      { label: "Lluvia 7 dias", value: `${rainfall} mm`, copy: "Acumulado de referencia tipo ERA5-Land." },
+      { label: "Temperatura aire", value: `${minTemp.toFixed(1)} - ${maxTemp.toFixed(1)} C`, copy: "Rango diario esperado sobre el lote o zona activa." },
+      { label: "Humedad estimada", value: `${soilMoisture.toFixed(0)}%`, copy: `Ajustada con la senal ${indexConfig[moistureKey].label} del AOI.` },
+      { label: "LST MODIS", value: `${lst.toFixed(1)} C`, copy: "Temperatura superficial para seguimiento de estres termico." },
+      { label: "Estado termico", value: stress, copy: `Lectura de vigor: ${analysis.diagnostics.vigorSignal}.` },
+      { label: "Escena base", value: localeDate.format(new Date(`${image.date}T00:00:00`)), copy: `AOI ${analysis.context.scopeLabel}.` },
+    ];
+
+    paintMetricGrid(dom.climateResults, cards);
+    const result = {
+      image,
+      analysis,
+      cards,
+      scopeLabel: target.scopeLabel,
+      rainfall,
+      minTemp: Number(minTemp.toFixed(1)),
+      maxTemp: Number(maxTemp.toFixed(1)),
+      soilMoisture: Number(soilMoisture.toFixed(0)),
+      lst: Number(lst.toFixed(1)),
+      stress,
+    };
+    state.agronomyOutputs.climate = result;
+    if (!silent) {
+      setStatus("Modulo de clima agricola actualizado con variables de referencia.");
+    }
+    renderWizardAssistantState();
+    return result;
+  } catch (error) {
+    console.warn("Fallo el modulo de clima agricola.", error);
+    resetMetricGrid(dom.climateResults, "No se pudo calcular el clima agricola. Revisa la escena activa o vuelve a intentarlo.");
+    if (!silent) {
+      setStatus(`Clima agricola: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    renderWizardAssistantState();
+    return null;
+  }
 }
 
 function getPlanning3dEmptyCollection() {
@@ -9556,70 +9732,88 @@ function renderLandChangeDoctrine(analysis = null) {
 }
 
 function runLandChangeAnalysis(silent = false) {
-  const analysis = buildLandChangeAnalysis();
-  state.landChangeData = analysis;
-  state.landChangeHighlightId = analysis.prioritySectors[0]?.id || analysis.sectors[0]?.id || null;
-  state.territorialFocus = "landChange";
+  try {
+    const analysis = buildLandChangeAnalysis();
+    state.landChangeData = analysis;
+    state.landChangeHighlightId = analysis.prioritySectors[0]?.id || analysis.sectors[0]?.id || null;
+    state.territorialFocus = "landChange";
 
-  const cards = [
-    {
-      label: `Huella ${analysis.period.fromYear}`,
-      value: `${formatLandChangeHa(analysis.summary.fromAreaHa)} ha`,
-      copy: `${formatLandChangePopulation(analysis.summary.fromPopulation)} habitantes estimados en el arranque de la serie.`,
-    },
-    {
-      label: `Huella ${analysis.period.toYear}`,
-      value: `${formatLandChangeHa(analysis.summary.toAreaHa)} ha`,
-      copy: `${formatLandChangePopulation(analysis.summary.toPopulation)} habitantes estimados para ${analysis.period.toYear}.`,
-      highlight: true,
-    },
-    {
-      label: "Suelo rural transformado",
-      value: `${formatLandChangeHa(analysis.summary.transformedHa)} ha`,
-      copy: `${analysis.period.shortLabel} con crecimiento medio anual de ${analysis.summary.annualGrowthPct}%.`,
-    },
-    {
-      label: "Poblacion incorporada",
-      value: formatLandChangePopulation(analysis.summary.populationDelta),
-      copy: `Presion demografica sintetica bajo escenario ${analysis.scenario.label.toLowerCase()}.`,
-    },
-    {
-      label: "Suelo productivo en tension",
-      value: `${formatLandChangeHa(analysis.summary.productiveLossHa)} ha`,
-      copy: `${analysis.summary.productiveLabel}. Enfoque ${analysis.lens.label.toLowerCase()}.`,
-    },
-    {
-      label: "Riesgo territorial",
-      value: analysis.summary.riskLabel,
-      copy: `${formatLandChangeHa(analysis.summary.riskHa)} ha en corredores de vigilancia por quebradas o drenaje.`,
-    },
-    {
-      label: "Hotspot dominante",
-      value: analysis.summary.hotspotLabel,
-      copy: analysis.summary.hotspotCopy,
-    },
-    {
-      label: "Metodo",
-      value: analysis.summary.methodLabel,
-      copy: "Serie temporal sintetica, huella urbana escalada, suelo rural transformado, poblacion estimada y lectura preventiva de OT.",
-    },
-  ];
+    const cards = [
+      {
+        label: `Huella ${analysis.period.fromYear}`,
+        value: `${formatLandChangeHa(analysis.summary.fromAreaHa)} ha`,
+        copy: `${formatLandChangePopulation(analysis.summary.fromPopulation)} habitantes estimados en el arranque de la serie.`,
+      },
+      {
+        label: `Huella ${analysis.period.toYear}`,
+        value: `${formatLandChangeHa(analysis.summary.toAreaHa)} ha`,
+        copy: `${formatLandChangePopulation(analysis.summary.toPopulation)} habitantes estimados para ${analysis.period.toYear}.`,
+        highlight: true,
+      },
+      {
+        label: "Suelo rural transformado",
+        value: `${formatLandChangeHa(analysis.summary.transformedHa)} ha`,
+        copy: `${analysis.period.shortLabel} con crecimiento medio anual de ${analysis.summary.annualGrowthPct}%.`,
+      },
+      {
+        label: "Poblacion incorporada",
+        value: formatLandChangePopulation(analysis.summary.populationDelta),
+        copy: `Presion demografica sintetica bajo escenario ${analysis.scenario.label.toLowerCase()}.`,
+      },
+      {
+        label: "Suelo productivo en tension",
+        value: `${formatLandChangeHa(analysis.summary.productiveLossHa)} ha`,
+        copy: `${analysis.summary.productiveLabel}. Enfoque ${analysis.lens.label.toLowerCase()}.`,
+      },
+      {
+        label: "Riesgo territorial",
+        value: analysis.summary.riskLabel,
+        copy: `${formatLandChangeHa(analysis.summary.riskHa)} ha en corredores de vigilancia por quebradas o drenaje.`,
+      },
+      {
+        label: "Hotspot dominante",
+        value: analysis.summary.hotspotLabel,
+        copy: analysis.summary.hotspotCopy,
+      },
+      {
+        label: "Metodo",
+        value: analysis.summary.methodLabel,
+        copy: "Serie temporal sintetica, huella urbana escalada, suelo rural transformado, poblacion estimada y lectura preventiva de OT.",
+      },
+    ];
 
-  paintMetricGrid(dom.landChangeResults, cards);
-  renderLandChangeDrivers(analysis);
-  renderLandChangeTimeline(analysis);
-  renderLandChangeSectors(analysis);
-  renderLandChangeOverlay(analysis);
-  renderPlanningModule();
-  updateMapSummary();
+    paintMetricGrid(dom.landChangeResults, cards);
+    renderLandChangeDrivers(analysis);
+    renderLandChangeTimeline(analysis);
+    renderLandChangeSectors(analysis);
+    renderLandChangeOverlay(analysis);
+    renderPlanningModule();
+    updateMapSummary();
 
-  if (!silent) {
-    setStatus(
-      `Estudio de transformacion del suelo listo para Mejia: ${analysis.period.shortLabel}, ${analysis.scenario.label} y enfoque ${analysis.lens.label.toLowerCase()}. ${formatLandChangeHa(analysis.summary.transformedHa)} ha de suelo rural pasan a vigilancia.`
-    );
+    if (!silent) {
+      setStatus(
+        `Estudio de transformacion del suelo listo para Mejia: ${analysis.period.shortLabel}, ${analysis.scenario.label} y enfoque ${analysis.lens.label.toLowerCase()}. ${formatLandChangeHa(analysis.summary.transformedHa)} ha de suelo rural pasan a vigilancia.`
+      );
+    }
+
+    return analysis;
+  } catch (error) {
+    console.warn("Fallo el modulo de transformacion del suelo.", error);
+    state.landChangeData = null;
+    state.landChangeHighlightId = null;
+    clearLandChangeOverlay();
+    resetTerritorialModuleState(dom.landChangeResults, "No se pudo calcular la huella urbana y la transformacion del suelo rural.", [
+      { target: dom.landChangeDrivers, message: "No fue posible resumir los componentes metodologicos del estudio." },
+      { target: dom.landChangeTimeline, message: "No fue posible construir la serie temporal de huella urbana." },
+      { target: dom.landChangeSectors, message: "No fue posible identificar hotspots territoriales en esta corrida." },
+    ]);
+    renderLandChangeDoctrine();
+    if (!silent) {
+      setStatus(`Huella urbana: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    updateMapSummary();
+    return null;
   }
-
-  return analysis;
 }
 
 function clearLandChangeAnalysis() {
@@ -10242,22 +10436,23 @@ function renderHydrologyModule() {
 }
 
 function runHydrologyAnalysis(silent = false) {
-  const hydrology = buildHydrologyAnalysis();
-  state.hydrologyData = hydrology;
-  state.hydrologyHighlightId = hydrology.prioritySectors[0]?.id || hydrology.sectors[0]?.id || null;
-  state.territorialFocus = "hydrology";
+  try {
+    const hydrology = buildHydrologyAnalysis();
+    state.hydrologyData = hydrology;
+    state.hydrologyHighlightId = hydrology.prioritySectors[0]?.id || hydrology.sectors[0]?.id || null;
+    state.territorialFocus = "hydrology";
 
-  const cards = [
-    {
-      label: "Oferta util",
-      value: `${formatHydrologyHm3(hydrology.summary.supplyHm3)} hm3/anio`,
-      copy: `Incluye recarga, escorrentia regulada y soporte de almacenamiento sobre ${hydrology.context.scopeLabel}.`,
-    },
-    {
-      label: "Demanda total",
-      value: `${formatHydrologyHm3(hydrology.summary.demandHm3)} hm3/anio`,
-      copy: `${hydrology.demand.label} con horizonte ${hydrology.horizon.label}.`,
-    },
+    const cards = [
+      {
+        label: "Oferta util",
+        value: `${formatHydrologyHm3(hydrology.summary.supplyHm3)} hm3/anio`,
+        copy: `Incluye recarga, escorrentia regulada y soporte de almacenamiento sobre ${hydrology.context.scopeLabel}.`,
+      },
+      {
+        label: "Demanda total",
+        value: `${formatHydrologyHm3(hydrology.summary.demandHm3)} hm3/anio`,
+        copy: `${hydrology.demand.label} con horizonte ${hydrology.horizon.label}.`,
+      },
     {
       label: "Balance neto",
       value: `${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3`,
@@ -10291,21 +10486,37 @@ function runHydrologyAnalysis(silent = false) {
     },
   ];
 
-  paintMetricGrid(dom.hydrologyResults, cards);
-  renderHydrologyDrivers(hydrology);
-  renderHydrologyTimeline(hydrology);
-  renderHydrologySectors(hydrology);
-  renderHydrologyOverlay(hydrology);
-  renderPlanningModule();
-  updateMapSummary();
+    paintMetricGrid(dom.hydrologyResults, cards);
+    renderHydrologyDrivers(hydrology);
+    renderHydrologyTimeline(hydrology);
+    renderHydrologySectors(hydrology);
+    renderHydrologyOverlay(hydrology);
+    renderPlanningModule();
+    updateMapSummary();
 
-  if (!silent) {
-    setStatus(
-      `Estudio hidrico de Mejia listo con ${hydrology.climate.shortLabel}, ${hydrology.horizon.label} y ${hydrology.demand.label}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "positivo" : "ajustado"} de ${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio.`
-    );
+    if (!silent) {
+      setStatus(
+        `Estudio hidrico de Mejia listo con ${hydrology.climate.shortLabel}, ${hydrology.horizon.label} y ${hydrology.demand.label}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "positivo" : "ajustado"} de ${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio.`
+      );
+    }
+
+    return hydrology;
+  } catch (error) {
+    console.warn("Fallo el modulo hidrico.", error);
+    state.hydrologyData = null;
+    state.hydrologyHighlightId = null;
+    clearHydrologyOverlay();
+    resetTerritorialModuleState(dom.hydrologyResults, "No se pudo calcular el estudio hidrico para Mejia.", [
+      { target: dom.hydrologyDrivers, message: "No fue posible resumir los pilares metodologicos del estudio hidrico." },
+      { target: dom.hydrologyTimeline, message: "No fue posible construir la serie prospectiva de oferta y demanda." },
+      { target: dom.hydrologySectors, message: "No fue posible identificar subzonas hidricas prioritarias en esta corrida." },
+    ]);
+    if (!silent) {
+      setStatus(`Disponibilidad hidrica: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    updateMapSummary();
+    return null;
   }
-
-  return hydrology;
 }
 
 function clearHydrologyAnalysis() {
@@ -10749,22 +10960,23 @@ function formatHydrologyHm3(value) {
 }
 
 function runPlanningAnalysis(silent = false) {
-  const planning = buildPlanningAnalysis();
-  state.planningData = planning;
-  state.planningHighlightId = planning.candidates[0]?.id || null;
-  state.territorialFocus = "planning";
+  try {
+    const planning = buildPlanningAnalysis();
+    state.planningData = planning;
+    state.planningHighlightId = planning.candidates[0]?.id || null;
+    state.territorialFocus = "planning";
 
-  const cards = [
-    {
-      label: "Suelo clase A",
-      value: `${planning.summary.priorityAreaHa.toFixed(0)} ha`,
-      copy: "Celdas con puntaje >= 70 y compatibilidad urbana-alta para implantacion.",
-    },
-    {
-      label: "Indice multicriterio",
-      value: `${planning.summary.meanScore}/100`,
-      copy: `${planning.program.longLabel} para ${planning.context.scopeLabel}.`,
-    },
+    const cards = [
+      {
+        label: "Suelo clase A",
+        value: `${planning.summary.priorityAreaHa.toFixed(0)} ha`,
+        copy: "Celdas con puntaje >= 70 y compatibilidad urbana-alta para implantacion.",
+      },
+      {
+        label: "Indice multicriterio",
+        value: `${planning.summary.meanScore}/100`,
+        copy: `${planning.program.longLabel} para ${planning.context.scopeLabel}.`,
+      },
     {
       label: "Expansion dominante",
       value: planning.summary.anchorLabel,
@@ -10797,21 +11009,38 @@ function runPlanningAnalysis(silent = false) {
     },
   ];
 
-  paintMetricGrid(dom.planningResults, cards);
-  renderPlanningWeights(planning);
-  renderPlanningCandidates(planning);
-  renderPlanningOverlay(planning);
-  updatePlanning3dCandidateSource();
-  renderPlanningModule();
-  updateMapSummary();
+    paintMetricGrid(dom.planningResults, cards);
+    renderPlanningWeights(planning);
+    renderPlanningCandidates(planning);
+    renderPlanningOverlay(planning);
+    updatePlanning3dCandidateSource();
+    renderPlanningModule();
+    updateMapSummary();
 
-  if (!silent) {
-    setStatus(
-      `Planificacion ${planning.program.longLabel} lista para ${planning.context.scopeLabel} con ${planning.imageryProfile.shortLabel}. Se priorizaron ${planning.candidates.length} sectores.`
-    );
+    if (!silent) {
+      setStatus(
+        `Planificacion ${planning.program.longLabel} lista para ${planning.context.scopeLabel} con ${planning.imageryProfile.shortLabel}. Se priorizaron ${planning.candidates.length} sectores.`
+      );
+    }
+
+    return planning;
+  } catch (error) {
+    console.warn("Fallo el modulo de planificacion territorial.", error);
+    state.planningData = null;
+    state.planningHighlightId = null;
+    clearPlanningOverlay();
+    updatePlanning3dCandidateSource();
+    resetTerritorialModuleState(dom.planningResults, "No se pudo calcular la aptitud territorial para esta corrida.", [
+      { target: dom.planningWeights, message: "No fue posible construir la ponderacion multicriterio." },
+      { target: dom.planningCandidates, message: "No fue posible generar sectores candidatos en esta corrida." },
+    ]);
+    renderPlanningVariableMatrix();
+    if (!silent) {
+      setStatus(`Planificacion territorial: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    updateMapSummary();
+    return null;
   }
-
-  return planning;
 }
 
 function clearPlanningAnalysis() {
