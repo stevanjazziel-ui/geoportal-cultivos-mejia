@@ -1161,7 +1161,7 @@ const hydrologyHorizonCatalog = {
     climateExposure: 0,
     storageAdjustment: 1,
   },
-  2035: {
+  "2035": {
     id: "2035",
     label: "Ventana 2030-2035",
     shortLabel: "2035",
@@ -1170,7 +1170,7 @@ const hydrologyHorizonCatalog = {
     climateExposure: 0.12,
     storageAdjustment: 0.98,
   },
-  2050: {
+  "2050": {
     id: "2050",
     label: "Ventana 2045-2050",
     shortLabel: "2050",
@@ -1179,7 +1179,7 @@ const hydrologyHorizonCatalog = {
     climateExposure: 0.24,
     storageAdjustment: 0.94,
   },
-  2080: {
+  "2080": {
     id: "2080",
     label: "Ventana 2080-2100",
     shortLabel: "2100",
@@ -2112,16 +2112,82 @@ function getPlanningScenario(scenarioId = state.planningGrowthScenarioId) {
   return planningScenarioCatalog[scenarioId] || planningScenarioCatalog.balanceado;
 }
 
+const hydrologyFallbackClimateProfile = {
+  id: "historico",
+  label: "Historico 2000-2025",
+  shortLabel: "Historico",
+  precipMultiplier: 1,
+  petMultiplier: 1,
+  rechargeMultiplier: 1,
+  floodBoost: 1,
+  droughtBoost: 1,
+  transferReliability: 1,
+};
+
+const hydrologyFallbackHorizonProfile = {
+  id: "2050",
+  label: "Ventana 2045-2050",
+  shortLabel: "2050",
+  year: 2050,
+  demandMultiplier: 1.22,
+  climateExposure: 0.24,
+  storageAdjustment: 0.94,
+};
+
+const hydrologyFallbackDemandProfile = {
+  id: "eficienciaMedia",
+  label: "Eficiencia media",
+  shortLabel: "Ef media",
+  domesticFactor: 0.92,
+  irrigationFactor: 0.88,
+  productiveFactor: 0.94,
+  efficiencyBoost: 0.08,
+};
+
 function getHydrologyClimateProfile(climateId = state.hydrologyClimateId) {
-  return hydrologyClimateCatalog[climateId] || hydrologyClimateCatalog.historico;
+  const profile = hydrologyClimateCatalog[climateId]
+    || hydrologyClimateCatalog.historico
+    || hydrologyFallbackClimateProfile;
+  return {
+    ...hydrologyFallbackClimateProfile,
+    ...profile,
+  };
 }
 
 function getHydrologyHorizonProfile(horizonId = state.hydrologyHorizonId) {
-  return hydrologyHorizonCatalog[horizonId] || hydrologyHorizonCatalog["2050"];
+  const profile = hydrologyHorizonCatalog[horizonId]
+    || hydrologyHorizonCatalog["2050"]
+    || hydrologyHorizonCatalog.base
+    || hydrologyFallbackHorizonProfile;
+  return {
+    ...hydrologyFallbackHorizonProfile,
+    ...profile,
+  };
 }
 
 function getHydrologyDemandProfile(demandId = state.hydrologyDemandId) {
-  return hydrologyDemandCatalog[demandId] || hydrologyDemandCatalog.eficienciaMedia;
+  const profile = hydrologyDemandCatalog[demandId]
+    || hydrologyDemandCatalog.eficienciaMedia
+    || hydrologyFallbackDemandProfile;
+  return {
+    ...hydrologyFallbackDemandProfile,
+    ...profile,
+  };
+}
+
+function getHydrologySourceFeatures() {
+  const features = Array.isArray(geoSources.hidrozonas?.features)
+    ? geoSources.hidrozonas.features
+    : [];
+  return features.filter((feature) => {
+    const geometryType = feature?.geometry?.type;
+    return geometryType === "Polygon" || geometryType === "MultiPolygon";
+  });
+}
+
+function readHydrologyNumericValue(properties, key, fallback = 0) {
+  const value = Number(properties?.[key]);
+  return Number.isFinite(value) ? value : fallback;
 }
 
 function getLandChangePeriodProfile(periodId = state.landChangePeriodId) {
@@ -10568,11 +10634,12 @@ function buildHydrologyAnalysis(horizonOverride = null) {
   const climate = getHydrologyClimateProfile();
   const horizon = getHydrologyHorizonProfile(horizonOverride || state.hydrologyHorizonId);
   const demand = getHydrologyDemandProfile();
-  const sectors = geoSources.hidrozonas.features.map((feature, index) =>
+  const sourceFeatures = getHydrologySourceFeatures();
+  const sectors = sourceFeatures.map((feature, index) =>
     simulateHydrologySectorFeature(feature, climate, horizon, demand, index)
-  );
+  ).filter(Boolean);
   const summary = summarizeHydrologyAnalysis(sectors, climate, horizon, demand);
-  const timeline = buildHydrologyTimeline(climate, demand, horizon.id);
+  const timeline = buildHydrologyTimeline(climate, demand, horizon.id, sourceFeatures);
   const prioritySectors = selectHydrologyPrioritySectors(sectors);
 
   return {
@@ -10596,41 +10663,63 @@ function buildHydrologyAnalysis(horizonOverride = null) {
 }
 
 function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand, index = 0) {
+  if (!sourceFeature?.geometry) {
+    return null;
+  }
   const feature = cloneFeature(sourceFeature);
+  if (!feature?.geometry) {
+    return null;
+  }
   const properties = feature.properties || {};
-  const areaKm2 = turf.area(feature) / 1000000;
+  const sectorName = properties.name || `Subzona hidrica ${index + 1}`;
+  const sectorRole = properties.hydroRole || "Subzona hidrica";
+  const areaSqM = turf.area(feature);
+  const areaKm2 = Number.isFinite(areaSqM) && areaSqM > 0 ? areaSqM / 1000000 : 0.1;
   const noise = pseudoNoise((index + 1) * 1.37, areaKm2 * 0.083, 211 + index * 9);
+  const precipBaseMm = readHydrologyNumericValue(properties, "precipBaseMm", 1220);
+  const petBaseMm = readHydrologyNumericValue(properties, "petBaseMm", 840);
+  const rechargeCoeff = readHydrologyNumericValue(properties, "rechargeCoeff", 0.28);
+  const runoffCoeff = readHydrologyNumericValue(properties, "runoffCoeff", 0.32);
+  const domesticBaseHm3 = readHydrologyNumericValue(properties, "domesticBaseHm3", 1.2);
+  const irrigationBaseHm3 = readHydrologyNumericValue(properties, "irrigationBaseHm3", 1.6);
+  const productiveBaseHm3 = readHydrologyNumericValue(properties, "productiveBaseHm3", 0.6);
+  const ecologicalFlowHm3Base = readHydrologyNumericValue(properties, "ecologicalFlowHm3", 3.2);
+  const floodSensitivity = readHydrologyNumericValue(properties, "floodSensitivity", 0.4);
+  const storageOpportunity = readHydrologyNumericValue(properties, "storageOpportunity", 0.5);
+  const urbanPressure = readHydrologyNumericValue(properties, "urbanPressure", 0.35);
+  const irrigationPressure = readHydrologyNumericValue(properties, "irrigationPressure", 0.3);
+  const transferDependency = readHydrologyNumericValue(properties, "transferDependency", 0.12);
   const precipMm = Number((
-    properties.precipBaseMm
+    precipBaseMm
     * climate.precipMultiplier
     * (1 + horizon.climateExposure * 0.16)
     * (1 + noise * 0.04)
   ).toFixed(0));
   const petMm = Number((
-    properties.petBaseMm
+    petBaseMm
     * climate.petMultiplier
     * (1 + horizon.climateExposure * 0.14)
     * (1 + Math.abs(noise) * 0.03)
   ).toFixed(0));
   const grossHm3 = areaKm2 * (precipMm / 1000);
-  const rechargeHm3 = grossHm3 * properties.rechargeCoeff * climate.rechargeMultiplier * (1 - horizon.climateExposure * 0.12);
-  const runoffHm3 = grossHm3 * properties.runoffCoeff * (0.56 + climate.floodBoost * 0.08 + horizon.climateExposure * 0.06);
-  const storageHm3 = properties.storageOpportunity * 4.2 * horizon.storageAdjustment;
-  const transferHm3 = properties.transferDependency * 3.6 * climate.transferReliability;
+  const rechargeHm3 = grossHm3 * rechargeCoeff * climate.rechargeMultiplier * (1 - horizon.climateExposure * 0.12);
+  const runoffHm3 = grossHm3 * runoffCoeff * (0.56 + climate.floodBoost * 0.08 + horizon.climateExposure * 0.06);
+  const storageHm3 = storageOpportunity * 4.2 * horizon.storageAdjustment;
+  const transferHm3 = transferDependency * 3.6 * climate.transferReliability;
   const supplyHm3 = rechargeHm3 * 0.58 + runoffHm3 * 0.42 + storageHm3 + transferHm3;
-  const domesticDemandHm3 = properties.domesticBaseHm3
+  const domesticDemandHm3 = domesticBaseHm3
     * horizon.demandMultiplier
     * demand.domesticFactor
-    * (1 + properties.urbanPressure * 0.22);
-  const irrigationDemandHm3 = properties.irrigationBaseHm3
+    * (1 + urbanPressure * 0.22);
+  const irrigationDemandHm3 = irrigationBaseHm3
     * horizon.demandMultiplier
     * demand.irrigationFactor
-    * (1 + properties.irrigationPressure * 0.18 + horizon.climateExposure * 0.1);
-  const productiveDemandHm3 = properties.productiveBaseHm3
+    * (1 + irrigationPressure * 0.18 + horizon.climateExposure * 0.1);
+  const productiveDemandHm3 = productiveBaseHm3
     * horizon.demandMultiplier
     * demand.productiveFactor
-    * (1 + properties.urbanPressure * 0.08);
-  const ecologicalFlowHm3 = properties.ecologicalFlowHm3 * (1 + horizon.climateExposure * 0.04);
+    * (1 + urbanPressure * 0.08);
+  const ecologicalFlowHm3 = ecologicalFlowHm3Base * (1 + horizon.climateExposure * 0.04);
   const totalDemandHm3 = domesticDemandHm3 + irrigationDemandHm3 + productiveDemandHm3;
   const availableHm3 = supplyHm3 - ecologicalFlowHm3;
   const balanceHm3 = availableHm3 - totalDemandHm3;
@@ -10639,10 +10728,10 @@ function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand,
     24
     + horizon.climateExposure * 58
     + (petMm / Math.max(precipMm, 1)) * 18
-    + properties.irrigationPressure * 20
+    + irrigationPressure * 20
     + Math.max(0, (totalDemandHm3 - availableHm3) / Math.max(totalDemandHm3, 0.1)) * 36
     - demand.efficiencyBoost * 96
-    - properties.storageOpportunity * 12,
+    - storageOpportunity * 12,
     8,
     96
   ));
@@ -10650,9 +10739,9 @@ function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand,
     18
     + horizon.climateExposure * 34
     + (climate.floodBoost - 1) * 54
-    + properties.floodSensitivity * 44
-    + properties.urbanPressure * 16
-    - properties.storageOpportunity * 12,
+    + floodSensitivity * 44
+    + urbanPressure * 16
+    - storageOpportunity * 12,
     6,
     96
   ));
@@ -10662,8 +10751,8 @@ function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand,
     - droughtRisk * 0.34
     - floodRisk * 0.18
     + demand.efficiencyBoost * 96
-    + properties.storageOpportunity * 12
-    + properties.rechargeCoeff * 14,
+    + storageOpportunity * 12
+    + rechargeCoeff * 14,
     10,
     96
   ));
@@ -10671,8 +10760,8 @@ function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand,
     droughtRisk * 0.54
     + floodRisk * 0.24
     + Math.max(0, -balanceHm3) * 8
-    + properties.urbanPressure * 10
-    + properties.irrigationPressure * 8,
+    + urbanPressure * 10
+    + irrigationPressure * 8,
     0,
     100
   ));
@@ -10683,14 +10772,14 @@ function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand,
     floodRisk,
     domesticDemandHm3,
     irrigationDemandHm3,
-    urbanPressure: properties.urbanPressure,
-    rechargeCoeff: properties.rechargeCoeff,
-    storageOpportunity: properties.storageOpportunity,
-    role: properties.hydroRole,
+    urbanPressure,
+    rechargeCoeff,
+    storageOpportunity,
+    role: sectorRole,
   });
   const summary = buildHydrologySectorSummary({
-    name: properties.name,
-    role: properties.hydroRole,
+    name: sectorName,
+    role: sectorRole,
     balanceHm3,
     droughtRisk,
     floodRisk,
@@ -10698,11 +10787,16 @@ function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand,
     climate,
     demand,
   });
-  const centroid = turf.centroid(feature).geometry.coordinates;
+  const centroidFeature = turf.centroid(feature);
+  const centroid = Array.isArray(centroidFeature?.geometry?.coordinates)
+    ? centroidFeature.geometry.coordinates
+    : [-78.59, -0.51];
   const sectorId = `hydro-sector-${index + 1}`;
 
   feature.properties = {
     ...properties,
+    name: sectorName,
+    hydroRole: sectorRole,
     sectorId,
     areaKm2: Number(areaKm2.toFixed(1)),
     precipMm,
@@ -10732,8 +10826,8 @@ function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand,
   return {
     id: sectorId,
     feature,
-    name: properties.name,
-    role: properties.hydroRole,
+    name: sectorName,
+    role: sectorRole,
     centroid,
     supplyHm3: feature.properties.supplyHm3,
     demandHm3: feature.properties.demandHm3,
@@ -10801,12 +10895,12 @@ function summarizeHydrologyAnalysis(sectors, climate, horizon, demand) {
   };
 }
 
-function buildHydrologyTimeline(climate, demand, activeHorizonId) {
+function buildHydrologyTimeline(climate, demand, activeHorizonId, sourceFeatures = getHydrologySourceFeatures()) {
   return ["base", "2035", "2050", "2080"].map((horizonId) => {
     const horizon = getHydrologyHorizonProfile(horizonId);
-    const sectors = geoSources.hidrozonas.features.map((feature, index) =>
+    const sectors = sourceFeatures.map((feature, index) =>
       simulateHydrologySectorFeature(feature, climate, horizon, demand, index)
-    );
+    ).filter(Boolean);
     const summary = summarizeHydrologyAnalysis(sectors, climate, horizon, demand);
     return {
       id: horizon.id,
