@@ -1266,7 +1266,7 @@ const planning3dPublishedView = {
 };
 
 const planning3dPublishedSatelliteFallback = {
-  url: "./public-data/planning3d/machachi_orthophoto_full_web.jpg",
+  url: "./public-data/planning3d/machachi_orthophoto_full_rgba.webp",
   coordinates: [
     [planning3dPublishedOrthophotoBounds[0], planning3dPublishedOrthophotoBounds[3]],
     [planning3dPublishedOrthophotoBounds[2], planning3dPublishedOrthophotoBounds[3]],
@@ -6104,7 +6104,7 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
           visibility: isSatellite ? "visible" : "none",
         },
         paint: {
-          "raster-opacity": 0.42,
+          "raster-opacity": 0.28,
           "raster-saturation": 0.1,
           "raster-contrast": 0.1,
           "raster-brightness-min": 0.06,
@@ -6134,7 +6134,7 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
         type: "raster",
         source: "planning3d-basemap-orthophoto",
         layout: {
-          visibility: isSatellite ? "visible" : "none",
+          visibility: "none",
         },
         paint: {
           "raster-opacity": 1,
@@ -6195,7 +6195,7 @@ function updatePlanning3dBasemapStyle() {
   [
     ["planning3d-basemap-light", !isSatellite],
     ["planning3d-basemap-satellite", isSatellite],
-    ["planning3d-basemap-orthophoto", isSatellite],
+    ["planning3d-basemap-orthophoto", false],
     ["planning3d-basemap-satellite-preview", isSatellite],
   ].forEach(([layerId, visible]) => {
     if (planning3dState.map?.getLayer(layerId)) {
