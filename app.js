@@ -3058,8 +3058,11 @@ function cacheDom() {
   dom.hydrologyHorizonSelect = document.querySelector("#hydrologyHorizonSelect");
   dom.hydrologyDemandSelect = document.querySelector("#hydrologyDemandSelect");
   dom.intraloteResults = document.querySelector("#intraloteResults");
+  dom.intraloteVisual = document.querySelector("#intraloteVisual");
   dom.demResults = document.querySelector("#demResults");
+  dom.demVisual = document.querySelector("#demVisual");
   dom.climateResults = document.querySelector("#climateResults");
+  dom.climateVisual = document.querySelector("#climateVisual");
   dom.planningResults = document.querySelector("#planningResults");
   dom.planningWeights = document.querySelector("#planningWeights");
   dom.planningCandidates = document.querySelector("#planningCandidates");
@@ -3291,15 +3294,21 @@ function bindUI() {
   });
 
   dom.runIntraloteBtn.addEventListener("click", () => {
-    setModulePendingState(dom.intraloteResults, "Procesando lote y construyendo zonas de manejo...");
+    setModulePendingState(dom.intraloteResults, "Procesando lote y construyendo zonas de manejo...", [
+      { target: dom.intraloteVisual, message: "Preparando lectura grafica de zonas de manejo e indices del lote..." },
+    ]);
     return runModuleAction(dom.runIntraloteBtn, "Procesando lote...", () => runIntraloteAnalysis());
   });
   dom.runDemBtn.addEventListener("click", () => {
-    setModulePendingState(dom.demResults, "Evaluando pendiente, escorrentia y microrelieve...");
+    setModulePendingState(dom.demResults, "Evaluando pendiente, escorrentia y microrelieve...", [
+      { target: dom.demVisual, message: "Preparando perfil grafico de altitud, pendiente y riesgo topografico..." },
+    ]);
     return runModuleAction(dom.runDemBtn, "Evaluando relieve...", () => runDemAnalysis());
   });
   dom.runClimateBtn.addEventListener("click", () => {
-    setModulePendingState(dom.climateResults, "Actualizando balance hidrico, lluvia y temperatura...");
+    setModulePendingState(dom.climateResults, "Actualizando balance hidrico, lluvia y temperatura...", [
+      { target: dom.climateVisual, message: "Preparando lectura grafica de lluvia, humedad y temperatura..." },
+    ]);
     return runModuleAction(dom.runClimateBtn, "Actualizando clima...", () => runClimateAnalysis());
   });
   dom.runWizardNextBtn?.addEventListener("click", runWizardNextStep);
@@ -6273,6 +6282,9 @@ function clearCurrentPlot(triggerRefresh = false) {
   resetMetricGrid(dom.intraloteResults, "Dibuja un lote en el mapa para empezar.");
   resetMetricGrid(dom.demResults, "Elige un lote o dibuja un poligono para estimar relieve.");
   resetMetricGrid(dom.climateResults, "Ejecuta el modulo para cargar indicadores climaticos.");
+  resetVisualPanel(dom.intraloteVisual, "Aqui apareceran la distribucion de zonas de manejo y la lectura grafica de indices del lote.");
+  resetVisualPanel(dom.demVisual, "Aqui apareceran el perfil de pendiente, la altitud relativa y el riesgo topografico del lote.");
+  resetVisualPanel(dom.climateVisual, "Aqui apareceran la lectura visual de lluvia, humedad, temperatura y estres termico.");
   if (state.planningData) {
     runPlanningAnalysis(true);
   }
@@ -6296,6 +6308,7 @@ function runIntraloteAnalysis(silent = false) {
     const image = ensureModuleSceneContext("Analisis intralote", silent);
     if (!image) {
       resetMetricGrid(dom.intraloteResults, "No hay escena disponible para calcular el analisis intralote.");
+      resetVisualPanel(dom.intraloteVisual, "No hay escena disponible para construir la lectura grafica del lote.");
       return null;
     }
     const plotTarget = {
@@ -6330,6 +6343,7 @@ function runIntraloteAnalysis(silent = false) {
       recommendedAction: analysis.management.recommendedAction,
     };
     state.agronomyOutputs.intralote = result;
+    renderIntraloteVisual(result);
     if (!silent) {
       setStatus(
         `Analisis intralote ejecutado para ${state.currentPlotLabel}. Se actualizaron superficies y zonas de manejo.`
@@ -6344,6 +6358,7 @@ function runIntraloteAnalysis(silent = false) {
   } catch (error) {
     console.warn("Fallo el modulo de analisis intralote.", error);
     resetMetricGrid(dom.intraloteResults, "No se pudo calcular el analisis intralote. Revisa lote, escena o vuelve a intentarlo.");
+    resetVisualPanel(dom.intraloteVisual, "No se pudo construir la lectura grafica del analisis intralote.");
     if (!silent) {
       setStatus(`Analisis intralote: ${error.message || "ocurrio un error inesperado"}.`);
     }
@@ -6407,6 +6422,7 @@ function runDemAnalysis(silent = false) {
     const image = ensureModuleSceneContext("Analisis DEM", silent);
     if (!image) {
       resetMetricGrid(dom.demResults, "No hay escena disponible para calcular el analisis topografico.");
+      resetVisualPanel(dom.demVisual, "No hay escena disponible para construir el perfil topografico del lote.");
       return null;
     }
     const plotTarget = {
@@ -6454,6 +6470,7 @@ function runDemAnalysis(silent = false) {
       operationLabel: meanSlope > 10 ? "Manejo cuidadoso" : "Operacion favorable",
     };
     state.agronomyOutputs.dem = result;
+    renderDemVisual(result);
     if (!silent) {
       setStatus(`Analisis topografico generado para ${state.currentPlotLabel}.`);
     }
@@ -6462,6 +6479,7 @@ function runDemAnalysis(silent = false) {
   } catch (error) {
     console.warn("Fallo el modulo DEM.", error);
     resetMetricGrid(dom.demResults, "No se pudo calcular el analisis topografico. Revisa lote, escena o vuelve a intentarlo.");
+    resetVisualPanel(dom.demVisual, "No se pudo construir la lectura grafica del relieve del lote.");
     if (!silent) {
       setStatus(`Analisis DEM: ${error.message || "ocurrio un error inesperado"}.`);
     }
@@ -6476,6 +6494,7 @@ function runClimateAnalysis(silent = false) {
     const image = ensureModuleSceneContext("Clima agricola", silent);
     if (!image) {
       resetMetricGrid(dom.climateResults, "No hay escena disponible para calcular el clima agricola.");
+      resetVisualPanel(dom.climateVisual, "No hay escena disponible para construir la lectura grafica del clima.");
       return null;
     }
     const target = state.currentPlot
@@ -6527,6 +6546,7 @@ function runClimateAnalysis(silent = false) {
       stress,
     };
     state.agronomyOutputs.climate = result;
+    renderClimateVisual(result);
     if (!silent) {
       setStatus("Modulo de clima agricola actualizado con variables de referencia.");
     }
@@ -6535,6 +6555,7 @@ function runClimateAnalysis(silent = false) {
   } catch (error) {
     console.warn("Fallo el modulo de clima agricola.", error);
     resetMetricGrid(dom.climateResults, "No se pudo calcular el clima agricola. Revisa la escena activa o vuelve a intentarlo.");
+    resetVisualPanel(dom.climateVisual, "No se pudo construir la lectura grafica del clima agricola.");
     if (!silent) {
       setStatus(`Clima agricola: ${error.message || "ocurrio un error inesperado"}.`);
     }
@@ -12695,13 +12716,218 @@ function renderWizardSteps() {
     .join(""));
 }
 
+function resetVisualPanel(target, message) {
+  if (!target) {
+    return;
+  }
+  target.classList.remove("has-data");
+  target.classList.add("empty-state");
+  setTextIfChanged(target, message);
+}
+
+function renderIntraloteVisual(result = null) {
+  if (!dom.intraloteVisual) {
+    return;
+  }
+
+  if (!result) {
+    resetVisualPanel(dom.intraloteVisual, "Aqui apareceran la distribucion de zonas de manejo y la lectura grafica de indices del lote.");
+    return;
+  }
+
+  const sensorLabel = getSensorForImage(result.image).label;
+  const zoneStats = result.zoneStats || { high: 0, medium: 0, low: 0 };
+  const indexCards = getSupportedIndexKeys(result.image)
+    .slice(0, 4)
+    .map((indexKey) => {
+      const config = indexConfig[indexKey];
+      const summary = result.analysis.summary[indexKey];
+      const normalized = Math.round(normalizeMetricValue(summary.mean, config) * 100);
+      return {
+        key: indexKey,
+        label: config.label,
+        value: formatValue(summary.mean, config),
+        normalized: clamp(normalized, 6, 100),
+      };
+    });
+
+  dom.intraloteVisual.classList.remove("empty-state");
+  dom.intraloteVisual.classList.add("has-data");
+  setHtmlIfChanged(dom.intraloteVisual, `
+    <div class="agronomy-visual-head">
+      <div>
+        <p class="section-kicker">Lectura grafica</p>
+        <h4>Zonas de manejo e indices</h4>
+      </div>
+      <span class="agronomy-visual-pill">${sensorLabel}</span>
+    </div>
+    <div class="agronomy-zone-stack" aria-label="Distribucion de zonas de manejo">
+      <span class="tone-high" style="width: ${zoneStats.high}%"></span>
+      <span class="tone-medium" style="width: ${zoneStats.medium}%"></span>
+      <span class="tone-low" style="width: ${zoneStats.low}%"></span>
+    </div>
+    <div class="agronomy-zone-legend">
+      <span><i class="tone-high"></i>Alta ${zoneStats.high}%</span>
+      <span><i class="tone-medium"></i>Media ${zoneStats.medium}%</span>
+      <span><i class="tone-low"></i>Baja ${zoneStats.low}%</span>
+    </div>
+    <div class="agronomy-bar-grid">
+      ${indexCards.map((card) => `
+        <article class="agronomy-bar-card">
+          <div class="agronomy-bar-head">
+            <span>${card.label}</span>
+            <strong>${card.value}</strong>
+          </div>
+          <div class="agronomy-bar-track">
+            <i style="width: ${card.normalized}%"></i>
+          </div>
+        </article>
+      `).join("")}
+    </div>
+    <p class="agronomy-visual-copy">${result.recommendedAction}</p>
+  `);
+}
+
+function renderDemVisual(result = null) {
+  if (!dom.demVisual) {
+    return;
+  }
+
+  if (!result) {
+    resetVisualPanel(dom.demVisual, "Aqui apareceran el perfil de pendiente, la altitud relativa y el riesgo topografico del lote.");
+    return;
+  }
+
+  const altitudePct = clamp(Math.round(((result.altitude - 2700) / 320) * 100), 8, 100);
+  const meanSlopePct = clamp(Math.round((result.meanSlope / 18) * 100), 8, 100);
+  const maxSlopePct = clamp(Math.round((result.maxSlope / 31) * 100), 8, 100);
+  const riskTone = result.floodRisk.includes("Alto")
+    ? "high"
+    : result.floodRisk === "Medio"
+      ? "mid"
+      : "low";
+
+  dom.demVisual.classList.remove("empty-state");
+  dom.demVisual.classList.add("has-data");
+  setHtmlIfChanged(dom.demVisual, `
+    <div class="agronomy-visual-head">
+      <div>
+        <p class="section-kicker">Lectura grafica</p>
+        <h4>Perfil topografico del lote</h4>
+      </div>
+      <span class="agronomy-visual-pill tone-${riskTone}">${result.floodRisk}</span>
+    </div>
+    <div class="agronomy-bar-grid">
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Altitud relativa</span>
+          <strong>${Math.round(result.altitude)} msnm</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${altitudePct}%"></i>
+        </div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Pendiente media</span>
+          <strong>${result.meanSlope}%</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${meanSlopePct}%"></i>
+        </div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Pendiente maxima</span>
+          <strong>${result.maxSlope}%</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${maxSlopePct}%"></i>
+        </div>
+      </article>
+    </div>
+    <div class="agronomy-tag-row">
+      <span class="agronomy-visual-pill">Orientacion ${result.aspect}</span>
+      <span class="agronomy-visual-pill">${result.operationLabel}</span>
+    </div>
+  `);
+}
+
+function renderClimateVisual(result = null) {
+  if (!dom.climateVisual) {
+    return;
+  }
+
+  if (!result) {
+    resetVisualPanel(dom.climateVisual, "Aqui apareceran la lectura visual de lluvia, humedad, temperatura y estres termico.");
+    return;
+  }
+
+  const rainfallPct = clamp(Math.round((result.rainfall / 45) * 100), 8, 100);
+  const moisturePct = clamp(Math.round(result.soilMoisture), 8, 100);
+  const lstPct = clamp(Math.round(((result.lst - 18) / 14) * 100), 8, 100);
+  const tempMinPct = clamp(Math.round(((result.minTemp - 4) / 28) * 100), 0, 100);
+  const tempMaxPct = clamp(Math.round(((result.maxTemp - 4) / 28) * 100), tempMinPct + 4, 100);
+  const stressTone = result.stress === "Atencion" ? "high" : "low";
+
+  dom.climateVisual.classList.remove("empty-state");
+  dom.climateVisual.classList.add("has-data");
+  setHtmlIfChanged(dom.climateVisual, `
+    <div class="agronomy-visual-head">
+      <div>
+        <p class="section-kicker">Lectura grafica</p>
+        <h4>Clima corto plazo y humedad</h4>
+      </div>
+      <span class="agronomy-visual-pill tone-${stressTone}">${result.stress}</span>
+    </div>
+    <div class="agronomy-bar-grid">
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Lluvia 7 dias</span>
+          <strong>${result.rainfall} mm</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${rainfallPct}%"></i>
+        </div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Humedad estimada</span>
+          <strong>${result.soilMoisture}%</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${moisturePct}%"></i>
+        </div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>LST MODIS</span>
+          <strong>${result.lst} C</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${lstPct}%"></i>
+        </div>
+      </article>
+    </div>
+    <div class="agronomy-temperature-card">
+      <div class="agronomy-bar-head">
+        <span>Rango termico diario</span>
+        <strong>${result.minTemp} - ${result.maxTemp} C</strong>
+      </div>
+      <div class="agronomy-range-track">
+        <i style="left: ${tempMinPct}%; width: ${Math.max(6, tempMaxPct - tempMinPct)}%"></i>
+      </div>
+    </div>
+  `);
+}
+
 function paintMetricGrid(target, cards) {
   target.classList.remove("empty-state");
   target.classList.add("has-data");
   setHtmlIfChanged(target, cards
     .map(
       (card) => `
-        <article class="metric-card">
+        <article class="metric-card ${card.highlight ? "highlight" : ""}">
           <p>${card.label}</p>
           <strong>${card.value}</strong>
           <p>${card.copy}</p>

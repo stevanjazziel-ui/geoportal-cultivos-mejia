@@ -936,6 +936,179 @@ button {
   align-items: stretch;
 }
 
+.agronomy-visual {
+  gap: 14px;
+  min-width: 0;
+}
+
+.agronomy-visual.has-data {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(47, 61, 50, 0.08);
+  background: rgba(255, 255, 255, 0.56);
+}
+
+.agronomy-visual-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.agronomy-visual-head h4 {
+  margin: 0;
+  font-family: var(--font-display);
+}
+
+.agronomy-visual-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(47, 61, 50, 0.1);
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.agronomy-visual-pill.tone-high {
+  color: #8a3f2e;
+  background: rgba(181, 90, 63, 0.14);
+  border-color: rgba(181, 90, 63, 0.18);
+}
+
+.agronomy-visual-pill.tone-mid {
+  color: #8b6721;
+  background: rgba(210, 165, 68, 0.16);
+  border-color: rgba(210, 165, 68, 0.2);
+}
+
+.agronomy-visual-pill.tone-low {
+  color: var(--leaf-deep);
+  background: rgba(47, 127, 95, 0.12);
+  border-color: rgba(47, 127, 95, 0.18);
+}
+
+.agronomy-zone-stack {
+  display: flex;
+  min-height: 14px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(47, 61, 50, 0.08);
+}
+
+.agronomy-zone-stack span {
+  display: block;
+  min-width: 0;
+}
+
+.agronomy-zone-stack .tone-high,
+.agronomy-zone-legend i.tone-high {
+  background: #3f9a60;
+}
+
+.agronomy-zone-stack .tone-medium,
+.agronomy-zone-legend i.tone-medium {
+  background: #d2a544;
+}
+
+.agronomy-zone-stack .tone-low,
+.agronomy-zone-legend i.tone-low {
+  background: #b55a3f;
+}
+
+.agronomy-zone-legend,
+.agronomy-tag-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.agronomy-zone-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.agronomy-zone-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+}
+
+.agronomy-bar-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.agronomy-bar-card,
+.agronomy-temperature-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(47, 61, 50, 0.08);
+  background: rgba(255, 255, 255, 0.78);
+}
+
+.agronomy-bar-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.agronomy-bar-head span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.agronomy-bar-head strong {
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+}
+
+.agronomy-bar-track,
+.agronomy-range-track {
+  position: relative;
+  min-height: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(47, 61, 50, 0.08);
+}
+
+.agronomy-bar-track i,
+.agronomy-range-track i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  display: block;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(47, 127, 95, 0.7), rgba(210, 165, 68, 0.92));
+}
+
+.agronomy-range-track i {
+  inset: 0 auto 0 0;
+  background: linear-gradient(90deg, rgba(110, 155, 182, 0.82), rgba(181, 90, 63, 0.88));
+}
+
+.agronomy-visual-copy {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
 .scene-summary.has-data {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }

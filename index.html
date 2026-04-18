@@ -28,7 +28,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260418-6">
+  <link rel="stylesheet" href="./styles.css?v=20260418-7">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -298,6 +298,9 @@
               <div id="intraloteResults" class="metrics-grid empty-state">
                 Dibuja un lote en el mapa para empezar.
               </div>
+              <div id="intraloteVisual" class="agronomy-visual empty-state">
+                Aqui apareceran la distribucion de zonas de manejo y la lectura grafica de indices del lote.
+              </div>
             </article>
 
             <article class="module-card" data-module-track="agronomia">
@@ -314,6 +317,9 @@
               <div id="demResults" class="metrics-grid empty-state">
                 Elige un lote o dibuja un poligono para estimar relieve.
               </div>
+              <div id="demVisual" class="agronomy-visual empty-state">
+                Aqui apareceran el perfil de pendiente, la altitud relativa y el riesgo topografico del lote.
+              </div>
             </article>
 
             <article class="module-card" data-module-track="agronomia">
@@ -329,6 +335,9 @@
               </p>
               <div id="climateResults" class="metrics-grid empty-state">
                 Ejecuta el modulo para cargar indicadores climaticos.
+              </div>
+              <div id="climateVisual" class="agronomy-visual empty-state">
+                Aqui apareceran la lectura visual de lluvia, humedad, temperatura y estres termico.
               </div>
             </article>
 
@@ -742,6 +751,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260418-8" defer></script>
+  <script src="./app.js?v=20260418-9" defer></script>
 </body>
 </html>
