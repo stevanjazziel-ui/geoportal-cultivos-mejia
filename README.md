@@ -26,6 +26,7 @@ Geoportal navegable orientado al canton Mejia con rutas de agronomia y planifica
 - El render de escena prioriza previews web mas utiles y mejora el color/contraste del raster exacto para lectura mas limpia en el mapa.
 - Analisis intralote con dibujo de poligonos o seleccion de lotes demo.
 - Modulo de planificacion territorial con calculo multivariable para VIS, escuelas, hospitales y equipamientos.
+- Modulo territorial adicional de `Huella urbana / Transformacion del suelo rural` para comparar 2010, 2016, 2022 y una proyeccion 2030 sobre Mejia.
 - Capas demo de mancha urbana y equipamientos para medir crecimiento, deficit de cobertura y aptitud territorial.
 - Selector territorial de fuente satelital con `Sentinel-2`, `Landsat`, `Sentinel-1` y `VIIRS` segun el objetivo de planificacion.
 - Matriz visible de variables territoriales por fuente satelital y ponderacion integrada al puntaje multicriterio.
@@ -81,5 +82,6 @@ Modo recomendado:
 - Landsat 8/9 ahora ya no cae al rectangulo bruto del `bbox`; se presenta recortado a la huella real de la escena.
 - Sentinel-1 usa metricas radar propias y no indices opticos.
 - El modulo territorial es beta: sintetiza crecimiento urbano, accesibilidad, pendiente, riesgo hidrico, brecha de servicios y compatibilidad de ocupacion con datos demo calibrados para Mejia.
+- El estudio de transformacion del suelo rural es una replica metodologica sintetica inspirada en referentes nacionales; no reemplaza una delimitacion oficial de huella urbana ni un catastro normativo.
 - El visor 3D actual ya muestra construcciones y catastro; la vinculacion de fotos de fachadas por coordenadas queda lista para una siguiente iteracion.
 - La galeria de fotos del visor 3D es local: las imagenes no se empujan al repo ni a GitHub Pages, se sirven unicamente desde tu maquina mediante `server.ps1`.

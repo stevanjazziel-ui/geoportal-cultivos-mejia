@@ -1220,6 +1220,128 @@ const hydrologyDemandCatalog = {
   },
 };
 
+const landChangePeriodCatalog = {
+  2010_2016: {
+    id: "2010_2016",
+    label: "Huella 2010-2016",
+    shortLabel: "2010-2016",
+    fromYear: 2010,
+    toYear: 2016,
+    headline: "Transicion inicial",
+    years: [2010, 2016],
+  },
+  2016_2022: {
+    id: "2016_2022",
+    label: "Huella 2016-2022",
+    shortLabel: "2016-2022",
+    fromYear: 2016,
+    toYear: 2022,
+    headline: "Consolidacion reciente",
+    years: [2016, 2022],
+  },
+  2010_2022: {
+    id: "2010_2022",
+    label: "Serie 2010-2022",
+    shortLabel: "2010-2022",
+    fromYear: 2010,
+    toYear: 2022,
+    headline: "Lectura completa",
+    years: [2010, 2016, 2022],
+  },
+  2022_2030: {
+    id: "2022_2030",
+    label: "Proyeccion 2022-2030",
+    shortLabel: "2022-2030",
+    fromYear: 2022,
+    toYear: 2030,
+    headline: "Escenario prospectivo",
+    years: [2022, 2030],
+    projected: true,
+  },
+};
+
+const landChangeScenarioCatalog = {
+  contencion: {
+    id: "contencion",
+    label: "Contencion",
+    shortLabel: "Contencion",
+    growthFactor: 0.72,
+    densificationBoost: 1.08,
+    riskMultiplier: 0.88,
+    productiveShield: 1.14,
+  },
+  tendencial: {
+    id: "tendencial",
+    label: "Tendencial",
+    shortLabel: "Tendencial",
+    growthFactor: 1,
+    densificationBoost: 1,
+    riskMultiplier: 1,
+    productiveShield: 1,
+  },
+  expansivo: {
+    id: "expansivo",
+    label: "Expansivo",
+    shortLabel: "Expansivo",
+    growthFactor: 1.3,
+    densificationBoost: 0.9,
+    riskMultiplier: 1.2,
+    productiveShield: 0.86,
+  },
+};
+
+const landChangeLensCatalog = {
+  mixto: {
+    id: "mixto",
+    label: "Mixto OT",
+    shortLabel: "Mixto",
+    headline: "Huella, suelo rural y riesgo",
+    soilWeight: 0.38,
+    riskWeight: 0.3,
+    corridorWeight: 0.18,
+    densityWeight: 0.14,
+  },
+  suelo: {
+    id: "suelo",
+    label: "Suelo rural",
+    shortLabel: "Rural",
+    headline: "Perdida de suelo rural y fragmentacion",
+    soilWeight: 0.48,
+    riskWeight: 0.18,
+    corridorWeight: 0.16,
+    densityWeight: 0.18,
+  },
+  quebradas: {
+    id: "quebradas",
+    label: "Quebradas y riesgo",
+    shortLabel: "Riesgo",
+    headline: "Ocupacion en bordes de quebrada y escorrentia",
+    soilWeight: 0.2,
+    riskWeight: 0.46,
+    corridorWeight: 0.18,
+    densityWeight: 0.16,
+  },
+  corredores: {
+    id: "corredores",
+    label: "Corredores de ocupacion",
+    shortLabel: "Corredores",
+    headline: "Expansion apoyada en ejes viales y nodos",
+    soilWeight: 0.22,
+    riskWeight: 0.18,
+    corridorWeight: 0.42,
+    densityWeight: 0.18,
+  },
+};
+
+const landChangeMethodPillCatalog = [
+  "Huella 2010",
+  "Huella 2016",
+  "Huella 2022",
+  "Suelo rural transformado",
+  "Presion en quebradas",
+  "Ocupacion por corredores",
+];
+
 const hydrologyMethodPillCatalog = [
   "Cubo 2000-2025",
   "CHIRPS + ERA5-Land",
@@ -1532,26 +1654,9 @@ const planning3dPublishedOrthophotoBounds = [-78.581347, -0.534320, -78.545394, 
 
 const planning3dPublishedView = {
   center: [-78.563371, -0.51234],
-  zoom: 15.8,
-  pitch: 0,
-  bearing: 0,
-};
-
-const planning3dPublishedSatelliteFallback = {
-  url: "./public-data/planning3d/machachi_orthophoto_full_rgba.webp",
-  coordinates: [
-    [planning3dPublishedOrthophotoBounds[0], planning3dPublishedOrthophotoBounds[3]],
-    [planning3dPublishedOrthophotoBounds[2], planning3dPublishedOrthophotoBounds[3]],
-    [planning3dPublishedOrthophotoBounds[2], planning3dPublishedOrthophotoBounds[1]],
-    [planning3dPublishedOrthophotoBounds[0], planning3dPublishedOrthophotoBounds[1]],
-  ],
-};
-
-const planning3dPublishedOrthophotoTiles = {
-  tiles: ["./public-data/planning3d/machachi_orthophoto_tiles/{z}/{x}/{y}.jpg"],
-  bounds: [-78.5687255859375, -0.513603961287338, -78.563232421875, -0.508111015572299],
-  minzoom: 16,
-  maxzoom: 20,
+  zoom: 16.6,
+  pitch: 58,
+  bearing: -18,
 };
 
 const planning3dBasemapWarmup = {
@@ -1682,6 +1787,11 @@ const state = {
   planningGrowthScenarioId: "balanceado",
   planningData: null,
   planningHighlightId: null,
+  landChangePeriodId: "2010_2022",
+  landChangeScenarioId: "tendencial",
+  landChangeLensId: "mixto",
+  landChangeData: null,
+  landChangeHighlightId: null,
   hydrologyClimateId: "historico",
   hydrologyHorizonId: "2050",
   hydrologyDemandId: "eficienciaMedia",
@@ -1712,6 +1822,9 @@ const mapState = {
   managementLayer: null,
   planningLayer: null,
   planningCandidatesLayer: null,
+  landChangeLayer: null,
+  landChangePressureLayer: null,
+  landChangeHotspotLayer: null,
   hydrologyLayer: null,
   hydrologyPriorityLayer: null,
   studyAreaLayer: null,
@@ -1720,7 +1833,7 @@ const mapState = {
 
 const planning3dState = {
   modalOpen: false,
-  currentBase: "satellite",
+  currentBase: "light",
   statusMessage: "Preparando datasets 3D...",
   statusTone: "loading",
   manifest: null,
@@ -2009,6 +2122,18 @@ function getHydrologyHorizonProfile(horizonId = state.hydrologyHorizonId) {
 
 function getHydrologyDemandProfile(demandId = state.hydrologyDemandId) {
   return hydrologyDemandCatalog[demandId] || hydrologyDemandCatalog.eficienciaMedia;
+}
+
+function getLandChangePeriodProfile(periodId = state.landChangePeriodId) {
+  return landChangePeriodCatalog[periodId] || landChangePeriodCatalog["2010_2022"];
+}
+
+function getLandChangeScenarioProfile(scenarioId = state.landChangeScenarioId) {
+  return landChangeScenarioCatalog[scenarioId] || landChangeScenarioCatalog.tendencial;
+}
+
+function getLandChangeLensProfile(lensId = state.landChangeLensId) {
+  return landChangeLensCatalog[lensId] || landChangeLensCatalog.mixto;
 }
 
 function getPlanning3dFallbackManifest() {
@@ -2928,6 +3053,12 @@ function cacheDom() {
   dom.planningUseSelect = document.querySelector("#planningUseSelect");
   dom.planningHorizonSelect = document.querySelector("#planningHorizonSelect");
   dom.planningGrowthSelect = document.querySelector("#planningGrowthSelect");
+  dom.runLandChangeBtn = document.querySelector("#runLandChangeBtn");
+  dom.focusLandChangeBtn = document.querySelector("#focusLandChangeBtn");
+  dom.clearLandChangeBtn = document.querySelector("#clearLandChangeBtn");
+  dom.landChangePeriodSelect = document.querySelector("#landChangePeriodSelect");
+  dom.landChangeScenarioSelect = document.querySelector("#landChangeScenarioSelect");
+  dom.landChangeLensSelect = document.querySelector("#landChangeLensSelect");
   dom.runHydrologyBtn = document.querySelector("#runHydrologyBtn");
   dom.focusHydrologyBtn = document.querySelector("#focusHydrologyBtn");
   dom.clearHydrologyBtn = document.querySelector("#clearHydrologyBtn");
@@ -2942,12 +3073,18 @@ function cacheDom() {
   dom.planningCandidates = document.querySelector("#planningCandidates");
   dom.planningSourceNote = document.querySelector("#planningSourceNote");
   dom.planningVariableMatrix = document.querySelector("#planningVariableMatrix");
+  dom.landChangeResults = document.querySelector("#landChangeResults");
+  dom.landChangeDrivers = document.querySelector("#landChangeDrivers");
+  dom.landChangeTimeline = document.querySelector("#landChangeTimeline");
+  dom.landChangeSectors = document.querySelector("#landChangeSectors");
+  dom.landChangeSourceNote = document.querySelector("#landChangeSourceNote");
   dom.hydrologyResults = document.querySelector("#hydrologyResults");
   dom.hydrologyDrivers = document.querySelector("#hydrologyDrivers");
   dom.hydrologyTimeline = document.querySelector("#hydrologyTimeline");
   dom.hydrologySectors = document.querySelector("#hydrologySectors");
   dom.hydrologySourceNote = document.querySelector("#hydrologySourceNote");
   dom.planningCard = document.querySelector("#planningCard");
+  dom.landChangeCard = document.querySelector("#landChangeCard");
   dom.hydrologyCard = document.querySelector("#hydrologyCard");
   dom.planningModuleCards = Array.from(document.querySelectorAll('[data-module-track="planificacion"]'));
   dom.planning3dAvailability = document.querySelector("#planning3dAvailability");
@@ -3017,6 +3154,7 @@ function bindUI() {
   dom.sentinelResults?.addEventListener("click", handleSentinelResultsInteraction);
   dom.indexButtons?.addEventListener("click", handleIndexButtonInteraction);
   dom.planningCandidates?.addEventListener("click", handlePlanningCandidatesInteraction);
+  dom.landChangeSectors?.addEventListener("click", handleLandChangeSectorsInteraction);
   dom.hydrologySectors?.addEventListener("click", handleHydrologySectorsInteraction);
   dom.wizardModes?.addEventListener("click", handleWizardModeInteraction);
   dom.wizardSteps?.addEventListener("click", handleWizardStepInteraction);
@@ -3204,6 +3342,31 @@ function bindUI() {
     }
   });
 
+  dom.runLandChangeBtn?.addEventListener("click", runLandChangeAnalysis);
+  dom.focusLandChangeBtn?.addEventListener("click", focusLandChangeStudy);
+  dom.clearLandChangeBtn?.addEventListener("click", clearLandChangeAnalysis);
+  dom.landChangePeriodSelect?.addEventListener("change", () => {
+    state.landChangePeriodId = dom.landChangePeriodSelect.value || "2010_2022";
+    renderPlanningModule();
+    if (state.landChangeData) {
+      runLandChangeAnalysis(true);
+    }
+  });
+  dom.landChangeScenarioSelect?.addEventListener("change", () => {
+    state.landChangeScenarioId = dom.landChangeScenarioSelect.value || "tendencial";
+    renderPlanningModule();
+    if (state.landChangeData) {
+      runLandChangeAnalysis(true);
+    }
+  });
+  dom.landChangeLensSelect?.addEventListener("change", () => {
+    state.landChangeLensId = dom.landChangeLensSelect.value || "mixto";
+    renderPlanningModule();
+    if (state.landChangeData) {
+      runLandChangeAnalysis(true);
+    }
+  });
+
   dom.hydrologyClimateSelect?.addEventListener("change", () => {
     state.hydrologyClimateId = dom.hydrologyClimateSelect.value || "historico";
     renderPlanningModule();
@@ -3385,6 +3548,15 @@ function handlePlanningCandidatesInteraction(event) {
   focusPlanningCandidate(button.dataset.candidateId);
 }
 
+function handleLandChangeSectorsInteraction(event) {
+  const button = event.target.closest("[data-land-change-sector-id]");
+  if (!button || !dom.landChangeSectors?.contains(button)) {
+    return;
+  }
+
+  focusLandChangeSector(button.dataset.landChangeSectorId);
+}
+
 function handleHydrologySectorsInteraction(event) {
   const button = event.target.closest("[data-hydrology-sector-id]");
   if (!button || !dom.hydrologySectors?.contains(button)) {
@@ -3497,6 +3669,9 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     if (state.planningData) {
       renderPlanningOverlay(state.planningData);
     }
+    if (state.landChangeData) {
+      renderLandChangeOverlay(state.landChangeData);
+    }
     if (state.hydrologyData) {
       renderHydrologyOverlay(state.hydrologyData);
     }
@@ -3506,7 +3681,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
       dom.sidebarTitle.textContent = "Centro de planificacion territorial";
     }
     if (dom.sidebarSubtitle) {
-      dom.sidebarSubtitle.textContent = "Crecimiento urbano, deficit de servicios, aptitud territorial y candidatos para equipamientos.";
+      dom.sidebarSubtitle.textContent = "Crecimiento urbano, transformacion del suelo rural, deficit de servicios, aptitud territorial y candidatos para equipamientos.";
     }
     if (dom.overlayMode) {
       dom.overlayMode.textContent = "Territorial";
@@ -3521,6 +3696,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   setActiveTab("modulos");
   closePlanning3dViewer(true);
   clearPlanningOverlay();
+  clearLandChangeOverlay();
   clearHydrologyOverlay();
   if (state.currentPlot) {
     renderCurrentPlotLayer();
@@ -3611,7 +3787,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   }
   if (dom.modulesSectionCopy) {
     dom.modulesSectionCopy.textContent = isPlanning
-      ? "Ruta territorial con modulos de aptitud, estudio hidrico, priorizacion de candidatos y visor 3D urbano."
+      ? "Ruta territorial con modulos de aptitud, transformacion del suelo rural, estudio hidrico, priorizacion de candidatos y visor 3D urbano."
       : "Nucleo del sistema para agricultura de precision, relieve, clima y flujos guiados para monitoreo productivo.";
   }
   if (dom.modeFooterPill) {
@@ -6243,17 +6419,12 @@ function renderPlanning3dPanel() {
   const buildingsReady = !!manifest.buildings?.available;
   const parcelsReady = !!manifest.parcels?.available;
   const stats = manifest.buildings?.stats || null;
-  const orthophoto = manifest.orthophoto || null;
-  const orthophotoReady = !!orthophoto?.available;
   const usingPublishedRealData = !manifest.viaBackend && planning3dState.backendMode === "public";
   const backendCopy = manifest.viaBackend
     ? "Backend local activo: pisos y alturas reales leidos desde el DBF de construcciones."
     : usingPublishedRealData
-      ? "Modo publicado con GeoJSON real: huellas de construcciones y catastro servidas como capas publicas listas para el mapa satelital."
+      ? "Modo publicado con GeoJSON real: huellas de construcciones y catastro servidas como capas publicas listas para una base urbana clara."
       : "Modo publicado: si no activas server.ps1 el visor usa alturas estimadas y, si hace falta, una muestra 3D ligera para no bloquear la carga.";
-  const orthophotoCopy = orthophotoReady
-    ? ` Ortofoto local detectada: ${orthophoto.resolutionCm ? `${orthophoto.resolutionCm} cm/pixel` : "alta resolucion"} y preview ligero listo para base urbana del visor 3D.`
-    : "";
 
   dom.planning3dAvailability.classList.remove("empty-state");
   dom.planning3dAvailability.classList.add("has-data");
@@ -6272,15 +6443,15 @@ function renderPlanning3dPanel() {
         <strong>${stats?.meanFloors ? `${stats.meanFloors}` : "Estimado"}</strong>
       </article>
       <article class="planning-3d-stat">
-        <span>Ortofoto</span>
-        <strong>${orthophotoReady ? `${orthophoto.resolutionCm || "alta"} cm` : "No detectada"}</strong>
+        <span>Base 3D</span>
+        <strong>${planning3dState.currentBase === "satellite" ? "Satelite" : "Claro urbano"}</strong>
       </article>
       <article class="planning-3d-stat">
         <span>Modo</span>
         <strong>${manifest.viaBackend ? "DBF + shapes" : usingPublishedRealData ? "GeoJSON publico real" : "Fallback demo"}</strong>
       </article>
     </div>
-    <p class="planning-3d-meta">${backendCopy}${orthophotoCopy}</p>
+    <p class="planning-3d-meta">${backendCopy}</p>
   `);
 
   if (dom.openPlanning3dBtn) {
@@ -6445,26 +6616,13 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
       "planning3d-basemap-light": {
         type: "raster",
         tiles: [
-          "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+          "https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+          "https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
+          "https://d.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
         ],
         tileSize: 256,
-        attribution: "OpenStreetMap",
-      },
-      "planning3d-basemap-orthophoto": {
-        type: "raster",
-        tiles: planning3dPublishedOrthophotoTiles.tiles,
-        tileSize: 256,
-        bounds: planning3dPublishedOrthophotoTiles.bounds,
-        minzoom: planning3dPublishedOrthophotoTiles.minzoom,
-        maxzoom: planning3dPublishedOrthophotoTiles.maxzoom,
-        attribution: "Ortofoto local Machachi",
-      },
-      "planning3d-basemap-satellite-preview": {
-        type: "image",
-        url: planning3dPublishedSatelliteFallback.url,
-        coordinates: planning3dPublishedSatelliteFallback.coordinates,
+        attribution: "CARTO / OpenStreetMap",
       },
     },
     layers: [
@@ -6472,7 +6630,7 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
         id: "background",
         type: "background",
         paint: {
-          "background-color": isSatellite ? "rgba(214, 224, 229, 0)" : "#eef2ee",
+          "background-color": isSatellite ? "#d7d8d3" : "#efe9df",
         },
       },
       {
@@ -6483,11 +6641,11 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
           visibility: isSatellite ? "none" : "visible",
         },
         paint: {
-          "raster-opacity": 0.92,
-          "raster-saturation": -0.78,
-          "raster-brightness-min": 0.22,
-          "raster-brightness-max": 0.94,
-          "raster-contrast": 0.08,
+          "raster-opacity": 0.98,
+          "raster-saturation": -0.45,
+          "raster-brightness-min": 0.28,
+          "raster-brightness-max": 1,
+          "raster-contrast": 0.16,
         },
       },
       {
@@ -6498,46 +6656,12 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
           visibility: isSatellite ? "visible" : "none",
         },
         paint: {
-          "raster-opacity": 0.28,
-          "raster-saturation": 0.1,
-          "raster-contrast": 0.1,
-          "raster-brightness-min": 0.06,
+          "raster-opacity": 0.78,
+          "raster-saturation": -0.12,
+          "raster-contrast": 0.08,
+          "raster-brightness-min": 0.12,
           "raster-brightness-max": 0.98,
           "raster-resampling": "linear",
-        },
-      },
-      {
-        id: "planning3d-basemap-satellite-preview",
-        type: "raster",
-        source: "planning3d-basemap-satellite-preview",
-        layout: {
-          visibility: isSatellite ? "visible" : "none",
-        },
-        paint: {
-          "raster-opacity": 0.94,
-          "raster-saturation": 0.08,
-          "raster-contrast": 0.12,
-          "raster-brightness-min": 0.04,
-          "raster-brightness-max": 1,
-          "raster-resampling": "linear",
-          "raster-fade-duration": 0,
-        },
-      },
-      {
-        id: "planning3d-basemap-orthophoto",
-        type: "raster",
-        source: "planning3d-basemap-orthophoto",
-        layout: {
-          visibility: "none",
-        },
-        paint: {
-          "raster-opacity": 1,
-          "raster-saturation": 0.1,
-          "raster-contrast": 0.15,
-          "raster-brightness-min": 0.04,
-          "raster-brightness-max": 1,
-          "raster-resampling": "linear",
-          "raster-fade-duration": 0,
         },
       },
     ],
@@ -6557,9 +6681,9 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
     },
     light: {
       anchor: "viewport",
-      color: "#fef7df",
-      intensity: 0.62,
-      position: [1.3, 180, 38],
+      color: "#f6e6c8",
+      intensity: 0.72,
+      position: [1.35, 186, 42],
     },
   };
 
@@ -6572,7 +6696,6 @@ function updatePlanning3dBasemapStyle() {
   }
 
   const isSatellite = planning3dState.currentBase === "satellite";
-  syncPlanning3dImageBackdrop();
   if (dom.planning3dMap) {
     dom.planning3dMap.classList.toggle("satellite-mode", isSatellite);
     dom.planning3dMap.classList.toggle("light-mode", !isSatellite);
@@ -6589,8 +6712,6 @@ function updatePlanning3dBasemapStyle() {
   [
     ["planning3d-basemap-light", !isSatellite],
     ["planning3d-basemap-satellite", isSatellite],
-    ["planning3d-basemap-orthophoto", false],
-    ["planning3d-basemap-satellite-preview", isSatellite],
   ].forEach(([layerId, visible]) => {
     if (planning3dState.map?.getLayer(layerId)) {
       planning3dState.map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
@@ -6610,7 +6731,6 @@ function ensurePlanning3dImageBackdrop() {
   const backdrop = document.createElement("div");
   backdrop.className = "planning-3d-image-backdrop";
   backdrop.setAttribute("aria-hidden", "true");
-  backdrop.style.backgroundImage = `url('${planning3dPublishedSatelliteFallback.url}')`;
   dom.planning3dMap.appendChild(backdrop);
   planning3dState.imageBackdrop = backdrop;
   return backdrop;
@@ -6622,8 +6742,7 @@ function syncPlanning3dImageBackdrop() {
     return;
   }
 
-  const isSatellite = planning3dState.currentBase === "satellite";
-  backdrop.classList.toggle("active", isSatellite);
+  backdrop.classList.remove("active");
   backdrop.setAttribute("data-base", planning3dState.currentBase);
 }
 
@@ -6984,6 +7103,7 @@ function addPlanning3dRuntimeLayers() {
       "fill-extrusion-base": 0,
       "fill-extrusion-opacity": 0.97,
       "fill-extrusion-color": getPlanning3dBuildingFillColorExpression(),
+      "fill-extrusion-vertical-gradient": true,
     },
   });
 
@@ -7092,12 +7212,19 @@ function addPlanning3dRuntimeLayers() {
 }
 
 function getPlanning3dBuildingFillColorExpression() {
-  const useRoofColor = isPlanning3dOrthographicView();
   return [
     "case",
     ["boolean", ["feature-state", "selected"], false],
     "#f4d35e",
-    ["coalesce", ["get", useRoofColor ? "facadeTop" : "facadeFront"], useRoofColor ? "#d9e3ea" : "#6e8ea3"],
+    [">=", ["coalesce", ["get", "floors"], 1], 7],
+    "#534335",
+    [">=", ["coalesce", ["get", "floors"], 1], 5],
+    "#6a5544",
+    [">=", ["coalesce", ["get", "floors"], 1], 3],
+    "#866e59",
+    [">=", ["coalesce", ["get", "floors"], 1], 2],
+    "#a68c74",
+    "#c1ad96",
   ];
 }
 
@@ -8054,14 +8181,13 @@ function isPlanning3dOrthographicView() {
 function shouldRenderPlanning3dSvgScene() {
   const buildingCount = planning3dState.sourceData.buildings?.features?.length || 0;
   const zoom = planning3dState.map?.getZoom?.() || 0;
-  const orthographic = isPlanning3dOrthographicView();
   return Boolean(
     dom.planning3dMap
     && planning3dState.modalOpen
     && planning3dState.buildingsVisible
     && buildingCount
-    && zoom >= (orthographic ? 15 : 16)
-    && (orthographic || buildingCount <= 520)
+    && zoom >= 17.4
+    && (planning3dState.selectedFeatureId != null || planning3dState.textureCatalog?.derivedFromPhotos)
   );
 }
 
@@ -8967,8 +9093,8 @@ function focusPlanning3dDemoView() {
   planning3dState.map.easeTo({
     center,
     zoom: 17.1,
-    pitch: 0,
-    bearing: 0,
+    pitch: planning3dPublishedView.pitch,
+    bearing: planning3dPublishedView.bearing,
     duration: 760,
     essential: true,
   });
@@ -9036,9 +9162,9 @@ function focusPlanning3dDataset() {
       ? { top: 72, right: 380, bottom: 72, left: 72 }
       : 56,
     duration: 720,
-    pitch: 0,
-    bearing: 0,
-    maxZoom: state.planningData?.candidates?.length ? 16.2 : 18.2,
+    pitch: planning3dPublishedView.pitch,
+    bearing: planning3dPublishedView.bearing,
+    maxZoom: state.planningData?.candidates?.length ? 16.8 : 17.8,
     essential: true,
   });
 
@@ -9047,8 +9173,8 @@ function focusPlanning3dDataset() {
       return;
     }
     planning3dState.map.easeTo({
-      pitch: 0,
-      bearing: 0,
+      pitch: planning3dPublishedView.pitch,
+      bearing: planning3dPublishedView.bearing,
       duration: 280,
       essential: true,
     });
@@ -9094,9 +9220,7 @@ async function openPlanning3dViewer() {
     if (dom.planning3dSubtitle) {
       setTextIfChanged(
         dom.planning3dSubtitle,
-        orthophoto?.available
-          ? `Huellas reales de construcciones extruidas por n_piso, soporte catastral y ortofoto local de ${orthophoto.resolutionCm || "alta"} cm para lectura espacial fina.`
-          : "Huellas reales de construcciones extruidas por n_piso, soporte catastral y lectura espacial sobre satelite."
+        "Huellas reales de construcciones extruidas por n_piso, soporte catastral y base urbana clara para lectura espacial tridimensional."
       );
     }
     await ensurePlanning3dDataset("buildings", !planning3dState.sourceData.buildings?.features?.length);
@@ -9187,8 +9311,8 @@ async function reloadPlanning3dData() {
 
 function renderPlanningModule() {
   const imageryProfile = getPlanningImageryProfile();
-  const orthophoto = getPlanning3dManifest().orthophoto || null;
   renderPlanningVariableMatrix();
+  renderLandChangeModule();
   renderHydrologyModule();
   renderPlanning3dPanel();
   if (dom.planningImagerySelect) {
@@ -9209,6 +9333,21 @@ function renderPlanningModule() {
   if (dom.clearPlanningBtn) {
     dom.clearPlanningBtn.disabled = !state.planningData;
   }
+  if (dom.landChangePeriodSelect) {
+    dom.landChangePeriodSelect.value = state.landChangePeriodId;
+  }
+  if (dom.landChangeScenarioSelect) {
+    dom.landChangeScenarioSelect.value = state.landChangeScenarioId;
+  }
+  if (dom.landChangeLensSelect) {
+    dom.landChangeLensSelect.value = state.landChangeLensId;
+  }
+  if (dom.focusLandChangeBtn) {
+    dom.focusLandChangeBtn.disabled = !(state.landChangeData?.prioritySectors?.length);
+  }
+  if (dom.clearLandChangeBtn) {
+    dom.clearLandChangeBtn.disabled = !state.landChangeData;
+  }
   if (dom.hydrologyClimateSelect) {
     dom.hydrologyClimateSelect.value = state.hydrologyClimateId;
   }
@@ -9225,10 +9364,16 @@ function renderPlanningModule() {
     dom.clearHydrologyBtn.disabled = !state.hydrologyData;
   }
   if (dom.planningSourceNote) {
-    const orthophotoNote = orthophoto?.available
-      ? ` Ortofoto Machachi local disponible: ${orthophoto.resolutionCm ? `${orthophoto.resolutionCm} cm/pixel` : "alta resolucion"} para validacion fina de lotes, cubiertas, vias y equipamientos.`
-      : "";
-    setTextIfChanged(dom.planningSourceNote, `${imageryProfile.label}: ${imageryProfile.useCopy} Resolucion ${imageryProfile.spatialLabel} y frecuencia ${imageryProfile.temporalLabel}.${orthophotoNote}`);
+    setTextIfChanged(dom.planningSourceNote, `${imageryProfile.label}: ${imageryProfile.useCopy} Resolucion ${imageryProfile.spatialLabel} y frecuencia ${imageryProfile.temporalLabel}. El visor 3D urbano ahora prioriza una base clara oblicua para leer volumenes, calles y sombras con mas limpieza.`);
+  }
+  if (dom.landChangeSourceNote) {
+    const period = getLandChangePeriodProfile();
+    const scenario = getLandChangeScenarioProfile();
+    const lens = getLandChangeLensProfile();
+    setTextIfChanged(
+      dom.landChangeSourceNote,
+      `Replica metodologica inspirada en estudios de transformacion del suelo rural en Ecuador: huella urbana ${period.shortLabel}, lectura ${lens.headline.toLowerCase()} y escenario ${scenario.label.toLowerCase()} para Mejia.`
+    );
   }
   if (dom.hydrologySourceNote) {
     const climate = getHydrologyClimateProfile();
@@ -9298,6 +9443,692 @@ function renderPlanningVariableMatrix() {
       `).join("")}
     </div>
   `);
+}
+
+function renderLandChangeModule() {
+  if (!state.landChangeData) {
+    resetMetricGrid(dom.landChangeResults, "Ejecuta el estudio para ver huella urbana, suelo rural transformado, poblacion estimada y presion territorial.");
+    dom.landChangeDrivers?.classList.add("empty-state");
+    dom.landChangeDrivers?.classList.remove("has-data");
+    if (dom.landChangeDrivers) {
+      setTextIfChanged(dom.landChangeDrivers, "Aqui apareceran los componentes metodologicos activos del estudio de transformacion del suelo.");
+    }
+    dom.landChangeTimeline?.classList.add("empty-state");
+    dom.landChangeTimeline?.classList.remove("has-data");
+    if (dom.landChangeTimeline) {
+      setTextIfChanged(dom.landChangeTimeline, "La serie temporal mostrara el cambio de huella urbana entre 2010, 2016, 2022 y la proyeccion 2030.");
+    }
+    dom.landChangeSectors?.classList.add("empty-state");
+    dom.landChangeSectors?.classList.remove("has-data");
+    if (dom.landChangeSectors) {
+      setTextIfChanged(dom.landChangeSectors, "Aqui apareceran los hotspots de transformacion rural, riesgo y ocupacion territorial para Mejia.");
+    }
+    return;
+  }
+
+  renderLandChangeDrivers(state.landChangeData);
+  renderLandChangeTimeline(state.landChangeData);
+  renderLandChangeSectors(state.landChangeData);
+}
+
+function runLandChangeAnalysis(silent = false) {
+  const analysis = buildLandChangeAnalysis();
+  state.landChangeData = analysis;
+  state.landChangeHighlightId = analysis.prioritySectors[0]?.id || analysis.sectors[0]?.id || null;
+  state.territorialFocus = "landChange";
+
+  const cards = [
+    {
+      label: `Huella ${analysis.period.fromYear}`,
+      value: `${formatLandChangeHa(analysis.summary.fromAreaHa)} ha`,
+      copy: `${formatLandChangePopulation(analysis.summary.fromPopulation)} habitantes estimados en el arranque de la serie.`,
+    },
+    {
+      label: `Huella ${analysis.period.toYear}`,
+      value: `${formatLandChangeHa(analysis.summary.toAreaHa)} ha`,
+      copy: `${formatLandChangePopulation(analysis.summary.toPopulation)} habitantes estimados para ${analysis.period.toYear}.`,
+      highlight: true,
+    },
+    {
+      label: "Suelo rural transformado",
+      value: `${formatLandChangeHa(analysis.summary.transformedHa)} ha`,
+      copy: `${analysis.period.shortLabel} con crecimiento medio anual de ${analysis.summary.annualGrowthPct}%.`,
+    },
+    {
+      label: "Poblacion incorporada",
+      value: formatLandChangePopulation(analysis.summary.populationDelta),
+      copy: `Presion demografica sintetica bajo escenario ${analysis.scenario.label.toLowerCase()}.`,
+    },
+    {
+      label: "Suelo productivo en tension",
+      value: `${formatLandChangeHa(analysis.summary.productiveLossHa)} ha`,
+      copy: `${analysis.summary.productiveLabel}. Enfoque ${analysis.lens.label.toLowerCase()}.`,
+    },
+    {
+      label: "Riesgo territorial",
+      value: analysis.summary.riskLabel,
+      copy: `${formatLandChangeHa(analysis.summary.riskHa)} ha en corredores de vigilancia por quebradas o drenaje.`,
+    },
+    {
+      label: "Hotspot dominante",
+      value: analysis.summary.hotspotLabel,
+      copy: analysis.summary.hotspotCopy,
+    },
+    {
+      label: "Metodo",
+      value: analysis.summary.methodLabel,
+      copy: "Serie temporal sintetica, huella urbana escalada, suelo rural transformado, poblacion estimada y lectura preventiva de OT.",
+    },
+  ];
+
+  paintMetricGrid(dom.landChangeResults, cards);
+  renderLandChangeDrivers(analysis);
+  renderLandChangeTimeline(analysis);
+  renderLandChangeSectors(analysis);
+  renderLandChangeOverlay(analysis);
+  renderPlanningModule();
+  updateMapSummary();
+
+  if (!silent) {
+    setStatus(
+      `Estudio de transformacion del suelo listo para Mejia: ${analysis.period.shortLabel}, ${analysis.scenario.label} y enfoque ${analysis.lens.label.toLowerCase()}. ${formatLandChangeHa(analysis.summary.transformedHa)} ha de suelo rural pasan a vigilancia.`
+    );
+  }
+
+  return analysis;
+}
+
+function clearLandChangeAnalysis() {
+  state.landChangeData = null;
+  state.landChangeHighlightId = null;
+  clearLandChangeOverlay();
+  state.territorialFocus = state.hydrologyData
+    ? "hydrology"
+    : state.planningData
+      ? "planning"
+      : "planning";
+  renderPlanningModule();
+  updateMapSummary();
+  setStatus("Estudio de transformacion del suelo limpiado. Puedes correr una nueva lectura territorial para Mejia.");
+}
+
+function buildLandChangeAnalysis() {
+  const period = getLandChangePeriodProfile();
+  const scenario = getLandChangeScenarioProfile();
+  const lens = getLandChangeLensProfile();
+  const series = buildLandChangeSettlementSeries(scenario);
+  const timeline = buildLandChangeTimelineData(series, scenario);
+  const sectors = buildLandChangeSectors(series, period, scenario, lens);
+  const summary = summarizeLandChangeAnalysis(series, sectors, period, scenario, lens);
+  const prioritySectors = selectLandChangePrioritySectors(sectors);
+  const surface = buildLandChangeSurface(series, period);
+  const pressureSurface = buildLandChangePressureSurface(lens, scenario);
+
+  return {
+    context: {
+      scopeLabel: "Canton Mejia",
+      scopeType: "studyArea",
+      feature: cloneFeature(studyArea),
+    },
+    period,
+    scenario,
+    lens,
+    series,
+    timeline,
+    sectors,
+    prioritySectors,
+    summary,
+    surface,
+    pressureSurface,
+  };
+}
+
+function buildLandChangeSettlementSeries(scenario) {
+  const yearSequence = [2010, 2016, 2022, 2030];
+  const settlementSeries = geoSources.manchaUrbana.features.map((sourceFeature, index) => {
+    const baseName = sourceFeature.properties?.name || `Centro ${index + 1}`;
+    const hierarchy = sourceFeature.properties?.hierarchy || "barrial";
+    const growthRate = Number(sourceFeature.properties?.growthRate) || 0.68;
+    const baseDensity = getLandChangeDensityByHierarchy(hierarchy);
+    const records = {};
+
+    yearSequence.forEach((year) => {
+      const scaleFactor = getLandChangeScaleFactor(sourceFeature, year, scenario);
+      const feature = scaleLandChangeFeature(sourceFeature, scaleFactor);
+      const areaHa = turf.area(feature) / 10000;
+      const population = Math.round(areaHa * baseDensity * getLandChangePopulationFactor(year, scenario));
+      feature.properties = {
+        ...feature.properties,
+        seriesId: `urban-series-${index + 1}`,
+        settlementName: baseName,
+        year,
+        areaHa: Number(areaHa.toFixed(1)),
+        inhabitants: population,
+      };
+      records[year] = {
+        year,
+        feature,
+        areaHa: Number(areaHa.toFixed(1)),
+        inhabitants: population,
+      };
+    });
+
+    const periods = {
+      2010_2016: buildLandChangeDeltaRecord(records[2010], records[2016], baseName, "growth2016", "Huella 2016", "2010_2016"),
+      2016_2022: buildLandChangeDeltaRecord(records[2016], records[2022], baseName, "growth2022", "Huella 2022", "2016_2022"),
+      2022_2030: buildLandChangeDeltaRecord(records[2022], records[2030], baseName, "projected2030", "Huella 2030", "2022_2030"),
+    };
+
+    return {
+      id: `urban-series-${index + 1}`,
+      name: baseName,
+      hierarchy,
+      growthRate,
+      baseDensity,
+      years: records,
+      periods,
+      centroid: turf.centroid(sourceFeature).geometry.coordinates,
+    };
+  });
+
+  const totals = yearSequence.reduce((accumulator, year) => {
+    const areaHa = settlementSeries.reduce((sum, seriesItem) => sum + (seriesItem.years[year]?.areaHa || 0), 0);
+    const inhabitants = settlementSeries.reduce((sum, seriesItem) => sum + (seriesItem.years[year]?.inhabitants || 0), 0);
+    accumulator[year] = {
+      year,
+      areaHa: Number(areaHa.toFixed(1)),
+      inhabitants,
+    };
+    return accumulator;
+  }, {});
+
+  return {
+    settlements: settlementSeries,
+    totals,
+  };
+}
+
+function getLandChangeDensityByHierarchy(hierarchy) {
+  if (hierarchy === "primario") {
+    return 92;
+  }
+  if (hierarchy === "subcentro") {
+    return 76;
+  }
+  return 61;
+}
+
+function getLandChangePopulationFactor(year, scenario) {
+  if (year === 2010) {
+    return 0.92;
+  }
+  if (year === 2016) {
+    return 1;
+  }
+  if (year === 2022) {
+    return 1.08;
+  }
+  return 1.16 * scenario.densificationBoost;
+}
+
+function getLandChangeScaleFactor(sourceFeature, year, scenario) {
+  const growthRate = Number(sourceFeature.properties?.growthRate) || 0.68;
+  const hierarchy = sourceFeature.properties?.hierarchy || "barrial";
+  const hierarchyBoost = hierarchy === "primario" ? 0.06 : hierarchy === "subcentro" ? 0.03 : 0;
+
+  if (year === 2010) {
+    return clamp(0.44 + growthRate * 0.18 + hierarchyBoost, 0.48, 0.68);
+  }
+  if (year === 2016) {
+    return clamp(0.63 + growthRate * 0.16 + hierarchyBoost, 0.66, 0.84);
+  }
+  if (year === 2022) {
+    return 1;
+  }
+  return clamp(1 + (0.06 + growthRate * 0.08 + hierarchyBoost) * scenario.growthFactor, 1.06, 1.3);
+}
+
+function scaleLandChangeFeature(feature, factor) {
+  try {
+    const scaled = turf.transformScale(cloneFeature(feature), factor, { origin: "centroid" });
+    return scaled?.geometry ? scaled : cloneFeature(feature);
+  } catch (error) {
+    return cloneFeature(feature);
+  }
+}
+
+function buildLandChangeDeltaRecord(fromRecord, toRecord, settlementName, classId, stageLabel, periodId) {
+  try {
+    const deltaFeature = turf.difference(cloneFeature(toRecord.feature), cloneFeature(fromRecord.feature));
+    if (!deltaFeature?.geometry) {
+      return null;
+    }
+    const areaHa = turf.area(deltaFeature) / 10000;
+    deltaFeature.properties = {
+      ...deltaFeature.properties,
+      settlementName,
+      classId,
+      stageLabel,
+      periodId,
+      areaHa: Number(areaHa.toFixed(1)),
+    };
+    return {
+      feature: deltaFeature,
+      areaHa: Number(areaHa.toFixed(1)),
+      stageLabel,
+      classId,
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+function buildLandChangeTimelineData(series, scenario) {
+  const years = [2010, 2016, 2022, 2030];
+  return years.map((year, index) => {
+    const current = series.totals[year];
+    const previous = index > 0 ? series.totals[years[index - 1]] : null;
+    const deltaHa = previous ? Number((current.areaHa - previous.areaHa).toFixed(1)) : 0;
+    const deltaPopulation = previous ? current.inhabitants - previous.inhabitants : 0;
+    return {
+      year,
+      shortLabel: String(year),
+      areaHa: current.areaHa,
+      inhabitants: current.inhabitants,
+      deltaHa,
+      deltaPopulation,
+      active: year === 2022 || (year === 2030 && scenario.id !== "contencion"),
+      tone: year === 2010 ? "base" : year === 2016 ? "mid" : year === 2022 ? "current" : "future",
+      copy: previous
+        ? `${deltaHa >= 0 ? "+" : ""}${formatLandChangeHa(deltaHa)} ha y ${deltaPopulation >= 0 ? "+" : ""}${formatLandChangePopulation(deltaPopulation)} hab frente a ${previous.year}.`
+        : `Linea base sintetica de ocupacion urbana y poblacion para la serie territorial.`,
+    };
+  });
+}
+
+function buildLandChangeSectors(series, period, scenario, lens) {
+  return series.settlements.map((settlement, index) => {
+    const fromRecord = settlement.years[period.fromYear];
+    const toRecord = settlement.years[period.toYear];
+    const deltaRecord = settlement.periods[period.id];
+    const anchorPoint = pointFeature(settlement.name, settlement.centroid);
+    const nearestRoad = getNearestFeatureMatch(anchorPoint, geoSources.vias.features);
+    const nearestCanal = getNearestFeatureMatch(anchorPoint, geoSources.canales.features);
+    const roadInfluence = clamp(1 - nearestRoad.distanceKm / 3.2, 0, 1);
+    const floodExposure = clamp(1 - nearestCanal.distanceKm / 1.35, 0, 1);
+    const transformedHa = deltaRecord?.areaHa || Number((toRecord.areaHa - fromRecord.areaHa).toFixed(1));
+    const productiveLossHa = Number((Math.max(0, transformedHa) * (0.56 + (1 - scenario.productiveShield) * 0.3 + (lens.id === "suelo" ? 0.1 : 0))).toFixed(1));
+    const riskHa = Number((Math.max(0, transformedHa) * (0.28 + floodExposure * 0.46 + (lens.id === "quebradas" ? 0.12 : 0))).toFixed(1));
+    const densityPressure = clamp((toRecord.inhabitants / Math.max(toRecord.areaHa, 1)) / 120, 0, 1);
+    const soilPressure = clamp(Math.max(0, transformedHa) / Math.max(toRecord.areaHa, 1) * 1.45, 0, 1);
+    const riskPressure = clamp(floodExposure * scenario.riskMultiplier + pseudoNoise(index * 1.8, transformedHa * 0.12, 37) * 0.04, 0, 1);
+    const corridorPressure = clamp(roadInfluence + pseudoNoise(index * 2.1, transformedHa * 0.09, 73) * 0.06, 0, 1);
+    const score = Math.round(clamp(
+      soilPressure * lens.soilWeight
+      + riskPressure * lens.riskWeight
+      + corridorPressure * lens.corridorWeight
+      + densityPressure * lens.densityWeight,
+      0,
+      1
+    ) * 100);
+    const dominantDriver = pickLandChangeDominantDriver({
+      soilPressure,
+      riskPressure,
+      corridorPressure,
+      densityPressure,
+    });
+    const feature = cloneFeature(deltaRecord?.feature || toRecord.feature);
+    const sectorId = `land-change-sector-${index + 1}`;
+    const summary = buildLandChangeSectorSummary({
+      name: settlement.name,
+      period,
+      transformedHa,
+      productiveLossHa,
+      riskHa,
+      dominantDriver,
+      scenario,
+      lens,
+    });
+    feature.properties = {
+      ...feature.properties,
+      sectorId,
+      score,
+      transformedHa,
+      productiveLossHa,
+      riskHa,
+      pressureLabel: getLandChangePressureLabel(score),
+      dominantDriver,
+      summary,
+    };
+
+    return {
+      id: sectorId,
+      name: settlement.name,
+      hierarchy: settlement.hierarchy,
+      centroid: settlement.centroid,
+      feature,
+      score,
+      transformedHa: Number(Math.max(0, transformedHa).toFixed(1)),
+      productiveLossHa,
+      riskHa,
+      toAreaHa: toRecord.areaHa,
+      fromAreaHa: fromRecord.areaHa,
+      toPopulation: toRecord.inhabitants,
+      fromPopulation: fromRecord.inhabitants,
+      corridorInfluence: Math.round(corridorPressure * 100),
+      riskPressure: Math.round(riskPressure * 100),
+      soilPressure: Math.round(soilPressure * 100),
+      densityPressure: Math.round(densityPressure * 100),
+      pressureLabel: getLandChangePressureLabel(score),
+      dominantDriver,
+      summary,
+      recommendation: getLandChangeRecommendation({
+        score,
+        dominantDriver,
+        lens,
+        scenario,
+      }),
+      tags: [
+        `+${formatLandChangeHa(Math.max(0, transformedHa))} ha`,
+        `${formatLandChangeHa(productiveLossHa)} ha rural en tension`,
+        `${formatLandChangeHa(riskHa)} ha en vigilancia`,
+        `Vias ${Math.round(corridorPressure * 100)}%`,
+      ],
+    };
+  });
+}
+
+function pickLandChangeDominantDriver({ soilPressure, riskPressure, corridorPressure, densityPressure }) {
+  const entries = [
+    { key: "Suelo rural", value: soilPressure },
+    { key: "Quebradas", value: riskPressure },
+    { key: "Corredor vial", value: corridorPressure },
+    { key: "Densidad", value: densityPressure },
+  ].sort((left, right) => right.value - left.value);
+  return entries[0]?.key || "Suelo rural";
+}
+
+function buildLandChangeSectorSummary({ name, period, transformedHa, productiveLossHa, riskHa, dominantDriver, scenario, lens }) {
+  return `${name} agrega ${formatLandChangeHa(Math.max(0, transformedHa))} ha de huella entre ${period.fromYear} y ${period.toYear}, compromete ${formatLandChangeHa(productiveLossHa)} ha de suelo rural y deja ${formatLandChangeHa(riskHa)} ha bajo vigilancia. Driver dominante: ${dominantDriver.toLowerCase()} con escenario ${scenario.label.toLowerCase()} y enfoque ${lens.label.toLowerCase()}.`;
+}
+
+function getLandChangeRecommendation({ score, dominantDriver, lens, scenario }) {
+  if (dominantDriver === "Quebradas") {
+    return "Accion sugerida: franja de proteccion, drenaje urbano sostenible y control estricto de ocupacion en bordes de quebrada.";
+  }
+  if (dominantDriver === "Corredor vial") {
+    return "Accion sugerida: orientar usos mixtos compactos, limitar saltos dispersos y asegurar servicios antes de habilitar nueva ocupacion.";
+  }
+  if (dominantDriver === "Densidad") {
+    return "Accion sugerida: densificacion regulada, mejora de espacio publico y soporte de equipamientos para absorber crecimiento sin expandir borde.";
+  }
+  if (score >= 72 || lens.id === "suelo" || scenario.id === "expansivo") {
+    return "Accion sugerida: blindar reserva agricola, consolidar borde urbano y priorizar reutilizacion de vacios antes de abrir nuevo suelo.";
+  }
+  return "Accion sugerida: seguimiento anual, lectura satelital comparada y ordenamiento preventivo antes de consolidar nuevas licencias.";
+}
+
+function summarizeLandChangeAnalysis(series, sectors, period, scenario, lens) {
+  const fromTotals = series.totals[period.fromYear];
+  const toTotals = series.totals[period.toYear];
+  const transformedHa = Number(sectors.reduce((sum, sector) => sum + sector.transformedHa, 0).toFixed(1));
+  const productiveLossHa = Number(sectors.reduce((sum, sector) => sum + sector.productiveLossHa, 0).toFixed(1));
+  const riskHa = Number(sectors.reduce((sum, sector) => sum + sector.riskHa, 0).toFixed(1));
+  const yearsDelta = Math.max(1, period.toYear - period.fromYear);
+  const annualGrowthPct = Number((((toTotals.areaHa / Math.max(fromTotals.areaHa, 1)) ** (1 / yearsDelta)) - 1) * 100).toFixed(2);
+  const hotspot = [...sectors].sort((left, right) => right.score - left.score)[0] || null;
+  const meanScore = Math.round(sectors.reduce((sum, sector) => sum + sector.score, 0) / Math.max(sectors.length, 1));
+
+  return {
+    fromAreaHa: fromTotals.areaHa,
+    toAreaHa: toTotals.areaHa,
+    fromPopulation: fromTotals.inhabitants,
+    toPopulation: toTotals.inhabitants,
+    transformedHa,
+    productiveLossHa,
+    riskHa,
+    populationDelta: toTotals.inhabitants - fromTotals.inhabitants,
+    annualGrowthPct,
+    hotspotLabel: hotspot?.name || "Sin hotspot",
+    hotspotCopy: hotspot
+      ? `${hotspot.name} aparece como frente dominante por ${hotspot.pressureLabel.toLowerCase()} y driver ${hotspot.dominantDriver.toLowerCase()}.`
+      : "Aun no hay hotspots priorizados.",
+    productiveLabel: productiveLossHa >= transformedHa * 0.8 ? "Perdida fuerte de borde productivo" : productiveLossHa >= transformedHa * 0.55 ? "Presion media sobre suelo rural" : "Presion contenida sobre suelo rural",
+    riskLabel: meanScore >= 74 ? "Alta vigilancia" : meanScore >= 58 ? "Vigilancia media" : "Vigilancia baja",
+    meanScore,
+    methodLabel: `${period.shortLabel} + ${scenario.shortLabel} + ${lens.shortLabel}`,
+  };
+}
+
+function buildLandChangeSurface(series, period) {
+  const features = [];
+  series.settlements.forEach((settlement) => {
+    if (period.id === "2010_2016") {
+      features.push(markLandChangeSurfaceFeature(settlement.years[2010].feature, "base2010", "Huella 2010"));
+      if (settlement.periods["2010_2016"]?.feature) {
+        features.push(markLandChangeSurfaceFeature(settlement.periods["2010_2016"].feature, "growth2016", "Huella 2016"));
+      }
+      return;
+    }
+    if (period.id === "2016_2022") {
+      features.push(markLandChangeSurfaceFeature(settlement.years[2016].feature, "base2016", "Huella 2016"));
+      if (settlement.periods["2016_2022"]?.feature) {
+        features.push(markLandChangeSurfaceFeature(settlement.periods["2016_2022"].feature, "growth2022", "Huella 2022"));
+      }
+      return;
+    }
+    if (period.id === "2022_2030") {
+      features.push(markLandChangeSurfaceFeature(settlement.years[2022].feature, "base2022", "Huella 2022"));
+      if (settlement.periods["2022_2030"]?.feature) {
+        features.push(markLandChangeSurfaceFeature(settlement.periods["2022_2030"].feature, "projected2030", "Huella 2030"));
+      }
+      return;
+    }
+    features.push(markLandChangeSurfaceFeature(settlement.years[2010].feature, "base2010", "Huella 2010"));
+    if (settlement.periods["2010_2016"]?.feature) {
+      features.push(markLandChangeSurfaceFeature(settlement.periods["2010_2016"].feature, "growth2016", "Huella 2016"));
+    }
+    if (settlement.periods["2016_2022"]?.feature) {
+      features.push(markLandChangeSurfaceFeature(settlement.periods["2016_2022"].feature, "growth2022", "Huella 2022"));
+    }
+  });
+  return {
+    type: "FeatureCollection",
+    features,
+  };
+}
+
+function markLandChangeSurfaceFeature(feature, classId, stageLabel) {
+  const cloned = cloneFeature(feature);
+  cloned.properties = {
+    ...cloned.properties,
+    classId,
+    stageLabel,
+  };
+  return cloned;
+}
+
+function buildLandChangePressureSurface(lens, scenario) {
+  const features = [];
+  if (lens.id === "mixto" || lens.id === "quebradas") {
+    geoSources.canales.features.forEach((feature, index) => {
+      try {
+        const buffered = turf.buffer(feature, 0.16 * scenario.riskMultiplier, { units: "kilometers" });
+        buffered.properties = {
+          ...buffered.properties,
+          pressureId: `risk-corridor-${index + 1}`,
+          surfaceType: "quebrada",
+          name: feature.properties?.name || `Quebrada ${index + 1}`,
+          summary: "Franja de vigilancia por drenaje y ocupacion potencial en borde.",
+        };
+        features.push(buffered);
+      } catch (error) {
+        // ignore corridor build failure and keep the rest of the study available
+      }
+    });
+  }
+  if (lens.id === "mixto" || lens.id === "corredores") {
+    geoSources.vias.features.forEach((feature, index) => {
+      try {
+        const buffered = turf.buffer(feature, 0.22, { units: "kilometers" });
+        buffered.properties = {
+          ...buffered.properties,
+          pressureId: `road-corridor-${index + 1}`,
+          surfaceType: "corredor",
+          name: feature.properties?.name || `Corredor ${index + 1}`,
+          summary: "Franja de influencia vial con alta probabilidad de ocupacion por accesibilidad.",
+        };
+        features.push(buffered);
+      } catch (error) {
+        // keep running without this feature if turf fails on a geometry
+      }
+    });
+  }
+  return {
+    type: "FeatureCollection",
+    features,
+  };
+}
+
+function selectLandChangePrioritySectors(sectors) {
+  return [...sectors]
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 4)
+    .map((sector, index) => ({
+      ...sector,
+      rank: index + 1,
+      priorityLabel: index === 0 ? "Intervencion prioritaria" : index === 1 ? "Atencion alta" : "Seguimiento",
+    }));
+}
+
+function renderLandChangeDrivers(analysis) {
+  if (!dom.landChangeDrivers) {
+    return;
+  }
+
+  dom.landChangeDrivers.classList.remove("empty-state");
+  dom.landChangeDrivers.classList.add("has-data");
+  setHtmlIfChanged(dom.landChangeDrivers, [
+    ...landChangeMethodPillCatalog,
+    analysis.period.label,
+    analysis.scenario.label,
+    analysis.lens.headline,
+    `Hotspot ${analysis.summary.hotspotLabel}`,
+  ].map((item) => `<span class="planning-pill emphasis">${item}</span>`).join(""));
+}
+
+function renderLandChangeTimeline(analysis) {
+  if (!dom.landChangeTimeline) {
+    return;
+  }
+
+  const maxArea = analysis.timeline.reduce((max, item) => Math.max(max, item.areaHa), 1);
+  dom.landChangeTimeline.classList.remove("empty-state");
+  dom.landChangeTimeline.classList.add("has-data");
+  setHtmlIfChanged(dom.landChangeTimeline, `
+    <div class="land-change-head">
+      <div>
+        <p class="section-kicker">Serie temporal</p>
+        <h4>Huella urbana y poblacion sintetica</h4>
+        <p>Replica visual del estudio con cortes 2010, 2016, 2022 y una proyeccion 2030 para interpretar ocupacion, suelo rural y ordenamiento preventivo.</p>
+      </div>
+      <span class="land-change-pill tone-${getLandChangeScoreTone(analysis.summary.meanScore)}">${analysis.period.headline}</span>
+    </div>
+    <div class="land-change-timeline-grid">
+      ${analysis.timeline.map((snapshot) => `
+        <article class="land-change-year-card ${snapshot.year === analysis.period.toYear ? "active" : ""}">
+          <div class="land-change-year-head">
+            <h5>${snapshot.shortLabel}</h5>
+            <span class="land-change-pill tone-${snapshot.tone}">${snapshot.year === analysis.period.toYear ? "Referencia" : "Serie"}</span>
+          </div>
+          <strong>${formatLandChangeHa(snapshot.areaHa)} ha</strong>
+          <span>${formatLandChangePopulation(snapshot.inhabitants)} habitantes</span>
+          <div class="land-change-bar">
+            <i style="width: ${Math.max(10, snapshot.areaHa / maxArea * 100)}%"></i>
+          </div>
+          <p>${snapshot.copy}</p>
+        </article>
+      `).join("")}
+    </div>
+  `);
+}
+
+function renderLandChangeSectors(analysis) {
+  if (!dom.landChangeSectors) {
+    return;
+  }
+
+  const ranked = [...analysis.sectors].sort((left, right) => right.score - left.score);
+  dom.landChangeSectors.classList.remove("empty-state");
+  dom.landChangeSectors.classList.add("has-data");
+  setHtmlIfChanged(dom.landChangeSectors, ranked.map((sector, index) => `
+    <article class="land-change-sector ${sector.id === state.landChangeHighlightId ? "active" : ""}">
+      <div class="land-change-sector-head">
+        <div>
+          <p class="land-change-sector-kicker">${sector.hierarchy}</p>
+          <h4>${sector.name}</h4>
+        </div>
+        <span class="land-change-pill tone-${getLandChangeScoreTone(sector.score)}">${sector.pressureLabel}</span>
+      </div>
+      <p class="land-change-sector-copy">${sector.summary}</p>
+      <div class="land-change-sector-grid">
+        <article class="land-change-sector-metric">
+          <span>Huella nueva</span>
+          <strong>${formatLandChangeHa(sector.transformedHa)} ha</strong>
+        </article>
+        <article class="land-change-sector-metric">
+          <span>Suelo rural</span>
+          <strong>${formatLandChangeHa(sector.productiveLossHa)} ha</strong>
+        </article>
+        <article class="land-change-sector-metric">
+          <span>Riesgo</span>
+          <strong>${formatLandChangeHa(sector.riskHa)} ha</strong>
+        </article>
+        <article class="land-change-sector-metric">
+          <span>Puntaje</span>
+          <strong>${sector.score}/100</strong>
+        </article>
+      </div>
+      <div class="land-change-sector-tags">
+        <span>Prioridad ${index + 1}</span>
+        <span>Driver ${sector.dominantDriver}</span>
+        ${sector.tags.map((tag) => `<span>${tag}</span>`).join("")}
+      </div>
+      <p class="land-change-sector-note">${sector.recommendation}</p>
+      <button class="ghost-button" type="button" data-land-change-sector-id="${sector.id}">Ver en mapa</button>
+    </article>
+  `).join(""));
+}
+
+function getLandChangePressureLabel(score) {
+  if (score >= 74) {
+    return "Presion alta";
+  }
+  if (score >= 58) {
+    return "Presion media";
+  }
+  return "Presion baja";
+}
+
+function getLandChangeScoreTone(score) {
+  if (score >= 74 || score === "future") {
+    return "high";
+  }
+  if (score >= 58 || score === "mid" || score === "current") {
+    return "mid";
+  }
+  if (score === "base") {
+    return "base";
+  }
+  return "low";
+}
+
+function formatLandChangeHa(value) {
+  return Number(value || 0).toFixed(1);
+}
+
+function formatLandChangePopulation(value) {
+  return new Intl.NumberFormat("es-EC").format(Math.round(value || 0));
 }
 
 function renderHydrologyModule() {
@@ -9397,7 +10228,11 @@ function clearHydrologyAnalysis() {
   state.hydrologyData = null;
   state.hydrologyHighlightId = null;
   clearHydrologyOverlay();
-  state.territorialFocus = state.planningData ? "planning" : "planning";
+  state.territorialFocus = state.landChangeData
+    ? "landChange"
+    : state.planningData
+      ? "planning"
+      : "planning";
   renderPlanningModule();
   updateMapSummary();
   setStatus("Estudio hidrico limpiado. Puedes correr un nuevo escenario para Mejia.");
@@ -9899,7 +10734,11 @@ function clearPlanningAnalysis() {
   state.planningData = null;
   state.planningHighlightId = null;
   clearPlanningOverlay();
-  state.territorialFocus = state.hydrologyData ? "hydrology" : "planning";
+  state.territorialFocus = state.hydrologyData
+    ? "hydrology"
+    : state.landChangeData
+      ? "landChange"
+      : "planning";
   updatePlanning3dCandidateSource();
   renderPlanningModule();
   updateMapSummary();
@@ -10557,6 +11396,121 @@ function renderPlanningOverlay(planning) {
   }
 }
 
+function renderLandChangeOverlay(analysis) {
+  clearLandChangeOverlay();
+  if (!mapState.map) {
+    return;
+  }
+
+  mapState.landChangeLayer = L.geoJSON(analysis.surface, {
+    style: (feature) => {
+      const classId = feature.properties?.classId;
+      if (classId === "base2010" || classId === "base2016" || classId === "base2022") {
+        return {
+          color: "#f7f2e8",
+          weight: 1.3,
+          fillColor: classId === "base2016" ? "#ff5a36" : classId === "base2022" ? "#ff4a34" : "#ff3a2d",
+          fillOpacity: 0.72,
+        };
+      }
+      if (classId === "growth2016") {
+        return {
+          color: "#ffe8c7",
+          weight: 1.2,
+          fillColor: "#ff9314",
+          fillOpacity: 0.82,
+        };
+      }
+      if (classId === "growth2022") {
+        return {
+          color: "#fff4db",
+          weight: 1.2,
+          fillColor: "#ffc72b",
+          fillOpacity: 0.84,
+        };
+      }
+      return {
+        color: "#f5efe4",
+        weight: 1.6,
+        fillColor: "#f8dd83",
+        fillOpacity: 0.18,
+        dashArray: "6 6",
+      };
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(
+        `<h3 class="popup-title">${feature.properties?.settlementName || feature.properties?.name || "Huella urbana"}</h3><p class="popup-copy">${feature.properties?.stageLabel || "Serie de huella"} sobre ${feature.properties?.settlementName || "Mejia"}${feature.properties?.areaHa ? ` con ${formatLandChangeHa(feature.properties.areaHa)} ha.` : "."}</p>`
+      );
+      layer.bindTooltip(
+        `${feature.properties?.stageLabel || "Huella"} | ${feature.properties?.settlementName || "Mejia"}`,
+        { sticky: true }
+      );
+    },
+  }).addTo(mapState.map);
+
+  if (analysis.pressureSurface?.features?.length) {
+    mapState.landChangePressureLayer = L.geoJSON(analysis.pressureSurface, {
+      style: (feature) => ({
+        color: feature.properties?.surfaceType === "quebrada" ? "#58aec2" : "#8a6a4f",
+        weight: feature.properties?.surfaceType === "quebrada" ? 1.8 : 1.4,
+        fillColor: feature.properties?.surfaceType === "quebrada" ? "#8fd9e0" : "#d8bb91",
+        fillOpacity: feature.properties?.surfaceType === "quebrada" ? 0.12 : 0.08,
+        dashArray: feature.properties?.surfaceType === "quebrada" ? "8 6" : "6 8",
+      }),
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          `<h3 class="popup-title">${feature.properties?.name || "Corredor territorial"}</h3><p class="popup-copy">${feature.properties?.summary || "Franja de presion territorial para lectura preventiva."}</p>`
+        );
+      },
+    }).addTo(mapState.map);
+  }
+
+  const hotspotPoints = analysis.prioritySectors.map((sector) => pointFeature(sector.name, sector.centroid, {
+    landChangeSectorId: sector.id,
+    rank: sector.rank,
+    score: sector.score,
+    pressureLabel: sector.pressureLabel,
+    summary: sector.summary,
+  }));
+
+  mapState.landChangeHotspotLayer = L.geoJSON({
+    type: "FeatureCollection",
+    features: hotspotPoints,
+  }, {
+    pointToLayer: (feature, latlng) => {
+      const active = feature.properties?.landChangeSectorId === state.landChangeHighlightId;
+      return L.circleMarker(latlng, {
+        radius: active ? 9 : 7,
+        weight: 2.4,
+        color: active ? "#fff8eb" : "#fff1d5",
+        fillColor: active ? "#cc6b18" : "#ff9a1f",
+        fillOpacity: 0.96,
+      });
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(
+        `<h3 class="popup-title">${feature.properties?.name || "Hotspot"}</h3><p class="popup-copy">${feature.properties?.summary || ""} Puntaje ${feature.properties?.score || 0}/100.</p>`
+      );
+    },
+  }).addTo(mapState.map);
+
+  if (mapState.landChangePressureLayer?.bringToBack) {
+    mapState.landChangePressureLayer.bringToBack();
+  }
+  if (mapState.landChangeLayer?.bringToFront) {
+    mapState.landChangeLayer.bringToFront();
+  }
+  if (mapState.landChangeHotspotLayer?.bringToFront) {
+    mapState.landChangeHotspotLayer.bringToFront();
+  }
+  if (mapState.hydrologyPriorityLayer?.bringToFront) {
+    mapState.hydrologyPriorityLayer.bringToFront();
+  }
+  if (mapState.planningCandidatesLayer?.bringToFront) {
+    mapState.planningCandidatesLayer.bringToFront();
+  }
+}
+
 function renderHydrologyOverlay(hydrology) {
   clearHydrologyOverlay();
   if (!mapState.map) {
@@ -10637,6 +11591,21 @@ function clearPlanningOverlay() {
   }
 }
 
+function clearLandChangeOverlay() {
+  if (mapState.landChangeLayer) {
+    mapState.map.removeLayer(mapState.landChangeLayer);
+    mapState.landChangeLayer = null;
+  }
+  if (mapState.landChangePressureLayer) {
+    mapState.map.removeLayer(mapState.landChangePressureLayer);
+    mapState.landChangePressureLayer = null;
+  }
+  if (mapState.landChangeHotspotLayer) {
+    mapState.map.removeLayer(mapState.landChangeHotspotLayer);
+    mapState.landChangeHotspotLayer = null;
+  }
+}
+
 function clearHydrologyOverlay() {
   if (mapState.hydrologyLayer) {
     mapState.map.removeLayer(mapState.hydrologyLayer);
@@ -10660,6 +11629,22 @@ function focusPlanningCandidates() {
     mapState.map.fitBounds(bounds, {
       padding: [48, 48],
       maxZoom: 13,
+    });
+  }
+}
+
+function focusLandChangeStudy() {
+  if (!mapState.map || (!mapState.landChangeLayer && !mapState.landChangeHotspotLayer)) {
+    return;
+  }
+
+  state.territorialFocus = "landChange";
+  updateMapSummary();
+  const bounds = mapState.landChangeLayer?.getBounds?.() || mapState.landChangeHotspotLayer?.getBounds?.();
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, {
+      padding: [44, 44],
+      maxZoom: 11,
     });
   }
 }
@@ -10699,6 +11684,31 @@ function focusPlanningCandidate(candidateId) {
   if (mapState.planningCandidatesLayer) {
     mapState.planningCandidatesLayer.eachLayer((layer) => {
       if (layer.feature?.properties?.candidateId === candidateId) {
+        layer.openPopup();
+      }
+    });
+  }
+}
+
+function focusLandChangeSector(sectorId) {
+  const sector = state.landChangeData?.sectors?.find((item) => item.id === sectorId);
+  if (!sector || !mapState.map) {
+    return;
+  }
+
+  state.landChangeHighlightId = sectorId;
+  state.territorialFocus = "landChange";
+  renderLandChangeSectors(state.landChangeData);
+  renderLandChangeOverlay(state.landChangeData);
+  updateMapSummary();
+  const bounds = L.geoJSON(sector.feature).getBounds();
+  mapState.map.fitBounds(bounds, {
+    padding: [52, 52],
+    maxZoom: 13,
+  });
+  if (mapState.landChangeHotspotLayer) {
+    mapState.landChangeHotspotLayer.eachLayer((layer) => {
+      if (layer.feature?.properties?.landChangeSectorId === sectorId) {
         layer.openPopup();
       }
     });
@@ -11412,15 +12422,27 @@ function updateMapSummary(force = false) {
 
   if (state.entryRoute === "planificacion") {
     const planning = state.planningData;
+    const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
     const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
+    const landChangePeriod = landChange?.period || getLandChangePeriodProfile();
+    const landChangeScenario = landChange?.scenario || getLandChangeScenarioProfile();
+    const landChangeLens = landChange?.lens || getLandChangeLensProfile();
     const hydrologyClimate = hydrology?.climate || getHydrologyClimateProfile();
     const hydrologyHorizon = hydrology?.horizon || getHydrologyHorizonProfile();
     const hydrologyDemand = hydrology?.demand || getHydrologyDemandProfile();
+    const showLandChange = state.territorialFocus === "landChange" && landChange;
     const showHydrology = state.territorialFocus === "hydrology" && hydrology;
     setTextIfChanged(dom.overlayIndex, planning ? "Aptitud" : imageryProfile.shortLabel);
     renderMapBadges();
-    if (showHydrology) {
+    if (showLandChange) {
+      setTextIfChanged(dom.overlayIndex, "Huella");
+      setTextIfChanged(dom.mapTitle, `Transformacion del suelo rural sobre ${landChange.context.scopeLabel}`);
+      setTextIfChanged(
+        dom.mapSubtitle,
+        `${landChangePeriod.shortLabel}, ${landChangeScenario.label} y enfoque ${landChangeLens.label.toLowerCase()}. ${formatLandChangeHa(landChange.summary.transformedHa)} ha de suelo rural transformado y hotspot ${landChange.summary.hotspotLabel}.`
+      );
+    } else if (showHydrology) {
       setTextIfChanged(dom.overlayIndex, "Balance");
       setTextIfChanged(dom.mapTitle, `Disponibilidad hidrica sobre ${hydrology.context.scopeLabel}`);
       setTextIfChanged(
@@ -11434,9 +12456,13 @@ function updateMapSummary(force = false) {
       setTextIfChanged(dom.overlayIndex, "Balance");
       setTextIfChanged(dom.mapTitle, "Estudio hidrico de Mejia listo");
       setTextIfChanged(dom.mapSubtitle, `${hydrology.climate.shortLabel}, ${hydrology.horizon.label} y ${hydrology.demand.label} con balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio.`);
+    } else if (landChange) {
+      setTextIfChanged(dom.overlayIndex, "Huella");
+      setTextIfChanged(dom.mapTitle, "Estudio de transformacion del suelo listo");
+      setTextIfChanged(dom.mapSubtitle, `${landChange.period.shortLabel} con ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas, ${landChange.summary.riskLabel.toLowerCase()} y foco ${landChange.summary.hotspotLabel}.`);
     } else {
       setTextIfChanged(dom.mapTitle, "Planificacion territorial lista");
-      setTextIfChanged(dom.mapSubtitle, `Elige ${imageryProfile.label} para aptitud territorial o ejecuta el estudio hidrico para simular oferta, demanda y resiliencia de Mejia.`);
+      setTextIfChanged(dom.mapSubtitle, `Elige ${imageryProfile.label} para aptitud territorial o ejecuta los estudios de suelo e hidrologia para simular transformacion, oferta, demanda y resiliencia de Mejia.`);
     }
     return;
   }
@@ -11500,11 +12526,37 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
 
   if (state.entryRoute === "planificacion") {
     const planning = state.planningData;
+    const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
     const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
+    const landChangePeriod = landChange?.period || getLandChangePeriodProfile();
+    const landChangeScenario = landChange?.scenario || getLandChangeScenarioProfile();
     const climate = hydrology?.climate || getHydrologyClimateProfile();
     const horizon = hydrology?.horizon || getHydrologyHorizonProfile();
-    const badges = state.territorialFocus === "hydrology" && hydrology
+    const badges = state.territorialFocus === "landChange" && landChange
+      ? [
+          {
+            tone: "analysis",
+            label: "Huella",
+          },
+          {
+            tone: "neutral",
+            label: landChangePeriod.shortLabel,
+          },
+          {
+            tone: "neutral",
+            label: landChangeScenario.shortLabel,
+          },
+          {
+            tone: landChange.summary.meanScore >= 74
+              ? "compare"
+              : landChange.summary.meanScore >= 58
+                ? "preview"
+                : "exact",
+            label: landChange.summary.riskLabel,
+          },
+        ]
+      : state.territorialFocus === "hydrology" && hydrology
       ? [
           {
             tone: "analysis",
@@ -11550,6 +12602,11 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
                   tone: "analysis",
                   label: `Agua ${hydrology.climate.shortLabel}`,
                 }
+              : landChange
+                ? {
+                    tone: "analysis",
+                    label: `Huella ${landChange.period.shortLabel}`,
+                  }
               : {
                   tone: "muted",
                   label: "Sin escenario",

@@ -28,7 +28,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260417-5">
+  <link rel="stylesheet" href="./styles.css?v=20260418-3">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -453,6 +453,72 @@
               </div>
             </article>
 
+            <article id="landChangeCard" class="module-card planning-card hidden" data-module-track="planificacion">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Huella urbana</p>
+                  <h3>Transformacion del suelo rural</h3>
+                </div>
+                <button id="runLandChangeBtn" class="secondary-button" type="button">Analizar huella</button>
+              </div>
+              <p class="module-copy">
+                Replica metodologica para Mejia inspirada en estudios de huella urbana y transformacion del suelo rural:
+                cortes 2010, 2016 y 2022, proyeccion 2030, presion sobre borde agricola y lectura preventiva
+                de corredores y quebradas.
+              </p>
+              <div class="planning-toolbar land-change-toolbar">
+                <label class="field">
+                  <span>Periodo</span>
+                  <select id="landChangePeriodSelect">
+                    <option value="2010_2016">Huella 2010-2016</option>
+                    <option value="2016_2022">Huella 2016-2022</option>
+                    <option value="2010_2022">Serie 2010-2022</option>
+                    <option value="2022_2030">Proyeccion 2022-2030</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Escenario</span>
+                  <select id="landChangeScenarioSelect">
+                    <option value="contencion">Contencion</option>
+                    <option value="tendencial">Tendencial</option>
+                    <option value="expansivo">Expansivo</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Enfoque</span>
+                  <select id="landChangeLensSelect">
+                    <option value="mixto">Mixto OT</option>
+                    <option value="suelo">Suelo rural</option>
+                    <option value="quebradas">Quebradas y riesgo</option>
+                    <option value="corredores">Corredores de ocupacion</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Escala</span>
+                  <input type="text" value="Canton Mejia" readonly>
+                </label>
+              </div>
+              <p id="landChangeSourceNote" class="service-note">
+                La simulacion sintetiza huella urbana 2010-2016-2022, transformacion de suelo rural y riesgo territorial.
+              </p>
+              <div id="landChangeResults" class="metrics-grid empty-state">
+                Ejecuta el estudio para ver huella urbana, suelo rural transformado, poblacion estimada y presion territorial.
+              </div>
+              <div id="landChangeDrivers" class="planning-pills empty-state">
+                Aqui apareceran los componentes metodologicos activos del estudio de transformacion del suelo.
+              </div>
+              <div id="landChangeTimeline" class="land-change-timeline empty-state">
+                La serie temporal mostrara el cambio de huella urbana entre 2010, 2016, 2022 y la proyeccion 2030.
+              </div>
+              <div id="landChangeSectors" class="land-change-sectors empty-state">
+                Aqui apareceran los hotspots de transformacion rural, riesgo y ocupacion territorial para Mejia.
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="focusLandChangeBtn" class="secondary-button" type="button">Centrar estudio</button>
+                <button id="clearLandChangeBtn" class="ghost-button" type="button">Limpiar estudio</button>
+              </div>
+            </article>
+
             <article class="module-card planning-card hidden" data-module-track="planificacion">
               <div class="module-head">
                 <div>
@@ -583,11 +649,11 @@
           <p class="overlay-kicker">Planificacion territorial</p>
           <h2 id="planning3dTitle">Visualizador 3D urbano</h2>
           <p id="planning3dSubtitle" class="planning-3d-subtitle">
-            Huellas reales de construcciones extruidas por n_piso, soporte catastral y lectura espacial sobre satelite.
+            Huellas reales de construcciones extruidas por n_piso, soporte catastral y base urbana clara para lectura espacial tridimensional.
           </p>
         </div>
         <div class="planning-3d-header-actions">
-          <button id="planning3dResetViewBtn" class="ghost-button" type="button">Vista ortogonal</button>
+          <button id="planning3dResetViewBtn" class="ghost-button" type="button">Vista urbana</button>
           <button id="planning3dCloseBtn" class="secondary-button" type="button">Cerrar</button>
         </div>
       </header>
@@ -673,6 +739,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-<script src="./app.js?v=20260418-1" defer></script>
+<script src="./app.js?v=20260418-3" defer></script>
 </body>
 </html>
