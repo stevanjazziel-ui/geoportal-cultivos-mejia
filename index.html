@@ -389,6 +389,70 @@
               </div>
             </article>
 
+            <article id="hydrologyCard" class="module-card planning-card hidden" data-module-track="planificacion">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Seguridad hidrica</p>
+                  <h3>Disponibilidad hidrica y resiliencia</h3>
+                </div>
+                <button id="runHydrologyBtn" class="secondary-button" type="button">Simular escenarios</button>
+              </div>
+              <p class="module-copy">
+                Replica metodologica para Mejia inspirada en el estudio de disponibilidad hidrica del DMQ:
+                cubo hidroclimatico, oferta-demanda, resiliencia urbana y escenarios climaticos visibles sobre el geoportal.
+              </p>
+              <div class="planning-toolbar hydrology-toolbar">
+                <label class="field">
+                  <span>Escenario climatico</span>
+                  <select id="hydrologyClimateSelect">
+                    <option value="historico">Historico 2000-2025</option>
+                    <option value="rcp26">RCP 2.6 mitigado</option>
+                    <option value="rcp85">RCP 8.5 intensivo</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Horizonte</span>
+                  <select id="hydrologyHorizonSelect">
+                    <option value="base">Base 2020-2025</option>
+                    <option value="2035">Ventana 2030-2035</option>
+                    <option value="2050">Ventana 2045-2050</option>
+                    <option value="2080">Ventana 2080-2100</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Gestion de demanda</span>
+                  <select id="hydrologyDemandSelect">
+                    <option value="actual">Gestion actual</option>
+                    <option value="eficienciaMedia">Eficiencia media</option>
+                    <option value="eficienciaAlta">Eficiencia intensiva</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Escala</span>
+                  <input type="text" value="Canton Mejia" readonly>
+                </label>
+              </div>
+              <p id="hydrologySourceNote" class="service-note">
+                La simulacion sintetiza cubo hidroclimatico, balance hidrico, demanda y resiliencia urbana por subzonas de Mejia.
+              </p>
+              <div id="hydrologyResults" class="metrics-grid empty-state">
+                Ejecuta el estudio hidrico para ver oferta, demanda, balance, resiliencia y prioridades territoriales.
+              </div>
+              <div id="hydrologyDrivers" class="planning-pills empty-state">
+                Aqui apareceran los pilares metodologicos activos del estudio hidrico.
+              </div>
+              <div id="hydrologyTimeline" class="hydrology-timeline empty-state">
+                La serie prospectiva mostrara como cambia el balance hidrico de Mejia bajo cada escenario.
+              </div>
+              <div id="hydrologySectors" class="hydrology-sectors empty-state">
+                Aqui apareceran las subzonas hidricas, sus deficits o superavits y las medidas recomendadas.
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="focusHydrologyBtn" class="secondary-button" type="button">Centrar estudio</button>
+                <button id="clearHydrologyBtn" class="ghost-button" type="button">Limpiar estudio</button>
+              </div>
+            </article>
+
             <article class="module-card planning-card hidden" data-module-track="planificacion">
               <div class="module-head">
                 <div>
@@ -541,6 +605,18 @@
           <input id="planning3dParcelsToggle" type="checkbox" checked>
           <span>Catastro</span>
         </label>
+        <label class="planning-3d-check">
+          <input id="planning3dShadowsToggle" type="checkbox" checked>
+          <span>Sombras</span>
+        </label>
+        <label class="field planning-3d-sun-field">
+          <span>Fecha solar</span>
+          <input id="planning3dDate" type="date">
+        </label>
+        <label class="field planning-3d-sun-field">
+          <span>Hora</span>
+          <input id="planning3dTime" type="time" step="900">
+        </label>
         <label class="field planning-3d-range">
           <span>Escala de altura</span>
           <div class="range-wrap">
@@ -597,6 +673,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-<script src="./app.js?v=20260417-9" defer></script>
+<script src="./app.js?v=20260418-1" defer></script>
 </body>
 </html>

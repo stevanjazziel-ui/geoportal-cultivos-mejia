@@ -38,6 +38,11 @@ const layerCatalog = [
         title: "Equipamientos existentes",
         description: "Escuelas, salud y servicios de apoyo para medir deficit territorial.",
       },
+      {
+        id: "hidrozonas",
+        title: "Subzonas hidricas",
+        description: "Unidades hidricas sinteticas para balance oferta-demanda y resiliencia urbana.",
+      },
     ],
   },
   {
@@ -765,6 +770,152 @@ const geoSources = {
       }),
     ],
   },
+  hidrozonas: {
+    type: "FeatureCollection",
+    features: [
+      polygonFeature("Paramo occidental", [
+        [-78.752, -0.392],
+        [-78.688, -0.387],
+        [-78.643, -0.437],
+        [-78.656, -0.498],
+        [-78.722, -0.506],
+        [-78.762, -0.452],
+      ], {
+        category: "hidrico",
+        hydroRole: "Recarga de cabecera",
+        precipBaseMm: 1710,
+        petBaseMm: 760,
+        rechargeCoeff: 0.46,
+        runoffCoeff: 0.24,
+        domesticBaseHm3: 0.9,
+        irrigationBaseHm3: 1.6,
+        productiveBaseHm3: 0.3,
+        ecologicalFlowHm3: 6.8,
+        floodSensitivity: 0.28,
+        storageOpportunity: 0.88,
+        urbanPressure: 0.16,
+        irrigationPressure: 0.28,
+        transferDependency: 0.08,
+      }),
+      polygonFeature("Corredor Aloag", [
+        [-78.711, -0.418],
+        [-78.645, -0.423],
+        [-78.621, -0.484],
+        [-78.647, -0.534],
+        [-78.704, -0.541],
+        [-78.728, -0.477],
+      ], {
+        category: "hidrico",
+        hydroRole: "Transicion y drenaje rapido",
+        precipBaseMm: 1430,
+        petBaseMm: 810,
+        rechargeCoeff: 0.31,
+        runoffCoeff: 0.34,
+        domesticBaseHm3: 1.2,
+        irrigationBaseHm3: 1.8,
+        productiveBaseHm3: 0.5,
+        ecologicalFlowHm3: 4.2,
+        floodSensitivity: 0.44,
+        storageOpportunity: 0.62,
+        urbanPressure: 0.34,
+        irrigationPressure: 0.3,
+        transferDependency: 0.12,
+      }),
+      polygonFeature("Machachi central", [
+        [-78.627, -0.452],
+        [-78.552, -0.448],
+        [-78.529, -0.513],
+        [-78.562, -0.553],
+        [-78.621, -0.545],
+        [-78.639, -0.497],
+      ], {
+        category: "hidrico",
+        hydroRole: "Demanda urbana consolidada",
+        precipBaseMm: 1240,
+        petBaseMm: 850,
+        rechargeCoeff: 0.22,
+        runoffCoeff: 0.42,
+        domesticBaseHm3: 4.2,
+        irrigationBaseHm3: 1.1,
+        productiveBaseHm3: 1.3,
+        ecologicalFlowHm3: 3.8,
+        floodSensitivity: 0.62,
+        storageOpportunity: 0.46,
+        urbanPressure: 0.82,
+        irrigationPressure: 0.18,
+        transferDependency: 0.24,
+      }),
+      polygonFeature("Tambillo oriental", [
+        [-78.591, -0.414],
+        [-78.492, -0.419],
+        [-78.468, -0.483],
+        [-78.516, -0.512],
+        [-78.584, -0.486],
+      ], {
+        category: "hidrico",
+        hydroRole: "Expansion periurbana",
+        precipBaseMm: 1190,
+        petBaseMm: 865,
+        rechargeCoeff: 0.24,
+        runoffCoeff: 0.38,
+        domesticBaseHm3: 2.4,
+        irrigationBaseHm3: 1.3,
+        productiveBaseHm3: 0.7,
+        ecologicalFlowHm3: 2.7,
+        floodSensitivity: 0.58,
+        storageOpportunity: 0.42,
+        urbanPressure: 0.69,
+        irrigationPressure: 0.2,
+        transferDependency: 0.18,
+      }),
+      polygonFeature("Aloasi y El Chaupi", [
+        [-78.666, -0.523],
+        [-78.579, -0.516],
+        [-78.548, -0.589],
+        [-78.616, -0.624],
+        [-78.682, -0.585],
+      ], {
+        category: "hidrico",
+        hydroRole: "Valle mixto agro-urbano",
+        precipBaseMm: 1320,
+        petBaseMm: 838,
+        rechargeCoeff: 0.29,
+        runoffCoeff: 0.31,
+        domesticBaseHm3: 1.7,
+        irrigationBaseHm3: 3.6,
+        productiveBaseHm3: 0.8,
+        ecologicalFlowHm3: 3.9,
+        floodSensitivity: 0.36,
+        storageOpportunity: 0.64,
+        urbanPressure: 0.42,
+        irrigationPressure: 0.72,
+        transferDependency: 0.14,
+      }),
+      polygonFeature("Valle sur oriental", [
+        [-78.575, -0.495],
+        [-78.474, -0.505],
+        [-78.448, -0.593],
+        [-78.523, -0.623],
+        [-78.592, -0.566],
+      ], {
+        category: "hidrico",
+        hydroRole: "Riego y reserva agricola",
+        precipBaseMm: 1160,
+        petBaseMm: 882,
+        rechargeCoeff: 0.26,
+        runoffCoeff: 0.28,
+        domesticBaseHm3: 1.1,
+        irrigationBaseHm3: 4.4,
+        productiveBaseHm3: 0.9,
+        ecologicalFlowHm3: 3.4,
+        floodSensitivity: 0.3,
+        storageOpportunity: 0.71,
+        urbanPressure: 0.26,
+        irrigationPressure: 0.84,
+        transferDependency: 0.2,
+      }),
+    ],
+  },
 };
 
 const layerStyles = {
@@ -796,6 +947,13 @@ const layerStyles = {
     weight: 1.4,
     fillColor: "#d7a56a",
     fillOpacity: 0.18,
+  },
+  hidrozonas: {
+    color: "#2c6b78",
+    weight: 1.4,
+    fillColor: "#8bc7cc",
+    fillOpacity: 0.12,
+    dashArray: "6 6",
   },
   estaciones: {},
   equipamientos: {},
@@ -956,6 +1114,120 @@ const planningScenarioCatalog = {
     reserveSensitivity: 0.82,
   },
 };
+
+const hydrologyClimateCatalog = {
+  historico: {
+    id: "historico",
+    label: "Historico 2000-2025",
+    shortLabel: "Historico",
+    precipMultiplier: 1,
+    petMultiplier: 1,
+    rechargeMultiplier: 1,
+    floodBoost: 1,
+    droughtBoost: 1,
+    transferReliability: 1,
+  },
+  rcp26: {
+    id: "rcp26",
+    label: "RCP 2.6 mitigado",
+    shortLabel: "RCP 2.6",
+    precipMultiplier: 1.03,
+    petMultiplier: 1.05,
+    rechargeMultiplier: 0.97,
+    floodBoost: 1.08,
+    droughtBoost: 1.06,
+    transferReliability: 0.97,
+  },
+  rcp85: {
+    id: "rcp85",
+    label: "RCP 8.5 intensivo",
+    shortLabel: "RCP 8.5",
+    precipMultiplier: 1.08,
+    petMultiplier: 1.13,
+    rechargeMultiplier: 0.9,
+    floodBoost: 1.24,
+    droughtBoost: 1.22,
+    transferReliability: 0.9,
+  },
+};
+
+const hydrologyHorizonCatalog = {
+  base: {
+    id: "base",
+    label: "Base 2020-2025",
+    shortLabel: "2025",
+    year: 2025,
+    demandMultiplier: 1,
+    climateExposure: 0,
+    storageAdjustment: 1,
+  },
+  2035: {
+    id: "2035",
+    label: "Ventana 2030-2035",
+    shortLabel: "2035",
+    year: 2035,
+    demandMultiplier: 1.1,
+    climateExposure: 0.12,
+    storageAdjustment: 0.98,
+  },
+  2050: {
+    id: "2050",
+    label: "Ventana 2045-2050",
+    shortLabel: "2050",
+    year: 2050,
+    demandMultiplier: 1.22,
+    climateExposure: 0.24,
+    storageAdjustment: 0.94,
+  },
+  2080: {
+    id: "2080",
+    label: "Ventana 2080-2100",
+    shortLabel: "2100",
+    year: 2100,
+    demandMultiplier: 1.36,
+    climateExposure: 0.42,
+    storageAdjustment: 0.88,
+  },
+};
+
+const hydrologyDemandCatalog = {
+  actual: {
+    id: "actual",
+    label: "Gestion actual",
+    shortLabel: "Actual",
+    domesticFactor: 1,
+    irrigationFactor: 1,
+    productiveFactor: 1,
+    efficiencyBoost: 0,
+  },
+  eficienciaMedia: {
+    id: "eficienciaMedia",
+    label: "Eficiencia media",
+    shortLabel: "Ef media",
+    domesticFactor: 0.92,
+    irrigationFactor: 0.88,
+    productiveFactor: 0.94,
+    efficiencyBoost: 0.08,
+  },
+  eficienciaAlta: {
+    id: "eficienciaAlta",
+    label: "Eficiencia intensiva",
+    shortLabel: "Ef alta",
+    domesticFactor: 0.84,
+    irrigationFactor: 0.76,
+    productiveFactor: 0.88,
+    efficiencyBoost: 0.16,
+  },
+};
+
+const hydrologyMethodPillCatalog = [
+  "Cubo 2000-2025",
+  "CHIRPS + ERA5-Land",
+  "Hargreaves",
+  "GR4 semidistribuido",
+  "QDM",
+  "Demanda 2020-2100",
+];
 
 const planningVariableCatalog = {
   urbanFootprint: {
@@ -1410,6 +1682,12 @@ const state = {
   planningGrowthScenarioId: "balanceado",
   planningData: null,
   planningHighlightId: null,
+  hydrologyClimateId: "historico",
+  hydrologyHorizonId: "2050",
+  hydrologyDemandId: "eficienciaMedia",
+  hydrologyData: null,
+  hydrologyHighlightId: null,
+  territorialFocus: "planning",
   entryRoute: "agronomia",
   agronomyOutputs: {
     intralote: null,
@@ -1434,6 +1712,8 @@ const mapState = {
   managementLayer: null,
   planningLayer: null,
   planningCandidatesLayer: null,
+  hydrologyLayer: null,
+  hydrologyPriorityLayer: null,
   studyAreaLayer: null,
   currentPlotLayer: null,
 };
@@ -1458,6 +1738,10 @@ const planning3dState = {
   buildingsVisible: true,
   parcelsVisible: true,
   heightScale: 1,
+  shadowsVisible: true,
+  sunDate: "",
+  sunTime: "",
+  sunPosition: null,
   map: null,
   readyPromise: null,
   eventsBound: false,
@@ -1471,6 +1755,7 @@ const planning3dState = {
   domSyncQueued: false,
   svgOverlay: null,
   svgSyncQueued: false,
+  shadowSyncQueued: false,
   datasetRequestId: {
     buildings: 0,
     parcels: 0,
@@ -1497,6 +1782,7 @@ const planning3dState = {
     buildings: null,
     parcels: null,
     candidates: null,
+    shadows: null,
   },
 };
 
@@ -1711,6 +1997,18 @@ function getPlanningHorizon(horizonId = state.planningHorizonId) {
 
 function getPlanningScenario(scenarioId = state.planningGrowthScenarioId) {
   return planningScenarioCatalog[scenarioId] || planningScenarioCatalog.balanceado;
+}
+
+function getHydrologyClimateProfile(climateId = state.hydrologyClimateId) {
+  return hydrologyClimateCatalog[climateId] || hydrologyClimateCatalog.historico;
+}
+
+function getHydrologyHorizonProfile(horizonId = state.hydrologyHorizonId) {
+  return hydrologyHorizonCatalog[horizonId] || hydrologyHorizonCatalog["2050"];
+}
+
+function getHydrologyDemandProfile(demandId = state.hydrologyDemandId) {
+  return hydrologyDemandCatalog[demandId] || hydrologyDemandCatalog.eficienciaMedia;
 }
 
 function getPlanning3dFallbackManifest() {
@@ -2630,6 +2928,12 @@ function cacheDom() {
   dom.planningUseSelect = document.querySelector("#planningUseSelect");
   dom.planningHorizonSelect = document.querySelector("#planningHorizonSelect");
   dom.planningGrowthSelect = document.querySelector("#planningGrowthSelect");
+  dom.runHydrologyBtn = document.querySelector("#runHydrologyBtn");
+  dom.focusHydrologyBtn = document.querySelector("#focusHydrologyBtn");
+  dom.clearHydrologyBtn = document.querySelector("#clearHydrologyBtn");
+  dom.hydrologyClimateSelect = document.querySelector("#hydrologyClimateSelect");
+  dom.hydrologyHorizonSelect = document.querySelector("#hydrologyHorizonSelect");
+  dom.hydrologyDemandSelect = document.querySelector("#hydrologyDemandSelect");
   dom.intraloteResults = document.querySelector("#intraloteResults");
   dom.demResults = document.querySelector("#demResults");
   dom.climateResults = document.querySelector("#climateResults");
@@ -2638,7 +2942,13 @@ function cacheDom() {
   dom.planningCandidates = document.querySelector("#planningCandidates");
   dom.planningSourceNote = document.querySelector("#planningSourceNote");
   dom.planningVariableMatrix = document.querySelector("#planningVariableMatrix");
+  dom.hydrologyResults = document.querySelector("#hydrologyResults");
+  dom.hydrologyDrivers = document.querySelector("#hydrologyDrivers");
+  dom.hydrologyTimeline = document.querySelector("#hydrologyTimeline");
+  dom.hydrologySectors = document.querySelector("#hydrologySectors");
+  dom.hydrologySourceNote = document.querySelector("#hydrologySourceNote");
   dom.planningCard = document.querySelector("#planningCard");
+  dom.hydrologyCard = document.querySelector("#hydrologyCard");
   dom.planningModuleCards = Array.from(document.querySelectorAll('[data-module-track="planificacion"]'));
   dom.planning3dAvailability = document.querySelector("#planning3dAvailability");
   dom.openPlanning3dBtn = document.querySelector("#openPlanning3dBtn");
@@ -2657,6 +2967,9 @@ function cacheDom() {
   dom.planning3dHeightScaleValue = document.querySelector("#planning3dHeightScaleValue");
   dom.planning3dBuildingsToggle = document.querySelector("#planning3dBuildingsToggle");
   dom.planning3dParcelsToggle = document.querySelector("#planning3dParcelsToggle");
+  dom.planning3dShadowsToggle = document.querySelector("#planning3dShadowsToggle");
+  dom.planning3dDate = document.querySelector("#planning3dDate");
+  dom.planning3dTime = document.querySelector("#planning3dTime");
   dom.planning3dBaseButtons = Array.from(document.querySelectorAll("[data-planning-base]"));
   dom.modulesSectionKicker = document.querySelector("#modulesSectionKicker");
   dom.modulesSectionTitle = document.querySelector("#modulesSectionTitle");
@@ -2676,6 +2989,7 @@ function cacheDom() {
 
 function bootstrapApp() {
   setDefaultDates();
+  setPlanning3dSunDefaults();
   bindUI();
   ensureSelectedIndex();
   updateSensorControls();
@@ -2703,6 +3017,7 @@ function bindUI() {
   dom.sentinelResults?.addEventListener("click", handleSentinelResultsInteraction);
   dom.indexButtons?.addEventListener("click", handleIndexButtonInteraction);
   dom.planningCandidates?.addEventListener("click", handlePlanningCandidatesInteraction);
+  dom.hydrologySectors?.addEventListener("click", handleHydrologySectorsInteraction);
   dom.wizardModes?.addEventListener("click", handleWizardModeInteraction);
   dom.wizardSteps?.addEventListener("click", handleWizardStepInteraction);
 
@@ -2854,6 +3169,9 @@ function bindUI() {
   dom.runPlanningBtn.addEventListener("click", runPlanningAnalysis);
   dom.focusPlanningBtn.addEventListener("click", focusPlanningCandidates);
   dom.clearPlanningBtn.addEventListener("click", clearPlanningAnalysis);
+  dom.runHydrologyBtn?.addEventListener("click", runHydrologyAnalysis);
+  dom.focusHydrologyBtn?.addEventListener("click", focusHydrologyStudy);
+  dom.clearHydrologyBtn?.addEventListener("click", clearHydrologyAnalysis);
   dom.planningImagerySelect.addEventListener("change", () => {
     state.planningImageryId = dom.planningImagerySelect.value || "sentinel2Urban";
     renderPlanningModule();
@@ -2886,6 +3204,30 @@ function bindUI() {
     }
   });
 
+  dom.hydrologyClimateSelect?.addEventListener("change", () => {
+    state.hydrologyClimateId = dom.hydrologyClimateSelect.value || "historico";
+    renderPlanningModule();
+    if (state.hydrologyData) {
+      runHydrologyAnalysis(true);
+    }
+  });
+
+  dom.hydrologyHorizonSelect?.addEventListener("change", () => {
+    state.hydrologyHorizonId = dom.hydrologyHorizonSelect.value || "2050";
+    renderPlanningModule();
+    if (state.hydrologyData) {
+      runHydrologyAnalysis(true);
+    }
+  });
+
+  dom.hydrologyDemandSelect?.addEventListener("change", () => {
+    state.hydrologyDemandId = dom.hydrologyDemandSelect.value || "eficienciaMedia";
+    renderPlanningModule();
+    if (state.hydrologyData) {
+      runHydrologyAnalysis(true);
+    }
+  });
+
   dom.baseButtons.forEach((button) => {
     button.addEventListener("click", () => setBaseLayer(button.dataset.base));
   });
@@ -2910,12 +3252,25 @@ function bindUI() {
     }
     syncPlanning3dLayerVisibility();
   });
+  dom.planning3dShadowsToggle?.addEventListener("change", () => {
+    planning3dState.shadowsVisible = !!dom.planning3dShadowsToggle.checked;
+    updatePlanning3dSunModel();
+  });
+  dom.planning3dDate?.addEventListener("change", () => {
+    planning3dState.sunDate = dom.planning3dDate.value || planning3dState.sunDate;
+    updatePlanning3dSunModel();
+  });
+  dom.planning3dTime?.addEventListener("input", () => {
+    planning3dState.sunTime = dom.planning3dTime.value || planning3dState.sunTime;
+    updatePlanning3dSunModel();
+  });
   dom.planning3dHeightScale?.addEventListener("input", () => {
     planning3dState.heightScale = Number(dom.planning3dHeightScale.value || 1);
     if (dom.planning3dHeightScaleValue) {
       dom.planning3dHeightScaleValue.textContent = `${planning3dState.heightScale.toFixed(1)}x`;
     }
     updatePlanning3dHeightScale();
+    queuePlanning3dShadowSync();
   });
   dom.planning3dBaseButtons?.forEach((button) => {
     button.addEventListener("click", () => {
@@ -3030,6 +3385,15 @@ function handlePlanningCandidatesInteraction(event) {
   focusPlanningCandidate(button.dataset.candidateId);
 }
 
+function handleHydrologySectorsInteraction(event) {
+  const button = event.target.closest("[data-hydrology-sector-id]");
+  if (!button || !dom.hydrologySectors?.contains(button)) {
+    return;
+  }
+
+  focusHydrologySector(button.dataset.hydrologySectorId);
+}
+
 function handleWizardModeInteraction(event) {
   const button = event.target.closest("[data-mode]");
   if (!button || !dom.wizardModes?.contains(button)) {
@@ -3130,6 +3494,12 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
 
   if (route === "planificacion") {
     clearAgronomyMapContext();
+    if (state.planningData) {
+      renderPlanningOverlay(state.planningData);
+    }
+    if (state.hydrologyData) {
+      renderHydrologyOverlay(state.hydrologyData);
+    }
     setActiveTab("modulos");
     hydratePlanning3dManifest();
     if (dom.sidebarTitle) {
@@ -3150,6 +3520,8 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
 
   setActiveTab("modulos");
   closePlanning3dViewer(true);
+  clearPlanningOverlay();
+  clearHydrologyOverlay();
   if (state.currentPlot) {
     renderCurrentPlotLayer();
   }
@@ -3239,7 +3611,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   }
   if (dom.modulesSectionCopy) {
     dom.modulesSectionCopy.textContent = isPlanning
-      ? "Ruta territorial con modulos de aptitud, priorizacion de candidatos y visor 3D urbano."
+      ? "Ruta territorial con modulos de aptitud, estudio hidrico, priorizacion de candidatos y visor 3D urbano."
       : "Nucleo del sistema para agricultura de precision, relieve, clima y flujos guiados para monitoreo productivo.";
   }
   if (dom.modeFooterPill) {
@@ -3357,6 +3729,25 @@ function setDefaultDates() {
   dom.cloudValue.textContent = `${dom.cloudRange.value}%`;
 }
 
+function setPlanning3dSunDefaults() {
+  const now = new Date();
+  const roundedMinutes = Math.round(now.getMinutes() / 15) * 15;
+  now.setMinutes(roundedMinutes === 60 ? 45 : roundedMinutes, 0, 0);
+  if (roundedMinutes === 60) {
+    now.setHours(now.getHours() + 1);
+  }
+
+  planning3dState.sunDate = formatDateInput(now);
+  planning3dState.sunTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+
+  if (dom.planning3dDate) {
+    dom.planning3dDate.value = planning3dState.sunDate;
+  }
+  if (dom.planning3dTime) {
+    dom.planning3dTime.value = planning3dState.sunTime;
+  }
+}
+
 function setActiveTab(tabId) {
   state.activeTab = tabId;
   dom.tabButtons.forEach((button) => {
@@ -3463,6 +3854,9 @@ function buildLayerDescription(layerId, properties = {}) {
   }
   if (layerId === "manchaUrbana") {
     return `Nodo ${properties.hierarchy || "urbano"} con crecimiento relativo ${(Number(properties.growthRate || 0) * 100).toFixed(0)}%.`;
+  }
+  if (layerId === "hidrozonas") {
+    return `${properties.hydroRole || "Subzona hidrica"} con precipitacion base ${properties.precipBaseMm || "s/d"} mm, ETP ${properties.petBaseMm || "s/d"} mm y soporte para simulacion oferta-demanda.`;
   }
   if (layerId === "equipamientos") {
     return `${formatFacilityTypeLabel(properties.serviceType)} de escala ${properties.level || "local"} usado para medir cobertura territorial.`;
@@ -6239,6 +6633,250 @@ function syncPlanning3dBaseButtons() {
   });
 }
 
+function getPlanning3dSunDateTime() {
+  const now = new Date();
+  const dateValue = planning3dState.sunDate || formatDateInput(now);
+  const timeValue = planning3dState.sunTime || "09:00";
+  const [year, month, day] = dateValue.split("-").map((value) => Number(value));
+  const [hours, minutes] = timeValue.split(":").map((value) => Number(value));
+  if (![year, month, day, hours, minutes].every(Number.isFinite)) {
+    return now;
+  }
+  return new Date(year, month - 1, day, hours, minutes, 0, 0);
+}
+
+function computePlanning3dSunPosition(date, lat = planning3dPublishedView.center[1], lon = planning3dPublishedView.center[0]) {
+  const radians = Math.PI / 180;
+  const dayStart = new Date(date.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((date - dayStart) / 86400000);
+  const fractionalHour = date.getHours() + date.getMinutes() / 60 + date.getSeconds() / 3600;
+  const gamma = 2 * Math.PI / 365 * (dayOfYear - 1 + (fractionalHour - 12) / 24);
+  const equationOfTime = 229.18 * (
+    0.000075
+    + 0.001868 * Math.cos(gamma)
+    - 0.032077 * Math.sin(gamma)
+    - 0.014615 * Math.cos(2 * gamma)
+    - 0.040849 * Math.sin(2 * gamma)
+  );
+  const declination = 0.006918
+    - 0.399912 * Math.cos(gamma)
+    + 0.070257 * Math.sin(gamma)
+    - 0.006758 * Math.cos(2 * gamma)
+    + 0.000907 * Math.sin(2 * gamma)
+    - 0.002697 * Math.cos(3 * gamma)
+    + 0.00148 * Math.sin(3 * gamma);
+  const timezoneOffsetHours = -date.getTimezoneOffset() / 60;
+  const trueSolarMinutes = (
+    fractionalHour * 60
+    + equationOfTime
+    + 4 * lon
+    - 60 * timezoneOffsetHours
+  );
+  const hourAngleDegrees = ((trueSolarMinutes / 4) - 180 + 540) % 360 - 180;
+  const hourAngle = hourAngleDegrees * radians;
+  const latitude = lat * radians;
+  const cosineZenith = clamp(
+    Math.sin(latitude) * Math.sin(declination)
+    + Math.cos(latitude) * Math.cos(declination) * Math.cos(hourAngle),
+    -1,
+    1
+  );
+  const zenith = Math.acos(cosineZenith);
+  const elevation = 90 - (zenith / radians);
+  const azimuth = (Math.atan2(
+    Math.sin(hourAngle),
+    Math.cos(hourAngle) * Math.sin(latitude) - Math.tan(declination) * Math.cos(latitude)
+  ) / radians + 180) % 360;
+
+  return {
+    date,
+    azimuth: Number(azimuth.toFixed(1)),
+    elevation: Number(elevation.toFixed(1)),
+    azimuthRad: azimuth * radians,
+    elevationRad: elevation * radians,
+    daylight: elevation > 0,
+    label: `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`,
+  };
+}
+
+function applyPlanning3dLightFromSun(sunPosition = planning3dState.sunPosition) {
+  if (!planning3dState.map?.setLight || !sunPosition) {
+    return;
+  }
+
+  try {
+    planning3dState.map.setLight({
+      anchor: "viewport",
+      color: sunPosition.daylight ? "#fef2d0" : "#c9d7ef",
+      intensity: sunPosition.daylight ? clamp(0.3 + sunPosition.elevation / 90 * 0.58, 0.28, 0.9) : 0.18,
+      position: [
+        1.5,
+        sunPosition.azimuth,
+        clamp(90 - sunPosition.elevation, 8, 88),
+      ],
+    });
+  } catch (error) {
+    console.warn("No fue posible actualizar la luz solar del visor 3D.", error);
+  }
+}
+
+function updatePlanning3dSunModel() {
+  if (dom.planning3dDate) {
+    dom.planning3dDate.value = planning3dState.sunDate || dom.planning3dDate.value;
+  }
+  if (dom.planning3dTime) {
+    dom.planning3dTime.value = planning3dState.sunTime || dom.planning3dTime.value;
+  }
+  if (dom.planning3dShadowsToggle) {
+    dom.planning3dShadowsToggle.checked = planning3dState.shadowsVisible;
+  }
+
+  const anchor = planning3dState.map?.getCenter?.() || { lng: planning3dPublishedView.center[0], lat: planning3dPublishedView.center[1] };
+  planning3dState.sunPosition = computePlanning3dSunPosition(getPlanning3dSunDateTime(), anchor.lat, anchor.lng);
+  applyPlanning3dLightFromSun();
+  syncPlanning3dShadowLayerVisibility();
+  queuePlanning3dShadowSync();
+  renderPlanning3dSummary();
+}
+
+function queuePlanning3dShadowSync() {
+  if (planning3dState.shadowSyncQueued) {
+    return;
+  }
+
+  planning3dState.shadowSyncQueued = true;
+  window.requestAnimationFrame(() => {
+    planning3dState.shadowSyncQueued = false;
+    syncPlanning3dShadowSource();
+  });
+}
+
+function syncPlanning3dShadowLayerVisibility() {
+  if (!planning3dState.map) {
+    return;
+  }
+
+  const visible = Boolean(
+    planning3dState.buildingsVisible
+    && planning3dState.shadowsVisible
+    && planning3dState.sunPosition?.daylight
+  );
+
+  ["planning3d-shadows-fill", "planning3d-shadows-line"].forEach((layerId) => {
+    if (planning3dState.map.getLayer(layerId)) {
+      planning3dState.map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
+    }
+  });
+}
+
+function getVisiblePlanning3dBuildingFeatures(limit = 900) {
+  if (planning3dState.map?.getLayer("planning3d-buildings-footprint")) {
+    try {
+      const rendered = planning3dState.map.queryRenderedFeatures(undefined, {
+        layers: ["planning3d-buildings-footprint"],
+      });
+      const unique = [];
+      const seen = new Set();
+      rendered.forEach((feature) => {
+        const featureId = feature.id ?? feature.properties?.recordIndex ?? feature.properties?.buildingId;
+        if (featureId == null || seen.has(featureId)) {
+          return;
+        }
+        seen.add(featureId);
+        unique.push(feature);
+      });
+      if (unique.length) {
+        return unique.slice(0, limit);
+      }
+    } catch (error) {
+      console.warn("No fue posible consultar las construcciones visibles para sombras.", error);
+    }
+  }
+
+  return (planning3dState.sourceData.buildings?.features || []).slice(0, limit);
+}
+
+function getPlanning3dPrimaryRing(geometry) {
+  if (!geometry) {
+    return null;
+  }
+  if (geometry.type === "Polygon") {
+    return geometry.coordinates?.[0] || null;
+  }
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates?.[0]?.[0] || null;
+  }
+  return null;
+}
+
+function projectPlanning3dCoordinate(lon, lat, eastM, northM) {
+  const latRad = lat * Math.PI / 180;
+  return [
+    Number((lon + eastM / (111320 * Math.max(Math.cos(latRad), 0.2))).toFixed(7)),
+    Number((lat + northM / 110540).toFixed(7)),
+  ];
+}
+
+function buildPlanning3dShadowFeature(feature, sunPosition = planning3dState.sunPosition) {
+  if (!sunPosition?.daylight || sunPosition.elevation <= 1) {
+    return null;
+  }
+
+  const ring = getPlanning3dPrimaryRing(feature.geometry);
+  if (!Array.isArray(ring) || ring.length < 4) {
+    return null;
+  }
+
+  const heightM = (Number(feature.properties?.heightM) || 4.2) * planning3dState.heightScale;
+  const shadowLengthM = clamp(heightM / Math.tan(Math.max(sunPosition.elevationRad, 0.12)), 1.5, 180);
+  const shadowBearing = (sunPosition.azimuth + 180) * Math.PI / 180;
+  const eastM = Math.sin(shadowBearing) * shadowLengthM;
+  const northM = Math.cos(shadowBearing) * shadowLengthM;
+  const baseRing = ring.slice(0, -1);
+  const shiftedRing = baseRing.map(([lon, lat]) => projectPlanning3dCoordinate(lon, lat, eastM, northM));
+  const shadowRing = [...baseRing, ...shiftedRing.slice().reverse(), baseRing[0]];
+  if (shadowRing.length < 4) {
+    return null;
+  }
+
+  return {
+    type: "Feature",
+    properties: {
+      sourceId: feature.id ?? feature.properties?.recordIndex ?? null,
+      shadowLengthM: Number(shadowLengthM.toFixed(1)),
+    },
+    geometry: {
+      type: "Polygon",
+      coordinates: [[...shadowRing]],
+    },
+  };
+}
+
+function buildPlanning3dShadowCollection(features, sunPosition = planning3dState.sunPosition) {
+  return {
+    type: "FeatureCollection",
+    features: features
+      .map((feature) => buildPlanning3dShadowFeature(feature, sunPosition))
+      .filter(Boolean),
+  };
+}
+
+function syncPlanning3dShadowSource() {
+  const source = planning3dState.map?.getSource("planning3d-shadows");
+  if (!source) {
+    return;
+  }
+
+  const collection = !planning3dState.buildingsVisible || !planning3dState.shadowsVisible || !planning3dState.sunPosition?.daylight
+    ? getPlanning3dEmptyCollection()
+    : buildPlanning3dShadowCollection(getVisiblePlanning3dBuildingFeatures(), planning3dState.sunPosition);
+
+  planning3dState.sourceData.shadows = collection;
+  source.setData(collection);
+  syncPlanning3dShadowLayerVisibility();
+  renderPlanning3dSummary();
+}
+
 function addPlanning3dRuntimeLayers() {
   if (!planning3dState.map || planning3dState.map.getSource("planning3d-buildings")) {
     return;
@@ -6257,6 +6895,51 @@ function addPlanning3dRuntimeLayers() {
   planning3dState.map.addSource("planning3d-candidates", {
     type: "geojson",
     data: planning3dState.sourceData.candidates || emptyCollection,
+  });
+  planning3dState.map.addSource("planning3d-shadows", {
+    type: "geojson",
+    data: planning3dState.sourceData.shadows || emptyCollection,
+  });
+
+  planning3dState.map.addLayer({
+    id: "planning3d-shadows-fill",
+    type: "fill",
+    source: "planning3d-shadows",
+    minzoom: 8,
+    paint: {
+      "fill-color": "#10171a",
+      "fill-opacity": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        8,
+        0.1,
+        14,
+        0.16,
+        18,
+        0.22,
+      ],
+    },
+  });
+
+  planning3dState.map.addLayer({
+    id: "planning3d-shadows-line",
+    type: "line",
+    source: "planning3d-shadows",
+    minzoom: 9,
+    paint: {
+      "line-color": "rgba(16, 23, 26, 0.32)",
+      "line-width": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        10,
+        0.5,
+        16,
+        1.1,
+      ],
+      "line-opacity": 0.44,
+    },
   });
 
   planning3dState.map.addLayer({
@@ -6434,6 +7117,7 @@ function hydratePlanning3dRuntimeLayers() {
     updatePlanning3dCandidateSource();
     syncPlanning3dLayerVisibility();
     updatePlanning3dHeightScale();
+    updatePlanning3dSunModel();
     renderPlanning3dSvgScene();
     renderPlanning3dDomMarkers();
     return true;
@@ -6482,6 +7166,9 @@ async function initializePlanning3dMap() {
   planning3dState.map.on("rotateend", queuePlanning3dSvgSceneSync);
   planning3dState.map.on("pitchend", queuePlanning3dSvgSceneSync);
   planning3dState.map.on("resize", queuePlanning3dSvgSceneSync);
+  planning3dState.map.on("moveend", queuePlanning3dShadowSync);
+  planning3dState.map.on("zoomend", queuePlanning3dShadowSync);
+  planning3dState.map.on("resize", queuePlanning3dShadowSync);
   planning3dState.map.on("move", queuePlanning3dDomMarkerPositionSync);
   planning3dState.map.on("zoom", queuePlanning3dDomMarkerPositionSync);
   planning3dState.map.on("resize", queuePlanning3dDomMarkerPositionSync);
@@ -7100,6 +7787,7 @@ function syncPlanning3dSource(datasetKey) {
   }
   updatePlanning3dHeightScale();
   if (datasetKey === "buildings" && planning3dState.sourceData.buildings?.features?.length) {
+    queuePlanning3dShadowSync();
     queuePlanning3dSvgSceneSync();
     renderPlanning3dDomMarkers();
     if (planning3dState.map) {
@@ -7830,14 +8518,19 @@ function syncPlanning3dLayerVisibility() {
     );
   }
 
+  syncPlanning3dShadowLayerVisibility();
+  queuePlanning3dShadowSync();
   queuePlanning3dSvgSceneSync();
   renderPlanning3dDomMarkers();
+  renderPlanning3dSummary();
 }
 
 function updatePlanning3dHeightScale() {
   queuePlanning3dSvgSceneSync();
   if (!planning3dState.map?.getLayer("planning3d-buildings-fill")) {
+    queuePlanning3dShadowSync();
     renderPlanning3dDomMarkers();
+    renderPlanning3dSummary();
     return;
   }
 
@@ -7851,7 +8544,9 @@ function updatePlanning3dHeightScale() {
     "fill-extrusion-color",
     getPlanning3dBuildingFillColorExpression()
   );
+  queuePlanning3dShadowSync();
   renderPlanning3dDomMarkers();
+  renderPlanning3dSummary();
 }
 
 function renderPlanning3dSummary(force = false) {
@@ -7870,6 +8565,25 @@ function renderPlanning3dSummary(force = false) {
   const photoStatus = planning3dState.photoStatus;
   const buildingStatus = planning3dState.datasetStatus.buildings;
   const textureCatalog = planning3dState.textureCatalog || getPlanning3dFallbackTextureCatalog();
+  const sunPosition = planning3dState.sunPosition;
+  const shadowCount = planning3dState.sourceData.shadows?.features?.length || 0;
+  const solarStamp = `${planning3dState.sunDate || formatDateInput(getPlanning3dSunDateTime())} ${planning3dState.sunTime || "09:00"}`;
+  const solarBadgeLabel = sunPosition
+    ? sunPosition.daylight
+      ? `Az ${sunPosition.azimuth} deg | El ${sunPosition.elevation} deg`
+      : `Sol bajo horizonte | El ${sunPosition.elevation} deg`
+    : "Calculando sol";
+  const solarNarrative = !sunPosition
+    ? ""
+    : sunPosition.daylight
+      ? ` El asoleamiento esta evaluado para ${solarStamp}, con azimut ${sunPosition.azimuth} deg y elevacion ${sunPosition.elevation} deg; ahora mismo se proyectan ${formatPlanning3dCount(shadowCount, "0")} sombras visibles.`
+      : ` Para ${solarStamp} el sol queda bajo el horizonte local, por eso no se proyectan sombras en el visor.`;
+  const solarLabel = sunPosition
+    ? sunPosition.daylight
+      ? `Az ${sunPosition.azimuth}° | El ${sunPosition.elevation}°`
+      : `Sol bajo horizonte | El ${sunPosition.elevation}°`
+    : "Calculando sol";
+
   if (!buildings?.features?.length) {
     dom.planning3dSummary.classList.add("empty-state");
     dom.planning3dSummary.classList.remove("has-data");
@@ -7918,6 +8632,14 @@ function renderPlanning3dSummary(force = false) {
         <strong>${textureLabel}</strong>
       </article>
       <article class="planning-3d-chip">
+        <span>Sol</span>
+        <strong>${solarBadgeLabel}</strong>
+      </article>
+      <article class="planning-3d-chip">
+        <span>Sombras</span>
+        <strong>${planning3dState.shadowsVisible ? (sunPosition?.daylight ? formatPlanning3dCount(shadowCount, "0") : "Sin sol") : "Ocultas"}</strong>
+      </article>
+      <article class="planning-3d-chip">
         <span>Carga</span>
         <strong>${getPlanning3dLoadLabel(buildingStatus)}</strong>
       </article>
@@ -7943,6 +8665,11 @@ function renderPlanning3dSummary(force = false) {
       ${textureCatalog.derivedFromPhotos
         ? ` Las fachadas del overlay SVG estan usando perfiles derivados de ${textureCatalog.sampledPhotos || textureCatalog.profiles.length} fotos reales.`
         : " Mientras no haya analisis local de fotos, las fachadas usan un catalogo base de materiales urbanos."}
+      ${sunPosition
+        ? sunPosition.daylight
+          ? ` El asoleamiento esta evaluado para ${solarStamp}, con azimut ${sunPosition.azimuth}° y elevacion ${sunPosition.elevation}°; ahora mismo se proyectan ${formatPlanning3dCount(shadowCount, "0")} sombras visibles.`
+          : ` Para ${solarStamp} el sol queda bajo el horizonte local, por eso no se proyectan sombras en el visor.`
+        : ""}
       ${candidateCount ? ` Hay ${candidateCount} sectores priorizados del analisis territorial visibles como nodos amarillos.` : ""}
     </p>
   `);
@@ -8462,6 +9189,7 @@ function renderPlanningModule() {
   const imageryProfile = getPlanningImageryProfile();
   const orthophoto = getPlanning3dManifest().orthophoto || null;
   renderPlanningVariableMatrix();
+  renderHydrologyModule();
   renderPlanning3dPanel();
   if (dom.planningImagerySelect) {
     dom.planningImagerySelect.value = state.planningImageryId;
@@ -8481,11 +9209,35 @@ function renderPlanningModule() {
   if (dom.clearPlanningBtn) {
     dom.clearPlanningBtn.disabled = !state.planningData;
   }
+  if (dom.hydrologyClimateSelect) {
+    dom.hydrologyClimateSelect.value = state.hydrologyClimateId;
+  }
+  if (dom.hydrologyHorizonSelect) {
+    dom.hydrologyHorizonSelect.value = state.hydrologyHorizonId;
+  }
+  if (dom.hydrologyDemandSelect) {
+    dom.hydrologyDemandSelect.value = state.hydrologyDemandId;
+  }
+  if (dom.focusHydrologyBtn) {
+    dom.focusHydrologyBtn.disabled = !(state.hydrologyData?.prioritySectors?.length);
+  }
+  if (dom.clearHydrologyBtn) {
+    dom.clearHydrologyBtn.disabled = !state.hydrologyData;
+  }
   if (dom.planningSourceNote) {
     const orthophotoNote = orthophoto?.available
       ? ` Ortofoto Machachi local disponible: ${orthophoto.resolutionCm ? `${orthophoto.resolutionCm} cm/pixel` : "alta resolucion"} para validacion fina de lotes, cubiertas, vias y equipamientos.`
       : "";
     setTextIfChanged(dom.planningSourceNote, `${imageryProfile.label}: ${imageryProfile.useCopy} Resolucion ${imageryProfile.spatialLabel} y frecuencia ${imageryProfile.temporalLabel}.${orthophotoNote}`);
+  }
+  if (dom.hydrologySourceNote) {
+    const climate = getHydrologyClimateProfile();
+    const horizon = getHydrologyHorizonProfile();
+    const demand = getHydrologyDemandProfile();
+    setTextIfChanged(
+      dom.hydrologySourceNote,
+      `Replica metodologica inspirada en el estudio hidrico del DMQ: cubo hidroclimatico, modelo semidistribuido tipo GR4, demanda 2020-2100 y sesgo climatico corregido. En esta fase el geoportal usa una simulacion territorial sintetica para Mejia con ${climate.label}, ${horizon.label} y ${demand.label}.`
+    );
   }
   if (state.entryRoute === "planificacion" && !state.planningData) {
     updateMapSummary();
@@ -8548,10 +9300,540 @@ function renderPlanningVariableMatrix() {
   `);
 }
 
+function renderHydrologyModule() {
+  if (!state.hydrologyData) {
+    resetMetricGrid(dom.hydrologyResults, "Ejecuta el estudio hidrico para ver oferta, demanda, balance, resiliencia y prioridades territoriales.");
+    dom.hydrologyDrivers?.classList.add("empty-state");
+    dom.hydrologyDrivers?.classList.remove("has-data");
+    if (dom.hydrologyDrivers) {
+      setTextIfChanged(dom.hydrologyDrivers, "Aqui apareceran los pilares metodologicos activos del estudio hidrico.");
+    }
+    dom.hydrologyTimeline?.classList.add("empty-state");
+    dom.hydrologyTimeline?.classList.remove("has-data");
+    if (dom.hydrologyTimeline) {
+      setTextIfChanged(dom.hydrologyTimeline, "La serie prospectiva mostrara como cambia el balance hidrico de Mejia bajo cada escenario.");
+    }
+    dom.hydrologySectors?.classList.add("empty-state");
+    dom.hydrologySectors?.classList.remove("has-data");
+    if (dom.hydrologySectors) {
+      setTextIfChanged(dom.hydrologySectors, "Aqui apareceran las subzonas hidricas, sus deficits o superavits y las medidas recomendadas.");
+    }
+    return;
+  }
+
+  renderHydrologyDrivers(state.hydrologyData);
+  renderHydrologyTimeline(state.hydrologyData);
+  renderHydrologySectors(state.hydrologyData);
+}
+
+function runHydrologyAnalysis(silent = false) {
+  const hydrology = buildHydrologyAnalysis();
+  state.hydrologyData = hydrology;
+  state.hydrologyHighlightId = hydrology.prioritySectors[0]?.id || hydrology.sectors[0]?.id || null;
+  state.territorialFocus = "hydrology";
+
+  const cards = [
+    {
+      label: "Oferta util",
+      value: `${formatHydrologyHm3(hydrology.summary.supplyHm3)} hm3/anio`,
+      copy: `Incluye recarga, escorrentia regulada y soporte de almacenamiento sobre ${hydrology.context.scopeLabel}.`,
+    },
+    {
+      label: "Demanda total",
+      value: `${formatHydrologyHm3(hydrology.summary.demandHm3)} hm3/anio`,
+      copy: `${hydrology.demand.label} con horizonte ${hydrology.horizon.label}.`,
+    },
+    {
+      label: "Balance neto",
+      value: `${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3`,
+      copy: `${hydrology.summary.balanceLabel}. Caudal ecologico resguardado ${formatHydrologyHm3(hydrology.summary.ecologicalHm3)} hm3/anio.`,
+      highlight: true,
+    },
+    {
+      label: "Resiliencia media",
+      value: `${hydrology.summary.meanResilience}/100`,
+      copy: `Riesgo de estiaje ${hydrology.summary.meanDroughtRisk}% y riesgo de crecida ${hydrology.summary.meanFloodRisk}%.`,
+    },
+    {
+      label: "Sector critico",
+      value: hydrology.summary.criticalSectorLabel,
+      copy: hydrology.summary.criticalCopy,
+    },
+    {
+      label: "Seguridad hidrica",
+      value: `${hydrology.summary.coveragePct}%`,
+      copy: `Cobertura relativa entre oferta util y demanda en ${hydrology.climate.label}.`,
+    },
+    {
+      label: "Metodo",
+      value: hydrology.summary.methodLabel,
+      copy: "Replica metodologica inspirada en cubo hidroclimatico, modelo semidistribuido y demanda prospectiva.",
+    },
+    {
+      label: "Prioridades",
+      value: `${hydrology.prioritySectors.length} sectores`,
+      copy: "Los sectores se priorizan por balance, riesgo hidrico, presion urbana y necesidad de intervencion.",
+    },
+  ];
+
+  paintMetricGrid(dom.hydrologyResults, cards);
+  renderHydrologyDrivers(hydrology);
+  renderHydrologyTimeline(hydrology);
+  renderHydrologySectors(hydrology);
+  renderHydrologyOverlay(hydrology);
+  renderPlanningModule();
+  updateMapSummary();
+
+  if (!silent) {
+    setStatus(
+      `Estudio hidrico de Mejia listo con ${hydrology.climate.shortLabel}, ${hydrology.horizon.label} y ${hydrology.demand.label}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "positivo" : "ajustado"} de ${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio.`
+    );
+  }
+
+  return hydrology;
+}
+
+function clearHydrologyAnalysis() {
+  state.hydrologyData = null;
+  state.hydrologyHighlightId = null;
+  clearHydrologyOverlay();
+  state.territorialFocus = state.planningData ? "planning" : "planning";
+  renderPlanningModule();
+  updateMapSummary();
+  setStatus("Estudio hidrico limpiado. Puedes correr un nuevo escenario para Mejia.");
+}
+
+function buildHydrologyAnalysis(horizonOverride = null) {
+  const climate = getHydrologyClimateProfile();
+  const horizon = getHydrologyHorizonProfile(horizonOverride || state.hydrologyHorizonId);
+  const demand = getHydrologyDemandProfile();
+  const sectors = geoSources.hidrozonas.features.map((feature, index) =>
+    simulateHydrologySectorFeature(feature, climate, horizon, demand, index)
+  );
+  const summary = summarizeHydrologyAnalysis(sectors, climate, horizon, demand);
+  const timeline = buildHydrologyTimeline(climate, demand, horizon.id);
+  const prioritySectors = selectHydrologyPrioritySectors(sectors);
+
+  return {
+    context: {
+      scopeLabel: "Canton Mejia",
+      scopeType: "studyArea",
+      feature: cloneFeature(studyArea),
+    },
+    climate,
+    horizon,
+    demand,
+    sectors,
+    timeline,
+    prioritySectors,
+    summary,
+    surface: {
+      type: "FeatureCollection",
+      features: sectors.map((sector) => sector.feature),
+    },
+  };
+}
+
+function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand, index = 0) {
+  const feature = cloneFeature(sourceFeature);
+  const properties = feature.properties || {};
+  const areaKm2 = turf.area(feature) / 1000000;
+  const noise = pseudoNoise((index + 1) * 1.37, areaKm2 * 0.083, 211 + index * 9);
+  const precipMm = Number((
+    properties.precipBaseMm
+    * climate.precipMultiplier
+    * (1 + horizon.climateExposure * 0.16)
+    * (1 + noise * 0.04)
+  ).toFixed(0));
+  const petMm = Number((
+    properties.petBaseMm
+    * climate.petMultiplier
+    * (1 + horizon.climateExposure * 0.14)
+    * (1 + Math.abs(noise) * 0.03)
+  ).toFixed(0));
+  const grossHm3 = areaKm2 * (precipMm / 1000);
+  const rechargeHm3 = grossHm3 * properties.rechargeCoeff * climate.rechargeMultiplier * (1 - horizon.climateExposure * 0.12);
+  const runoffHm3 = grossHm3 * properties.runoffCoeff * (0.56 + climate.floodBoost * 0.08 + horizon.climateExposure * 0.06);
+  const storageHm3 = properties.storageOpportunity * 4.2 * horizon.storageAdjustment;
+  const transferHm3 = properties.transferDependency * 3.6 * climate.transferReliability;
+  const supplyHm3 = rechargeHm3 * 0.58 + runoffHm3 * 0.42 + storageHm3 + transferHm3;
+  const domesticDemandHm3 = properties.domesticBaseHm3
+    * horizon.demandMultiplier
+    * demand.domesticFactor
+    * (1 + properties.urbanPressure * 0.22);
+  const irrigationDemandHm3 = properties.irrigationBaseHm3
+    * horizon.demandMultiplier
+    * demand.irrigationFactor
+    * (1 + properties.irrigationPressure * 0.18 + horizon.climateExposure * 0.1);
+  const productiveDemandHm3 = properties.productiveBaseHm3
+    * horizon.demandMultiplier
+    * demand.productiveFactor
+    * (1 + properties.urbanPressure * 0.08);
+  const ecologicalFlowHm3 = properties.ecologicalFlowHm3 * (1 + horizon.climateExposure * 0.04);
+  const totalDemandHm3 = domesticDemandHm3 + irrigationDemandHm3 + productiveDemandHm3;
+  const availableHm3 = supplyHm3 - ecologicalFlowHm3;
+  const balanceHm3 = availableHm3 - totalDemandHm3;
+  const coveragePct = Math.round(clamp((availableHm3 / Math.max(totalDemandHm3, 0.1)) * 100, 0, 220));
+  const droughtRisk = Math.round(clamp(
+    24
+    + horizon.climateExposure * 58
+    + (petMm / Math.max(precipMm, 1)) * 18
+    + properties.irrigationPressure * 20
+    + Math.max(0, (totalDemandHm3 - availableHm3) / Math.max(totalDemandHm3, 0.1)) * 36
+    - demand.efficiencyBoost * 96
+    - properties.storageOpportunity * 12,
+    8,
+    96
+  ));
+  const floodRisk = Math.round(clamp(
+    18
+    + horizon.climateExposure * 34
+    + (climate.floodBoost - 1) * 54
+    + properties.floodSensitivity * 44
+    + properties.urbanPressure * 16
+    - properties.storageOpportunity * 12,
+    6,
+    96
+  ));
+  const resilience = Math.round(clamp(
+    78
+    + (balanceHm3 / Math.max(totalDemandHm3, 1)) * 28
+    - droughtRisk * 0.34
+    - floodRisk * 0.18
+    + demand.efficiencyBoost * 96
+    + properties.storageOpportunity * 12
+    + properties.rechargeCoeff * 14,
+    10,
+    96
+  ));
+  const stressScore = Math.round(clamp(
+    droughtRisk * 0.54
+    + floodRisk * 0.24
+    + Math.max(0, -balanceHm3) * 8
+    + properties.urbanPressure * 10
+    + properties.irrigationPressure * 8,
+    0,
+    100
+  ));
+  const balanceTone = getHydrologyBalanceTone(balanceHm3);
+  const intervention = pickHydrologyIntervention({
+    balanceHm3,
+    droughtRisk,
+    floodRisk,
+    domesticDemandHm3,
+    irrigationDemandHm3,
+    urbanPressure: properties.urbanPressure,
+    rechargeCoeff: properties.rechargeCoeff,
+    storageOpportunity: properties.storageOpportunity,
+    role: properties.hydroRole,
+  });
+  const summary = buildHydrologySectorSummary({
+    name: properties.name,
+    role: properties.hydroRole,
+    balanceHm3,
+    droughtRisk,
+    floodRisk,
+    resilience,
+    climate,
+    demand,
+  });
+  const centroid = turf.centroid(feature).geometry.coordinates;
+  const sectorId = `hydro-sector-${index + 1}`;
+
+  feature.properties = {
+    ...properties,
+    sectorId,
+    areaKm2: Number(areaKm2.toFixed(1)),
+    precipMm,
+    petMm,
+    supplyHm3: Number(supplyHm3.toFixed(1)),
+    rechargeHm3: Number(rechargeHm3.toFixed(1)),
+    runoffHm3: Number(runoffHm3.toFixed(1)),
+    storageHm3: Number(storageHm3.toFixed(1)),
+    transferHm3: Number(transferHm3.toFixed(1)),
+    demandHm3: Number(totalDemandHm3.toFixed(1)),
+    domesticDemandHm3: Number(domesticDemandHm3.toFixed(1)),
+    irrigationDemandHm3: Number(irrigationDemandHm3.toFixed(1)),
+    productiveDemandHm3: Number(productiveDemandHm3.toFixed(1)),
+    ecologicalFlowHm3: Number(ecologicalFlowHm3.toFixed(1)),
+    balanceHm3: Number(balanceHm3.toFixed(1)),
+    coveragePct,
+    droughtRisk,
+    floodRisk,
+    resilience,
+    stressScore,
+    balanceTone,
+    balanceLabel: getHydrologyBalanceLabel(balanceHm3),
+    intervention,
+    summary,
+  };
+
+  return {
+    id: sectorId,
+    feature,
+    name: properties.name,
+    role: properties.hydroRole,
+    centroid,
+    supplyHm3: feature.properties.supplyHm3,
+    demandHm3: feature.properties.demandHm3,
+    ecologicalFlowHm3: feature.properties.ecologicalFlowHm3,
+    balanceHm3: feature.properties.balanceHm3,
+    precipMm,
+    petMm,
+    coveragePct,
+    droughtRisk,
+    floodRisk,
+    resilience,
+    stressScore,
+    balanceTone,
+    balanceLabel: feature.properties.balanceLabel,
+    intervention,
+    summary,
+    tags: [
+      `Recarga ${formatHydrologyHm3(feature.properties.rechargeHm3)} hm3`,
+      `Cobertura ${coveragePct}%`,
+      `Estiaje ${droughtRisk}%`,
+      `Crecida ${floodRisk}%`,
+    ],
+  };
+}
+
+function summarizeHydrologyAnalysis(sectors, climate, horizon, demand) {
+  const totals = sectors.reduce((accumulator, sector) => {
+    accumulator.supply += sector.supplyHm3;
+    accumulator.demand += sector.demandHm3;
+    accumulator.ecological += sector.ecologicalFlowHm3;
+    accumulator.balance += sector.balanceHm3;
+    accumulator.resilience += sector.resilience;
+    accumulator.drought += sector.droughtRisk;
+    accumulator.flood += sector.floodRisk;
+    accumulator.coverage += sector.coveragePct;
+    return accumulator;
+  }, {
+    supply: 0,
+    demand: 0,
+    ecological: 0,
+    balance: 0,
+    resilience: 0,
+    drought: 0,
+    flood: 0,
+    coverage: 0,
+  });
+  const count = sectors.length || 1;
+  const criticalSector = [...sectors].sort((left, right) => right.stressScore - left.stressScore)[0] || null;
+
+  return {
+    supplyHm3: Number(totals.supply.toFixed(1)),
+    demandHm3: Number(totals.demand.toFixed(1)),
+    ecologicalHm3: Number(totals.ecological.toFixed(1)),
+    balanceHm3: Number(totals.balance.toFixed(1)),
+    meanResilience: Math.round(totals.resilience / count),
+    meanDroughtRisk: Math.round(totals.drought / count),
+    meanFloodRisk: Math.round(totals.flood / count),
+    coveragePct: Math.round(totals.coverage / count),
+    criticalSectorLabel: criticalSector?.name || "Sin lectura",
+    criticalCopy: criticalSector
+      ? `${criticalSector.name} queda como sector mas sensible por ${criticalSector.balanceLabel.toLowerCase()}, estiaje ${criticalSector.droughtRisk}% y crecida ${criticalSector.floodRisk}%.`
+      : "Aun no hay lectura hidrica disponible.",
+    balanceLabel: getHydrologyBalanceLabel(totals.balance),
+    methodLabel: `${climate.shortLabel} + ${horizon.shortLabel} + ${demand.shortLabel}`,
+  };
+}
+
+function buildHydrologyTimeline(climate, demand, activeHorizonId) {
+  return ["base", "2035", "2050", "2080"].map((horizonId) => {
+    const horizon = getHydrologyHorizonProfile(horizonId);
+    const sectors = geoSources.hidrozonas.features.map((feature, index) =>
+      simulateHydrologySectorFeature(feature, climate, horizon, demand, index)
+    );
+    const summary = summarizeHydrologyAnalysis(sectors, climate, horizon, demand);
+    return {
+      id: horizon.id,
+      label: horizon.label,
+      shortLabel: horizon.shortLabel,
+      active: horizon.id === activeHorizonId,
+      supplyHm3: summary.supplyHm3,
+      demandHm3: summary.demandHm3,
+      balanceHm3: summary.balanceHm3,
+      resilience: summary.meanResilience,
+      balanceLabel: summary.balanceLabel,
+      tone: getHydrologyBalanceTone(summary.balanceHm3),
+      copy: `Oferta ${formatHydrologyHm3(summary.supplyHm3)} hm3/anio, demanda ${formatHydrologyHm3(summary.demandHm3)} hm3/anio y resiliencia ${summary.meanResilience}/100.`,
+    };
+  });
+}
+
+function selectHydrologyPrioritySectors(sectors) {
+  return [...sectors]
+    .sort((left, right) => right.stressScore - left.stressScore)
+    .slice(0, 4)
+    .map((sector, index) => ({
+      ...sector,
+      rank: index + 1,
+      priorityLabel: index === 0 ? "Intervencion critica" : index === 1 ? "Atencion alta" : "Seguimiento",
+    }));
+}
+
+function renderHydrologyDrivers(hydrology) {
+  if (!dom.hydrologyDrivers) {
+    return;
+  }
+
+  dom.hydrologyDrivers.classList.remove("empty-state");
+  dom.hydrologyDrivers.classList.add("has-data");
+  setHtmlIfChanged(dom.hydrologyDrivers, [
+    ...hydrologyMethodPillCatalog,
+    hydrology.climate.label,
+    hydrology.horizon.label,
+    hydrology.demand.label,
+    `Sector critico ${hydrology.summary.criticalSectorLabel}`,
+  ].map((item) => `<span class="planning-pill emphasis">${item}</span>`).join(""));
+}
+
+function renderHydrologyTimeline(hydrology) {
+  if (!dom.hydrologyTimeline) {
+    return;
+  }
+
+  const maxValue = hydrology.timeline.reduce((max, item) => Math.max(max, item.supplyHm3, item.demandHm3, Math.abs(item.balanceHm3)), 1);
+  dom.hydrologyTimeline.classList.remove("empty-state");
+  dom.hydrologyTimeline.classList.add("has-data");
+  setHtmlIfChanged(dom.hydrologyTimeline, `
+    <div class="hydrology-timeline-head">
+      <div>
+        <p class="section-kicker">Serie prospectiva</p>
+        <h4>Oferta y demanda hasta 2100</h4>
+        <p>Replica el flujo del estudio: oferta hidrica, demanda proyectada y balance neto por horizonte para Mejia.</p>
+      </div>
+      <span class="hydrology-balance-pill tone-${getHydrologyBalanceTone(hydrology.summary.balanceHm3)}">${hydrology.summary.balanceLabel}</span>
+    </div>
+    <div class="hydrology-timeline-grid">
+      ${hydrology.timeline.map((snapshot) => `
+        <article class="hydrology-timeline-card ${snapshot.active ? "active" : ""}">
+          <div class="hydrology-timeline-card-head">
+            <h5>${snapshot.shortLabel}</h5>
+            <span class="hydrology-balance-pill tone-${snapshot.tone}">${snapshot.balanceLabel}</span>
+          </div>
+          <div class="hydrology-timeline-bars">
+            <div class="hydrology-bar-row">
+              <span>Oferta ${formatHydrologyHm3(snapshot.supplyHm3)} hm3</span>
+              <div class="hydrology-bar-track supply"><i style="width: ${Math.max(8, snapshot.supplyHm3 / maxValue * 100)}%"></i></div>
+            </div>
+            <div class="hydrology-bar-row">
+              <span>Demanda ${formatHydrologyHm3(snapshot.demandHm3)} hm3</span>
+              <div class="hydrology-bar-track demand"><i style="width: ${Math.max(8, snapshot.demandHm3 / maxValue * 100)}%"></i></div>
+            </div>
+            <div class="hydrology-bar-row">
+              <span>Balance ${snapshot.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(snapshot.balanceHm3)} hm3</span>
+              <div class="hydrology-bar-track balance"><i style="width: ${Math.max(8, Math.abs(snapshot.balanceHm3) / maxValue * 100)}%"></i></div>
+            </div>
+          </div>
+          <p class="hydrology-timeline-copy">${snapshot.copy}</p>
+        </article>
+      `).join("")}
+    </div>
+  `);
+}
+
+function renderHydrologySectors(hydrology) {
+  if (!dom.hydrologySectors) {
+    return;
+  }
+
+  const ranked = [...hydrology.sectors].sort((left, right) => right.stressScore - left.stressScore);
+  dom.hydrologySectors.classList.remove("empty-state");
+  dom.hydrologySectors.classList.add("has-data");
+  setHtmlIfChanged(dom.hydrologySectors, ranked.map((sector, index) => `
+    <article class="hydrology-sector ${sector.id === state.hydrologyHighlightId ? "active" : ""}">
+      <div class="hydrology-sector-head">
+        <div>
+          <p class="hydrology-sector-kicker">${sector.role}</p>
+          <h4>${sector.name}</h4>
+        </div>
+        <span class="hydrology-balance-pill tone-${sector.balanceTone}">${sector.balanceLabel}</span>
+      </div>
+      <p class="hydrology-sector-copy">${sector.summary}</p>
+      <div class="hydrology-sector-grid">
+        <article class="hydrology-sector-metric">
+          <span>Oferta</span>
+          <strong>${formatHydrologyHm3(sector.supplyHm3)} hm3</strong>
+        </article>
+        <article class="hydrology-sector-metric">
+          <span>Demanda</span>
+          <strong>${formatHydrologyHm3(sector.demandHm3)} hm3</strong>
+        </article>
+        <article class="hydrology-sector-metric">
+          <span>Balance</span>
+          <strong>${sector.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(sector.balanceHm3)} hm3</strong>
+        </article>
+        <article class="hydrology-sector-metric">
+          <span>Resiliencia</span>
+          <strong>${sector.resilience}/100</strong>
+        </article>
+      </div>
+      <div class="hydrology-sector-tags">
+        <span>Prioridad ${index + 1}</span>
+        ${sector.tags.map((tag) => `<span>${tag}</span>`).join("")}
+      </div>
+      <p class="hydrology-sector-note">${sector.intervention}</p>
+      <button class="ghost-button" type="button" data-hydrology-sector-id="${sector.id}">Ver en mapa</button>
+    </article>
+  `).join(""));
+}
+
+function getHydrologyBalanceTone(balanceHm3) {
+  if (balanceHm3 >= 1.2) {
+    return "surplus";
+  }
+  if (balanceHm3 >= -1.2) {
+    return "watch";
+  }
+  return "deficit";
+}
+
+function getHydrologyBalanceLabel(balanceHm3) {
+  if (balanceHm3 >= 1.2) {
+    return "Superavit operativo";
+  }
+  if (balanceHm3 >= -1.2) {
+    return "Balance ajustado";
+  }
+  return "Deficit proyectado";
+}
+
+function buildHydrologySectorSummary({ name, role, balanceHm3, droughtRisk, floodRisk, resilience, climate, demand }) {
+  const mainPressure = droughtRisk >= floodRisk ? "estiaje" : "crecida";
+  const balanceCopy = balanceHm3 >= 0
+    ? `mantiene un saldo disponible de ${formatHydrologyHm3(balanceHm3)} hm3`
+    : `entra en tension con un deficit de ${formatHydrologyHm3(Math.abs(balanceHm3))} hm3`;
+  return `${name} (${role}) ${balanceCopy}, con presion dominante de ${mainPressure} bajo ${climate.shortLabel} y ${demand.shortLabel}. Resiliencia ${resilience}/100.`;
+}
+
+function pickHydrologyIntervention(context) {
+  if (context.droughtRisk >= 72 && context.irrigationDemandHm3 >= context.domesticDemandHm3) {
+    return "Medida recomendada: tecnificacion de riego, reservorios de regulacion y proteccion de recarga en cabeceras.";
+  }
+  if (context.floodRisk >= 70 && context.urbanPressure >= 0.48) {
+    return "Medida recomendada: drenaje urbano sostenible, parques inundables y control de impermeabilizacion en ejes urbanos.";
+  }
+  if (context.balanceHm3 < 0 && context.rechargeCoeff <= 0.26) {
+    return "Medida recomendada: restaurar infiltracion, blindar suelos de recarga y reducir extracciones en estiaje.";
+  }
+  if (context.storageOpportunity >= 0.68) {
+    return "Medida recomendada: consolidar almacenamiento de pequena escala, monitoreo de caudal ecologico y control de demanda.";
+  }
+  return "Medida recomendada: vigilancia hidrometeorologica, eficiencia en consumo y programacion territorial preventiva.";
+}
+
+function formatHydrologyHm3(value) {
+  return Number(value || 0).toFixed(1);
+}
+
 function runPlanningAnalysis(silent = false) {
   const planning = buildPlanningAnalysis();
   state.planningData = planning;
   state.planningHighlightId = planning.candidates[0]?.id || null;
+  state.territorialFocus = "planning";
 
   const cards = [
     {
@@ -8617,6 +9899,7 @@ function clearPlanningAnalysis() {
   state.planningData = null;
   state.planningHighlightId = null;
   clearPlanningOverlay();
+  state.territorialFocus = state.hydrologyData ? "hydrology" : "planning";
   updatePlanning3dCandidateSource();
   renderPlanningModule();
   updateMapSummary();
@@ -9274,6 +10557,75 @@ function renderPlanningOverlay(planning) {
   }
 }
 
+function renderHydrologyOverlay(hydrology) {
+  clearHydrologyOverlay();
+  if (!mapState.map) {
+    return;
+  }
+
+  mapState.hydrologyLayer = L.geoJSON(hydrology.surface, {
+    style: (feature) => {
+      const balanceHm3 = Number(feature.properties?.balanceHm3 || 0);
+      const tone = getHydrologyBalanceTone(balanceHm3);
+      return {
+        color: tone === "surplus" ? "#2b7564" : tone === "watch" ? "#b27c33" : "#9f5441",
+        weight: feature.properties?.sectorId === state.hydrologyHighlightId ? 2.4 : 1.6,
+        fillColor: tone === "surplus" ? "#72b89a" : tone === "watch" ? "#e2b66a" : "#d38a74",
+        fillOpacity: feature.properties?.sectorId === state.hydrologyHighlightId ? 0.34 : 0.24,
+        dashArray: feature.properties?.sectorId === state.hydrologyHighlightId ? null : "5 6",
+      };
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(
+        `<h3 class="popup-title">${feature.properties?.name || "Subzona hidrica"}</h3><p class="popup-copy">${feature.properties?.summary || ""} Oferta ${formatHydrologyHm3(feature.properties?.supplyHm3)} hm3/anio, demanda ${formatHydrologyHm3(feature.properties?.demandHm3)} hm3/anio, balance ${feature.properties?.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(feature.properties?.balanceHm3)} hm3.</p>`
+      );
+      layer.bindTooltip(
+        `${feature.properties?.name || "Subzona"} | ${feature.properties?.balanceLabel || "Balance"} | Resiliencia ${feature.properties?.resilience || 0}/100`,
+        { sticky: true }
+      );
+    },
+  }).addTo(mapState.map);
+
+  const priorityPoints = hydrology.prioritySectors.map((sector) => pointFeature(sector.name, sector.centroid, {
+    hydrologySectorId: sector.id,
+    rank: sector.rank,
+    balanceLabel: sector.balanceLabel,
+    resilience: sector.resilience,
+    summary: sector.summary,
+  }));
+
+  mapState.hydrologyPriorityLayer = L.geoJSON({
+    type: "FeatureCollection",
+    features: priorityPoints,
+  }, {
+    pointToLayer: (feature, latlng) => {
+      const active = feature.properties?.hydrologySectorId === state.hydrologyHighlightId;
+      return L.circleMarker(latlng, {
+        radius: active ? 9 : 7,
+        weight: 2.4,
+        color: active ? "#fff6ea" : "#eef8f5",
+        fillColor: active ? "#2f7f5f" : "#4c8e79",
+        fillOpacity: 0.96,
+      });
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(
+        `<h3 class="popup-title">${feature.properties?.name || "Prioridad hidrica"}</h3><p class="popup-copy">${feature.properties?.summary || ""}</p>`
+      );
+    },
+  }).addTo(mapState.map);
+
+  if (mapState.hydrologyLayer?.bringToBack) {
+    mapState.hydrologyLayer.bringToBack();
+  }
+  if (mapState.hydrologyPriorityLayer?.bringToFront) {
+    mapState.hydrologyPriorityLayer.bringToFront();
+  }
+  if (mapState.planningCandidatesLayer?.bringToFront) {
+    mapState.planningCandidatesLayer.bringToFront();
+  }
+}
+
 function clearPlanningOverlay() {
   if (mapState.planningLayer) {
     mapState.map.removeLayer(mapState.planningLayer);
@@ -9285,16 +10637,45 @@ function clearPlanningOverlay() {
   }
 }
 
+function clearHydrologyOverlay() {
+  if (mapState.hydrologyLayer) {
+    mapState.map.removeLayer(mapState.hydrologyLayer);
+    mapState.hydrologyLayer = null;
+  }
+  if (mapState.hydrologyPriorityLayer) {
+    mapState.map.removeLayer(mapState.hydrologyPriorityLayer);
+    mapState.hydrologyPriorityLayer = null;
+  }
+}
+
 function focusPlanningCandidates() {
   if (!mapState.map || !mapState.planningCandidatesLayer) {
     return;
   }
 
+  state.territorialFocus = "planning";
+  updateMapSummary();
   const bounds = mapState.planningCandidatesLayer.getBounds();
   if (bounds.isValid()) {
     mapState.map.fitBounds(bounds, {
       padding: [48, 48],
       maxZoom: 13,
+    });
+  }
+}
+
+function focusHydrologyStudy() {
+  if (!mapState.map || !mapState.hydrologyLayer) {
+    return;
+  }
+
+  state.territorialFocus = "hydrology";
+  updateMapSummary();
+  const bounds = mapState.hydrologyLayer.getBounds();
+  if (bounds.isValid()) {
+    mapState.map.fitBounds(bounds, {
+      padding: [44, 44],
+      maxZoom: 11,
     });
   }
 }
@@ -9306,8 +10687,10 @@ function focusPlanningCandidate(candidateId) {
   }
 
   state.planningHighlightId = candidateId;
+  state.territorialFocus = "planning";
   renderPlanningCandidates(state.planningData);
   renderPlanningOverlay(state.planningData);
+  updateMapSummary();
   const bounds = L.geoJSON(candidate.feature).getBounds();
   mapState.map.fitBounds(bounds, {
     padding: [54, 54],
@@ -9316,6 +10699,31 @@ function focusPlanningCandidate(candidateId) {
   if (mapState.planningCandidatesLayer) {
     mapState.planningCandidatesLayer.eachLayer((layer) => {
       if (layer.feature?.properties?.candidateId === candidateId) {
+        layer.openPopup();
+      }
+    });
+  }
+}
+
+function focusHydrologySector(sectorId) {
+  const sector = state.hydrologyData?.sectors?.find((item) => item.id === sectorId);
+  if (!sector || !mapState.map) {
+    return;
+  }
+
+  state.hydrologyHighlightId = sectorId;
+  state.territorialFocus = "hydrology";
+  renderHydrologySectors(state.hydrologyData);
+  renderHydrologyOverlay(state.hydrologyData);
+  updateMapSummary();
+  const bounds = L.geoJSON(sector.feature).getBounds();
+  mapState.map.fitBounds(bounds, {
+    padding: [52, 52],
+    maxZoom: 12,
+  });
+  if (mapState.hydrologyLayer) {
+    mapState.hydrologyLayer.eachLayer((layer) => {
+      if (layer.feature?.properties?.sectorId === sectorId) {
         layer.openPopup();
       }
     });
@@ -10004,15 +11412,31 @@ function updateMapSummary(force = false) {
 
   if (state.entryRoute === "planificacion") {
     const planning = state.planningData;
+    const hydrology = state.hydrologyData;
     const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
+    const hydrologyClimate = hydrology?.climate || getHydrologyClimateProfile();
+    const hydrologyHorizon = hydrology?.horizon || getHydrologyHorizonProfile();
+    const hydrologyDemand = hydrology?.demand || getHydrologyDemandProfile();
+    const showHydrology = state.territorialFocus === "hydrology" && hydrology;
     setTextIfChanged(dom.overlayIndex, planning ? "Aptitud" : imageryProfile.shortLabel);
     renderMapBadges();
-    if (planning) {
+    if (showHydrology) {
+      setTextIfChanged(dom.overlayIndex, "Balance");
+      setTextIfChanged(dom.mapTitle, `Disponibilidad hidrica sobre ${hydrology.context.scopeLabel}`);
+      setTextIfChanged(
+        dom.mapSubtitle,
+        `${hydrologyClimate.shortLabel}, ${hydrologyHorizon.label} y ${hydrologyDemand.label}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio con ${hydrology.prioritySectors.length} sectores en vigilancia.`
+      );
+    } else if (planning) {
       setTextIfChanged(dom.mapTitle, `${planning.program.longLabel} sobre ${planning.context.scopeLabel}`);
       setTextIfChanged(dom.mapSubtitle, `Fuente ${planning.imageryProfile.shortLabel}, horizonte ${planning.horizon.label}, escenario ${planning.scenario.label} y ${planning.candidates.length} candidatos priorizados.`);
+    } else if (hydrology) {
+      setTextIfChanged(dom.overlayIndex, "Balance");
+      setTextIfChanged(dom.mapTitle, "Estudio hidrico de Mejia listo");
+      setTextIfChanged(dom.mapSubtitle, `${hydrology.climate.shortLabel}, ${hydrology.horizon.label} y ${hydrology.demand.label} con balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio.`);
     } else {
       setTextIfChanged(dom.mapTitle, "Planificacion territorial lista");
-      setTextIfChanged(dom.mapSubtitle, `Elige ${imageryProfile.label} y ejecuta la aptitud territorial para evaluar VIS, escuelas, hospitales o equipamientos.`);
+      setTextIfChanged(dom.mapSubtitle, `Elige ${imageryProfile.label} para aptitud territorial o ejecuta el estudio hidrico para simular oferta, demanda y resiliencia de Mejia.`);
     }
     return;
   }
@@ -10076,30 +11500,61 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
 
   if (state.entryRoute === "planificacion") {
     const planning = state.planningData;
+    const hydrology = state.hydrologyData;
     const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
-    const badges = [
-      {
-        tone: "analysis",
-        label: "Territorial",
-      },
-      {
-        tone: "neutral",
-        label: imageryProfile.shortLabel,
-      },
-      {
-        tone: "neutral",
-        label: imageryProfile.spatialLabel,
-      },
-      planning
-        ? {
+    const climate = hydrology?.climate || getHydrologyClimateProfile();
+    const horizon = hydrology?.horizon || getHydrologyHorizonProfile();
+    const badges = state.territorialFocus === "hydrology" && hydrology
+      ? [
+          {
             tone: "analysis",
-            label: `Plan ${planning.program.label}`,
-          }
-        : {
-            tone: "muted",
-            label: "Sin escenario",
+            label: "Hidrica",
           },
-    ];
+          {
+            tone: "neutral",
+            label: climate.shortLabel,
+          },
+          {
+            tone: "neutral",
+            label: horizon.shortLabel,
+          },
+          {
+            tone: getHydrologyBalanceTone(hydrology.summary.balanceHm3) === "surplus"
+              ? "exact"
+              : getHydrologyBalanceTone(hydrology.summary.balanceHm3) === "watch"
+                ? "preview"
+                : "compare",
+            label: hydrology.summary.balanceLabel,
+          },
+        ]
+      : [
+          {
+            tone: "analysis",
+            label: "Territorial",
+          },
+          {
+            tone: "neutral",
+            label: imageryProfile.shortLabel,
+          },
+          {
+            tone: "neutral",
+            label: imageryProfile.spatialLabel,
+          },
+          planning
+            ? {
+                tone: "analysis",
+                label: `Plan ${planning.program.label}`,
+              }
+            : hydrology
+              ? {
+                  tone: "analysis",
+                  label: `Agua ${hydrology.climate.shortLabel}`,
+                }
+              : {
+                  tone: "muted",
+                  label: "Sin escenario",
+                },
+        ];
     setHtmlIfChanged(dom.mapBadges, badges
       .map((badge) => `<span class="map-badge ${badge.tone}">${badge.label}</span>`)
       .join(""));
