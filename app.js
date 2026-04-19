@@ -10707,7 +10707,7 @@ function renderPlanningModule() {
     const lens = getLandChangeLensProfile();
     setTextIfChanged(
       dom.landChangeSourceNote,
-      `Replica metodologica inspirada en estudios de transformacion del suelo rural y prevencion del riesgo: huella urbana ${period.shortLabel}, lectura ${lens.headline.toLowerCase()} y escenario ${scenario.label.toLowerCase()} para ${areaProfile.scopeLabel}. Aqui el crecimiento se interpreta con una regla base: el agua busca su cauce y la planificacion debe preceder a la ocupacion.`
+      `Replica metodologica inspirada en estudios de transformacion del suelo rural y prevencion del riesgo: huella urbana ${period.shortLabel}, lectura ${lens.headline.toLowerCase()} y escenario ${scenario.label.toLowerCase()} para ${areaProfile.scopeLabel}. Aqui el crecimiento se interpreta con una regla base: el agua busca su cauce y la planificacion debe preceder a la ocupacion. ${state.fieldEvidenceData ? `La corrida actual ya incorpora ${state.fieldEvidenceData.summary.supportLabel.toLowerCase()}, ${state.fieldEvidenceData.summary.sensitiveThemeCount} temas sensibles y ${state.fieldEvidenceData.summary.stationCount} estaciones para endurecer los hotspots.` : "La evidencia de campo, estaciones y consultoria sensible se integra automaticamente cuando esta disponible."}`
     );
   }
   if (dom.hydrologySourceNote) {
@@ -10716,7 +10716,7 @@ function renderPlanningModule() {
     const demand = getHydrologyDemandProfile();
     setTextIfChanged(
       dom.hydrologySourceNote,
-      `Replica metodologica inspirada en el estudio hidrico del DMQ: cubo hidroclimatico, modelo semidistribuido tipo GR4, demanda 2020-2100 y sesgo climatico corregido. En esta fase el geoportal usa una simulacion territorial sintetica para ${areaProfile.scopeLabel} con ${climate.label}, ${horizon.label} y ${demand.label}.`
+      `Replica metodologica inspirada en el estudio hidrico del DMQ: cubo hidroclimatico, modelo semidistribuido tipo GR4, demanda 2020-2100 y sesgo climatico corregido. En esta fase el geoportal usa una simulacion territorial sintetica para ${areaProfile.scopeLabel} con ${climate.label}, ${horizon.label} y ${demand.label}. ${state.fieldEvidenceData ? `La calibracion territorial ya cruza ${state.fieldEvidenceData.summary.stationCount} estaciones, ${state.fieldEvidenceData.summary.climateSeriesCount} series climaticas, ${state.fieldEvidenceData.summary.historyCount} apoyos historicos y ${state.fieldEvidenceData.summary.sensitiveThemeCount} temas sensibles.` : "La evidencia de estaciones, series climaticas y areas sensibles se incorpora automaticamente cuando esta disponible."}`
     );
   }
   if (isTerritorialRoute() && !state.planningData) {
@@ -10854,8 +10854,9 @@ function renderLandChangeDoctrine(analysis = null) {
   `);
 }
 
-function runLandChangeAnalysis(silent = false) {
+async function runLandChangeAnalysis(silent = false) {
   try {
+    await ensureFieldEvidencePrecisionData();
     const analysis = buildLandChangeAnalysis();
     state.landChangeData = analysis;
     state.landChangeHighlightId = analysis.prioritySectors[0]?.id || analysis.sectors[0]?.id || null;
@@ -10892,6 +10893,11 @@ function runLandChangeAnalysis(silent = false) {
         label: "Riesgo territorial",
         value: analysis.summary.riskLabel,
         copy: `${formatLandChangeHa(analysis.summary.riskHa)} ha en corredores de vigilancia por quebradas o drenaje.`,
+      },
+      {
+        label: "Soporte de precision",
+        value: analysis.summary.evidence.supportLabel,
+        copy: `${analysis.summary.evidence.supportScore}/100 con ${analysis.summary.evidence.impactedSensitiveThemeCount} temas sensibles, ${analysis.summary.evidence.impactedSectorCount} sectores de campo y ${analysis.summary.evidence.impactedStationCount} estaciones que endurecen la lectura de ${analysis.context.scopeLabel}.`,
       },
       {
         label: "Hotspot dominante",
@@ -10958,13 +10964,14 @@ function buildLandChangeAnalysis(options = {}) {
   const scenario = getLandChangeScenarioProfile(options.scenarioId);
   const lens = getLandChangeLensProfile(options.lensId);
   const target = getCurrentTerritorialTarget();
+  const evidenceProfiles = getTerritorialEvidenceProfiles(target.feature);
   const series = buildLandChangeSettlementSeries(scenario, state.territorialAreaId);
   const timeline = buildLandChangeTimelineData(series, scenario);
-  const sectors = buildLandChangeSectors(series, period, scenario, lens);
-  const summary = summarizeLandChangeAnalysis(series, sectors, period, scenario, lens);
+  const sectors = buildLandChangeSectors(series, period, scenario, lens, evidenceProfiles);
+  const summary = summarizeLandChangeAnalysis(series, sectors, period, scenario, lens, evidenceProfiles);
   const prioritySectors = selectLandChangePrioritySectors(sectors);
   const surface = buildLandChangeSurface(series, period);
-  const pressureSurface = buildLandChangePressureSurface(lens, scenario, state.territorialAreaId);
+  const pressureSurface = buildLandChangePressureSurface(lens, scenario, state.territorialAreaId, evidenceProfiles);
 
   return {
     context: target,
@@ -10978,6 +10985,7 @@ function buildLandChangeAnalysis(options = {}) {
     summary,
     surface,
     pressureSurface,
+    evidence: summary.evidence,
   };
 }
 
@@ -11146,7 +11154,7 @@ function buildLandChangeTimelineData(series, scenario) {
   });
 }
 
-function buildLandChangeSectors(series, period, scenario, lens) {
+function buildLandChangeSectors(series, period, scenario, lens, evidenceProfiles = null) {
   return series.settlements.map((settlement, index) => {
     const fromRecord = settlement.years[period.fromYear];
     const toRecord = settlement.years[period.toYear];
@@ -11157,11 +11165,36 @@ function buildLandChangeSectors(series, period, scenario, lens) {
     const roadInfluence = clamp(1 - nearestRoad.distanceKm / 3.2, 0, 1);
     const floodExposure = clamp(1 - nearestCanal.distanceKm / 1.35, 0, 1);
     const transformedHa = deltaRecord?.areaHa || Number((toRecord.areaHa - fromRecord.areaHa).toFixed(1));
-    const productiveLossHa = Number((Math.max(0, transformedHa) * (0.56 + (1 - scenario.productiveShield) * 0.3 + (lens.id === "suelo" ? 0.1 : 0))).toFixed(1));
-    const riskHa = Number((Math.max(0, transformedHa) * (0.28 + floodExposure * 0.46 + (lens.id === "quebradas" ? 0.12 : 0))).toFixed(1));
+    const feature = cloneFeature(deltaRecord?.feature || toRecord.feature);
+    const evidenceImpact = computeTerritorialEvidenceImpact(feature, evidenceProfiles, {
+      stationDistanceKm: 4.8,
+      historyDistanceKm: 4.5,
+    });
+    const productiveLossHa = Number((
+      Math.max(0, transformedHa)
+      * (0.56 + (1 - scenario.productiveShield) * 0.3 + (lens.id === "suelo" ? 0.1 : 0))
+      * (1 + evidenceImpact.sensitivePenalty * 0.26)
+    ).toFixed(1));
+    const riskHa = Number((
+      Math.max(0, transformedHa)
+      * (0.28 + floodExposure * 0.46 + (lens.id === "quebradas" ? 0.12 : 0))
+      * (1 + evidenceImpact.riskBoost * 0.42 + evidenceImpact.fieldSignal * 0.22)
+    ).toFixed(1));
     const densityPressure = clamp((toRecord.inhabitants / Math.max(toRecord.areaHa, 1)) / 120, 0, 1);
-    const soilPressure = clamp(Math.max(0, transformedHa) / Math.max(toRecord.areaHa, 1) * 1.45, 0, 1);
-    const riskPressure = clamp(floodExposure * scenario.riskMultiplier + pseudoNoise(index * 1.8, transformedHa * 0.12, 37) * 0.04, 0, 1);
+    const soilPressure = clamp(
+      Math.max(0, transformedHa) / Math.max(toRecord.areaHa, 1) * 1.45
+      + evidenceImpact.sensitivePenalty * (lens.id === "suelo" ? 0.28 : 0.14),
+      0,
+      1
+    );
+    const riskPressure = clamp(
+      floodExposure * scenario.riskMultiplier
+      + pseudoNoise(index * 1.8, transformedHa * 0.12, 37) * 0.04
+      + evidenceImpact.riskBoost
+      + evidenceImpact.fieldSignal * 0.28,
+      0,
+      1
+    );
     const corridorPressure = clamp(roadInfluence + pseudoNoise(index * 2.1, transformedHa * 0.09, 73) * 0.06, 0, 1);
     const score = Math.round(clamp(
       soilPressure * lens.soilWeight
@@ -11171,13 +11204,20 @@ function buildLandChangeSectors(series, period, scenario, lens) {
       0,
       1
     ) * 100);
+    const adjustedScore = Math.round(clamp(
+      (score / 100)
+      + evidenceImpact.priorityBoost * 0.22
+      + evidenceImpact.calibrationSupport * 0.08,
+      0,
+      1
+    ) * 100);
     const dominantDriver = pickLandChangeDominantDriver({
       soilPressure,
       riskPressure,
       corridorPressure,
       densityPressure,
+      evidenceImpact,
     });
-    const feature = cloneFeature(deltaRecord?.feature || toRecord.feature);
     const sectorId = `land-change-sector-${index + 1}`;
     const summary = buildLandChangeSectorSummary({
       name: settlement.name,
@@ -11188,17 +11228,26 @@ function buildLandChangeSectors(series, period, scenario, lens) {
       dominantDriver,
       scenario,
       lens,
+      evidenceImpact,
     });
     feature.properties = {
       ...feature.properties,
       sectorId,
-      score,
+      score: adjustedScore,
       transformedHa,
       productiveLossHa,
       riskHa,
-      pressureLabel: getLandChangePressureLabel(score),
+      pressureLabel: getLandChangePressureLabel(adjustedScore),
       dominantDriver,
       summary,
+      evidenceSupportScore: evidenceImpact.supportScore,
+      evidenceSupportLabel: evidenceImpact.supportLabel,
+      evidenceCopy: evidenceImpact.copy,
+      evidenceSensitiveThemeCount: evidenceImpact.sensitiveCount,
+      evidenceSectorCount: evidenceImpact.sectorCount,
+      evidenceStationCount: evidenceImpact.stationCount,
+      evidenceHistoryCount: evidenceImpact.historyCount,
+      evidenceDominantLabel: evidenceImpact.dominantLabel,
     };
 
     return {
@@ -11207,7 +11256,7 @@ function buildLandChangeSectors(series, period, scenario, lens) {
       hierarchy: settlement.hierarchy,
       centroid: settlement.centroid,
       feature,
-      score,
+      score: adjustedScore,
       transformedHa: Number(Math.max(0, transformedHa).toFixed(1)),
       productiveLossHa,
       riskHa,
@@ -11219,26 +11268,32 @@ function buildLandChangeSectors(series, period, scenario, lens) {
       riskPressure: Math.round(riskPressure * 100),
       soilPressure: Math.round(soilPressure * 100),
       densityPressure: Math.round(densityPressure * 100),
-      pressureLabel: getLandChangePressureLabel(score),
+      pressureLabel: getLandChangePressureLabel(adjustedScore),
       dominantDriver,
       summary,
       recommendation: getLandChangeRecommendation({
-        score,
+        score: adjustedScore,
         dominantDriver,
         lens,
         scenario,
+        evidenceImpact,
       }),
+      evidence: evidenceImpact,
       tags: [
         `+${formatLandChangeHa(Math.max(0, transformedHa))} ha`,
         `${formatLandChangeHa(productiveLossHa)} ha rural en tension`,
         `${formatLandChangeHa(riskHa)} ha en vigilancia`,
         `Vias ${Math.round(corridorPressure * 100)}%`,
+        ...evidenceImpact.tags,
       ],
     };
   });
 }
 
-function pickLandChangeDominantDriver({ soilPressure, riskPressure, corridorPressure, densityPressure }) {
+function pickLandChangeDominantDriver({ soilPressure, riskPressure, corridorPressure, densityPressure, evidenceImpact = null }) {
+  if ((evidenceImpact?.hydricSectorCount || 0) > 0 && riskPressure >= Math.max(soilPressure * 0.86, corridorPressure, densityPressure)) {
+    return "Quebradas";
+  }
   const entries = [
     { key: "Suelo rural", value: soilPressure },
     { key: "Quebradas", value: riskPressure },
@@ -11248,27 +11303,31 @@ function pickLandChangeDominantDriver({ soilPressure, riskPressure, corridorPres
   return entries[0]?.key || "Suelo rural";
 }
 
-function buildLandChangeSectorSummary({ name, period, transformedHa, productiveLossHa, riskHa, dominantDriver, scenario, lens }) {
-  return `${name} agrega ${formatLandChangeHa(Math.max(0, transformedHa))} ha de huella entre ${period.fromYear} y ${period.toYear}, compromete ${formatLandChangeHa(productiveLossHa)} ha de suelo rural y deja ${formatLandChangeHa(riskHa)} ha bajo vigilancia. Driver dominante: ${dominantDriver.toLowerCase()} con escenario ${scenario.label.toLowerCase()} y enfoque ${lens.label.toLowerCase()}.`;
+function buildLandChangeSectorSummary({ name, period, transformedHa, productiveLossHa, riskHa, dominantDriver, scenario, lens, evidenceImpact = null }) {
+  const evidenceCopy = evidenceImpact?.copy ? ` ${evidenceImpact.copy}` : "";
+  return `${name} agrega ${formatLandChangeHa(Math.max(0, transformedHa))} ha de huella entre ${period.fromYear} y ${period.toYear}, compromete ${formatLandChangeHa(productiveLossHa)} ha de suelo rural y deja ${formatLandChangeHa(riskHa)} ha bajo vigilancia. Driver dominante: ${dominantDriver.toLowerCase()} con escenario ${scenario.label.toLowerCase()} y enfoque ${lens.label.toLowerCase()}.${evidenceCopy}`;
 }
 
-function getLandChangeRecommendation({ score, dominantDriver, lens, scenario }) {
+function getLandChangeRecommendation({ score, dominantDriver, lens, scenario, evidenceImpact = null }) {
+  const evidenceNote = evidenceImpact?.supportScore
+    ? ` Soporte de evidencia ${evidenceImpact.supportScore}/100 con ${evidenceImpact.supportLabel.toLowerCase()}.`
+    : "";
   if (dominantDriver === "Quebradas") {
-    return "Accion sugerida: declarar proteccion estricta en quebradas y drenajes, recuperar el cauce libre y exigir ordenamiento previo antes de cualquier licencia u ocupacion.";
+    return `Accion sugerida: declarar proteccion estricta en quebradas y drenajes, recuperar el cauce libre y exigir ordenamiento previo antes de cualquier licencia u ocupacion.${evidenceNote}`;
   }
   if (dominantDriver === "Corredor vial") {
-    return "Accion sugerida: orientar usos mixtos compactos, limitar saltos dispersos y asegurar servicios antes de habilitar nueva ocupacion.";
+    return `Accion sugerida: orientar usos mixtos compactos, limitar saltos dispersos y asegurar servicios antes de habilitar nueva ocupacion.${evidenceNote}`;
   }
   if (dominantDriver === "Densidad") {
-    return "Accion sugerida: densificacion regulada, mejora de espacio publico y soporte de equipamientos para absorber crecimiento sin expandir borde.";
+    return `Accion sugerida: densificacion regulada, mejora de espacio publico y soporte de equipamientos para absorber crecimiento sin expandir borde.${evidenceNote}`;
   }
   if (score >= 72 || lens.id === "suelo" || scenario.id === "expansivo") {
-    return "Accion sugerida: blindar reserva agricola, consolidar borde urbano y priorizar reutilizacion de vacios antes de abrir nuevo suelo.";
+    return `Accion sugerida: blindar reserva agricola, consolidar borde urbano y priorizar reutilizacion de vacios antes de abrir nuevo suelo.${evidenceNote}`;
   }
-  return "Accion sugerida: seguimiento anual, lectura satelital comparada y ordenamiento preventivo antes de consolidar nuevas licencias.";
+  return `Accion sugerida: seguimiento anual, lectura satelital comparada y ordenamiento preventivo antes de consolidar nuevas licencias.${evidenceNote}`;
 }
 
-function summarizeLandChangeAnalysis(series, sectors, period, scenario, lens) {
+function summarizeLandChangeAnalysis(series, sectors, period, scenario, lens, evidenceProfiles = null) {
   const fromTotals = series.totals[period.fromYear];
   const toTotals = series.totals[period.toYear];
   const transformedHa = Number(sectors.reduce((sum, sector) => sum + sector.transformedHa, 0).toFixed(1));
@@ -11278,6 +11337,7 @@ function summarizeLandChangeAnalysis(series, sectors, period, scenario, lens) {
   const annualGrowthPct = Number((((toTotals.areaHa / Math.max(fromTotals.areaHa, 1)) ** (1 / yearsDelta)) - 1) * 100).toFixed(2);
   const hotspot = [...sectors].sort((left, right) => right.score - left.score)[0] || null;
   const meanScore = Math.round(sectors.reduce((sum, sector) => sum + sector.score, 0) / Math.max(sectors.length, 1));
+  const evidence = summarizeStudyEvidence(evidenceProfiles, sectors);
 
   return {
     fromAreaHa: fromTotals.areaHa,
@@ -11291,12 +11351,13 @@ function summarizeLandChangeAnalysis(series, sectors, period, scenario, lens) {
     annualGrowthPct,
     hotspotLabel: hotspot?.name || "Sin hotspot",
     hotspotCopy: hotspot
-      ? `${hotspot.name} aparece como frente dominante por ${hotspot.pressureLabel.toLowerCase()} y driver ${hotspot.dominantDriver.toLowerCase()}.`
+      ? `${hotspot.name} aparece como frente dominante por ${hotspot.pressureLabel.toLowerCase()} y driver ${hotspot.dominantDriver.toLowerCase()}. ${hotspot.evidence?.copy || evidence.copy}`
       : "Aun no hay hotspots priorizados.",
     productiveLabel: productiveLossHa >= transformedHa * 0.8 ? "Perdida fuerte de borde productivo" : productiveLossHa >= transformedHa * 0.55 ? "Presion media sobre suelo rural" : "Presion contenida sobre suelo rural",
-    riskLabel: meanScore >= 74 ? "Alta vigilancia" : meanScore >= 58 ? "Vigilancia media" : "Vigilancia baja",
+    riskLabel: meanScore >= 74 || evidence.supportScore >= 78 ? "Alta vigilancia" : meanScore >= 58 || evidence.supportScore >= 58 ? "Vigilancia media" : "Vigilancia baja",
     meanScore,
     methodLabel: `${period.shortLabel} + ${scenario.shortLabel} + ${lens.shortLabel}`,
+    evidence,
   };
 }
 
@@ -11348,7 +11409,7 @@ function markLandChangeSurfaceFeature(feature, classId, stageLabel) {
   return cloned;
 }
 
-function buildLandChangePressureSurface(lens, scenario, areaId = state.territorialAreaId) {
+function buildLandChangePressureSurface(lens, scenario, areaId = state.territorialAreaId, evidenceProfiles = null) {
   const features = [];
   const canalFeatures = filterFeaturesByTerritorialArea(geoSources.canales.features, areaId);
   const roadFeatures = filterFeaturesByTerritorialArea(geoSources.vias.features, areaId);
@@ -11386,6 +11447,44 @@ function buildLandChangePressureSurface(lens, scenario, areaId = state.territori
       }
     });
   }
+  if (evidenceProfiles?.sectors?.length) {
+    evidenceProfiles.sectors
+      .filter((feature) => isHydricEvidenceFeature(feature))
+      .slice(0, 8)
+      .forEach((feature, index) => {
+        try {
+          const buffered = turf.buffer(feature, 0.12 * scenario.riskMultiplier, { units: "kilometers" });
+          buffered.properties = {
+            ...buffered.properties,
+            pressureId: `field-corridor-${index + 1}`,
+            surfaceType: "evidencia",
+            name: feature.properties?.sectorLabel || feature.properties?.name || `Sector de campo ${index + 1}`,
+            summary: "Corredor de vigilancia reforzado con levantamiento de campo, DTM y/o ortomosaico sobre cauces y bordes sensibles.",
+          };
+          features.push(buffered);
+        } catch (error) {
+          // keep the rest available if one field corridor cannot be buffered
+        }
+      });
+  }
+  if (evidenceProfiles?.sensitive?.length) {
+    evidenceProfiles.sensitive.slice(0, 12).forEach((feature, index) => {
+      const toneProfile = getPlanningSensitiveConstraintToneProfile(feature.properties?.sensitiveTone);
+      try {
+        const buffered = turf.buffer(feature, 0.05 + toneProfile.penalty * 0.22, { units: "kilometers" });
+        buffered.properties = {
+          ...buffered.properties,
+          pressureId: `sensitive-corridor-${index + 1}`,
+          surfaceType: "sensible",
+          name: feature.properties?.sensitiveThemeLabel || feature.properties?.name || `Area sensible ${index + 1}`,
+          summary: `Franja preventiva derivada de ${feature.properties?.sensitiveGroup || "area sensible"} con regimen ${toneProfile.regime.toLowerCase()}.`,
+        };
+        features.push(buffered);
+      } catch (error) {
+        // ignore sensitive buffer failures and preserve the remaining corridors
+      }
+    });
+  }
   return {
     type: "FeatureCollection",
     features,
@@ -11394,7 +11493,12 @@ function buildLandChangePressureSurface(lens, scenario, areaId = state.territori
 
 function selectLandChangePrioritySectors(sectors) {
   return [...sectors]
-    .sort((left, right) => right.score - left.score)
+    .sort((left, right) => {
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+      return (right.evidence?.supportScore || 0) - (left.evidence?.supportScore || 0);
+    })
     .slice(0, 4)
     .map((sector, index) => ({
       ...sector,
@@ -11416,6 +11520,7 @@ function renderLandChangeDrivers(analysis) {
     analysis.scenario.label,
     analysis.lens.headline,
     `Hotspot ${analysis.summary.hotspotLabel}`,
+    analysis.summary.evidence.supportLabel,
   ].map((item) => `<span class="planning-pill emphasis">${item}</span>`).join(""));
 }
 
@@ -11490,13 +11595,17 @@ function renderLandChangeSectors(analysis) {
           <span>Puntaje</span>
           <strong>${sector.score}/100</strong>
         </article>
+        <article class="land-change-sector-metric">
+          <span>Precision</span>
+          <strong>${sector.evidence?.supportScore || 0}/100</strong>
+        </article>
       </div>
       <div class="land-change-sector-tags">
         <span>Prioridad ${index + 1}</span>
         <span>Driver ${sector.dominantDriver}</span>
         ${sector.tags.map((tag) => `<span>${tag}</span>`).join("")}
       </div>
-      <p class="land-change-sector-note">${sector.recommendation}</p>
+      <p class="land-change-sector-note">${sector.recommendation}${sector.evidence?.copy ? ` ${sector.evidence.copy}` : ""}</p>
       <button class="ghost-button" type="button" data-land-change-sector-id="${sector.id}">Ver en mapa</button>
     </article>
   `).join(""));
@@ -11560,8 +11669,9 @@ function renderHydrologyModule() {
   renderHydrologySectors(state.hydrologyData);
 }
 
-function runHydrologyAnalysis(silent = false) {
+async function runHydrologyAnalysis(silent = false) {
   try {
+    await ensureFieldEvidencePrecisionData();
     const hydrology = buildHydrologyAnalysis();
     state.hydrologyData = hydrology;
     state.hydrologyHighlightId = hydrology.prioritySectors[0]?.id || hydrology.sectors[0]?.id || null;
@@ -11598,6 +11708,11 @@ function runHydrologyAnalysis(silent = false) {
       label: "Seguridad hidrica",
       value: `${hydrology.summary.coveragePct}%`,
       copy: `Cobertura relativa entre oferta util y demanda en ${hydrology.climate.label}.`,
+    },
+    {
+      label: "Calibracion territorial",
+      value: hydrology.summary.evidence.supportLabel,
+      copy: `${hydrology.summary.evidence.supportScore}/100 con ${hydrology.summary.evidence.impactedStationCount} estaciones, ${hydrology.summary.evidence.impactedSensitiveThemeCount} temas sensibles y ${hydrology.summary.evidence.impactedHistoryCount} coberturas historicas integradas a ${hydrology.context.scopeLabel}.`,
     },
     {
       label: "Metodo",
@@ -11664,11 +11779,12 @@ function buildHydrologyAnalysis(options = {}) {
   const demand = getHydrologyDemandProfile(options.demandId);
   const sourceFeatures = options.sourceFeatures || getHydrologySourceFeatures();
   const target = getCurrentTerritorialTarget();
+  const evidenceProfiles = getTerritorialEvidenceProfiles(target.feature);
   const sectors = sourceFeatures.map((feature, index) =>
-    simulateHydrologySectorFeature(feature, climate, horizon, demand, index)
+    simulateHydrologySectorFeature(feature, climate, horizon, demand, index, evidenceProfiles)
   ).filter(Boolean);
-  const summary = summarizeHydrologyAnalysis(sectors, climate, horizon, demand);
-  const timeline = buildHydrologyTimeline(climate, demand, horizon.id, sourceFeatures);
+  const summary = summarizeHydrologyAnalysis(sectors, climate, horizon, demand, evidenceProfiles);
+  const timeline = buildHydrologyTimeline(climate, demand, horizon.id, sourceFeatures, evidenceProfiles);
   const prioritySectors = selectHydrologyPrioritySectors(sectors);
 
   return {
@@ -11684,10 +11800,11 @@ function buildHydrologyAnalysis(options = {}) {
       type: "FeatureCollection",
       features: sectors.map((sector) => sector.feature),
     },
+    evidence: summary.evidence,
   };
 }
 
-function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand, index = 0) {
+function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand, index = 0, evidenceProfiles = null) {
   if (!sourceFeature?.geometry) {
     return null;
   }
@@ -11714,6 +11831,10 @@ function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand,
   const urbanPressure = readHydrologyNumericValue(properties, "urbanPressure", 0.35);
   const irrigationPressure = readHydrologyNumericValue(properties, "irrigationPressure", 0.3);
   const transferDependency = readHydrologyNumericValue(properties, "transferDependency", 0.12);
+  const evidenceImpact = computeTerritorialEvidenceImpact(feature, evidenceProfiles, {
+    stationDistanceKm: 4.2,
+    historyDistanceKm: 4,
+  });
   const precipMm = Number((
     precipBaseMm
     * climate.precipMultiplier
@@ -11755,6 +11876,9 @@ function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand,
     + (petMm / Math.max(precipMm, 1)) * 18
     + irrigationPressure * 20
     + Math.max(0, (totalDemandHm3 - availableHm3) / Math.max(totalDemandHm3, 0.1)) * 36
+    + evidenceImpact.sensitivePenalty * 18
+    + evidenceImpact.fieldSignal * 8
+    - evidenceImpact.stationSupport * 9
     - demand.efficiencyBoost * 96
     - storageOpportunity * 12,
     8,
@@ -11766,6 +11890,8 @@ function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand,
     + (climate.floodBoost - 1) * 54
     + floodSensitivity * 44
     + urbanPressure * 16
+    + evidenceImpact.riskBoost * 34
+    + evidenceImpact.fieldSignal * 12
     - storageOpportunity * 12,
     6,
     96
@@ -11775,6 +11901,9 @@ function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand,
     + (balanceHm3 / Math.max(totalDemandHm3, 1)) * 28
     - droughtRisk * 0.34
     - floodRisk * 0.18
+    - evidenceImpact.sensitivePenalty * 16
+    - evidenceImpact.riskBoost * 12
+    + evidenceImpact.stationSupport * 8
     + demand.efficiencyBoost * 96
     + storageOpportunity * 12
     + rechargeCoeff * 14,
@@ -11790,8 +11919,20 @@ function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand,
     0,
     100
   ));
+  const adjustedStressScore = Math.round(clamp(
+    (droughtRisk * 0.54)
+    + (floodRisk * 0.24)
+    + Math.max(0, -balanceHm3) * 8
+    + urbanPressure * 10
+    + irrigationPressure * 8
+    + evidenceImpact.priorityBoost * 24
+    + evidenceImpact.riskBoost * 14,
+    0,
+    100
+  ));
   const balanceTone = getHydrologyBalanceTone(balanceHm3);
-  const intervention = pickHydrologyIntervention({
+  const intervention = buildHydrologyInterventionReadout(
+    pickHydrologyIntervention({
     balanceHm3,
     droughtRisk,
     floodRisk,
@@ -11801,7 +11942,9 @@ function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand,
     rechargeCoeff,
     storageOpportunity,
     role: sectorRole,
-  });
+  }),
+    evidenceImpact
+  );
   const summary = buildHydrologySectorSummary({
     name: sectorName,
     role: sectorRole,
@@ -11811,6 +11954,7 @@ function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand,
     resilience,
     climate,
     demand,
+    evidenceImpact,
   });
   const centroidFeature = turf.centroid(feature);
   const centroid = Array.isArray(centroidFeature?.geometry?.coordinates)
@@ -11841,11 +11985,18 @@ function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand,
     droughtRisk,
     floodRisk,
     resilience,
-    stressScore,
+    stressScore: adjustedStressScore,
     balanceTone,
     balanceLabel: getHydrologyBalanceLabel(balanceHm3),
     intervention,
     summary,
+    evidenceSupportScore: evidenceImpact.supportScore,
+    evidenceSupportLabel: evidenceImpact.supportLabel,
+    evidenceCopy: evidenceImpact.copy,
+    evidenceSensitiveThemeCount: evidenceImpact.sensitiveCount,
+    evidenceStationCount: evidenceImpact.stationCount,
+    evidenceHistoryCount: evidenceImpact.historyCount,
+    evidenceDominantLabel: evidenceImpact.dominantLabel,
   };
 
   return {
@@ -11864,21 +12015,23 @@ function simulateHydrologySectorFeature(sourceFeature, climate, horizon, demand,
     droughtRisk,
     floodRisk,
     resilience,
-    stressScore,
+    stressScore: adjustedStressScore,
     balanceTone,
     balanceLabel: feature.properties.balanceLabel,
     intervention,
     summary,
+    evidence: evidenceImpact,
     tags: [
       `Recarga ${formatHydrologyHm3(feature.properties.rechargeHm3)} hm3`,
       `Cobertura ${coveragePct}%`,
       `Estiaje ${droughtRisk}%`,
       `Crecida ${floodRisk}%`,
+      ...evidenceImpact.tags,
     ],
   };
 }
 
-function summarizeHydrologyAnalysis(sectors, climate, horizon, demand) {
+function summarizeHydrologyAnalysis(sectors, climate, horizon, demand, evidenceProfiles = null) {
   const totals = sectors.reduce((accumulator, sector) => {
     accumulator.supply += sector.supplyHm3;
     accumulator.demand += sector.demandHm3;
@@ -11901,6 +12054,7 @@ function summarizeHydrologyAnalysis(sectors, climate, horizon, demand) {
   });
   const count = sectors.length || 1;
   const criticalSector = [...sectors].sort((left, right) => right.stressScore - left.stressScore)[0] || null;
+  const evidence = summarizeStudyEvidence(evidenceProfiles, sectors);
 
   return {
     supplyHm3: Number(totals.supply.toFixed(1)),
@@ -11913,20 +12067,21 @@ function summarizeHydrologyAnalysis(sectors, climate, horizon, demand) {
     coveragePct: Math.round(totals.coverage / count),
     criticalSectorLabel: criticalSector?.name || "Sin lectura",
     criticalCopy: criticalSector
-      ? `${criticalSector.name} queda como sector mas sensible por ${criticalSector.balanceLabel.toLowerCase()}, estiaje ${criticalSector.droughtRisk}% y crecida ${criticalSector.floodRisk}%.`
+      ? `${criticalSector.name} queda como sector mas sensible por ${criticalSector.balanceLabel.toLowerCase()}, estiaje ${criticalSector.droughtRisk}% y crecida ${criticalSector.floodRisk}%. ${criticalSector.evidence?.copy || evidence.copy}`
       : "Aun no hay lectura hidrica disponible.",
     balanceLabel: getHydrologyBalanceLabel(totals.balance),
     methodLabel: `${climate.shortLabel} + ${horizon.shortLabel} + ${demand.shortLabel}`,
+    evidence,
   };
 }
 
-function buildHydrologyTimeline(climate, demand, activeHorizonId, sourceFeatures = getHydrologySourceFeatures()) {
+function buildHydrologyTimeline(climate, demand, activeHorizonId, sourceFeatures = getHydrologySourceFeatures(), evidenceProfiles = null) {
   return ["base", "2035", "2050", "2080"].map((horizonId) => {
     const horizon = getHydrologyHorizonProfile(horizonId);
     const sectors = sourceFeatures.map((feature, index) =>
-      simulateHydrologySectorFeature(feature, climate, horizon, demand, index)
+      simulateHydrologySectorFeature(feature, climate, horizon, demand, index, evidenceProfiles)
     ).filter(Boolean);
-    const summary = summarizeHydrologyAnalysis(sectors, climate, horizon, demand);
+    const summary = summarizeHydrologyAnalysis(sectors, climate, horizon, demand, evidenceProfiles);
     return {
       id: horizon.id,
       label: horizon.label,
@@ -11938,14 +12093,19 @@ function buildHydrologyTimeline(climate, demand, activeHorizonId, sourceFeatures
       resilience: summary.meanResilience,
       balanceLabel: summary.balanceLabel,
       tone: getHydrologyBalanceTone(summary.balanceHm3),
-      copy: `Oferta ${formatHydrologyHm3(summary.supplyHm3)} hm3/anio, demanda ${formatHydrologyHm3(summary.demandHm3)} hm3/anio y resiliencia ${summary.meanResilience}/100.`,
+      copy: `Oferta ${formatHydrologyHm3(summary.supplyHm3)} hm3/anio, demanda ${formatHydrologyHm3(summary.demandHm3)} hm3/anio, resiliencia ${summary.meanResilience}/100 y ${summary.evidence.supportLabel.toLowerCase()} para soporte local.`,
     };
   });
 }
 
 function selectHydrologyPrioritySectors(sectors) {
   return [...sectors]
-    .sort((left, right) => right.stressScore - left.stressScore)
+    .sort((left, right) => {
+      if (right.stressScore !== left.stressScore) {
+        return right.stressScore - left.stressScore;
+      }
+      return (right.evidence?.supportScore || 0) - (left.evidence?.supportScore || 0);
+    })
     .slice(0, 4)
     .map((sector, index) => ({
       ...sector,
@@ -11967,6 +12127,7 @@ function renderHydrologyDrivers(hydrology) {
     hydrology.horizon.label,
     hydrology.demand.label,
     `Sector critico ${hydrology.summary.criticalSectorLabel}`,
+    hydrology.summary.evidence.supportLabel,
   ].map((item) => `<span class="planning-pill emphasis">${item}</span>`).join(""));
 }
 
@@ -12050,12 +12211,16 @@ function renderHydrologySectors(hydrology) {
           <span>Resiliencia</span>
           <strong>${sector.resilience}/100</strong>
         </article>
+        <article class="hydrology-sector-metric">
+          <span>Calibracion</span>
+          <strong>${sector.evidence?.supportScore || 0}/100</strong>
+        </article>
       </div>
       <div class="hydrology-sector-tags">
         <span>Prioridad ${index + 1}</span>
         ${sector.tags.map((tag) => `<span>${tag}</span>`).join("")}
       </div>
-      <p class="hydrology-sector-note">${sector.intervention}</p>
+      <p class="hydrology-sector-note">${sector.intervention}${sector.evidence?.copy ? ` ${sector.evidence.copy}` : ""}</p>
       <button class="ghost-button" type="button" data-hydrology-sector-id="${sector.id}">Ver en mapa</button>
     </article>
   `).join(""));
@@ -12081,12 +12246,26 @@ function getHydrologyBalanceLabel(balanceHm3) {
   return "Deficit proyectado";
 }
 
-function buildHydrologySectorSummary({ name, role, balanceHm3, droughtRisk, floodRisk, resilience, climate, demand }) {
+function buildHydrologySectorSummary({ name, role, balanceHm3, droughtRisk, floodRisk, resilience, climate, demand, evidenceImpact = null }) {
   const mainPressure = droughtRisk >= floodRisk ? "estiaje" : "crecida";
   const balanceCopy = balanceHm3 >= 0
     ? `mantiene un saldo disponible de ${formatHydrologyHm3(balanceHm3)} hm3`
     : `entra en tension con un deficit de ${formatHydrologyHm3(Math.abs(balanceHm3))} hm3`;
-  return `${name} (${role}) ${balanceCopy}, con presion dominante de ${mainPressure} bajo ${climate.shortLabel} y ${demand.shortLabel}. Resiliencia ${resilience}/100.`;
+  const evidenceCopy = evidenceImpact?.copy ? ` ${evidenceImpact.copy}` : "";
+  return `${name} (${role}) ${balanceCopy}, con presion dominante de ${mainPressure} bajo ${climate.shortLabel} y ${demand.shortLabel}. Resiliencia ${resilience}/100.${evidenceCopy}`;
+}
+
+function buildHydrologyInterventionReadout(baseIntervention, evidenceImpact = null) {
+  if (!evidenceImpact?.supportScore) {
+    return baseIntervention;
+  }
+  if (evidenceImpact.hydricSectorCount > 0 || evidenceImpact.sensitiveCount > 0) {
+    return `${baseIntervention} La evidencia de campo pide resguardar cauces, franjas sensibles y puntos criticos ya reconocidos por levantamiento y procedimiento tecnico.`;
+  }
+  if (evidenceImpact.stationCount > 0 || evidenceImpact.historyCount > 0) {
+    return `${baseIntervention} Existen estaciones y memoria historica cercanas para validar caudales, lluvia maxima y seguimiento de escenario.`;
+  }
+  return `${baseIntervention} ${evidenceImpact.supportLabel} para seguimiento territorial.`;
 }
 
 function pickHydrologyIntervention(context) {
@@ -13153,6 +13332,264 @@ function safeBooleanIntersects(leftFeature, rightFeature) {
       return false;
     }
   }
+}
+
+function getTerritorialEvidenceProfiles(targetFeature = getTerritorialAreaFeature()) {
+  if (!state.fieldEvidenceData) {
+    return null;
+  }
+
+  const filterByTarget = (features) => filterFeaturesByTerritorialArea(
+    features || [],
+    state.territorialAreaId
+  ).filter((feature) => !targetFeature?.geometry || safeBooleanIntersects(feature, targetFeature))
+    .map(cloneFeature);
+
+  return {
+    sectors: filterByTarget(state.fieldEvidenceData.sectorsCollection?.features),
+    stations: filterByTarget(state.fieldEvidenceData.stationCollection?.features),
+    sensitive: filterByTarget(state.fieldEvidenceData.sensitiveCollection?.features),
+    history: filterByTarget(state.fieldEvidenceData.historyCollection?.features),
+    climateSeries: Array.isArray(state.fieldEvidenceData.climateSeries)
+      ? state.fieldEvidenceData.climateSeries.slice()
+      : [],
+    summary: state.fieldEvidenceData.summary || {},
+  };
+}
+
+function normalizeTerritorialText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function isHydricEvidenceFeature(feature) {
+  const label = normalizeTerritorialText(
+    feature?.properties?.sectorType
+    || feature?.properties?.sectorLabel
+    || feature?.properties?.sensitiveThemeLabel
+    || feature?.properties?.name
+    || ""
+  );
+  return /quebrada|rio|cauce|ribera|drenaje|san pedro/.test(label);
+}
+
+function computeTerritorialEvidenceImpact(feature, evidenceProfiles = null, options = {}) {
+  const emptyImpact = {
+    sectorCount: 0,
+    sensitiveCount: 0,
+    stationCount: 0,
+    historyCount: 0,
+    climateSeriesCount: evidenceProfiles?.climateSeries?.length || 0,
+    hydricSectorCount: 0,
+    supportScore: 0,
+    supportLabel: "Soporte inicial",
+    fieldSignal: 0,
+    stationSupport: 0,
+    historySupport: 0,
+    calibrationSupport: 0,
+    sensitivePenalty: 0,
+    riskBoost: 0,
+    priorityBoost: 0,
+    dominantLabel: "Sin evidencia intersectada",
+    dominantSectorLabel: null,
+    dominantSensitiveLabel: null,
+    dominantStationLabel: null,
+    dominantHistoryLabel: null,
+    sectorIds: [],
+    sensitiveIds: [],
+    stationIds: [],
+    historyIds: [],
+    copy: "",
+    tags: [],
+  };
+  if (!feature?.geometry || !evidenceProfiles) {
+    return emptyImpact;
+  }
+
+  const stationDistanceKm = Number(options.stationDistanceKm) || 4.2;
+  const historyDistanceKm = Number(options.historyDistanceKm) || 4;
+  const centroid = turf.centroid(feature);
+  const sectorHits = evidenceProfiles.sectors.filter((candidate) => safeBooleanIntersects(feature, candidate));
+  const sensitiveHits = evidenceProfiles.sensitive.filter((candidate) => safeBooleanIntersects(feature, candidate));
+  const nearbyStations = evidenceProfiles.stations.filter((candidate) => distanceToFeatureKm(centroid, candidate) <= stationDistanceKm);
+  const nearbyHistory = evidenceProfiles.history.filter((candidate) => (
+    safeBooleanIntersects(feature, candidate) || distanceToFeatureKm(centroid, candidate) <= historyDistanceKm
+  ));
+  const hydricSectorHits = sectorHits.filter((candidate) => isHydricEvidenceFeature(candidate));
+  const dtmHits = sectorHits.filter((candidate) => Boolean(candidate.properties?.hasDtm));
+  const orthomosaicHits = sectorHits.filter((candidate) => Boolean(candidate.properties?.hasOrthomosaic));
+  const climateSeriesCount = evidenceProfiles.climateSeries.length;
+  const sensitivePenalty = clamp(
+    sensitiveHits.reduce((sum, candidate) => sum + getPlanningSensitiveConstraintToneProfile(candidate.properties?.sensitiveTone).penalty, 0),
+    0,
+    0.34
+  );
+  const fieldSignal = clamp(
+    hydricSectorHits.length * 0.1
+    + dtmHits.length * 0.04
+    + orthomosaicHits.length * 0.03,
+    0,
+    0.28
+  );
+  const stationSupport = clamp(
+    nearbyStations.length * 0.06 + Math.min(climateSeriesCount, 6) * 0.01,
+    0,
+    0.24
+  );
+  const historySupport = clamp(nearbyHistory.length * 0.04, 0, 0.18);
+  const calibrationSupport = clamp(
+    stationSupport + historySupport + Math.min(climateSeriesCount, 10) * 0.006,
+    0,
+    0.34
+  );
+  const riskBoost = clamp(
+    hydricSectorHits.length * 0.1
+    + sensitivePenalty * 0.62
+    + (nearbyStations.length ? 0.04 : 0),
+    0,
+    0.36
+  );
+  const priorityBoost = clamp(
+    fieldSignal * 0.6
+    + sensitivePenalty * 0.72
+    + calibrationSupport * 0.34,
+    0,
+    0.32
+  );
+  const supportScore = clamp(Math.round(
+    (priorityBoost * 100 * 1.1)
+    + (calibrationSupport * 100 * 0.72)
+    + (hydricSectorHits.length * 7)
+    + (sensitiveHits.length * 6)
+  ), 0, 100);
+  const supportLabel = supportScore >= 80
+    ? "Soporte muy alto"
+    : supportScore >= 60
+      ? "Soporte alto"
+      : supportScore >= 40
+        ? "Soporte medio"
+        : "Soporte inicial";
+  const dominantSector = sectorHits
+    .slice()
+    .sort((left, right) => (Number(right.properties?.coverageHa) || 0) - (Number(left.properties?.coverageHa) || 0))[0] || null;
+  const dominantSensitive = sensitiveHits
+    .slice()
+    .sort((left, right) => getPlanningSensitiveConstraintToneProfile(right.properties?.sensitiveTone).penalty - getPlanningSensitiveConstraintToneProfile(left.properties?.sensitiveTone).penalty)[0] || null;
+  const dominantStation = nearbyStations[0] || null;
+  const dominantHistory = nearbyHistory
+    .slice()
+    .sort((left, right) => (Number(right.properties?.coverageHa) || 0) - (Number(left.properties?.coverageHa) || 0))[0] || null;
+  const dominantLabel = dominantSensitive?.properties?.sensitiveThemeLabel
+    || dominantSector?.properties?.sectorLabel
+    || dominantSector?.properties?.name
+    || dominantStation?.properties?.name
+    || dominantHistory?.properties?.name
+    || emptyImpact.dominantLabel;
+  const clauses = [
+    sensitiveHits.length
+      ? `${sensitiveHits.length} tema(s) sensible(s)`
+      : null,
+    hydricSectorHits.length
+      ? `${hydricSectorHits.length} sector(es) de quebrada/rio`
+      : null,
+    nearbyStations.length
+      ? `${nearbyStations.length} estacion(es) FONAG`
+      : null,
+    nearbyHistory.length
+      ? `${nearbyHistory.length} apoyo(s) historico(s)`
+      : null,
+  ].filter(Boolean);
+
+  return {
+    sectorCount: sectorHits.length,
+    sensitiveCount: sensitiveHits.length,
+    stationCount: nearbyStations.length,
+    historyCount: nearbyHistory.length,
+    climateSeriesCount,
+    hydricSectorCount: hydricSectorHits.length,
+    supportScore,
+    supportLabel,
+    fieldSignal,
+    stationSupport,
+    historySupport,
+    calibrationSupport,
+    sensitivePenalty,
+    riskBoost,
+    priorityBoost,
+    dominantLabel,
+    dominantSectorLabel: dominantSector?.properties?.sectorLabel || dominantSector?.properties?.name || null,
+    dominantSensitiveLabel: dominantSensitive?.properties?.sensitiveThemeLabel || null,
+    dominantStationLabel: dominantStation?.properties?.name || null,
+    dominantHistoryLabel: dominantHistory?.properties?.name || null,
+    sectorIds: sectorHits.map((candidate) => String(candidate.id || candidate.properties?.name || candidate.properties?.sectorLabel || "")),
+    sensitiveIds: sensitiveHits.map((candidate) => String(candidate.properties?.sensitiveThemeId || candidate.id || "")),
+    stationIds: nearbyStations.map((candidate) => String(candidate.id || candidate.properties?.code || candidate.properties?.name || "")),
+    historyIds: nearbyHistory.map((candidate) => String(candidate.id || candidate.properties?.name || "")),
+    copy: clauses.length
+      ? `La precision local se refuerza con ${clauses.slice(0, 3).join(", ")} alrededor de ${dominantLabel.toLowerCase()}.`
+      : "",
+    tags: [
+      sensitiveHits.length ? `${sensitiveHits.length} tema(s) sensibles` : null,
+      hydricSectorHits.length ? `${hydricSectorHits.length} cauce(s) levantados` : null,
+      nearbyStations.length ? `${nearbyStations.length} estacion(es)` : null,
+      nearbyHistory.length ? `${nearbyHistory.length} memoria(s)` : null,
+    ].filter(Boolean),
+  };
+}
+
+function summarizeStudyEvidence(evidenceProfiles = null, items = []) {
+  if (!evidenceProfiles) {
+    return {
+      supportScore: 0,
+      supportLabel: "Soporte inicial",
+      impactedSectorCount: 0,
+      impactedSensitiveThemeCount: 0,
+      impactedStationCount: 0,
+      impactedHistoryCount: 0,
+      climateSeriesCount: 0,
+      copy: "Sin soporte adicional de campo cargado para esta corrida.",
+    };
+  }
+
+  const impacts = items.map((item) => item?.evidence).filter(Boolean);
+  const impactedSectorIds = new Set(impacts.flatMap((impact) => impact.sectorIds || []).filter(Boolean));
+  const impactedSensitiveIds = new Set(impacts.flatMap((impact) => impact.sensitiveIds || []).filter(Boolean));
+  const impactedStationIds = new Set(impacts.flatMap((impact) => impact.stationIds || []).filter(Boolean));
+  const impactedHistoryIds = new Set(impacts.flatMap((impact) => impact.historyIds || []).filter(Boolean));
+  const supportBase = Number(state.fieldEvidenceData?.summary?.supportScore || 0);
+  const meanImpactScore = impacts.length
+    ? Math.round(impacts.reduce((sum, impact) => sum + (impact.supportScore || 0), 0) / impacts.length)
+    : 0;
+  const supportScore = clamp(Math.round(
+    supportBase * 0.55
+    + meanImpactScore * 0.35
+    + impactedSensitiveIds.size * 3.5
+    + impactedSectorIds.size * 3
+    + impactedStationIds.size * 2.5
+    + impactedHistoryIds.size * 2
+  ), 0, 100);
+  const supportLabel = supportScore >= 80
+    ? "Soporte muy alto"
+    : supportScore >= 60
+      ? "Soporte alto"
+      : supportScore >= 40
+        ? "Soporte medio"
+        : "Soporte inicial";
+
+  return {
+    supportScore,
+    supportLabel,
+    impactedSectorCount: impactedSectorIds.size,
+    impactedSensitiveThemeCount: impactedSensitiveIds.size,
+    impactedStationCount: impactedStationIds.size,
+    impactedHistoryCount: impactedHistoryIds.size,
+    climateSeriesCount: evidenceProfiles.climateSeries.length,
+    copy: impactedSensitiveIds.size || impactedSectorIds.size || impactedStationIds.size || impactedHistoryIds.size
+      ? `La corrida ya esta endurecida con ${impactedSensitiveIds.size} tema(s) sensible(s), ${impactedSectorIds.size} sector(es) de campo, ${impactedStationIds.size} estacion(es) y ${impactedHistoryIds.size} apoyo(s) historico(s).`
+      : "La evidencia territorial se cargo, pero no intersecto directamente los sectores priorizados de esta corrida.",
+  };
 }
 
 function getPlanningSensitiveConstraintProfiles(targetFeature = getTerritorialAreaFeature()) {
@@ -15818,13 +16255,34 @@ function renderLandChangeOverlay(analysis) {
 
   if (analysis.pressureSurface?.features?.length) {
     mapState.landChangePressureLayer = L.geoJSON(analysis.pressureSurface, {
-      style: (feature) => ({
-        color: feature.properties?.surfaceType === "quebrada" ? "#58aec2" : "#8a6a4f",
-        weight: feature.properties?.surfaceType === "quebrada" ? 1.8 : 1.4,
-        fillColor: feature.properties?.surfaceType === "quebrada" ? "#8fd9e0" : "#d8bb91",
-        fillOpacity: feature.properties?.surfaceType === "quebrada" ? 0.12 : 0.08,
-        dashArray: feature.properties?.surfaceType === "quebrada" ? "8 6" : "6 8",
-      }),
+      style: (feature) => {
+        const surfaceType = feature.properties?.surfaceType;
+        if (surfaceType === "quebrada" || surfaceType === "evidencia") {
+          return {
+            color: surfaceType === "evidencia" ? "#4c8eab" : "#58aec2",
+            weight: surfaceType === "evidencia" ? 2 : 1.8,
+            fillColor: surfaceType === "evidencia" ? "#9fd9e1" : "#8fd9e0",
+            fillOpacity: surfaceType === "evidencia" ? 0.16 : 0.12,
+            dashArray: "8 6",
+          };
+        }
+        if (surfaceType === "sensible") {
+          return {
+            color: "#c78b42",
+            weight: 1.6,
+            fillColor: "#efc96e",
+            fillOpacity: 0.12,
+            dashArray: "6 10",
+          };
+        }
+        return {
+          color: "#8a6a4f",
+          weight: 1.4,
+          fillColor: "#d8bb91",
+          fillOpacity: 0.08,
+          dashArray: "6 8",
+        };
+      },
       onEachFeature: (feature, layer) => {
         layer.bindPopup(
           `<h3 class="popup-title">${feature.properties?.name || "Corredor territorial"}</h3><p class="popup-copy">${feature.properties?.summary || "Franja de presion territorial para lectura preventiva."}</p>`
@@ -17387,13 +17845,14 @@ function updateMapSummary(force = false) {
       setTextIfChanged(
         dom.mapSubtitle,
         `${landChangePeriod.shortLabel}, ${landChangeScenario.label} y enfoque ${landChangeLens.label.toLowerCase()}. ${formatLandChangeHa(landChange.summary.transformedHa)} ha de suelo rural transformado con hotspots, calor de presion y buffers de vigilancia sobre ${landChange.summary.hotspotLabel}.`
+        + ` ${landChange.summary.evidence.copy}`
       );
     } else if (showHydrology) {
       setTextIfChanged(dom.overlayIndex, "Balance");
       setTextIfChanged(dom.mapTitle, `Disponibilidad hidrica sobre ${hydrology.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `${hydrologyClimate.shortLabel}, ${hydrologyHorizon.label} y ${hydrologyDemand.label}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio con ${hydrology.prioritySectors.length} sectores en vigilancia, buffers de proteccion y franjas de atencion hidrica.`
+        `${hydrologyClimate.shortLabel}, ${hydrologyHorizon.label} y ${hydrologyDemand.label}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio con ${hydrology.prioritySectors.length} sectores en vigilancia, buffers de proteccion y franjas de atencion hidrica. ${hydrology.summary.evidence.copy}`
       );
     } else if (planning) {
       setTextIfChanged(dom.mapTitle, `${planning.program.longLabel} sobre ${planning.context.scopeLabel}`);
@@ -17404,7 +17863,7 @@ function updateMapSummary(force = false) {
     } else if (hydrology) {
       setTextIfChanged(dom.overlayIndex, "Balance");
       setTextIfChanged(dom.mapTitle, "Estudio hidrico de Mejia listo");
-      setTextIfChanged(dom.mapSubtitle, `${hydrology.climate.shortLabel}, ${hydrology.horizon.label} y ${hydrology.demand.label} con balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio y franjas de proteccion activas.`);
+      setTextIfChanged(dom.mapSubtitle, `${hydrology.climate.shortLabel}, ${hydrology.horizon.label} y ${hydrology.demand.label} con balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio, franjas de proteccion activas y ${hydrology.summary.evidence.supportLabel.toLowerCase()} para la calibracion local.`);
     } else if (fieldEvidence) {
       setTextIfChanged(dom.overlayIndex, "Campo");
       setTextIfChanged(dom.mapTitle, "Evidencia de campo integrada");
@@ -17412,7 +17871,7 @@ function updateMapSummary(force = false) {
     } else if (landChange) {
       setTextIfChanged(dom.overlayIndex, "Huella");
       setTextIfChanged(dom.mapTitle, "Estudio de transformacion del suelo listo");
-      setTextIfChanged(dom.mapSubtitle, `${landChange.period.shortLabel} con ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas, ${landChange.summary.riskLabel.toLowerCase()} y foco ${landChange.summary.hotspotLabel} con halos de presion.`);
+      setTextIfChanged(dom.mapSubtitle, `${landChange.period.shortLabel} con ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas, ${landChange.summary.riskLabel.toLowerCase()} y foco ${landChange.summary.hotspotLabel} con halos de presion. ${landChange.summary.evidence.copy}`);
     } else if (evidenceRouteActive) {
       setTextIfChanged(dom.overlayIndex, "Campo");
       setTextIfChanged(dom.mapTitle, "Evidencia territorial lista");
@@ -17547,7 +18006,7 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
           },
           {
             tone: "neutral",
-            label: "Calor + buffers + alertas",
+            label: `${landChange.summary.evidence.impactedSensitiveThemeCount} sensibles + ${landChange.summary.evidence.impactedSectorCount} campo`,
           },
         ]
       : state.territorialFocus === "hydrology" && hydrology
@@ -17574,7 +18033,7 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
           },
           {
             tone: "neutral",
-            label: "Buffers + alertas",
+            label: `${hydrology.summary.evidence.impactedStationCount} estaciones + ${hydrology.summary.evidence.impactedSensitiveThemeCount} sensibles`,
           },
         ]
       : evidenceRouteActive
