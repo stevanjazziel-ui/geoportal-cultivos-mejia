@@ -2119,6 +2119,7 @@ const mapState = {
   hydrologyBufferLayer: null,
   fieldEvidenceSectorLayer: null,
   fieldEvidenceStationLayer: null,
+  fieldEvidenceSensitiveLayer: null,
   fieldEvidenceHistoryLayer: null,
   studyAreaLayer: null,
   currentPlotLayer: null,
@@ -3558,6 +3559,7 @@ function cacheDom() {
   dom.fieldEvidenceInventory = document.querySelector("#fieldEvidenceInventory");
   dom.fieldEvidenceSectors = document.querySelector("#fieldEvidenceSectors");
   dom.fieldEvidenceStations = document.querySelector("#fieldEvidenceStations");
+  dom.fieldEvidenceSensitive = document.querySelector("#fieldEvidenceSensitive");
   dom.fieldEvidenceHistory = document.querySelector("#fieldEvidenceHistory");
   dom.planningCard = document.querySelector("#planningCard");
   dom.landChangeCard = document.querySelector("#landChangeCard");
@@ -3640,6 +3642,7 @@ function bindUI() {
   dom.hydrologySectors?.addEventListener("click", handleHydrologySectorsInteraction);
   dom.fieldEvidenceSectors?.addEventListener("click", handleFieldEvidenceInteraction);
   dom.fieldEvidenceStations?.addEventListener("click", handleFieldEvidenceInteraction);
+  dom.fieldEvidenceSensitive?.addEventListener("click", handleFieldEvidenceInteraction);
   dom.fieldEvidenceHistory?.addEventListener("click", handleFieldEvidenceInteraction);
   dom.territorialScenarioCompare?.addEventListener("click", handleTerritorialScenarioCompareInteraction);
   dom.territorialSectorSheets?.addEventListener("click", handleTerritorialSectorSheetsInteraction);
@@ -3843,6 +3846,7 @@ function bindUI() {
       { target: dom.fieldEvidenceInventory, message: "Resumiendo catalogo maestro, fuentes y objetos geograficos disponibles..." },
       { target: dom.fieldEvidenceSectors, message: "Organizando quebradas, rios y sectores levantados en campo..." },
       { target: dom.fieldEvidenceStations, message: "Ubicando estaciones FONAG e indicadores hidrometeorologicos..." },
+      { target: dom.fieldEvidenceSensitive, message: "Integrando areas sensibles, proteccion minima, riberas y quebradas del procedimiento tecnico..." },
       { target: dom.fieldEvidenceHistory, message: "Levantando cartas IGM, MDT historico y series climaticas INHAMI..." },
       { target: dom.territorialDecisionBoard, message: "Incorporando soporte de evidencia territorial al semaforo tecnico..." },
       { target: dom.territorialSectorSheets, message: "Preparando fichas de campo, estaciones y memoria historica..." },
@@ -4155,12 +4159,12 @@ function handleHydrologySectorsInteraction(event) {
 }
 
 function handleFieldEvidenceInteraction(event) {
-  const button = event.target.closest("[data-field-sector-id], [data-field-station-id], [data-field-history-id]");
+  const button = event.target.closest("[data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id]");
   if (!button) {
     return;
   }
 
-  const container = button.closest("#fieldEvidenceSectors, #fieldEvidenceStations, #fieldEvidenceHistory");
+  const container = button.closest("#fieldEvidenceSectors, #fieldEvidenceStations, #fieldEvidenceSensitive, #fieldEvidenceHistory");
   if (!container) {
     return;
   }
@@ -4173,13 +4177,17 @@ function handleFieldEvidenceInteraction(event) {
     focusFieldEvidenceItem("station", button.dataset.fieldStationId);
     return;
   }
+  if (button.dataset.fieldSensitiveId) {
+    focusFieldEvidenceItem("sensitive", button.dataset.fieldSensitiveId);
+    return;
+  }
   if (button.dataset.fieldHistoryId) {
     focusFieldEvidenceItem("history", button.dataset.fieldHistoryId);
   }
 }
 
 function handleTerritorialSectorSheetsInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-history-id]");
+  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id]");
   if (!button || !dom.territorialSectorSheets?.contains(button)) {
     return;
   }
@@ -4204,13 +4212,17 @@ function handleTerritorialSectorSheetsInteraction(event) {
     focusFieldEvidenceItem("station", button.dataset.fieldStationId);
     return;
   }
+  if (button.dataset.fieldSensitiveId) {
+    focusFieldEvidenceItem("sensitive", button.dataset.fieldSensitiveId);
+    return;
+  }
   if (button.dataset.fieldHistoryId) {
     focusFieldEvidenceItem("history", button.dataset.fieldHistoryId);
   }
 }
 
 function handleTerritorialAlertInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-history-id]");
+  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id]");
   if (!button || !dom.territorialAlertsPanel?.contains(button)) {
     return;
   }
@@ -4233,6 +4245,10 @@ function handleTerritorialAlertInteraction(event) {
   }
   if (button.dataset.fieldStationId) {
     focusFieldEvidenceItem("station", button.dataset.fieldStationId);
+    return;
+  }
+  if (button.dataset.fieldSensitiveId) {
+    focusFieldEvidenceItem("sensitive", button.dataset.fieldSensitiveId);
     return;
   }
   if (button.dataset.fieldHistoryId) {
@@ -12036,6 +12052,10 @@ function buildFieldEvidenceAnalysis(catalog = state.fieldEvidenceCatalog) {
   const target = getCurrentTerritorialTarget();
   const sectors = filterFeaturesByTerritorialArea(catalog?.sectors?.features || [], state.territorialAreaId).map(cloneFeature);
   const stations = filterFeaturesByTerritorialArea(catalog?.hydrometStations?.features || [], state.territorialAreaId).map(cloneFeature);
+  const sensitiveFeatures = filterFeaturesByTerritorialArea(
+    catalog?.sensitiveConsultancy?.subproductCollection?.features || [],
+    state.territorialAreaId
+  ).map(cloneFeature);
   const history = [
     ...filterFeaturesByTerritorialArea(catalog?.historicalSources?.features || [], state.territorialAreaId).map(cloneFeature),
     ...filterFeaturesByTerritorialArea(catalog?.terrainSources?.features || [], state.territorialAreaId).map(cloneFeature),
@@ -12046,6 +12066,52 @@ function buildFieldEvidenceAnalysis(catalog = state.fieldEvidenceCatalog) {
   const inventoryCategories = Array.isArray(catalog?.inventoryCatalog?.categories)
     ? catalog.inventoryCatalog.categories.slice().sort((left, right) => (right.itemCount || 0) - (left.itemCount || 0))
     : [];
+  const consultancyProjects = Array.isArray(catalog?.sensitiveConsultancy?.projects)
+    ? catalog.sensitiveConsultancy.projects.slice()
+    : [];
+  const consultancyBaseThemes = Array.isArray(catalog?.sensitiveConsultancy?.baseThemes)
+    ? catalog.sensitiveConsultancy.baseThemes
+      .slice()
+      .sort((left, right) => (right.featureCount || 0) - (left.featureCount || 0))
+    : [];
+  const consultancyTypologies = Array.isArray(catalog?.sensitiveConsultancy?.typologyThemes)
+    ? catalog.sensitiveConsultancy.typologyThemes.slice()
+    : [];
+
+  const sensitiveThemeCountMap = new Map();
+  sensitiveFeatures.forEach((feature) => {
+    const themeId = String(feature?.properties?.sensitiveThemeId || feature?.id || "").trim();
+    if (!themeId) {
+      return;
+    }
+    sensitiveThemeCountMap.set(
+      themeId,
+      Math.max(Number(feature?.properties?.featureCount) || 0, sensitiveThemeCountMap.get(themeId) || 0)
+    );
+  });
+  const topSensitiveThemes = (Array.isArray(catalog?.sensitiveConsultancy?.subproductThemes)
+    ? catalog.sensitiveConsultancy.subproductThemes
+    : []
+  )
+    .filter((theme) => sensitiveThemeCountMap.has(String(theme.id)))
+    .sort((left, right) => (sensitiveThemeCountMap.get(String(right.id)) || 0) - (sensitiveThemeCountMap.get(String(left.id)) || 0))
+    .slice(0, 6)
+    .map((theme, index) => ({
+      id: String(theme.id),
+      rank: index + 1,
+      label: theme.label || `Tema ${index + 1}`,
+      group: theme.group || "Áreas sensibles",
+      groupLabel: theme.groupLabel || theme.group || "Áreas sensibles",
+      tone: theme.tone || "base",
+      featureCount: sensitiveThemeCountMap.get(String(theme.id)) || 0,
+      geometryType: theme.geometryType || "Unknown",
+      renderMode: theme.renderMode || "union",
+      coverageHa: Number(theme.coverageHa) || 0,
+      sourceLayer: theme.sourceLayer || "subproducto",
+      description: theme.description || "Tema sensible sin descripción.",
+      summary: `${theme.description || "Tema sensible disponible"} ${sensitiveThemeCountMap.get(String(theme.id)) || 0} elementos del procedimiento tecnico.`,
+      feature: sensitiveFeatures.find((feature) => String(feature?.properties?.sensitiveThemeId || feature?.id) === String(theme.id)) || null,
+    }));
 
   const topSectors = sectors
     .slice()
@@ -12117,8 +12183,12 @@ function buildFieldEvidenceAnalysis(catalog = state.fieldEvidenceCatalog) {
         ? stations.reduce((sum, feature) => sum + (Number(feature.properties?.altitudeM) || 0), 0) / stations.length
         : 0
     ),
+    sensitiveThemeCount: topSensitiveThemes.length,
+    sensitiveFeatureCount: topSensitiveThemes.reduce((sum, theme) => sum + (theme.featureCount || 0), 0),
+    consultancyProjectCount: consultancyProjects.length,
     dominantSectorType: getFieldEvidenceDominantLabel(sectors, "sectorType"),
     dominantStationType: getFieldEvidenceDominantLabel(stations, "stationKind"),
+    dominantSensitiveGroup: topSensitiveThemes[0]?.groupLabel || "Sin lectura sensible",
   };
   const supportScore = clamp(
     Math.round(
@@ -12126,6 +12196,7 @@ function buildFieldEvidenceAnalysis(catalog = state.fieldEvidenceCatalog) {
       + summary.stationCount * 5
       + summary.historyCount * 4
       + summary.climateSeriesCount * 2
+      + Math.min(summary.sensitiveThemeCount * 5, 18)
       + Math.min(summary.inventoryCategoryCount * 3, 16)
     ),
     0,
@@ -12141,6 +12212,7 @@ function buildFieldEvidenceAnalysis(catalog = state.fieldEvidenceCatalog) {
       coverageLabel: summary.surveyedAreaHa >= 1200 ? "Cobertura extensa" : summary.surveyedAreaHa >= 500 ? "Cobertura media" : "Cobertura puntual",
       stationLabel: summary.dominantStationType === "precipitacion" ? "Predomina lluvia observada" : summary.dominantStationType === "caudal" ? "Predomina caudal observado" : "Sin lectura dominante",
       historicalLabel: summary.historyCount ? "Memoria historica activa" : "Memoria historica pendiente",
+      sensitiveLabel: summary.sensitiveThemeCount ? `Áreas sensibles activas (${summary.dominantSensitiveGroup.toLowerCase()})` : "Áreas sensibles pendientes",
     },
     sectorsCollection: {
       type: "FeatureCollection",
@@ -12154,12 +12226,21 @@ function buildFieldEvidenceAnalysis(catalog = state.fieldEvidenceCatalog) {
       type: "FeatureCollection",
       features: history,
     },
+    sensitiveCollection: {
+      type: "FeatureCollection",
+      features: sensitiveFeatures,
+    },
     climateSeries,
     inventoryCategories,
+    consultancyProjects,
+    consultancyBaseThemes,
+    consultancyTypologies,
     topSectors,
     topStations,
+    topSensitiveThemes,
     topHistory,
     sourceSummary: catalog?.summary || {},
+    sensitiveSourceSummary: catalog?.sensitiveConsultancy?.summary || {},
   };
 }
 
@@ -12180,6 +12261,11 @@ function renderFieldEvidenceModule() {
       dom.fieldEvidenceStations.classList.add("empty-state");
       dom.fieldEvidenceStations.classList.remove("has-data");
       setTextIfChanged(dom.fieldEvidenceStations, "Aqui apareceran las estaciones FONAG y sus metricas hidrometeorologicas.");
+    }
+    if (dom.fieldEvidenceSensitive) {
+      dom.fieldEvidenceSensitive.classList.add("empty-state");
+      dom.fieldEvidenceSensitive.classList.remove("has-data");
+      setTextIfChanged(dom.fieldEvidenceSensitive, "Aqui apareceran las areas sensibles, protecciones minimas, riberas y quebradas del procedimiento tecnico.");
     }
     if (dom.fieldEvidenceHistory) {
       dom.fieldEvidenceHistory.classList.add("empty-state");
@@ -12218,6 +12304,11 @@ function renderFieldEvidenceModule() {
       copy: "Series historicas de precipitacion listas para lectura comparativa y validacion.",
     },
     {
+      label: "Areas sensibles",
+      value: `${analysis.summary.sensitiveThemeCount} temas`,
+      copy: `${analysis.summary.sensitiveLabel}. ${analysis.summary.sensitiveFeatureCount} elementos del procedimiento tecnico se resumen para ${analysis.context.scopeLabel}.`,
+    },
+    {
       label: "Catalogo maestro",
       value: `${analysis.summary.inventoryItemCount} objetos`,
       copy: `${analysis.summary.inventoryCategoryCount} categorias de insumos territoriales documentadas.`,
@@ -12228,9 +12319,17 @@ function renderFieldEvidenceModule() {
   if (dom.fieldEvidenceInventory) {
     dom.fieldEvidenceInventory.classList.remove("empty-state");
     dom.fieldEvidenceInventory.classList.add("has-data");
-    setHtmlIfChanged(dom.fieldEvidenceInventory, analysis.inventoryCategories.slice(0, 8).map((category) => `
+    setHtmlIfChanged(dom.fieldEvidenceInventory, [
+      ...analysis.inventoryCategories.slice(0, 6).map((category) => `
       <span class="planning-pill emphasis"><strong>${category.itemCount}</strong> ${category.label}</span>
-    `).join(""));
+    `),
+      ...analysis.consultancyBaseThemes.slice(0, 3).map((theme) => `
+      <span class="planning-pill emphasis"><strong>${theme.featureCount}</strong> ${theme.label}</span>
+    `),
+      ...analysis.consultancyProjects.slice(0, 2).map((project) => `
+      <span class="planning-pill emphasis"><strong>${project.entryCount}</strong> ${project.name.replace(".aprx", "")}</span>
+    `),
+    ].join(""));
   }
 
   if (dom.fieldEvidenceSectors) {
@@ -12277,6 +12376,49 @@ function renderFieldEvidenceModule() {
         <button class="ghost-button" type="button" data-field-station-id="${station.id}">Ver en mapa</button>
       </article>
     `).join(""));
+  }
+
+  if (dom.fieldEvidenceSensitive) {
+    dom.fieldEvidenceSensitive.classList.remove("empty-state");
+    dom.fieldEvidenceSensitive.classList.add("has-data");
+    const themeMarkup = analysis.topSensitiveThemes.map((theme) => `
+      <article class="field-evidence-card ${theme.id === state.fieldEvidenceHighlightId && state.fieldEvidenceHighlightType === "sensitive" ? "active" : ""}">
+        <div class="field-evidence-head">
+          <div>
+            <p class="candidate-rank">${theme.groupLabel}</p>
+            <h4>${theme.label}</h4>
+          </div>
+          <span class="planning-pill emphasis">${theme.featureCount} elem.</span>
+        </div>
+        <p class="territorial-readout-copy">${theme.summary}</p>
+        <div class="field-evidence-metrics">
+          <span>${theme.geometryType}</span>
+          <span>${theme.renderMode === "envelope" ? "envolvente web" : "geometria integrada"}</span>
+          <span>${theme.sourceLayer}</span>
+        </div>
+        <button class="ghost-button" type="button" data-field-sensitive-id="${theme.id}">Ver en mapa</button>
+      </article>
+    `).join("");
+    const projectMarkup = analysis.consultancyProjects.length
+      ? `
+      <article class="field-evidence-card compact">
+        <div class="field-evidence-head">
+          <div>
+            <p class="candidate-rank">Consultoria</p>
+            <h4>Procedimiento tecnico de areas sensibles</h4>
+          </div>
+          <span class="planning-pill emphasis">${analysis.summary.consultancyProjectCount} proyectos</span>
+        </div>
+        <p class="territorial-readout-copy">${escapeHtmlContent(analysis.consultancyProjects.map((project) => project.summary).slice(0, 2).join(" "))}</p>
+        <div class="field-evidence-metrics">
+          <span>${analysis.sensitiveSourceSummary.geodatabaseCount || 0} geodatabases</span>
+          <span>${analysis.sensitiveSourceSummary.workbookCount || 0} hojas</span>
+          <span>${analysis.consultancyTypologies.length} tipologias</span>
+        </div>
+      </article>
+    `
+      : "";
+    setHtmlIfChanged(dom.fieldEvidenceSensitive, `${themeMarkup}${projectMarkup}`);
   }
 
   if (dom.fieldEvidenceHistory) {
@@ -12329,15 +12471,21 @@ async function runFieldEvidenceAnalysis(silent = false) {
       ? "sector"
       : analysis.topStations.length
         ? "station"
-        : "history";
-    state.fieldEvidenceHighlightId = analysis.topSectors[0]?.id || analysis.topStations[0]?.id || analysis.topHistory[0]?.id || null;
+        : analysis.topSensitiveThemes.length
+          ? "sensitive"
+          : "history";
+    state.fieldEvidenceHighlightId = analysis.topSectors[0]?.id
+      || analysis.topStations[0]?.id
+      || analysis.topSensitiveThemes[0]?.id
+      || analysis.topHistory[0]?.id
+      || null;
     state.territorialFocus = "fieldEvidence";
     renderFieldEvidenceModule();
     renderFieldEvidenceOverlay(analysis);
     renderTerritorialDecisionSupport();
     updateMapSummary();
     if (!silent) {
-      setStatus(`Evidencia de campo integrada para ${analysis.context.scopeLabel}: ${analysis.summary.sectorCount} sectores, ${analysis.summary.stationCount} estaciones y ${analysis.summary.historyCount} fuentes historicas visibles en mapa.`);
+      setStatus(`Evidencia de campo integrada para ${analysis.context.scopeLabel}: ${analysis.summary.sectorCount} sectores, ${analysis.summary.stationCount} estaciones, ${analysis.summary.sensitiveThemeCount} temas sensibles y ${analysis.summary.historyCount} fuentes historicas visibles en mapa.`);
     }
     return analysis;
   } catch (error) {
@@ -12389,10 +12537,17 @@ function focusFieldEvidenceItem(type, id) {
 
   const collection = type === "station"
     ? state.fieldEvidenceData.stationCollection?.features
+    : type === "sensitive"
+      ? state.fieldEvidenceData.sensitiveCollection?.features
     : type === "history"
       ? state.fieldEvidenceData.historyCollection?.features
       : state.fieldEvidenceData.sectorsCollection?.features;
-  const feature = (collection || []).find((item) => String(item.id || item.properties?.code || item.properties?.name) === String(id));
+  const feature = (collection || []).find((item) => {
+    const candidateId = type === "sensitive"
+      ? item.properties?.sensitiveThemeId || item.id
+      : item.id || item.properties?.code || item.properties?.name;
+    return String(candidateId) === String(id);
+  });
   if (!feature) {
     return;
   }
@@ -12428,6 +12583,7 @@ function focusFieldEvidenceStudy() {
   const layers = [
     mapState.fieldEvidenceSectorLayer,
     mapState.fieldEvidenceStationLayer,
+    mapState.fieldEvidenceSensitiveLayer,
     mapState.fieldEvidenceHistoryLayer,
   ].filter(Boolean);
   let bounds = null;
@@ -13332,8 +13488,8 @@ function buildTerritorialDecisionSnapshot() {
       signal: getTerritorialSignalState(score),
       title: "Soporte de evidencia",
       metric: `${fieldEvidence.summary.sectorCount} sectores`,
-      copy: `${fieldEvidence.summary.stationCount} estaciones, ${fieldEvidence.summary.historyCount} insumos historicos y ${fieldEvidence.summary.inventoryItemCount} objetos catalogados respaldan la lectura de ${fieldEvidence.context.scopeLabel}.`,
-      note: `${fieldEvidence.summary.supportLabel} con predominio ${fieldEvidence.summary.dominantSectorType.toLowerCase()} y ${fieldEvidence.summary.stationLabel.toLowerCase()}.`,
+      copy: `${fieldEvidence.summary.stationCount} estaciones, ${fieldEvidence.summary.sensitiveThemeCount} temas sensibles, ${fieldEvidence.summary.historyCount} insumos historicos y ${fieldEvidence.summary.inventoryItemCount} objetos catalogados respaldan la lectura de ${fieldEvidence.context.scopeLabel}.`,
+      note: `${fieldEvidence.summary.supportLabel} con predominio ${fieldEvidence.summary.dominantSectorType.toLowerCase()}, ${fieldEvidence.summary.stationLabel.toLowerCase()} y ${fieldEvidence.summary.sensitiveLabel.toLowerCase()}.`,
     });
   }
 
@@ -13474,6 +13630,27 @@ function buildTerritorialSectorSheets() {
     });
   }
 
+  if (state.fieldEvidenceData?.topSensitiveThemes?.length) {
+    state.fieldEvidenceData.topSensitiveThemes.slice(0, 2).forEach((theme) => {
+      sheets.push({
+        id: theme.id,
+        module: "Areas sensibles",
+        title: theme.label,
+        tone: theme.tone,
+        kicker: theme.groupLabel,
+        summary: theme.summary,
+        note: `${theme.featureCount} elementos sintetizados mediante ${theme.renderMode === "envelope" ? "envolvente operativa" : "geometria integrada"} desde ${theme.sourceLayer}.`,
+        metrics: [
+          { label: "Grupo", value: theme.groupLabel },
+          { label: "Elementos", value: `${theme.featureCount}` },
+          { label: "Cobertura", value: `${theme.coverageHa.toFixed(1)} ha` },
+          { label: "Modo", value: theme.renderMode === "envelope" ? "Envolvente web" : "Union" },
+        ],
+        actionAttr: `data-field-sensitive-id="${theme.id}"`,
+      });
+    });
+  }
+
   return sheets.slice(0, 10);
 }
 
@@ -13558,6 +13735,18 @@ function buildTerritorialAlerts() {
       title: `${station.name}: soporte hidrometeorologico listo`,
       copy: `${station.annualMetricLabel} y ${station.historicalMetricLabel} disponibles para validar escenarios territoriales en ${state.fieldEvidenceData.context.scopeLabel}.`,
       actionAttr: `data-field-station-id="${station.id}"`,
+    });
+  }
+
+  if (state.fieldEvidenceData?.topSensitiveThemes?.length) {
+    const theme = state.fieldEvidenceData.topSensitiveThemes[0];
+    alerts.push({
+      id: `alert-field-sensitive-${theme.id}`,
+      tone: theme.tone === "high" ? "critical" : "watch",
+      module: "Areas sensibles",
+      title: `${theme.label}: regularizacion prioritaria`,
+      copy: `${theme.summary} ${theme.featureCount} elementos y lectura ${theme.groupLabel.toLowerCase()} requieren control territorial preventivo.`,
+      actionAttr: `data-field-sensitive-id="${theme.id}"`,
     });
   }
 
@@ -13825,9 +14014,13 @@ function buildTerritorialJsonExport() {
       summary: state.fieldEvidenceData.summary,
       topSectors: state.fieldEvidenceData.topSectors,
       topStations: state.fieldEvidenceData.topStations,
+      topSensitiveThemes: state.fieldEvidenceData.topSensitiveThemes,
       topHistory: state.fieldEvidenceData.topHistory,
       climateSeries: state.fieldEvidenceData.climateSeries,
       inventoryCategories: state.fieldEvidenceData.inventoryCategories,
+      consultancyProjects: state.fieldEvidenceData.consultancyProjects,
+      consultancyBaseThemes: state.fieldEvidenceData.consultancyBaseThemes,
+      sensitiveSourceSummary: state.fieldEvidenceData.sensitiveSourceSummary,
       sourceSummary: state.fieldEvidenceData.sourceSummary,
     } : null,
     alerts: buildTerritorialAlerts(),
@@ -13910,7 +14103,7 @@ function buildTerritorialReportHtml() {
       ${state.fieldEvidenceData ? `
         <section>
           <p class="kicker">Soporte de evidencia</p>
-          <h2>Campo, estaciones y memoria historica</h2>
+          <h2>Campo, areas sensibles y memoria historica</h2>
           <div class="grid">
             <article class="card">
               <p class="kicker">Levantamiento</p>
@@ -13927,9 +14120,15 @@ function buildTerritorialReportHtml() {
               <div class="metric">${escapeHtmlContent(String(state.fieldEvidenceData.summary.historyCount))}</div>
               <p>${escapeHtmlContent(`${state.fieldEvidenceData.summary.historicalLabel} con ${state.fieldEvidenceData.summary.climateSeriesCount} series climaticas y ${state.fieldEvidenceData.summary.inventoryItemCount} objetos catalogados.`)}</p>
             </article>
+            <article class="card">
+              <p class="kicker">Areas sensibles</p>
+              <div class="metric">${escapeHtmlContent(String(state.fieldEvidenceData.summary.sensitiveThemeCount))}</div>
+              <p>${escapeHtmlContent(`${state.fieldEvidenceData.summary.sensitiveLabel}. ${state.fieldEvidenceData.summary.sensitiveFeatureCount} elementos y ${state.fieldEvidenceData.summary.consultancyProjectCount} proyectos tecnicos integrados.`)}</p>
+            </article>
           </div>
           <ul>
             ${state.fieldEvidenceData.topSectors.slice(0, 3).map((sector) => `<li><strong>${escapeHtmlContent(sector.name)}:</strong> ${escapeHtmlContent(sector.summary)}</li>`).join("")}
+            ${state.fieldEvidenceData.topSensitiveThemes.slice(0, 2).map((theme) => `<li><strong>${escapeHtmlContent(theme.label)}:</strong> ${escapeHtmlContent(theme.summary)}</li>`).join("")}
           </ul>
         </section>
       ` : ""}
@@ -15493,6 +15692,36 @@ function renderFieldEvidenceOverlay(analysis) {
 
   const activeType = state.fieldEvidenceHighlightType;
   const activeId = state.fieldEvidenceHighlightId;
+  const getSensitivePalette = (tone) => {
+    if (tone === "high") {
+      return {
+        stroke: "#b35a47",
+        fill: "#e0a08e",
+      };
+    }
+    if (tone === "mid") {
+      return {
+        stroke: "#b88444",
+        fill: "#ebc471",
+      };
+    }
+    if (tone === "service") {
+      return {
+        stroke: "#4b88aa",
+        fill: "#8fd5df",
+      };
+    }
+    if (tone === "resilience") {
+      return {
+        stroke: "#2f7f5f",
+        fill: "#7fc7a1",
+      };
+    }
+    return {
+      stroke: "#6b7380",
+      fill: "#c9d0da",
+    };
+  };
 
   if (analysis.historyCollection?.features?.length) {
     mapState.fieldEvidenceHistoryLayer = L.geoJSON(analysis.historyCollection, {
@@ -15554,6 +15783,57 @@ function renderFieldEvidenceOverlay(analysis) {
     }).addTo(mapState.map);
   }
 
+  if (analysis.sensitiveCollection?.features?.length) {
+    mapState.fieldEvidenceSensitiveLayer = L.geoJSON(analysis.sensitiveCollection, {
+      style: (feature) => {
+        const featureId = feature.properties?.sensitiveThemeId || feature.id;
+        const highlighted = activeType === "sensitive"
+          && String(featureId) === String(activeId);
+        const palette = getSensitivePalette(feature.properties?.sensitiveTone);
+        const renderMode = feature.properties?.renderMode || "union";
+        return {
+          color: palette.stroke,
+          weight: highlighted
+            ? (renderMode === "envelope" ? 2.4 : 2.8)
+            : (renderMode === "envelope" ? 1.4 : 1.9),
+          fillColor: palette.fill,
+          fillOpacity: renderMode === "envelope"
+            ? (highlighted ? 0.12 : 0.06)
+            : (highlighted ? 0.24 : 0.14),
+          dashArray: renderMode === "envelope" ? "10 8" : null,
+          lineCap: "round",
+          lineJoin: "round",
+        };
+      },
+      pointToLayer: (feature, latlng) => {
+        const featureId = feature.properties?.sensitiveThemeId || feature.id;
+        const highlighted = activeType === "sensitive"
+          && String(featureId) === String(activeId);
+        const palette = getSensitivePalette(feature.properties?.sensitiveTone);
+        return L.circleMarker(latlng, {
+          radius: highlighted ? 8.5 : 6.8,
+          weight: 2.2,
+          color: "#fff6ea",
+          fillColor: palette.stroke,
+          fillOpacity: 0.96,
+        });
+      },
+      onEachFeature: (feature, layer) => {
+        const themeLabel = feature.properties?.sensitiveThemeLabel || feature.properties?.name || "Area sensible";
+        const groupLabel = feature.properties?.sensitiveGroup || "Procedimiento tecnico";
+        const featureCount = Number(feature.properties?.featureCount || 0);
+        const renderMode = feature.properties?.renderMode === "envelope" ? "envolvente operativa" : "geometria integrada";
+        layer.bindPopup(
+          `<h3 class="popup-title">${themeLabel}</h3><p class="popup-copy">${feature.properties?.summary || "Tema sensible integrado desde la consultoria tecnica."} Grupo ${groupLabel.toLowerCase()}, ${featureCount} elementos y ${renderMode} para despliegue web.</p>`
+        );
+        layer.bindTooltip(
+          `${groupLabel} | ${themeLabel} | ${featureCount} elem.`,
+          { sticky: true }
+        );
+      },
+    }).addTo(mapState.map);
+  }
+
   if (analysis.stationCollection?.features?.length) {
     mapState.fieldEvidenceStationLayer = L.geoJSON(analysis.stationCollection, {
       pointToLayer: (feature, latlng) => {
@@ -15583,6 +15863,9 @@ function renderFieldEvidenceOverlay(analysis) {
   if (mapState.fieldEvidenceHistoryLayer?.bringToBack) {
     mapState.fieldEvidenceHistoryLayer.bringToBack();
   }
+  if (mapState.fieldEvidenceSensitiveLayer?.bringToFront) {
+    mapState.fieldEvidenceSensitiveLayer.bringToFront();
+  }
   if (mapState.fieldEvidenceSectorLayer?.bringToFront) {
     mapState.fieldEvidenceSectorLayer.bringToFront();
   }
@@ -15609,6 +15892,10 @@ function clearFieldEvidenceOverlay() {
   if (mapState.fieldEvidenceHistoryLayer) {
     mapState.map.removeLayer(mapState.fieldEvidenceHistoryLayer);
     mapState.fieldEvidenceHistoryLayer = null;
+  }
+  if (mapState.fieldEvidenceSensitiveLayer) {
+    mapState.map.removeLayer(mapState.fieldEvidenceSensitiveLayer);
+    mapState.fieldEvidenceSensitiveLayer = null;
   }
 }
 
@@ -16764,7 +17051,7 @@ function updateMapSummary(force = false) {
       setTextIfChanged(dom.mapTitle, `Evidencia de campo sobre ${fieldEvidence.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `${fieldEvidence.summary.sectorCount} sectores de campo, ${fieldEvidence.summary.stationCount} estaciones FONAG, ${fieldEvidence.summary.historyCount} coberturas historicas y ${fieldEvidence.summary.climateSeriesCount} series climaticas listas para soporte tecnico sobre ${fieldEvidence.context.scopeLabel}.`
+        `${fieldEvidence.summary.sectorCount} sectores de campo, ${fieldEvidence.summary.stationCount} estaciones FONAG, ${fieldEvidence.summary.sensitiveThemeCount} temas sensibles, ${fieldEvidence.summary.historyCount} coberturas historicas y ${fieldEvidence.summary.climateSeriesCount} series climaticas listas para soporte tecnico sobre ${fieldEvidence.context.scopeLabel}.`
       );
     } else if (showLandChange) {
       setTextIfChanged(dom.overlayIndex, "Huella");
@@ -16793,7 +17080,7 @@ function updateMapSummary(force = false) {
     } else if (fieldEvidence) {
       setTextIfChanged(dom.overlayIndex, "Campo");
       setTextIfChanged(dom.mapTitle, "Evidencia de campo integrada");
-      setTextIfChanged(dom.mapSubtitle, `${fieldEvidence.summary.supportLabel} con ${fieldEvidence.summary.sectorCount} sectores, ${fieldEvidence.summary.stationCount} estaciones y ${fieldEvidence.summary.historyCount} insumos historicos listos para ${fieldEvidence.context.scopeLabel}.`);
+      setTextIfChanged(dom.mapSubtitle, `${fieldEvidence.summary.supportLabel} con ${fieldEvidence.summary.sectorCount} sectores, ${fieldEvidence.summary.stationCount} estaciones, ${fieldEvidence.summary.sensitiveThemeCount} temas sensibles y ${fieldEvidence.summary.historyCount} insumos historicos listos para ${fieldEvidence.context.scopeLabel}.`);
     } else if (landChange) {
       setTextIfChanged(dom.overlayIndex, "Huella");
       setTextIfChanged(dom.mapTitle, "Estudio de transformacion del suelo listo");
@@ -16887,6 +17174,10 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
             label: `${fieldEvidence.summary.stationCount} estaciones`,
           },
           {
+            tone: "neutral",
+            label: `${fieldEvidence.summary.sensitiveThemeCount} temas sensibles`,
+          },
+          {
             tone: fieldEvidence.summary.supportScore >= 80
               ? "exact"
               : fieldEvidence.summary.supportScore >= 60
@@ -16896,7 +17187,7 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
           },
           {
             tone: "neutral",
-            label: "IGM + MDT + FONAG + INHAMI",
+            label: fieldEvidence.summary.dominantSensitiveGroup,
           },
         ]
       : state.territorialFocus === "landChange" && landChange

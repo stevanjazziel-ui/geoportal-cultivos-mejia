@@ -4,7 +4,9 @@ import json
 import math
 import re
 import statistics
+import subprocess
 import unicodedata
+import zipfile
 from collections import Counter
 from pathlib import Path
 
@@ -13,9 +15,132 @@ from PIL import Image
 
 
 SOURCE_ROOT = Path(r"E:\info de campo")
+CONSULTANCY_ROOT = Path(r"E:\CONSULTORIA PARA LA ELABORACION DE UN PROCEDIMIENTO TECNICO PARA LA REGULARIZACION DE AREAS SENSIBLES")
 REPO_ROOT = Path(__file__).resolve().parents[1]
 OUTPUT_PATH = REPO_ROOT / "public-data" / "field" / "field_evidence.json"
+WORK_TMP = REPO_ROOT / "tmp" / "field-consultancy"
 Image.MAX_IMAGE_PIXELS = None
+
+OGRINFO_CANDIDATES = [
+    Path(r"C:\Program Files\QGIS 3.40.10\bin\ogrinfo.exe"),
+    Path(r"C:\Program Files\QGIS 3.40.10\apps\bin\ogrinfo.exe"),
+]
+OGR2OGR_CANDIDATES = [
+    Path(r"C:\Program Files\QGIS 3.40.10\bin\ogr2ogr.exe"),
+    Path(r"C:\Program Files\QGIS 3.40.10\apps\bin\ogr2ogr.exe"),
+]
+
+CONSULTANCY_SUBPRODUCT_GDB = CONSULTANCY_ROOT / "GDB_SUBPRODUCTOS_AREAS_SENSIBLES" / "GDB_SUBPRODUCTOS_AREAS_SENSIBLES.gdb"
+CONSULTANCY_BASE_GDB = CONSULTANCY_ROOT / "GDB_AREAS_SENSIBLES" / "GDB_AREAS_SENSIBLES_MEJIA.gdb"
+CONSULTANCY_TYPOLOGY_GDB = (
+    CONSULTANCY_ROOT
+    / "GDB_TIPOLOGIA_AREAS_SENSIBLES"
+    / "TIPOLOGIA_AREAS_SENSIBLES_MEJIA"
+    / "TIPOLOGIA_AREAS_SENSIBLES_MEJIA.gdb"
+)
+CONSULTANCY_PROJECTS = [
+    CONSULTANCY_ROOT / "GDB_SUBPRODUCTOS_AREAS_SENSIBLES" / "GDB_ACCID_GEO.aprx",
+    CONSULTANCY_ROOT / "GDB_TIPOLOGIA_AREAS_SENSIBLES" / "TIPOLOGIA_AREAS_SENSIBLES_MEJIA" / "TIPOL_MEJIA.aprx",
+]
+CONSULTANCY_GDBS = [
+    CONSULTANCY_ROOT / "CATALOGO_DE_OBJETOS_MEJIA" / "GEODATABASE_MEJIA.gdb",
+    CONSULTANCY_BASE_GDB,
+    CONSULTANCY_SUBPRODUCT_GDB,
+    CONSULTANCY_TYPOLOGY_GDB,
+]
+CONSULTANCY_SUBPRODUCT_THEMES = [
+    {
+        "id": "area-proteccion",
+        "layer": "area_protec",
+        "label": "Área de protección sensible",
+        "group": "Protección mínima",
+        "tone": "high",
+        "description": "Polígonos derivados para resguardo y regularización en áreas sensibles.",
+    },
+    {
+        "id": "vegetacion-riberena",
+        "layer": "vege_ribere",
+        "label": "Vegetación ribereña",
+        "group": "Cobertura ribereña",
+        "tone": "resilience",
+        "description": "Cobertura ribereña sensible asociada a cauces, quebradas y franjas de protección.",
+    },
+    {
+        "id": "quebradas-sensibles",
+        "layer": "quebrada",
+        "label": "Quebradas sensibles",
+        "group": "Hidrografía sensible",
+        "tone": "service",
+        "description": "Trazos de quebrada priorizados en la consultoría para control y regularización.",
+    },
+    {
+        "id": "red-hidrica",
+        "layer": "stream_q",
+        "label": "Red hídrica priorizada",
+        "group": "Hidrografía sensible",
+        "tone": "service",
+        "description": "Cauces principales empleados en el modelamiento de áreas sensibles.",
+    },
+    {
+        "id": "bordes-superiores",
+        "layer": "bord_s_que",
+        "label": "Bordes superiores de quebrada",
+        "group": "Protección mínima",
+        "tone": "mid",
+        "description": "Líneas de borde superior empleadas para vigilar ocupación en quebradas abiertas.",
+    },
+    {
+        "id": "cambio-pendiente",
+        "layer": "cam_pendie",
+        "label": "Cambio de pendiente",
+        "group": "Geomorfología",
+        "tone": "mid",
+        "description": "Líneas geomorfológicas donde cambia la pendiente y sube la sensibilidad territorial.",
+    },
+    {
+        "id": "variables-intermedias",
+        "layer": "VARIABLES_INTERMEDIAS",
+        "label": "Variables intermedias",
+        "group": "Modelación multicriterio",
+        "tone": "base",
+        "description": "Polígonos síntesis de variables intermedias usadas en el procedimiento técnico.",
+    },
+]
+CONSULTANCY_BASE_THEMES = [
+    {"layer": "AA01_ACEQUIA", "label": "Acequias", "group": "Aguas interiores"},
+    {"layer": "AA02_QUEBRADA", "label": "Quebradas", "group": "Aguas interiores"},
+    {"layer": "AA03_ALVEOLOS", "label": "Alvéolos", "group": "Aguas interiores"},
+    {"layer": "BA01_CAMBIO_DE_PENDIENTE", "label": "Cambio de pendiente", "group": "Geomorfología"},
+    {"layer": "BB01_TALUD_NATURAL", "label": "Talud natural", "group": "Accidentes geográficos"},
+    {
+        "layer": "BB02_BORDE_SUPERIOR_DE_LA_QUEBRADA_ABIERTA",
+        "label": "Borde superior de la quebrada abierta",
+        "group": "Accidentes geográficos",
+    },
+    {
+        "layer": "BB03_BORDE_SUPERIOR_DE_LA_ACEQUIA",
+        "label": "Borde superior de la acequia",
+        "group": "Accidentes geográficos",
+    },
+    {"layer": "CC02_AREA_DE_PROTECCIÓN", "label": "Área de protección", "group": "Demarcación"},
+    {"layer": "DA01_VEGETACION_RIBEREÑA", "label": "Vegetación ribereña", "group": "Cobertura"},
+]
+CONSULTANCY_TYPOLOGY_THEMES = [
+    {"layer": "ABIERTA", "label": "Quebrada abierta", "group": "Tipología quebrada"},
+    {"layer": "RELLENA", "label": "Quebrada rellena", "group": "Tipología quebrada"},
+    {"layer": "EJE", "label": "Eje de quebrada", "group": "Tipología quebrada"},
+    {"layer": "NATURAL", "label": "Talud natural", "group": "Tipología talud"},
+    {"layer": "ARTIFICIAL", "label": "Talud artificial", "group": "Tipología talud"},
+    {"layer": "ALVEO", "label": "Álveo", "group": "Tipología río"},
+    {"layer": "RIBERA", "label": "Ribera", "group": "Tipología río"},
+    {"layer": "ESTANQUE", "label": "Estanque", "group": "Tipología cuerpo de agua"},
+    {"layer": "LAGO", "label": "Lago", "group": "Tipología cuerpo de agua"},
+    {"layer": "RESERVORIO", "label": "Reservorio", "group": "Tipología cuerpo de agua"},
+    {"layer": "PRESA", "label": "Presa", "group": "Tipología cuerpo de agua"},
+    {"layer": "GRANJ_ACU", "label": "Granja acuícola", "group": "Tipología cuerpo de agua"},
+    {"layer": "AREA_RELLEN", "label": "Área rellenada", "group": "Tipología auxiliar"},
+    {"layer": "AREA_PROTEC", "label": "Área de protección", "group": "Tipología auxiliar"},
+]
 
 MONTH_CODES = {
     "ENE": 0,
@@ -47,6 +172,17 @@ MONTH_NAMES = [
 ]
 
 
+def discover_binary(candidates: list[Path]) -> Path | None:
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    return None
+
+
+OGRINFO_PATH = discover_binary(OGRINFO_CANDIDATES)
+OGR2OGR_PATH = discover_binary(OGR2OGR_CANDIDATES)
+
+
 def slugify(value: str) -> str:
     text = unicodedata.normalize("NFD", str(value or ""))
     text = "".join(char for char in text if unicodedata.category(char) != "Mn")
@@ -68,6 +204,137 @@ def to_float(value) -> float | None:
         return float(text)
     except ValueError:
         return None
+
+
+def run_external_command(command: list[str | Path]) -> str:
+    prepared = [str(part) for part in command]
+    completed = subprocess.run(
+        prepared,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="ignore",
+        check=False,
+    )
+    if completed.returncode != 0:
+        raise RuntimeError(completed.stderr.strip() or completed.stdout.strip() or "No se pudo ejecutar el comando externo.")
+    return completed.stdout
+
+
+def extract_aprx_entry_names(aprx_path: Path) -> list[str]:
+    if not aprx_path.exists():
+        return []
+    try:
+        with zipfile.ZipFile(aprx_path) as archive:
+            json_entry = next((entry for entry in archive.namelist() if entry.endswith("GISProject.json")), None)
+            if not json_entry:
+                return []
+            text = archive.read(json_entry).decode("utf-8", errors="ignore")
+    except Exception:
+        return []
+    names = sorted(set(re.findall(r'"name":"([^"]+)"', text)))
+    return [name for name in names if name and name not in {"Layers", "Mapa"}]
+
+
+def extract_ogr_layer_info(gdb_path: Path, layer_name: str) -> dict | None:
+    if not OGRINFO_PATH or not gdb_path.exists():
+        return None
+    try:
+        output = run_external_command([OGRINFO_PATH, "-ro", "-so", gdb_path, layer_name])
+    except RuntimeError:
+        return None
+
+    feature_match = re.search(r"Feature Count:\s*(\d+)", output)
+    geometry_match = re.search(r"^Geometry:\s*(.+)$", output, flags=re.MULTILINE)
+    extent_match = re.search(
+        r"Extent:\s*\(([-\d.]+),\s*([-\d.]+)\)\s*-\s*\(([-\d.]+),\s*([-\d.]+)\)",
+        output,
+    )
+    bbox_utm = None
+    geometry = None
+    area_ha = None
+    if extent_match:
+        min_x, min_y, max_x, max_y = (float(extent_match.group(index)) for index in range(1, 5))
+        geometry, bbox_utm, area_ha = build_geojson_polygon(
+            [
+                (min_x, max_y),
+                (max_x, max_y),
+                (max_x, min_y),
+                (min_x, min_y),
+            ]
+        )
+    return {
+        "layer": layer_name,
+        "featureCount": int(feature_match.group(1)) if feature_match else 0,
+        "geometryType": geometry_match.group(1).strip() if geometry_match else "Unknown",
+        "bboxUtm": bbox_utm,
+        "geometry": geometry,
+        "coverageHa": area_ha,
+    }
+
+
+def export_ogr_layer_render_feature(
+    gdb_path: Path,
+    layer_name: str,
+    geometry_type: str = "",
+    feature_count: int = 0,
+) -> tuple[dict | None, str]:
+    if not OGR2OGR_PATH or not gdb_path.exists():
+        return None, "none"
+    WORK_TMP.mkdir(parents=True, exist_ok=True)
+    render_mode = "union"
+    sql_geometry = "ST_Union(Shape)"
+    if "Polygon" in geometry_type and feature_count > 300:
+        render_mode = "envelope"
+        sql_geometry = "ST_ConvexHull(ST_Union(Shape))"
+    output_path = WORK_TMP / f"{slugify(layer_name)}-{render_mode}.geojson"
+    if output_path.exists():
+        output_path.unlink()
+    try:
+        run_external_command(
+            [
+                OGR2OGR_PATH,
+                "-f",
+                "GeoJSON",
+                output_path,
+                gdb_path,
+                "-dialect",
+                "sqlite",
+                "-sql",
+                f"SELECT {sql_geometry} AS geometry, COUNT(*) AS feature_count FROM {layer_name}",
+                "-t_srs",
+                "EPSG:4326",
+                "-lco",
+                "RFC7946=YES",
+                "-lco",
+                "COORDINATE_PRECISION=6",
+            ]
+        )
+    except RuntimeError:
+        return None, render_mode
+    try:
+        exported = json.loads(output_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None, render_mode
+    if not isinstance(exported, dict):
+        return None, render_mode
+    features = exported.get("features", [])
+    return (features[0] if features else None), render_mode
+
+
+def simplify_sensitive_group(label: str) -> str:
+    text = slugify(label)
+    if "protec" in text:
+        return "Protección mínima"
+    if "ribere" in text or "cobertura" in text:
+        return "Cobertura ribereña"
+    if "hidro" in text or "agua" in text or "quebrada" in text or "rio" in text:
+        return "Hidrografía sensible"
+    if "pend" in text or "geomorf" in text or "talud" in text:
+        return "Geomorfología"
+    if "model" in text or "multicriterio" in text or "variable" in text:
+        return "Modelación multicriterio"
+    return label
 
 
 def utm17s_to_lonlat(easting: float, northing: float) -> tuple[float, float]:
@@ -550,6 +817,144 @@ def build_raster_features(folder: Path, group: str) -> list[dict]:
     return features
 
 
+def build_sensitive_consultancy_dataset() -> dict:
+    consultancy_workbooks = sorted(path.name for path in CONSULTANCY_ROOT.rglob("*.xlsx"))
+    projects = []
+    for aprx_path in CONSULTANCY_PROJECTS:
+        names = extract_aprx_entry_names(aprx_path)
+        highlights = [
+            name
+            for name in names
+            if not any(token in name.lower() for token in ("arcgis", "colors", "provider", "raster calculator", "clip", "merge"))
+        ][:10]
+        projects.append(
+            {
+                "name": aprx_path.name,
+                "entryCount": len(names),
+                "highlights": highlights,
+                "summary": (
+                    f"{aprx_path.stem} organiza {len(names)} entradas del procedimiento técnico, "
+                    f"con énfasis en {', '.join(highlights[:3]) if highlights else 'capas temáticas sensibles'}."
+                ),
+            }
+        )
+
+    sensitive_features: list[dict] = []
+    theme_summaries = []
+    for theme in CONSULTANCY_SUBPRODUCT_THEMES:
+        info = extract_ogr_layer_info(CONSULTANCY_SUBPRODUCT_GDB, theme["layer"]) or {}
+        feature_count = int(info.get("featureCount") or 0)
+        union_feature, render_mode = export_ogr_layer_render_feature(
+            CONSULTANCY_SUBPRODUCT_GDB,
+            theme["layer"],
+            info.get("geometryType") or "",
+            feature_count,
+        )
+        if not union_feature and not feature_count:
+            continue
+        if union_feature and union_feature.get("geometry"):
+            union_feature["id"] = theme["id"]
+            union_feature["properties"] = {
+                "name": theme["label"],
+                "sensitiveThemeId": theme["id"],
+                "sensitiveThemeLabel": theme["label"],
+                "sensitiveGroup": theme["group"],
+                "sensitiveTone": theme["tone"],
+                "sourceLayer": theme["layer"],
+                "sourceDatabase": CONSULTANCY_SUBPRODUCT_GDB.name,
+                "featureCount": feature_count,
+                "renderMode": render_mode,
+                "summary": (
+                    f"{theme['label']}: {theme['description']} "
+                    f"La consultoría consolidó {feature_count} elementos para este tema "
+                    f"mediante {'envolvente operativa' if render_mode == 'envelope' else 'geometría integrada'}."
+                ),
+            }
+            sensitive_features.append(union_feature)
+        theme_summaries.append(
+            {
+                "id": theme["id"],
+                "label": theme["label"],
+                "group": theme["group"],
+                "groupLabel": simplify_sensitive_group(theme["group"]),
+                "tone": theme["tone"],
+                "description": theme["description"],
+                "sourceLayer": theme["layer"],
+                "featureCount": feature_count or int(info.get("featureCount") or 0),
+                "geometryType": info.get("geometryType") or "Unknown",
+                "coverageHa": info.get("coverageHa"),
+                "bboxUtm": info.get("bboxUtm"),
+                "renderMode": render_mode,
+            }
+        )
+
+    base_layers = []
+    for layer in CONSULTANCY_BASE_THEMES:
+        info = extract_ogr_layer_info(CONSULTANCY_BASE_GDB, layer["layer"])
+        if not info:
+            continue
+        base_layers.append(
+            {
+                "layer": layer["layer"],
+                "label": layer["label"],
+                "group": layer["group"],
+                "featureCount": info["featureCount"],
+                "geometryType": info["geometryType"],
+                "coverageHa": info["coverageHa"],
+                "bboxUtm": info["bboxUtm"],
+            }
+        )
+
+    typology_layers = []
+    for layer in CONSULTANCY_TYPOLOGY_THEMES:
+        info = extract_ogr_layer_info(CONSULTANCY_TYPOLOGY_GDB, layer["layer"])
+        if not info:
+            continue
+        typology_layers.append(
+            {
+                "layer": layer["layer"],
+                "label": layer["label"],
+                "group": layer["group"],
+                "featureCount": info["featureCount"],
+                "geometryType": info["geometryType"],
+            }
+        )
+
+    group_counts = Counter(theme["groupLabel"] for theme in theme_summaries)
+    polygon_features = sum(
+        1 for feature in sensitive_features if feature.get("geometry", {}).get("type", "").endswith("Polygon")
+    )
+    line_features = len(sensitive_features) - polygon_features
+
+    return {
+        "sourceRoot": str(CONSULTANCY_ROOT),
+        "summary": {
+            "projectCount": len([path for path in CONSULTANCY_PROJECTS if path.exists()]),
+            "geodatabaseCount": len([path for path in CONSULTANCY_GDBS if path.exists()]),
+            "workbookCount": len(consultancy_workbooks),
+            "subproductThemeCount": len(theme_summaries),
+            "subproductFeatureCount": sum(theme["featureCount"] for theme in theme_summaries),
+            "subproductRenderableThemeCount": len(sensitive_features),
+            "baseLayerCount": len(base_layers),
+            "baseFeatureCount": sum(item["featureCount"] for item in base_layers),
+            "typologyLayerCount": len(typology_layers),
+            "typologyFeatureCount": sum(item["featureCount"] for item in typology_layers),
+            "polygonFeatureCount": polygon_features,
+            "lineFeatureCount": line_features,
+            "groupCounts": dict(group_counts),
+        },
+        "projects": projects,
+        "workbooks": consultancy_workbooks,
+        "subproductThemes": theme_summaries,
+        "baseThemes": base_layers,
+        "typologyThemes": typology_layers,
+        "subproductCollection": {
+            "type": "FeatureCollection",
+            "features": sensitive_features,
+        },
+    }
+
+
 def build_dataset() -> dict:
     sectors = build_sector_features()
     stations = build_hydromet_features()
@@ -557,13 +962,15 @@ def build_dataset() -> dict:
     inventory = build_inventory_catalog()
     historical = build_raster_features(SOURCE_ROOT / "Cartas Historicas IGM", "cartas_historicas_igm")
     terrain = build_raster_features(SOURCE_ROOT / "MDT historico", "mdt_historico")
+    sensitive_consultancy = build_sensitive_consultancy_dataset()
 
     sector_types = Counter(feature["properties"]["sectorType"] for feature in sectors)
     station_types = Counter(feature["properties"]["stationKind"] for feature in stations)
 
     return {
-        "generatedAt": __import__("datetime").datetime.utcnow().isoformat(timespec="seconds") + "Z",
+        "generatedAt": __import__("datetime").datetime.now(__import__("datetime").UTC).isoformat(timespec="seconds").replace("+00:00", "Z"),
         "sourceRoot": str(SOURCE_ROOT),
+        "consultancyRoot": str(CONSULTANCY_ROOT),
         "summary": {
             "fieldSectorCount": len(sectors),
             "hydrometStationCount": len(stations),
@@ -572,6 +979,10 @@ def build_dataset() -> dict:
             "terrainRasterCount": len(terrain),
             "inventoryCategoryCount": inventory["categoryCount"],
             "inventoryItemCount": inventory["itemCount"],
+            "sensitiveConsultancyThemeCount": sensitive_consultancy["summary"]["subproductThemeCount"],
+            "sensitiveConsultancyFeatureCount": sensitive_consultancy["summary"]["subproductFeatureCount"],
+            "sensitiveConsultancyBaseLayerCount": sensitive_consultancy["summary"]["baseLayerCount"],
+            "sensitiveConsultancyProjectCount": sensitive_consultancy["summary"]["projectCount"],
             "sectorTypes": dict(sector_types),
             "stationTypes": dict(station_types),
         },
@@ -595,6 +1006,7 @@ def build_dataset() -> dict:
             "stations": climate_history,
         },
         "inventoryCatalog": inventory,
+        "sensitiveConsultancy": sensitive_consultancy,
     }
 
 
