@@ -10597,6 +10597,7 @@ function renderPlanningModule() {
     dom.focusFieldEvidenceBtn.disabled = !(
       state.fieldEvidenceData?.sectorsCollection?.features?.length
       || state.fieldEvidenceData?.stationCollection?.features?.length
+      || state.fieldEvidenceData?.sensitiveCollection?.features?.length
       || state.fieldEvidenceData?.historyCollection?.features?.length
     );
   }
@@ -12503,6 +12504,37 @@ async function runFieldEvidenceAnalysis(silent = false) {
   }
 }
 
+async function ensureFieldEvidencePrecisionData(force = false) {
+  if (state.fieldEvidenceData && !force) {
+    return state.fieldEvidenceData;
+  }
+
+  try {
+    const catalog = await loadFieldEvidenceCatalog(force);
+    const analysis = buildFieldEvidenceAnalysis(catalog);
+    state.fieldEvidenceData = analysis;
+    if (!state.fieldEvidenceHighlightId) {
+      state.fieldEvidenceHighlightType = analysis.topSectors.length
+        ? "sector"
+        : analysis.topStations.length
+          ? "station"
+          : analysis.topSensitiveThemes.length
+            ? "sensitive"
+            : "history";
+      state.fieldEvidenceHighlightId = analysis.topSectors[0]?.id
+        || analysis.topStations[0]?.id
+        || analysis.topSensitiveThemes[0]?.id
+        || analysis.topHistory[0]?.id
+        || null;
+    }
+    renderFieldEvidenceModule();
+    return analysis;
+  } catch (error) {
+    console.warn("No se pudo precargar la evidencia de campo para endurecer el analisis territorial.", error);
+    return null;
+  }
+}
+
 function clearFieldEvidenceAnalysis() {
   state.fieldEvidenceData = null;
   state.fieldEvidenceHighlightId = null;
@@ -12602,8 +12634,9 @@ function focusFieldEvidenceStudy() {
   updateMapSummary();
 }
 
-function runPlanningAnalysis(silent = false) {
+async function runPlanningAnalysis(silent = false) {
   try {
+    await ensureFieldEvidencePrecisionData();
     const planning = buildPlanningAnalysis();
     state.planningData = planning;
     state.planningHighlightId = planning.candidates[0]?.id || null;
@@ -12639,6 +12672,11 @@ function runPlanningAnalysis(silent = false) {
       label: "Compatibilidad territorial",
       value: planning.summary.landLabel,
       copy: `${planning.imageryProfile.shortLabel} prioriza ${planning.summary.landCopy}.`,
+    },
+    {
+      label: "Areas sensibles",
+      value: `${planning.restrictions.sensitiveThemeCount || 0} temas`,
+      copy: `${formatLandChangeHa(planning.restrictions.sensitiveProtectedAreaHa || 0)} ha del ambito ya entran con lectura preventiva de la consultoria tecnica.`,
     },
     {
       label: "Fuente satelital",
@@ -12710,6 +12748,7 @@ function buildPlanningAnalysis(options = {}) {
   const horizon = getPlanningHorizon(options.horizonId);
   const scenario = getPlanningScenario(options.scenarioId);
   const target = options.target || getCurrentTerritorialTarget();
+  const sensitiveProfiles = getPlanningSensitiveConstraintProfiles(target.feature);
   const urbanFeatures = geoSources.manchaUrbana.features;
   const roadFeatures = geoSources.vias.features;
   const canalFeatures = geoSources.canales.features;
@@ -12762,9 +12801,9 @@ function buildPlanningAnalysis(options = {}) {
     );
     const urbanSignal = imageryEvidence.growth;
     const terrainScore = clamp(1 - slope / (program.maxSlope * 1.45), 0, 1);
-    const resilienceScore = computePlanningResilienceScore(slope, nearestCanal.distanceKm, imageryEvidence.resilience, insideUrban);
+    const baseResilienceScore = computePlanningResilienceScore(slope, nearestCanal.distanceKm, imageryEvidence.resilience, insideUrban);
     const serviceScore = computePlanningServiceScore(program.id, facilityDistances, growthScore, horizon, scenario, imageryEvidence.service);
-    const landScore = computePlanningLandReserveScore(
+    const baseLandScore = computePlanningLandReserveScore(
       program,
       scenario,
       nearestUrban.distanceKm,
@@ -12774,13 +12813,17 @@ function buildPlanningAnalysis(options = {}) {
       nearestCanal.distanceKm,
       imageryEvidence.land
     );
+    const sensitiveImpact = computePlanningSensitiveImpact(cell, sensitiveProfiles);
+    const resilienceScore = clamp(baseResilienceScore - (sensitiveImpact.penalty * 0.82), 0, 1);
+    const landScore = clamp(baseLandScore - (sensitiveImpact.penalty * 0.68), 0, 1);
     const score = Math.round(clamp(
       (clamp((growthScore + urbanSignal) / 2, 0, 1) * program.weights.growth)
       + (accessScore * program.weights.access)
       + (terrainScore * program.weights.terrain)
       + (serviceScore * program.weights.service)
       + (resilienceScore * program.weights.resilience)
-      + (landScore * program.weights.land),
+      + (landScore * program.weights.land)
+      - (sensitiveImpact.penalty * 0.12),
       0,
       1
     ) * 100);
@@ -12804,6 +12847,13 @@ function buildPlanningAnalysis(options = {}) {
       primaryVariableScore: imageryEvidence.variables[0]?.score || Math.round(urbanSignal * 100),
       secondaryVariableLabel: imageryEvidence.variables[1]?.label || "Soporte territorial",
       secondaryVariableScore: imageryEvidence.variables[1]?.score || Math.round(accessScore * 100),
+      sensitivePenaltyScore: Math.round(sensitiveImpact.penalty * 100),
+      sensitiveThemeCount: sensitiveImpact.themeCount,
+      sensitiveConstraintLabel: sensitiveImpact.dominantLabel || "Sin restriccion sensible",
+      sensitiveConstraintGroup: sensitiveImpact.dominantGroup || null,
+      sensitiveConstraintIds: sensitiveImpact.ids,
+      sensitiveRegime: sensitiveImpact.regime || null,
+      sensitiveConstraintCopy: sensitiveImpact.copy,
       variableScores: imageryEvidence.variableScoreMap,
       slope: Number(slope.toFixed(1)),
       urbanDistanceKm: Number(nearestUrban.distanceKm.toFixed(2)),
@@ -12818,6 +12868,8 @@ function buildPlanningAnalysis(options = {}) {
         schoolDistanceKm: facilityDistances.escuela.distanceKm,
         hospitalDistanceKm: facilityDistances.hospital.distanceKm,
         equipmentDistanceKm: facilityDistances.equipamiento.distanceKm,
+        sensitiveLabel: sensitiveImpact.dominantLabel,
+        sensitiveCopy: sensitiveImpact.copy,
       }),
     };
     features.push(cell);
@@ -12826,7 +12878,7 @@ function buildPlanningAnalysis(options = {}) {
   const candidates = selectPlanningCandidates(features, program, imageryProfile, target.scopeType);
   const summary = summarizePlanningSurface(features, program, scenario);
   const imagerySummary = summarizePlanningImageryVariables(features, imageryProfile);
-  const restrictions = buildPlanningRestrictionReadout(features, program, target.feature);
+  const restrictions = buildPlanningRestrictionReadout(features, program, target.feature, sensitiveProfiles);
   const serviceCoverage = buildPlanningServiceCoverageReadout({
     planningSurface: features,
     program,
@@ -12946,7 +12998,136 @@ function getPlanningServiceCoverageProfiles(programId) {
   return profiles[programId] || profiles.vis;
 }
 
-function buildPlanningRestrictionReadout(features, program, targetFeature) {
+function getPlanningSensitiveConstraintToneProfile(tone = "base") {
+  if (tone === "high") {
+    return {
+      restrictionTone: "critical",
+      regime: "Proteccion estricta",
+      color: "#b35a47",
+      penalty: 0.24,
+    };
+  }
+  if (tone === "mid") {
+    return {
+      restrictionTone: "service",
+      regime: "Condicionado",
+      color: "#cb9440",
+      penalty: 0.17,
+    };
+  }
+  if (tone === "service") {
+    return {
+      restrictionTone: "resilience",
+      regime: "Proteccion hidrica",
+      color: "#4c8eab",
+      penalty: 0.16,
+    };
+  }
+  if (tone === "resilience") {
+    return {
+      restrictionTone: "resilience",
+      regime: "Proteccion ecosistemica",
+      color: "#2f7f5f",
+      penalty: 0.15,
+    };
+  }
+  return {
+    restrictionTone: "base",
+    regime: "Gestion preventiva",
+    color: "#6b7380",
+    penalty: 0.11,
+  };
+}
+
+function safeBooleanIntersects(leftFeature, rightFeature) {
+  if (!leftFeature?.geometry || !rightFeature?.geometry) {
+    return false;
+  }
+  try {
+    return turf.booleanIntersects(leftFeature, rightFeature);
+  } catch (error) {
+    try {
+      const leftBounds = turf.bbox(leftFeature);
+      const rightBounds = turf.bbox(rightFeature);
+      return !(
+        leftBounds[2] < rightBounds[0]
+        || leftBounds[0] > rightBounds[2]
+        || leftBounds[3] < rightBounds[1]
+        || leftBounds[1] > rightBounds[3]
+      );
+    } catch (bboxError) {
+      return false;
+    }
+  }
+}
+
+function getPlanningSensitiveConstraintProfiles(targetFeature = getTerritorialAreaFeature()) {
+  const filteredSensitive = filterFeaturesByTerritorialArea(
+    state.fieldEvidenceData?.sensitiveCollection?.features || [],
+    state.territorialAreaId
+  ).filter((feature) => safeBooleanIntersects(feature, targetFeature))
+    .map(cloneFeature);
+  if (!filteredSensitive.length) {
+    return [];
+  }
+
+  const grouped = new Map();
+  filteredSensitive.forEach((feature) => {
+    const themeId = String(feature.properties?.sensitiveThemeId || feature.id || "").trim();
+    if (!themeId) {
+      return;
+    }
+    const toneProfile = getPlanningSensitiveConstraintToneProfile(feature.properties?.sensitiveTone);
+    const existing = grouped.get(themeId) || {
+      id: themeId,
+      label: feature.properties?.sensitiveThemeLabel || "Area sensible",
+      groupLabel: feature.properties?.sensitiveGroup || "Areas sensibles",
+      tone: feature.properties?.sensitiveTone || "base",
+      sourceLayer: feature.properties?.sourceLayer || "procedimiento",
+      summary: feature.properties?.summary || "Tema sensible sin resumen.",
+      featureCount: Number(feature.properties?.featureCount) || 0,
+      coverageHa: Number(feature.properties?.coverageHa) || 0,
+      renderMode: feature.properties?.renderMode || "union",
+      restrictionTone: toneProfile.restrictionTone,
+      regime: toneProfile.regime,
+      color: toneProfile.color,
+      penalty: toneProfile.penalty,
+      features: [],
+    };
+    existing.features.push(feature);
+    existing.featureCount = Math.max(existing.featureCount, Number(feature.properties?.featureCount) || 0);
+    existing.coverageHa = Math.max(existing.coverageHa, Number(feature.properties?.coverageHa) || 0);
+    grouped.set(themeId, existing);
+  });
+
+  return [...grouped.values()].sort((left, right) => {
+    if (right.penalty !== left.penalty) {
+      return right.penalty - left.penalty;
+    }
+    return (right.featureCount || 0) - (left.featureCount || 0);
+  });
+}
+
+function computePlanningSensitiveImpact(feature, sensitiveProfiles = []) {
+  const hits = sensitiveProfiles.filter((profile) => profile.features.some((sensitiveFeature) => safeBooleanIntersects(feature, sensitiveFeature)));
+  const penalty = clamp(hits.reduce((sum, profile) => sum + profile.penalty, 0), 0, 0.34);
+  const dominant = hits[0] || null;
+  const labels = hits.map((profile) => profile.label);
+  return {
+    penalty,
+    themeCount: hits.length,
+    ids: hits.map((profile) => profile.id),
+    labels,
+    dominantLabel: dominant?.label || null,
+    dominantGroup: dominant?.groupLabel || null,
+    regime: dominant?.regime || null,
+    copy: dominant
+      ? `Cruza ${labels.slice(0, 2).join(" y ").toLowerCase()} y exige ${dominant.regime?.toLowerCase() || "control preventivo"}.`
+      : "",
+  };
+}
+
+function buildPlanningRestrictionReadout(features, program, targetFeature, sensitiveProfiles = []) {
   const totalAreaHa = Math.max(turf.area(targetFeature) / 10000, 0.1);
   const profiles = [
     {
@@ -13008,8 +13189,19 @@ function buildPlanningRestrictionReadout(features, program, targetFeature) {
       ),
     },
   ];
+  const consultancyProfiles = sensitiveProfiles.map((profile) => ({
+    id: `sensitive-${profile.id}`,
+    label: profile.label,
+    copy: `${profile.summary} Se interpreta como ${profile.regime.toLowerCase()} dentro del procedimiento tecnico para regularizacion de areas sensibles.`,
+    tone: profile.restrictionTone,
+    color: profile.color,
+    regime: profile.regime,
+    predicate: (feature) => Array.isArray(feature.properties?.sensitiveConstraintIds)
+      && feature.properties.sensitiveConstraintIds.includes(profile.id),
+  }));
+  const effectiveProfiles = [...profiles, ...consultancyProfiles];
 
-  const items = profiles.map((profile) => {
+  const items = effectiveProfiles.map((profile) => {
     const matching = features.filter((feature) => profile.predicate(feature));
     const areaHa = Number(matching.reduce((sum, feature) => sum + turf.area(feature) / 10000, 0).toFixed(1));
     return {
@@ -13033,8 +13225,12 @@ function buildPlanningRestrictionReadout(features, program, targetFeature) {
   }).filter((item) => item.areaHa > 0.1)
     .sort((left, right) => right.areaHa - left.areaHa);
 
+  const sensitiveProtectedAreaHa = Number(features
+    .filter((feature) => (feature.properties?.sensitiveThemeCount || 0) > 0)
+    .reduce((sum, feature) => sum + turf.area(feature) / 10000, 0)
+    .toFixed(1));
   const uniqueRestrictedAreaHa = Number(features
-    .filter((feature) => profiles.some((profile) => profile.predicate(feature)))
+    .filter((feature) => effectiveProfiles.some((profile) => profile.predicate(feature)))
     .reduce((sum, feature) => sum + turf.area(feature) / 10000, 0)
     .toFixed(1));
   const dominant = items[0] || null;
@@ -13042,9 +13238,12 @@ function buildPlanningRestrictionReadout(features, program, targetFeature) {
   return {
     headline: dominant ? dominant.label : "Sin restricciones dominantes",
     copy: dominant
-      ? `${formatLandChangeHa(uniqueRestrictedAreaHa)} ha del ambito quedan condicionadas por ${dominant.label.toLowerCase()}.`
+      ? `${formatLandChangeHa(uniqueRestrictedAreaHa)} ha del ambito quedan condicionadas por ${dominant.label.toLowerCase()}${sensitiveProfiles.length ? `. La consultoria tecnica incorpora ${sensitiveProfiles.length} temas sensibles y ${formatLandChangeHa(sensitiveProtectedAreaHa)} ha bajo lectura preventiva` : ""}.`
       : "No aparecieron restricciones fuertes sobre el ambito activo en esta corrida.",
     uniqueRestrictedAreaHa,
+    sensitiveThemeCount: sensitiveProfiles.length,
+    sensitiveProtectedAreaHa,
+    sensitiveDominantLabel: sensitiveProfiles[0]?.label || "Sin areas sensibles",
     items,
     collection: {
       type: "FeatureCollection",
@@ -13421,7 +13620,7 @@ function buildTerritorialDecisionSnapshot() {
       title: "Normativa y restriccion",
       metric: `${restrictedShare}%`,
       copy: `${formatLandChangeHa(planning.restrictions.uniqueRestrictedAreaHa)} ha del ambito quedan bajo restriccion o contencion territorial.`,
-      note: `${planning.restrictions.items.length} franjas normativas activas entre rondas, pendientes, inundabilidad y borde agro-rural.`,
+      note: `${planning.restrictions.items.length} franjas normativas activas entre rondas, pendientes, inundabilidad, borde agro-rural y ${planning.restrictions.sensitiveThemeCount || 0} temas sensibles de la consultoria tecnica.`,
     });
 
     const solarScore = clamp(
@@ -13535,6 +13734,7 @@ function buildTerritorialSectorSheets() {
           { label: "Brecha", value: coverageItem ? coverageItem.weakestLabel || `${coverageItem.shortLabel} ${coverageItem.coveragePct}%` : state.planningData.serviceCoverage.weakestLabel },
           { label: "Restriccion", value: state.planningData.restrictions.headline },
           { label: "Solar", value: state.planningData.solarReadout.exposures.find((item) => item.candidateId === candidate.id)?.solarSignal || state.planningData.solarReadout.solarLabel },
+          ...(feature.sensitiveThemeCount ? [{ label: "Area sensible", value: feature.sensitiveConstraintLabel || "Si" }] : []),
         ],
         actionAttr: `data-candidate-id="${candidate.id}"`,
       });
@@ -13677,6 +13877,16 @@ function buildTerritorialAlerts() {
           module: "Cobertura",
           title: `${candidate.title}: demanda de servicio alta`,
           copy: `La presion por servicios llega a ${props.serviceScore || 0}% y conviene revisar escuelas, salud o equipamiento antes de ocupar.`,
+          actionAttr: `data-candidate-id="${candidate.id}"`,
+        });
+      }
+      if ((props.sensitivePenaltyScore || 0) >= 14) {
+        alerts.push({
+          id: `alert-planning-sensitive-${candidate.id}`,
+          tone: (props.sensitivePenaltyScore || 0) >= 22 ? "critical" : "watch",
+          module: "Areas sensibles",
+          title: `${candidate.title}: cruce sensible activo`,
+          copy: `${props.sensitiveConstraintLabel || "Area sensible"} reduce la aptitud territorial y exige ${props.sensitiveRegime?.toLowerCase() || "control preventivo"} antes de ocupar.`,
           actionAttr: `data-candidate-id="${candidate.id}"`,
         });
       }
@@ -13970,6 +14180,7 @@ function buildTerritorialGeoJsonExport() {
   if (state.fieldEvidenceData) {
     pushFeatures(state.fieldEvidenceData.sectorsCollection, "evidencia_campo", "sectores");
     pushFeatures(state.fieldEvidenceData.stationCollection, "evidencia_campo", "estaciones");
+    pushFeatures(state.fieldEvidenceData.sensitiveCollection, "evidencia_campo", "areas_sensibles");
     pushFeatures(state.fieldEvidenceData.historyCollection, "evidencia_campo", "memoria_historica");
   }
 
@@ -14461,12 +14672,14 @@ function summarizePlanningSurface(features, program, scenario) {
       meanScore: 0,
       growthMean: 0,
       resilienceMean: 0,
+      sensitiveMean: 0,
       meanSlope: 0,
       anchorLabel: "Sin lectura",
       serviceGapLabel: "Sin lectura",
       riskLabel: "Sin lectura",
       landLabel: "Sin lectura",
       landCopy: "reserva de ocupacion disponible",
+      sensitiveLabel: "Sin restricciones sensibles",
     };
   }
 
@@ -14476,6 +14689,7 @@ function summarizePlanningSurface(features, program, scenario) {
     accumulator.service += feature.properties.serviceScore;
     accumulator.resilience += feature.properties.resilienceScore;
     accumulator.land += feature.properties.landScore;
+    accumulator.sensitive += feature.properties.sensitivePenaltyScore || 0;
     accumulator.slope += feature.properties.slope;
     if (feature.properties.score >= 70) {
       accumulator.priorityAreaHa += turf.area(feature) / 10000;
@@ -14488,6 +14702,7 @@ function summarizePlanningSurface(features, program, scenario) {
     service: 0,
     resilience: 0,
     land: 0,
+    sensitive: 0,
     slope: 0,
     priorityAreaHa: 0,
     anchors: {},
@@ -14497,12 +14712,14 @@ function summarizePlanningSurface(features, program, scenario) {
   const serviceMean = Math.round(totals.service / count);
   const resilienceMean = Math.round(totals.resilience / count);
   const landMean = Math.round(totals.land / count);
+  const sensitiveMean = Math.round(totals.sensitive / count);
 
   return {
     priorityAreaHa: totals.priorityAreaHa,
     meanScore: Math.round(totals.score / count),
     growthMean: Math.round(totals.growth / count),
     resilienceMean,
+    sensitiveMean,
     meanSlope: Number((totals.slope / count).toFixed(1)),
     anchorLabel,
     serviceGapLabel: serviceMean >= 72
@@ -14529,6 +14746,11 @@ function summarizePlanningSurface(features, program, scenario) {
       : landMean >= 54
         ? "bordes urbanos con ocupacion controlada"
         : "sectores que requieren mas restricciones o fases previas",
+    sensitiveLabel: sensitiveMean >= 22
+      ? "Sensibilidad alta"
+      : sensitiveMean >= 10
+        ? "Sensibilidad media"
+        : "Sensibilidad puntual",
   };
 }
 
@@ -14597,6 +14819,9 @@ function selectPlanningCandidates(features, program, imageryProfile, scopeType) 
         `Crecimiento ${feature.properties.growthScore}%`,
         `Servicio ${feature.properties.serviceScore}%`,
         `Resiliencia ${feature.properties.resilienceScore}%`,
+        ...(feature.properties.sensitiveThemeCount
+          ? [`Restriccion ${feature.properties.sensitiveConstraintLabel}`]
+          : []),
       ],
     });
   });
@@ -14630,6 +14855,7 @@ function renderPlanningWeights(planning) {
       <span class="planning-pill emphasis">${planning.imagerySummary.headline}</span>
       <span class="planning-pill emphasis">${planning.horizon.label}</span>
       <span class="planning-pill emphasis">${planning.scenario.label}</span>
+      <span class="planning-pill emphasis">${planning.restrictions.sensitiveThemeCount || 0} areas sensibles</span>
     `);
 }
 
@@ -15277,17 +15503,21 @@ function renderPlanningOverlay(planning) {
     mapState.planningRestrictionLayer = L.geoJSON(restrictionCollection, {
       style: (feature) => {
         const tone = feature.properties?.restrictionTone || "land";
-        const palette = tone === "resilience"
+        const palette = tone === "critical"
+          ? { stroke: "#b35a47", fill: "#e0a08e" }
+          : tone === "resilience"
           ? { stroke: "#4c8eab", fill: "#8fd9e0" }
           : tone === "service"
             ? { stroke: "#cb9440", fill: "#efc36b" }
+            : tone === "base"
+              ? { stroke: "#6b7380", fill: "#c9d0da" }
             : { stroke: "#7f6a4f", fill: "#d7bb8b" };
         return {
           color: palette.stroke,
-          weight: 1.1,
+          weight: tone === "critical" ? 1.4 : 1.1,
           fillColor: palette.fill,
-          fillOpacity: 0.12,
-          dashArray: "6 6",
+          fillOpacity: tone === "critical" ? 0.16 : 0.12,
+          dashArray: tone === "critical" ? "4 5" : "6 6",
         };
       },
       onEachFeature: (feature, layer) => {
@@ -16241,16 +16471,19 @@ function geometryToBoundaryLine(geometry) {
 }
 
 function buildPlanningSectorSummary(programId, metrics) {
+  const sensitiveNote = metrics.sensitiveLabel
+    ? ` ${metrics.sensitiveCopy || `Cruza ${metrics.sensitiveLabel.toLowerCase()} y exige condicionamiento preventivo.`}`
+    : "";
   if (programId === "vis") {
-    return `Borde de expansion de ${metrics.anchorName} con acceso vial a ${formatDistanceKm(metrics.roadDistanceKm)} y servicios base en radio funcional.`;
+    return `Borde de expansion de ${metrics.anchorName} con acceso vial a ${formatDistanceKm(metrics.roadDistanceKm)} y servicios base en radio funcional.${sensitiveNote}`;
   }
   if (programId === "escuela") {
-    return `Sector con demanda residencial alta en ${metrics.anchorName} y vacio educativo relativo de ${formatDistanceKm(metrics.schoolDistanceKm)}.`;
+    return `Sector con demanda residencial alta en ${metrics.anchorName} y vacio educativo relativo de ${formatDistanceKm(metrics.schoolDistanceKm)}.${sensitiveNote}`;
   }
   if (programId === "hospital") {
-    return `Nodo accesible de ${metrics.anchorName} con cobertura de salud abierta y soporte territorial para emergencias.`;
+    return `Nodo accesible de ${metrics.anchorName} con cobertura de salud abierta y soporte territorial para emergencias.${sensitiveNote}`;
   }
-  return `Refuerza centralidad barrial en ${metrics.anchorName} con brecha de equipamientos y buena conectividad local.`;
+  return `Refuerza centralidad barrial en ${metrics.anchorName} con brecha de equipamientos y buena conectividad local.${sensitiveNote}`;
 }
 
 function getRelativeDirectionLabel(originCoords, targetCoords) {
@@ -17071,7 +17304,7 @@ function updateMapSummary(force = false) {
       setTextIfChanged(dom.mapTitle, `${planning.program.longLabel} sobre ${planning.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `Fuente ${planning.imageryProfile.shortLabel}, horizonte ${planning.horizon.label}, escenario ${planning.scenario.label}, ${planning.candidates.length} candidatos priorizados, ${planning.restrictions.headline.toLowerCase()}, cobertura ${planning.serviceCoverage.overallCoverage}% y lectura solar ${planning.solarReadout.sunPosition.elevation}° sobre el horizonte.`
+        `Fuente ${planning.imageryProfile.shortLabel}, horizonte ${planning.horizon.label}, escenario ${planning.scenario.label}, ${planning.candidates.length} candidatos priorizados, ${planning.restrictions.headline.toLowerCase()}, ${planning.restrictions.sensitiveThemeCount || 0} temas sensibles integrados, cobertura ${planning.serviceCoverage.overallCoverage}% y lectura solar ${planning.solarReadout.sunPosition.elevation}° sobre el horizonte.`
       );
     } else if (hydrology) {
       setTextIfChanged(dom.overlayIndex, "Balance");
@@ -17255,7 +17488,9 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
           },
           {
             tone: "neutral",
-            label: imageryProfile.spatialLabel,
+            label: planning?.restrictions?.sensitiveThemeCount
+              ? `${planning.restrictions.sensitiveThemeCount} sensibles`
+              : imageryProfile.spatialLabel,
           },
           planning
             ? {
