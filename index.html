@@ -28,7 +28,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260418-12">
+  <link rel="stylesheet" href="./styles.css?v=20260418-13">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -60,7 +60,8 @@
           <p class="login-kicker">Elegir recorrido</p>
           <h2>Que quieres abrir primero</h2>
           <p>
-            Entra directo al flujo agronomico o al modulo de planificacion territorial
+            Entra directo al flujo agronomico, al modulo de planificacion territorial
+            o a la ruta de evidencia territorial
             sin pasar por una pantalla intermedia.
           </p>
           <div class="entry-options">
@@ -74,9 +75,14 @@
               <strong>Planificacion territorial</strong>
               <span>Entra al modulo de aptitud para VIS, escuelas, hospitales y equipamientos.</span>
             </button>
+            <button id="openFieldEvidenceBtn" class="entry-option evidence" type="button">
+              <span class="entry-eyebrow">Ruta 3</span>
+              <strong>Evidencia territorial</strong>
+              <span>Abre quebradas, estaciones, areas sensibles, memoria historica e insumos de campo.</span>
+            </button>
           </div>
           <p class="login-note">
-            Ambos accesos entran como usuario publico y puedes cambiar de ruta luego dentro del visor.
+            Los tres accesos entran como usuario publico y puedes cambiar de ruta luego dentro del visor.
           </p>
         </div>
       </div>
@@ -478,7 +484,7 @@
               </div>
             </article>
 
-            <article id="fieldEvidenceCard" class="module-card planning-card hidden" data-module-track="planificacion">
+            <article id="fieldEvidenceCard" class="module-card planning-card hidden" data-module-track="evidencia">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">Soporte territorial</p>
@@ -900,6 +906,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260418-22" defer></script>
+  <script src="./app.js?v=20260418-23" defer></script>
 </body>
 </html>

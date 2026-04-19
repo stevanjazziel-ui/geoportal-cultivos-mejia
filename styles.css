@@ -238,7 +238,7 @@ button {
 
 .entry-options {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 14px;
   margin-top: 22px;
 }
@@ -279,6 +279,10 @@ button {
 
 .entry-option.planning {
   background: rgba(255, 223, 188, 0.16);
+}
+
+.entry-option.evidence {
+  background: rgba(183, 221, 212, 0.18);
 }
 
 .entry-eyebrow {

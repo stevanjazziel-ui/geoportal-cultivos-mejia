@@ -3451,6 +3451,7 @@ function cacheDom() {
   dom.loginOverlay = document.querySelector("#loginOverlay");
   dom.openAgronomyBtn = document.querySelector("#openAgronomyBtn");
   dom.openPlanningBtn = document.querySelector("#openPlanningBtn");
+  dom.openFieldEvidenceBtn = document.querySelector("#openFieldEvidenceBtn");
   dom.appShell = document.querySelector("#appShell");
   dom.mapStage = document.querySelector(".map-stage");
   dom.sidebar = document.querySelector("#sidebar");
@@ -3566,6 +3567,7 @@ function cacheDom() {
   dom.hydrologyCard = document.querySelector("#hydrologyCard");
   dom.fieldEvidenceCard = document.querySelector("#fieldEvidenceCard");
   dom.planningModuleCards = Array.from(document.querySelectorAll('[data-module-track="planificacion"]'));
+  dom.evidenceModuleCards = Array.from(document.querySelectorAll('[data-module-track="evidencia"]'));
   dom.planning3dAvailability = document.querySelector("#planning3dAvailability");
   dom.openPlanning3dBtn = document.querySelector("#openPlanning3dBtn");
   dom.reloadPlanning3dBtn = document.querySelector("#reloadPlanning3dBtn");
@@ -3632,6 +3634,7 @@ function bootstrapApp() {
 function bindUI() {
   dom.openAgronomyBtn.addEventListener("click", () => enterPublicView("agronomia"));
   dom.openPlanningBtn.addEventListener("click", () => enterPublicView("planificacion"));
+  dom.openFieldEvidenceBtn?.addEventListener("click", () => enterPublicView("evidencia"));
   dom.sidebarToggle.addEventListener("click", () => dom.sidebar.classList.add("open"));
   dom.sidebarClose.addEventListener("click", () => dom.sidebar.classList.remove("open"));
   dom.sceneTimeline?.addEventListener("click", handleSceneTimelineInteraction);
@@ -4402,6 +4405,18 @@ function updateSensorControls() {
   }
 }
 
+function isPlanningRoute(route = state.entryRoute || "agronomia") {
+  return route === "planificacion";
+}
+
+function isEvidenceRoute(route = state.entryRoute || "agronomia") {
+  return route === "evidencia";
+}
+
+function isTerritorialRoute(route = state.entryRoute || "agronomia") {
+  return isPlanningRoute(route) || isEvidenceRoute(route);
+}
+
 function enterPublicView(route = state.entryRoute || "agronomia") {
   state.entryRoute = route;
   dom.loginOverlay.classList.add("hidden");
@@ -4420,7 +4435,13 @@ function applyRouteFromUrl() {
   const routeParam = params.get("route");
   const tabParam = params.get("tab");
   const viewerParam = params.get("viewer");
-  const route = routeParam === "planificacion" ? "planificacion" : routeParam === "agronomia" ? "agronomia" : null;
+  const route = routeParam === "planificacion"
+    ? "planificacion"
+    : routeParam === "evidencia"
+      ? "evidencia"
+      : routeParam === "agronomia"
+        ? "agronomia"
+        : null;
   if (!route) {
     return;
   }
@@ -4445,7 +4466,8 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   state.entryRoute = route;
   syncEntryRouteUi(route);
 
-  if (route === "planificacion") {
+  if (isPlanningRoute(route)) {
+    state.territorialFocus = "planning";
     clearAgronomyMapContext();
     if (state.planningData) {
       renderPlanningOverlay(state.planningData);
@@ -4456,9 +4478,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     if (state.hydrologyData) {
       renderHydrologyOverlay(state.hydrologyData);
     }
-    if (state.fieldEvidenceData) {
-      renderFieldEvidenceOverlay(state.fieldEvidenceData);
-    }
+    clearFieldEvidenceOverlay();
     setActiveTab("modulos");
     hydratePlanning3dManifest();
     if (dom.sidebarTitle) {
@@ -4473,6 +4493,44 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     updateMapSummary();
     window.setTimeout(() => {
       focusPlanningModuleCard();
+    }, 120);
+    return;
+  }
+
+  if (isEvidenceRoute(route)) {
+    state.territorialFocus = "fieldEvidence";
+    setActiveTab("modulos");
+    closePlanning3dViewer(true);
+    clearAgronomyMapContext();
+    clearPlanningOverlay();
+    clearLandChangeOverlay();
+    clearHydrologyOverlay();
+    if (state.fieldEvidenceData) {
+      renderFieldEvidenceOverlay(state.fieldEvidenceData);
+    } else {
+      setModulePendingState(dom.fieldEvidenceResults, "Reuniendo evidencia de campo, estaciones y memoria territorial...", [
+        { target: dom.fieldEvidenceInventory, message: "Resumiendo catalogo maestro, fuentes y objetos geograficos disponibles..." },
+        { target: dom.fieldEvidenceSectors, message: "Organizando quebradas, rios y sectores levantados en campo..." },
+        { target: dom.fieldEvidenceStations, message: "Ubicando estaciones FONAG e indicadores hidrometeorologicos..." },
+        { target: dom.fieldEvidenceSensitive, message: "Integrando areas sensibles, proteccion minima, riberas y quebradas del procedimiento tecnico..." },
+        { target: dom.fieldEvidenceHistory, message: "Levantando cartas IGM, MDT historico y series climaticas INHAMI..." },
+      ]);
+      clearFieldEvidenceOverlay();
+      runFieldEvidenceAnalysis(true);
+    }
+    if (dom.sidebarTitle) {
+      dom.sidebarTitle.textContent = "Centro de evidencia territorial";
+    }
+    if (dom.sidebarSubtitle) {
+      dom.sidebarSubtitle.textContent = "Quebradas, estaciones, areas sensibles, memoria historica e insumos tecnicos de campo para soporte territorial en Mejia.";
+    }
+    if (dom.overlayMode) {
+      dom.overlayMode.textContent = "Campo";
+    }
+    clearPlanningModuleFocus();
+    updateMapSummary();
+    window.setTimeout(() => {
+      focusFieldEvidenceModuleCard();
     }, 120);
     return;
   }
@@ -4529,63 +4587,99 @@ function clearAgronomyMapContext() {
   state.sceneLayerKind = "off";
 }
 
-function focusPlanningModuleCard() {
-  if (!dom.planningCard) {
+function focusModuleCard(card) {
+  if (!card) {
     return;
   }
 
-  dom.planningCard.classList.add("entry-focus");
-  dom.planningCard.scrollIntoView({
+  card.classList.add("entry-focus");
+  card.scrollIntoView({
     behavior: "smooth",
     block: "start",
     inline: "nearest",
   });
 
-  window.clearTimeout(focusPlanningModuleCard.timeoutId);
-  focusPlanningModuleCard.timeoutId = window.setTimeout(() => {
+  window.clearTimeout(focusModuleCard.timeoutId);
+  focusModuleCard.timeoutId = window.setTimeout(() => {
     clearPlanningModuleFocus();
   }, 2200);
+}
+
+function focusPlanningModuleCard() {
+  focusModuleCard(dom.planningCard);
+}
+
+function focusFieldEvidenceModuleCard() {
+  focusModuleCard(dom.fieldEvidenceCard);
 }
 
 function clearPlanningModuleFocus() {
   if (dom.planningCard) {
     dom.planningCard.classList.remove("entry-focus");
   }
+  if (dom.fieldEvidenceCard) {
+    dom.fieldEvidenceCard.classList.remove("entry-focus");
+  }
 }
 
 function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
-  const isPlanning = route === "planificacion";
+  const isPlanning = isPlanningRoute(route);
+  const isEvidence = isEvidenceRoute(route);
+  const isTerritorial = isPlanning || isEvidence;
   if (dom.appShell) {
     dom.appShell.dataset.route = route;
   }
   if (dom.tabImageryBtn) {
-    dom.tabImageryBtn.classList.toggle("hidden", isPlanning);
+    dom.tabImageryBtn.classList.toggle("hidden", isTerritorial);
   }
   if (dom.tabModulesBtn) {
-    dom.tabModulesBtn.textContent = isPlanning ? "Modulos territoriales" : "Modulos Agricolas";
+    dom.tabModulesBtn.textContent = isPlanning
+      ? "Modulos territoriales"
+      : isEvidence
+        ? "Evidencia territorial"
+        : "Modulos Agricolas";
   }
   if (dom.modulesSectionKicker) {
-    dom.modulesSectionKicker.textContent = isPlanning ? "Planeamiento" : "Herramientas beta";
+    dom.modulesSectionKicker.textContent = isPlanning
+      ? "Planeamiento"
+      : isEvidence
+        ? "Soporte territorial"
+        : "Herramientas beta";
   }
   if (dom.modulesSectionTitle) {
-    dom.modulesSectionTitle.textContent = isPlanning ? "Planificacion territorial" : "Modulos Agricolas";
+    dom.modulesSectionTitle.textContent = isPlanning
+      ? "Planificacion territorial"
+      : isEvidence
+        ? "Evidencia territorial"
+        : "Modulos Agricolas";
   }
   if (dom.modulesSectionCopy) {
     dom.modulesSectionCopy.textContent = isPlanning
       ? "Ruta territorial con modulos de aptitud, transformacion del suelo rural, estudio hidrico, priorizacion de candidatos y visor 3D urbano."
-      : "Nucleo del sistema para agricultura de precision, relieve, clima y flujos guiados para monitoreo productivo.";
+      : isEvidence
+        ? "Ruta dedicada a quebradas, estaciones, areas sensibles, memoria historica y soporte tecnico de campo para volver mas precisa la lectura territorial."
+        : "Nucleo del sistema para agricultura de precision, relieve, clima y flujos guiados para monitoreo productivo.";
   }
   if (dom.modeFooterPill) {
-    dom.modeFooterPill.textContent = isPlanning ? "Territorio inteligente" : "Agronomia digital";
+    dom.modeFooterPill.textContent = isPlanning
+      ? "Territorio inteligente"
+      : isEvidence
+        ? "Evidencia territorial"
+        : "Agronomia digital";
   }
   if (Array.isArray(dom.planningModuleCards)) {
     dom.planningModuleCards.forEach((card) => {
       card.classList.toggle("hidden", !isPlanning);
     });
   }
+  if (Array.isArray(dom.evidenceModuleCards)) {
+    dom.evidenceModuleCards.forEach((card) => {
+      card.classList.toggle("hidden", !isEvidence);
+    });
+  }
   if (Array.isArray(dom.agronomyModuleCards)) {
     dom.agronomyModuleCards.forEach((card) => {
-      card.classList.toggle("hidden", isPlanning);
+      card.classList.toggle("hidden", isTerritorial);
     });
   }
 }
@@ -6234,7 +6328,7 @@ function renderSentinelOverlay() {
     return;
   }
 
-  if (state.entryRoute === "planificacion") {
+  if (isTerritorialRoute()) {
     clearAgronomyMapContext();
     updateMapSummary();
     return;
@@ -7190,7 +7284,7 @@ function renderManagementZones(analysis) {
     mapState.managementLayer = null;
   }
 
-  if (state.entryRoute === "planificacion") {
+  if (isTerritorialRoute()) {
     return analysis.management;
   }
 
@@ -10625,7 +10719,7 @@ function renderPlanningModule() {
       `Replica metodologica inspirada en el estudio hidrico del DMQ: cubo hidroclimatico, modelo semidistribuido tipo GR4, demanda 2020-2100 y sesgo climatico corregido. En esta fase el geoportal usa una simulacion territorial sintetica para ${areaProfile.scopeLabel} con ${climate.label}, ${horizon.label} y ${demand.label}.`
     );
   }
-  if (state.entryRoute === "planificacion" && !state.planningData) {
+  if (isTerritorialRoute() && !state.planningData) {
     updateMapSummary();
   }
 
@@ -17262,11 +17356,12 @@ function updateMapSummary(force = false) {
     return;
   }
 
-  if (state.entryRoute === "planificacion") {
+  if (isTerritorialRoute()) {
     const planning = state.planningData;
     const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
     const fieldEvidence = state.fieldEvidenceData;
+    const evidenceRouteActive = isEvidenceRoute();
     const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
     const landChangePeriod = landChange?.period || getLandChangePeriodProfile();
     const landChangeScenario = landChange?.scenario || getLandChangeScenarioProfile();
@@ -17274,10 +17369,10 @@ function updateMapSummary(force = false) {
     const hydrologyClimate = hydrology?.climate || getHydrologyClimateProfile();
     const hydrologyHorizon = hydrology?.horizon || getHydrologyHorizonProfile();
     const hydrologyDemand = hydrology?.demand || getHydrologyDemandProfile();
-    const showFieldEvidence = state.territorialFocus === "fieldEvidence" && fieldEvidence;
+    const showFieldEvidence = (evidenceRouteActive || state.territorialFocus === "fieldEvidence") && fieldEvidence;
     const showLandChange = state.territorialFocus === "landChange" && landChange;
     const showHydrology = state.territorialFocus === "hydrology" && hydrology;
-    setTextIfChanged(dom.overlayIndex, planning ? "Aptitud" : imageryProfile.shortLabel);
+    setTextIfChanged(dom.overlayIndex, evidenceRouteActive ? "Campo" : planning ? "Aptitud" : imageryProfile.shortLabel);
     renderMapBadges();
     if (showFieldEvidence) {
       setTextIfChanged(dom.overlayIndex, "Campo");
@@ -17318,6 +17413,10 @@ function updateMapSummary(force = false) {
       setTextIfChanged(dom.overlayIndex, "Huella");
       setTextIfChanged(dom.mapTitle, "Estudio de transformacion del suelo listo");
       setTextIfChanged(dom.mapSubtitle, `${landChange.period.shortLabel} con ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas, ${landChange.summary.riskLabel.toLowerCase()} y foco ${landChange.summary.hotspotLabel} con halos de presion.`);
+    } else if (evidenceRouteActive) {
+      setTextIfChanged(dom.overlayIndex, "Campo");
+      setTextIfChanged(dom.mapTitle, "Evidencia territorial lista");
+      setTextIfChanged(dom.mapSubtitle, "Integra quebradas, estaciones FONAG, areas sensibles, cartografia historica y soporte tecnico de campo para fortalecer la precision del geoportal en Mejia.");
     } else {
       setTextIfChanged(dom.mapTitle, "Planificacion territorial lista");
       setTextIfChanged(dom.mapSubtitle, `Elige ${imageryProfile.label} para aptitud territorial o ejecuta los estudios de suelo e hidrologia para simular transformacion, oferta, demanda y resiliencia de Mejia.`);
@@ -17382,17 +17481,18 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
     return;
   }
 
-  if (state.entryRoute === "planificacion") {
+  if (isTerritorialRoute()) {
     const planning = state.planningData;
     const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
     const fieldEvidence = state.fieldEvidenceData;
+    const evidenceRouteActive = isEvidenceRoute();
     const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
     const landChangePeriod = landChange?.period || getLandChangePeriodProfile();
     const landChangeScenario = landChange?.scenario || getLandChangeScenarioProfile();
     const climate = hydrology?.climate || getHydrologyClimateProfile();
     const horizon = hydrology?.horizon || getHydrologyHorizonProfile();
-    const badges = state.territorialFocus === "fieldEvidence" && fieldEvidence
+    const badges = ((evidenceRouteActive || state.territorialFocus === "fieldEvidence") && fieldEvidence)
       ? [
           {
             tone: "analysis",
@@ -17475,6 +17575,25 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
           {
             tone: "neutral",
             label: "Buffers + alertas",
+          },
+        ]
+      : evidenceRouteActive
+      ? [
+          {
+            tone: "analysis",
+            label: "Campo",
+          },
+          {
+            tone: "neutral",
+            label: "Quebradas + estaciones",
+          },
+          {
+            tone: "neutral",
+            label: "Historia + sensibles",
+          },
+          {
+            tone: "muted",
+            label: "Listo para integrar",
           },
         ]
       : [
