@@ -655,6 +655,33 @@ const agronomyAreaCatalog = {
   },
 };
 
+const inamhiAgronomyReferenceCatalog = {
+  mejia: {
+    id: "mejia",
+    label: "Perfil interandino de Mejia",
+    stationCodes: ["M003", "M113", "M120", "M363"],
+    note: "Usa series historicas interandinas de referencia para lectura pluviometrica y estacional del canton.",
+  },
+  machachi: {
+    id: "machachi",
+    label: "Machachi",
+    stationCodes: ["M003", "M120", "M113"],
+    note: "Prioriza series de menor precipitacion anual para una lectura mas ajustada al valle de Machachi.",
+  },
+  cutuglagua: {
+    id: "cutuglagua",
+    label: "Cutuglagua",
+    stationCodes: ["M363", "M120", "M113"],
+    note: "Usa el subconjunto mas seco del catalogo INAMHI integrado para aproximar el borde norte de Mejia.",
+  },
+  quevedo: {
+    id: "quevedo",
+    label: "Quevedo",
+    stationCodes: ["M116", "M354", "M362", "M353"],
+    note: "Usa el subconjunto mas humedo del catalogo INAMHI integrado para una lectura de ambiente tropical humedo.",
+  },
+};
+
 const geoSources = {
   parroquias: {
     type: "FeatureCollection",
@@ -2232,6 +2259,7 @@ const state = {
     intralote: null,
     dem: null,
     climate: null,
+    inamhi: null,
   },
   wizardProgress: {},
   wizardBusy: false,
@@ -2794,6 +2822,7 @@ function resetAgronomySelectionState() {
   state.agronomyOutputs.intralote = null;
   state.agronomyOutputs.dem = null;
   state.agronomyOutputs.climate = null;
+  state.agronomyOutputs.inamhi = null;
 
   if (dom.overlayPlot) {
     dom.overlayPlot.textContent = state.currentPlotLabel;
@@ -2808,9 +2837,11 @@ function resetAgronomySelectionState() {
   resetMetricGrid(dom.intraloteResults, "Dibuja un lote en el mapa para empezar.");
   resetMetricGrid(dom.demResults, "Elige un lote o dibuja un poligono para estimar relieve.");
   resetMetricGrid(dom.climateResults, "Ejecuta el modulo para cargar indicadores climaticos.");
+  resetMetricGrid(dom.inamhiResults, "Ejecuta el modulo para cargar estaciones INAMHI de referencia.");
   resetVisualPanel(dom.intraloteVisual, "Aqui apareceran la distribucion de zonas de manejo y la lectura grafica de indices del lote.");
   resetVisualPanel(dom.demVisual, "Aqui apareceran el perfil de pendiente, la altitud relativa y el riesgo topografico del lote.");
   resetVisualPanel(dom.climateVisual, "Aqui apareceran la lectura visual de lluvia, humedad, temperatura y estres termico.");
+  resetVisualPanel(dom.inamhiVisual, "Aqui apareceran la lectura visual de lluvia historica, ventana humeda/seca y cobertura temporal de las estaciones.");
   renderSceneControls();
   renderSentinelResults();
   renderSentinelSourceStatus();
@@ -2896,6 +2927,7 @@ function refreshVisibleGeoLayers(layerIds = null) {
 async function setAgronomyArea(areaId = state.agronomyAreaId, options = {}) {
   const nextAreaId = agronomyAreaCatalog[areaId] ? areaId : "mejia";
   const changed = state.agronomyAreaId !== nextAreaId;
+  const hadInamhiReadout = dom.inamhiResults?.classList.contains("has-data");
   state.agronomyAreaId = nextAreaId;
 
   syncAgronomyAreaUi();
@@ -2915,6 +2947,10 @@ async function setAgronomyArea(areaId = state.agronomyAreaId, options = {}) {
 
   if (options.fetchScenes !== false) {
     await filterSentinelImages();
+  }
+
+  if (hadInamhiReadout || options.refreshInamhi) {
+    await runInamhiAnalysis(true);
   }
 
   if (!options.silent && changed) {
@@ -3833,6 +3869,7 @@ function cacheDom() {
   dom.runIntraloteBtn = document.querySelector("#runIntraloteBtn");
   dom.runDemBtn = document.querySelector("#runDemBtn");
   dom.runClimateBtn = document.querySelector("#runClimateBtn");
+  dom.runInamhiBtn = document.querySelector("#runInamhiBtn");
   dom.runPlanningBtn = document.querySelector("#runPlanningBtn");
   dom.focusPlanningBtn = document.querySelector("#focusPlanningBtn");
   dom.clearPlanningBtn = document.querySelector("#clearPlanningBtn");
@@ -3864,6 +3901,8 @@ function cacheDom() {
   dom.demVisual = document.querySelector("#demVisual");
   dom.climateResults = document.querySelector("#climateResults");
   dom.climateVisual = document.querySelector("#climateVisual");
+  dom.inamhiResults = document.querySelector("#inamhiResults");
+  dom.inamhiVisual = document.querySelector("#inamhiVisual");
   dom.planningResults = document.querySelector("#planningResults");
   dom.planningWeights = document.querySelector("#planningWeights");
   dom.planningCandidates = document.querySelector("#planningCandidates");
@@ -4148,6 +4187,12 @@ function bindUI() {
       { target: dom.climateVisual, message: "Preparando lectura grafica de lluvia, humedad y temperatura..." },
     ]);
     return runModuleAction(dom.runClimateBtn, "Actualizando clima...", () => runClimateAnalysis());
+  });
+  dom.runInamhiBtn.addEventListener("click", () => {
+    setModulePendingState(dom.inamhiResults, "Leyendo estaciones INAMHI y consolidando la climatologia historica...", [
+      { target: dom.inamhiVisual, message: "Preparando lectura grafica de estaciones, lluvia media y estacionalidad..." },
+    ]);
+    return runModuleAction(dom.runInamhiBtn, "Leyendo INAMHI...", () => runInamhiAnalysis());
   });
   dom.runWizardNextBtn?.addEventListener("click", runWizardNextStep);
   dom.runWizardPlanBtn?.addEventListener("click", runWizardPlan);
@@ -7833,6 +7878,233 @@ function runClimateAnalysis(silent = false) {
       setStatus(`Clima agricola: ${error.message || "ocurrio un error inesperado"}.`);
     }
     renderWizardAssistantState();
+    return null;
+  }
+}
+
+function getInamhiReferenceProfile(areaId = state.agronomyAreaId) {
+  return inamhiAgronomyReferenceCatalog[areaId] || inamhiAgronomyReferenceCatalog.mejia;
+}
+
+function selectInamhiFallbackStations(stations, areaId = state.agronomyAreaId) {
+  const list = Array.isArray(stations) ? stations.filter((station) => !!station?.stationCode) : [];
+  if (!list.length) {
+    return [];
+  }
+
+  const wettest = list
+    .slice()
+    .sort((left, right) => (Number(right.annualMeanMm) || 0) - (Number(left.annualMeanMm) || 0));
+  const driest = wettest.slice().reverse();
+
+  if (areaId === "quevedo") {
+    return wettest.slice(0, 4);
+  }
+  if (areaId === "cutuglagua") {
+    return driest.slice(0, 3);
+  }
+  if (areaId === "machachi") {
+    return driest.slice(0, 4);
+  }
+  return driest.slice(0, 4);
+}
+
+function selectInamhiStationsForArea(catalog, areaId = state.agronomyAreaId) {
+  const series = Array.isArray(catalog?.climateHistory?.stations)
+    ? catalog.climateHistory.stations.filter((station) => !!station?.stationCode)
+    : [];
+  const reference = getInamhiReferenceProfile(areaId);
+  const stationMap = new Map(
+    series.map((station) => [String(station.stationCode || "").trim().toUpperCase(), station])
+  );
+  const selected = reference.stationCodes
+    .map((code) => stationMap.get(String(code).trim().toUpperCase()))
+    .filter(Boolean);
+
+  return {
+    reference,
+    stations: selected.length ? selected : selectInamhiFallbackStations(series, areaId),
+  };
+}
+
+function buildInamhiMonthSignal(stations, monthKey, valueKey) {
+  const monthMap = new Map();
+  (Array.isArray(stations) ? stations : []).forEach((station) => {
+    const month = String(station?.[monthKey] || "").trim();
+    if (!month) {
+      return;
+    }
+    const metric = Number(station?.[valueKey]) || 0;
+    const current = monthMap.get(month) || { count: 0, total: 0 };
+    current.count += 1;
+    current.total += metric;
+    monthMap.set(month, current);
+  });
+
+  const best = [...monthMap.entries()].sort((left, right) => {
+    if (right[1].count !== left[1].count) {
+      return right[1].count - left[1].count;
+    }
+    return right[1].total - left[1].total;
+  })[0];
+
+  if (!best) {
+    return {
+      month: "Sin dato",
+      meanMm: 0,
+      supportCount: 0,
+    };
+  }
+
+  return {
+    month: best[0],
+    meanMm: Number((best[1].total / Math.max(1, best[1].count)).toFixed(1)),
+    supportCount: best[1].count,
+  };
+}
+
+function getInamhiRegimeLabel(annualMeanMm) {
+  if (annualMeanMm >= 2200) {
+    return "Muy humedo";
+  }
+  if (annualMeanMm >= 1600) {
+    return "Humedo";
+  }
+  if (annualMeanMm >= 1100) {
+    return "Subhumedo";
+  }
+  return "Relativamente seco";
+}
+
+function getInamhiSeasonalityLabel(seasonalityRatio) {
+  if (seasonalityRatio >= 5) {
+    return "Contraste alto";
+  }
+  if (seasonalityRatio >= 3.2) {
+    return "Contraste medio";
+  }
+  return "Contraste moderado";
+}
+
+function getInamhiReadingTone(annualMeanMm, seasonalityRatio) {
+  if (annualMeanMm >= 2200 || seasonalityRatio >= 5) {
+    return "high";
+  }
+  if (annualMeanMm >= 1200 || seasonalityRatio >= 3.2) {
+    return "mid";
+  }
+  return "low";
+}
+
+function getInamhiManagementFocus(areaId, annualMeanMm, seasonalityRatio) {
+  if (areaId === "quevedo" || annualMeanMm >= 2200) {
+    return "Lectura recomendada: prioriza drenaje parcelario, ventanas de cosecha y monitoreo fitosanitario ante periodos lluviosos persistentes.";
+  }
+  if (seasonalityRatio >= 4.5 || annualMeanMm <= 1000) {
+    return "Lectura recomendada: prioriza riego oportuno, coberturas y reserva de humedad para sostener el cultivo en la ventana seca.";
+  }
+  return "Lectura recomendada: ajusta siembra, fertilizacion y labores a la transicion entre la ventana humeda y la ventana seca del ambito.";
+}
+
+async function runInamhiAnalysis(silent = false) {
+  try {
+    const catalog = await loadFieldEvidenceCatalog();
+    const areaProfile = getAgronomyAreaProfile();
+    const targetLabel = areaProfile.scopeLabel;
+    const { reference, stations } = selectInamhiStationsForArea(catalog, state.agronomyAreaId);
+
+    if (!stations.length) {
+      resetMetricGrid(dom.inamhiResults, "No hay series INAMHI disponibles para el ambito agronomico activo.");
+      resetVisualPanel(dom.inamhiVisual, "No hay series INAMHI disponibles para construir la lectura visual.");
+      return null;
+    }
+
+    const annualMean = stations.reduce((sum, station) => sum + (Number(station.annualMeanMm) || 0), 0) / stations.length;
+    const maxAnnual = Math.max(...stations.map((station) => Number(station.annualMeanMm) || 0));
+    const minAnnual = Math.min(...stations.map((station) => Number(station.annualMeanMm) || 0));
+    const avgSampleCount = stations.reduce((sum, station) => sum + (Number(station.sampleCount) || 0), 0) / stations.length;
+    const yearStart = Math.min(...stations.map((station) => Number(station.yearStart) || 9999));
+    const yearEnd = Math.max(...stations.map((station) => Number(station.yearEnd) || 0));
+    const wetSignal = buildInamhiMonthSignal(stations, "wettestMonth", "wettestMonthMm");
+    const drySignal = buildInamhiMonthSignal(stations, "driestMonth", "driestMonthMm");
+    const seasonalityRatio = wetSignal.meanMm > 0
+      ? wetSignal.meanMm / Math.max(1, drySignal.meanMm)
+      : 1;
+    const regimeLabel = getInamhiRegimeLabel(annualMean);
+    const seasonalityLabel = getInamhiSeasonalityLabel(seasonalityRatio);
+    const tone = getInamhiReadingTone(annualMean, seasonalityRatio);
+    const recommendation = getInamhiManagementFocus(state.agronomyAreaId, annualMean, seasonalityRatio);
+    const stationCodes = stations.map((station) => station.stationCode).join(", ");
+
+    const cards = [
+      {
+        label: "Series base",
+        value: `${stations.length} estaciones`,
+        copy: `${reference.label}: ${stationCodes}.`,
+      },
+      {
+        label: "Cobertura historica",
+        value: `${yearStart}-${yearEnd}`,
+        copy: `Cobertura media de ${Math.round(avgSampleCount)} anios por serie.`,
+      },
+      {
+        label: "Lluvia media anual",
+        value: `${annualMean.toFixed(0)} mm/anio`,
+        copy: `Rango entre ${minAnnual.toFixed(0)} y ${maxAnnual.toFixed(0)} mm/anio en las estaciones base.`,
+        highlight: true,
+      },
+      {
+        label: "Mes mas lluvioso",
+        value: `${wetSignal.month} · ${wetSignal.meanMm.toFixed(0)} mm`,
+        copy: `Dominante en ${wetSignal.supportCount}/${stations.length} estaciones.`,
+      },
+      {
+        label: "Mes mas seco",
+        value: `${drySignal.month} · ${drySignal.meanMm.toFixed(0)} mm`,
+        copy: `Ventana seca dominante en ${drySignal.supportCount}/${stations.length} estaciones.`,
+      },
+      {
+        label: "Regimen",
+        value: `${regimeLabel} / ${seasonalityLabel}`,
+        copy: recommendation,
+      },
+    ];
+
+    paintMetricGrid(dom.inamhiResults, cards);
+    Array.from(dom.inamhiResults.querySelectorAll(".metric-card strong")).forEach((node) => {
+      node.textContent = node.textContent.replace(/Â·|·/g, " - ");
+    });
+    const result = {
+      reference,
+      stations,
+      cards,
+      tone,
+      targetLabel,
+      annualMean: Number(annualMean.toFixed(1)),
+      minAnnual: Number(minAnnual.toFixed(1)),
+      maxAnnual: Number(maxAnnual.toFixed(1)),
+      avgSampleCount: Number(avgSampleCount.toFixed(1)),
+      wetSignal,
+      drySignal,
+      seasonalityRatio: Number(seasonalityRatio.toFixed(2)),
+      regimeLabel,
+      seasonalityLabel,
+      recommendation,
+      readout: `${reference.note} ${recommendation} Lectura construida para ${targetLabel} con las series ${stationCodes}.`,
+    };
+    state.agronomyOutputs.inamhi = result;
+    renderInamhiVisual(result);
+    if (!silent) {
+      setStatus(`Lectura INAMHI actualizada para ${targetLabel} con ${stations.length} estaciones de referencia.`);
+    }
+    return result;
+  } catch (error) {
+    console.warn("Fallo el modulo de estaciones INAMHI.", error);
+    resetMetricGrid(dom.inamhiResults, "No se pudo leer la climatologia INAMHI. Revisa el catalogo de evidencia o vuelve a intentarlo.");
+    resetVisualPanel(dom.inamhiVisual, "No se pudo construir la lectura visual de estaciones INAMHI.");
+    if (!silent) {
+      setStatus(`Estaciones INAMHI: ${error.message || "ocurrio un error inesperado"}.`);
+    }
     return null;
   }
 }
@@ -17978,6 +18250,82 @@ function renderClimateVisual(result = null) {
       </div>
     </div>
   `);
+}
+
+function renderInamhiVisual(result = null) {
+  if (!dom.inamhiVisual) {
+    return;
+  }
+
+  if (!result) {
+    resetVisualPanel(dom.inamhiVisual, "Aqui apareceran la lectura visual de lluvia historica, ventana humeda/seca y cobertura temporal de las estaciones.");
+    return;
+  }
+
+  const annualPct = clamp(Math.round((result.annualMean / 3200) * 100), 10, 100);
+  const wetPct = clamp(Math.round((result.wetSignal.meanMm / 460) * 100), 10, 100);
+  const dryPct = clamp(Math.round((result.drySignal.meanMm / 140) * 100), 6, 100);
+  const coveragePct = clamp(Math.round((result.avgSampleCount / 55) * 100), 12, 100);
+
+  dom.inamhiVisual.classList.remove("empty-state");
+  dom.inamhiVisual.classList.add("has-data");
+  setHtmlIfChanged(dom.inamhiVisual, `
+    <div class="agronomy-visual-head">
+      <div>
+        <p class="section-kicker">Lectura historica</p>
+        <h4>Estaciones INAMHI de referencia</h4>
+      </div>
+      <span class="agronomy-visual-pill tone-${result.tone}">${result.regimeLabel}</span>
+    </div>
+    <div class="agronomy-tag-row">
+      ${result.stations
+        .map((station) => `<span class="agronomy-visual-pill">${station.stationCode}</span>`)
+        .join("")}
+      <span class="agronomy-visual-pill tone-${result.tone}">${result.seasonalityLabel}</span>
+    </div>
+    <div class="agronomy-bar-grid">
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Lluvia media anual</span>
+          <strong>${result.annualMean.toFixed(0)} mm/anio</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${annualPct}%"></i>
+        </div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Ventana humeda</span>
+          <strong>${result.wetSignal.month} · ${result.wetSignal.meanMm.toFixed(0)} mm</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${wetPct}%"></i>
+        </div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Ventana seca</span>
+          <strong>${result.drySignal.month} · ${result.drySignal.meanMm.toFixed(0)} mm</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${dryPct}%"></i>
+        </div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Serie media</span>
+          <strong>${Math.round(result.avgSampleCount)} anios</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${coveragePct}%"></i>
+        </div>
+      </article>
+    </div>
+    <p class="agronomy-visual-copy">${result.readout}</p>
+  `);
+  Array.from(dom.inamhiVisual.querySelectorAll("strong")).forEach((node) => {
+    node.textContent = node.textContent.replace(/Â·|·/g, " - ");
+  });
 }
 
 function paintMetricGrid(target, cards) {

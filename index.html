@@ -356,6 +356,25 @@
               </div>
             </article>
 
+            <article class="module-card" data-module-track="agronomia">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">INAMHI historico</p>
+                  <h3>Estaciones meteorologicas INAMHI</h3>
+                </div>
+                <button id="runInamhiBtn" class="secondary-button" type="button">Leer estaciones</button>
+              </div>
+              <p class="module-copy">
+                Sintetiza series historicas de estaciones INAMHI ya integradas al geoportal para leer regimen pluviometrico, estacionalidad y soporte meteorologico por ambito agronomico.
+              </p>
+              <div id="inamhiResults" class="metrics-grid empty-state">
+                Ejecuta el modulo para cargar estaciones INAMHI de referencia.
+              </div>
+              <div id="inamhiVisual" class="agronomy-visual empty-state">
+                Aqui apareceran la lectura visual de lluvia historica, ventana humeda/seca y cobertura temporal de las estaciones.
+              </div>
+            </article>
+
             <article id="planningCard" class="module-card planning-card hidden" data-module-track="planificacion">
               <div class="module-head">
                 <div>
@@ -915,6 +934,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260419-1" defer></script>
+  <script src="./app.js?v=20260419-2" defer></script>
 </body>
 </html>
