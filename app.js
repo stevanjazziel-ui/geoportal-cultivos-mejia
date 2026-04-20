@@ -7083,7 +7083,7 @@ async function renderSceneLayer(image) {
     updateMapSummary();
   }
 
-  if (image.source === "real" && getSensorForImage(image).exactRaster) {
+  if (canUseExactSceneRaster(image)) {
     queueExactSceneLayerUpgrade(image, requestId, previewRendered);
     return;
   }
@@ -7206,10 +7206,11 @@ async function createExactSceneLayer(image, earthItem = null) {
   const layer = new GeoRasterLayerCtor({
     georaster: exactScene.georaster,
     opacity: state.scenePreviewOpacity,
+    interactive: false,
     resolution: renderResolution,
     updateWhenIdle: true,
     updateWhenZooming: false,
-    keepBuffer: 4,
+    keepBuffer: 2,
     mask: {
       type: "Feature",
       geometry: exactScene.geometry,
@@ -7327,13 +7328,13 @@ function getRenderableScenePreviewImage(image, earthItem = null) {
 
 function getExactSceneRenderResolution() {
   const zoom = mapState.map?.getZoom?.() || 11;
-  if (zoom >= 13) {
-    return 256;
-  }
-  if (zoom >= 11) {
+  if (zoom >= 14) {
     return 192;
   }
-  return 160;
+  if (zoom >= 12) {
+    return 144;
+  }
+  return 112;
 }
 
 function colorizeVisualPixel(values) {
@@ -7385,12 +7386,26 @@ function getAnalysisOverlayOpacity(image) {
 }
 
 function maybeRefreshScenePreviewQuality() {
-  if (!mapState.map || state.analysisBusy || state.sceneLayerKind !== "exact" || !state.showScenePreview) {
+  if (!mapState.map || state.analysisBusy || !state.showScenePreview) {
     return;
   }
 
   const image = getSelectedImage();
-  if (!image || image.source !== "real" || !getSensorForImage(image).exactRaster || !mapState.sceneExactLayer) {
+  if (!image || image.source !== "real" || !getSensorForImage(image).exactRaster) {
+    return;
+  }
+
+  if ((state.sceneLayerKind === "preview" || state.sceneLayerKind === "footprint") && canUseExactSceneRaster(image)) {
+    renderSentinelOverlay();
+    return;
+  }
+
+  if (state.sceneLayerKind === "exact" && !canUseExactSceneRaster(image)) {
+    renderSentinelOverlay();
+    return;
+  }
+
+  if (state.sceneLayerKind !== "exact" || !mapState.sceneExactLayer) {
     return;
   }
 
@@ -7470,11 +7485,31 @@ function canRenderSceneLayer(image = getSelectedImage()) {
     return false;
   }
 
-  if (getSensorForImage(image).exactRaster && image.source === "real" && getSceneGridCode(image)) {
+  if (canUseExactSceneRaster(image)) {
     return true;
   }
 
   return canRenderThumbnailPreview(image);
+}
+
+function canUseExactSceneRaster(image = getSelectedImage()) {
+  if (!image || image.source !== "real") {
+    return false;
+  }
+
+  const sensor = getSensorForImage(image);
+  if (!sensor.exactRaster || !getSceneGridCode(image) || !mapState.map) {
+    return false;
+  }
+
+  const zoom = Number(mapState.map.getZoom?.()) || 0;
+  const target = getCurrentAnalysisTarget();
+
+  if (target.scopeType === "plot") {
+    return zoom >= 11.5;
+  }
+
+  return zoom >= 13.5;
 }
 
 function canRenderThumbnailPreview(image = getSelectedImage()) {
