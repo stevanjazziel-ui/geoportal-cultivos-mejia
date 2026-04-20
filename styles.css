@@ -1143,6 +1143,16 @@ button {
   justify-content: flex-start;
 }
 
+.module-action-row {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+}
+
+.module-action-row .secondary-button,
+.module-action-row .ghost-button {
+  flex: 0 0 auto;
+}
+
 .legend-values.compact {
   gap: 10px;
   justify-content: flex-start;
@@ -1161,6 +1171,33 @@ button {
   background: rgba(255, 255, 255, 0.45);
   color: var(--muted);
   min-width: 0;
+}
+
+.gps-device-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.gps-device-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(47, 61, 50, 0.08);
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.gps-device-card strong {
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.gps-device-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
 }
 
 .wizard-steps {

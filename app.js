@@ -252,6 +252,8 @@ const backendService = {
   healthPath: "/api/health",
   searchPath: "/api/stac/search",
   analysisPath: "/api/indices/analyze",
+  inamhiLivePath: "/api/agronomy/inamhi-live",
+  gpsLivePath: "/api/agronomy/gps/live",
   defaultOrigins: ["http://127.0.0.1:8765", "http://localhost:8765"],
 };
 
@@ -680,6 +682,120 @@ const inamhiAgronomyReferenceCatalog = {
     stationCodes: ["M116", "M354", "M362", "M353"],
     note: "Usa el subconjunto mas humedo del catalogo INAMHI integrado para una lectura de ambiente tropical humedo.",
   },
+};
+
+const agronomyGpsRouteCatalog = {
+  mejia: [
+    {
+      id: "tractor-mejia-01",
+      label: "Tractor demostrativo Mejia",
+      deviceType: "Maquinaria",
+      route: [
+        [-78.618, -0.49],
+        [-78.612, -0.504],
+        [-78.602, -0.503],
+        [-78.598, -0.492],
+        [-78.607, -0.485],
+        [-78.618, -0.49],
+      ],
+    },
+    {
+      id: "brigada-mejia-02",
+      label: "Brigada de campo Mejia",
+      deviceType: "Brigada",
+      route: [
+        [-78.56, -0.463],
+        [-78.552, -0.479],
+        [-78.541, -0.476],
+        [-78.544, -0.462],
+        [-78.56, -0.463],
+      ],
+    },
+  ],
+  machachi: [
+    {
+      id: "tractor-machachi-01",
+      label: "Tractor Machachi",
+      deviceType: "Maquinaria",
+      route: [
+        [-78.603, -0.488],
+        [-78.599, -0.5],
+        [-78.608, -0.509],
+        [-78.621, -0.503],
+        [-78.619, -0.492],
+        [-78.603, -0.488],
+      ],
+    },
+    {
+      id: "riego-machachi-02",
+      label: "Cuadrilla de riego",
+      deviceType: "Brigada",
+      route: [
+        [-78.589, -0.497],
+        [-78.58, -0.505],
+        [-78.572, -0.514],
+        [-78.579, -0.523],
+        [-78.591, -0.515],
+        [-78.589, -0.497],
+      ],
+    },
+  ],
+  cutuglagua: [
+    {
+      id: "pickup-cutuglagua-01",
+      label: "Camioneta tecnica Cutuglagua",
+      deviceType: "Vehiculo",
+      route: [
+        [-78.602, -0.353],
+        [-78.594, -0.362],
+        [-78.586, -0.37],
+        [-78.579, -0.378],
+        [-78.588, -0.382],
+        [-78.601, -0.372],
+        [-78.602, -0.353],
+      ],
+    },
+  ],
+  quevedo: [
+    {
+      id: "tractor-quevedo-01",
+      label: "Tractor Quevedo",
+      deviceType: "Maquinaria",
+      route: [
+        [-79.503, -1.034],
+        [-79.495, -1.046],
+        [-79.486, -1.044],
+        [-79.489, -1.032],
+        [-79.503, -1.034],
+      ],
+    },
+    {
+      id: "brigada-quevedo-02",
+      label: "Brigada fitosanitaria",
+      deviceType: "Brigada",
+      route: [
+        [-79.458, -1.014],
+        [-79.451, -1.024],
+        [-79.443, -1.03],
+        [-79.439, -1.02],
+        [-79.447, -1.012],
+        [-79.458, -1.014],
+      ],
+    },
+    {
+      id: "riego-quevedo-03",
+      label: "Monitoreo drenaje",
+      deviceType: "Riego",
+      route: [
+        [-79.521, -1.064],
+        [-79.514, -1.074],
+        [-79.503, -1.078],
+        [-79.499, -1.069],
+        [-79.507, -1.061],
+        [-79.521, -1.064],
+      ],
+    },
+  ],
 };
 
 const geoSources = {
@@ -2300,6 +2416,19 @@ const state = {
     dem: null,
     climate: null,
     inamhi: null,
+    inamhiLive: null,
+    gps: null,
+  },
+  gpsTracking: {
+    mode: "idle",
+    watchId: null,
+    pollId: null,
+    demoTimerId: null,
+    activeDeviceId: null,
+    devices: [],
+    track: [],
+    accuracyM: null,
+    lastDeviceSnapshot: null,
   },
   wizardProgress: {},
   wizardBusy: false,
@@ -2336,6 +2465,10 @@ const mapState = {
   fieldEvidenceStationLayer: null,
   fieldEvidenceSensitiveLayer: null,
   fieldEvidenceHistoryLayer: null,
+  inamhiLiveLayer: null,
+  gpsDeviceLayer: null,
+  gpsTrackLayer: null,
+  gpsAccuracyLayer: null,
   studyAreaLayer: null,
   currentPlotLayer: null,
 };
@@ -2852,6 +2985,7 @@ function getAgronomyStationFeatures(areaId = state.agronomyAreaId, anchorFeature
 }
 
 function resetAgronomySelectionState() {
+  stopGpsTracking({ silent: true, preservePanels: false });
   state.sentinelRequestId += 1;
   state.analysisRequestId += 1;
   state.currentPlot = null;
@@ -2875,6 +3009,8 @@ function resetAgronomySelectionState() {
   state.agronomyOutputs.dem = null;
   state.agronomyOutputs.climate = null;
   state.agronomyOutputs.inamhi = null;
+  state.agronomyOutputs.inamhiLive = null;
+  state.agronomyOutputs.gps = null;
 
   if (dom.overlayPlot) {
     dom.overlayPlot.textContent = state.currentPlotLabel;
@@ -2890,10 +3026,14 @@ function resetAgronomySelectionState() {
   resetMetricGrid(dom.demResults, "Elige un lote o dibuja un poligono para estimar relieve.");
   resetMetricGrid(dom.climateResults, "Ejecuta el modulo para cargar indicadores climaticos.");
   resetMetricGrid(dom.inamhiResults, "Ejecuta el modulo para cargar estaciones INAMHI de referencia.");
+  resetMetricGrid(dom.inamhiLiveResults, "Ejecuta la lectura en vivo para ver temperatura, humedad, lluvia y viento de la red activa.");
+  resetMetricGrid(dom.gpsResults, "Activa el modulo para seguir un dispositivo, un feed local o un recorrido demo sobre el mapa.");
   resetVisualPanel(dom.intraloteVisual, "Aqui apareceran la distribucion de zonas de manejo y la lectura grafica de indices del lote.");
   resetVisualPanel(dom.demVisual, "Aqui apareceran el perfil de pendiente, la altitud relativa y el riesgo topografico del lote.");
   resetVisualPanel(dom.climateVisual, "Aqui apareceran la lectura visual de lluvia, humedad, temperatura y estres termico.");
   resetVisualPanel(dom.inamhiVisual, "Aqui apareceran la lectura visual de lluvia historica, ventana humeda/seca y cobertura temporal de las estaciones.");
+  resetVisualPanel(dom.inamhiLiveVisual, "Aqui apareceran la lectura operativa en tiempo real, la ultima actualizacion y el estado de las estaciones activas.");
+  resetVisualPanel(dom.gpsVisual, "Aqui apareceran la trayectoria, velocidad, precision y estado operativo del seguimiento GPS.");
   renderSceneControls();
   renderSentinelResults();
   renderSentinelSourceStatus();
@@ -2980,6 +3120,7 @@ async function setAgronomyArea(areaId = state.agronomyAreaId, options = {}) {
   const nextAreaId = agronomyAreaCatalog[areaId] ? areaId : "mejia";
   const changed = state.agronomyAreaId !== nextAreaId;
   const hadInamhiReadout = dom.inamhiResults?.classList.contains("has-data");
+  const hadInamhiLiveReadout = dom.inamhiLiveResults?.classList.contains("has-data");
   state.agronomyAreaId = nextAreaId;
 
   syncAgronomyAreaUi();
@@ -3003,6 +3144,9 @@ async function setAgronomyArea(areaId = state.agronomyAreaId, options = {}) {
 
   if (hadInamhiReadout || options.refreshInamhi) {
     await runInamhiAnalysis(true);
+  }
+  if (hadInamhiLiveReadout) {
+    await runInamhiLiveAnalysis(true);
   }
 
   if (!options.silent && changed) {
@@ -3922,6 +4066,11 @@ function cacheDom() {
   dom.runDemBtn = document.querySelector("#runDemBtn");
   dom.runClimateBtn = document.querySelector("#runClimateBtn");
   dom.runInamhiBtn = document.querySelector("#runInamhiBtn");
+  dom.runInamhiLiveBtn = document.querySelector("#runInamhiLiveBtn");
+  dom.startGpsBrowserBtn = document.querySelector("#startGpsBrowserBtn");
+  dom.startGpsFeedBtn = document.querySelector("#startGpsFeedBtn");
+  dom.startGpsDemoBtn = document.querySelector("#startGpsDemoBtn");
+  dom.stopGpsTrackingBtn = document.querySelector("#stopGpsTrackingBtn");
   dom.runPlanningBtn = document.querySelector("#runPlanningBtn");
   dom.focusPlanningBtn = document.querySelector("#focusPlanningBtn");
   dom.clearPlanningBtn = document.querySelector("#clearPlanningBtn");
@@ -3955,6 +4104,10 @@ function cacheDom() {
   dom.climateVisual = document.querySelector("#climateVisual");
   dom.inamhiResults = document.querySelector("#inamhiResults");
   dom.inamhiVisual = document.querySelector("#inamhiVisual");
+  dom.inamhiLiveResults = document.querySelector("#inamhiLiveResults");
+  dom.inamhiLiveVisual = document.querySelector("#inamhiLiveVisual");
+  dom.gpsResults = document.querySelector("#gpsResults");
+  dom.gpsVisual = document.querySelector("#gpsVisual");
   dom.planningResults = document.querySelector("#planningResults");
   dom.planningWeights = document.querySelector("#planningWeights");
   dom.planningCandidates = document.querySelector("#planningCandidates");
@@ -4246,6 +4399,31 @@ function bindUI() {
     ]);
     return runModuleAction(dom.runInamhiBtn, "Leyendo INAMHI...", () => runInamhiAnalysis());
   });
+  dom.runInamhiLiveBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.inamhiLiveResults, "Consultando la red meteorologica operativa del ambito...", [
+      { target: dom.inamhiLiveVisual, message: "Preparando la lectura operativa de temperatura, humedad, lluvia y viento..." },
+    ]);
+    return runModuleAction(dom.runInamhiLiveBtn, "Leyendo en vivo...", () => runInamhiLiveAnalysis());
+  });
+  dom.startGpsBrowserBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.gpsResults, "Activando geolocalizacion del navegador y esperando senal GPS...", [
+      { target: dom.gpsVisual, message: "Preparando trayectoria, precision y estado operativo del dispositivo..." },
+    ]);
+    return runModuleAction(dom.startGpsBrowserBtn, "Activando GPS...", () => startBrowserGpsTracking());
+  });
+  dom.startGpsFeedBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.gpsResults, "Consultando feed local de dispositivos con GPS...", [
+      { target: dom.gpsVisual, message: "Preparando trayectoria, dispositivos y estado del feed local..." },
+    ]);
+    return runModuleAction(dom.startGpsFeedBtn, "Leyendo feed...", () => startGpsFeedTracking());
+  });
+  dom.startGpsDemoBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.gpsResults, "Levantando recorrido demo sobre el ambito agronomico activo...", [
+      { target: dom.gpsVisual, message: "Preparando recorrido demo, velocidad y rastro operativo..." },
+    ]);
+    return runModuleAction(dom.startGpsDemoBtn, "Levantando demo...", () => startGpsDemoTracking());
+  });
+  dom.stopGpsTrackingBtn?.addEventListener("click", () => stopGpsTracking());
   dom.runWizardNextBtn?.addEventListener("click", runWizardNextStep);
   dom.runWizardPlanBtn?.addEventListener("click", runWizardPlan);
   dom.useDemoPlotBtn?.addEventListener("click", useWizardDemoPlot);
@@ -4995,6 +5173,12 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   if (getSelectedImage()) {
     renderSentinelOverlay();
   }
+  if (state.agronomyOutputs.inamhiLive) {
+    renderInamhiLiveOverlay(state.agronomyOutputs.inamhiLive);
+  }
+  if (state.agronomyOutputs.gps) {
+    renderGpsTrackingOverlay(state.agronomyOutputs.gps);
+  }
   if (dom.sidebarTitle) {
     dom.sidebarTitle.textContent = "Centro de trabajo agronomico";
   }
@@ -5020,6 +5204,10 @@ function clearAgronomyMapContext() {
     "sentinelLayer",
     "managementLayer",
     "currentPlotLayer",
+    "inamhiLiveLayer",
+    "gpsDeviceLayer",
+    "gpsTrackLayer",
+    "gpsAccuracyLayer",
   ].forEach((layerKeyName) => {
     if (mapState[layerKeyName]) {
       mapState.map.removeLayer(mapState[layerKeyName]);
@@ -8303,6 +8491,1008 @@ async function runInamhiAnalysis(silent = false) {
     }
     return null;
   }
+}
+
+function getAgronomyLiveClimateProfile(areaId = state.agronomyAreaId) {
+  const profiles = {
+    mejia: { temperatureC: 15.4, humidityPct: 78, precip1hMm: 0.9, windKmh: 11, pressureHpa: 1015, solarWm2: 760 },
+    machachi: { temperatureC: 14.3, humidityPct: 76, precip1hMm: 0.7, windKmh: 12, pressureHpa: 1016, solarWm2: 790 },
+    cutuglagua: { temperatureC: 16.1, humidityPct: 72, precip1hMm: 0.6, windKmh: 13, pressureHpa: 1014, solarWm2: 810 },
+    quevedo: { temperatureC: 26.6, humidityPct: 86, precip1hMm: 3.2, windKmh: 9, pressureHpa: 1008, solarWm2: 690 },
+  };
+  return profiles[areaId] || profiles.mejia;
+}
+
+function formatMinutesAgo(minutes) {
+  if (!Number.isFinite(minutes)) {
+    return "sin dato";
+  }
+  if (minutes < 1) {
+    return "hace menos de 1 min";
+  }
+  if (minutes < 60) {
+    return `hace ${Math.round(minutes)} min`;
+  }
+  const hours = Math.round(minutes / 60);
+  return `hace ${hours} h`;
+}
+
+function summarizeInamhiLiveStations(stations = []) {
+  const now = Date.now();
+  const meanTemperatureC = stations.reduce((sum, station) => sum + (Number(station.temperatureC) || 0), 0) / Math.max(1, stations.length);
+  const meanHumidityPct = stations.reduce((sum, station) => sum + (Number(station.humidityPct) || 0), 0) / Math.max(1, stations.length);
+  const maxWindKmh = Math.max(...stations.map((station) => Number(station.windKmh) || 0), 0);
+  const maxPrecip1hMm = Math.max(...stations.map((station) => Number(station.precip1hMm) || 0), 0);
+  const rainiestStation = stations
+    .slice()
+    .sort((left, right) => (Number(right.precip1hMm) || 0) - (Number(left.precip1hMm) || 0))[0] || null;
+  const onlineCount = stations.filter((station) => (Number(station.updateAgeMinutes) || 999) <= 20).length;
+  const freshestMinutes = Math.min(...stations.map((station) => {
+    if (station.updateAgeMinutes != null) {
+      return Number(station.updateAgeMinutes) || 0;
+    }
+    const timestamp = station.timestamp ? new Date(station.timestamp).getTime() : Number.NaN;
+    return Number.isFinite(timestamp) ? Math.max(0, (now - timestamp) / 60000) : 999;
+  }), 999);
+
+  return {
+    stationCount: stations.length,
+    onlineCount,
+    meanTemperatureC: Number(meanTemperatureC.toFixed(1)),
+    meanHumidityPct: Number(meanHumidityPct.toFixed(0)),
+    maxWindKmh: Number(maxWindKmh.toFixed(1)),
+    maxPrecip1hMm: Number(maxPrecip1hMm.toFixed(1)),
+    rainiestStationName: rainiestStation?.name || "Sin dato",
+    freshestMinutes: Number(freshestMinutes.toFixed(1)),
+  };
+}
+
+function getInamhiLiveTone(summary = {}) {
+  if ((Number(summary.maxPrecip1hMm) || 0) >= 8 || (Number(summary.meanHumidityPct) || 0) >= 90) {
+    return "high";
+  }
+  if ((Number(summary.maxPrecip1hMm) || 0) >= 3 || (Number(summary.meanHumidityPct) || 0) >= 80) {
+    return "mid";
+  }
+  return "low";
+}
+
+function buildInamhiLiveReadout(areaProfile, summary, modeLabel) {
+  const target = areaProfile.scopeLabel;
+  if (areaProfile.id === "quevedo") {
+    return `${modeLabel} sobre ${target}: humedad media de ${summary.meanHumidityPct}% y lluvia maxima de ${summary.maxPrecip1hMm.toFixed(1)} mm/h. Conviene vigilar drenaje, fitosanidad y ventanas de cosecha.`;
+  }
+  if (areaProfile.id === "cutuglagua") {
+    return `${modeLabel} sobre ${target}: red activa con ${summary.stationCount} estaciones y humedad media de ${summary.meanHumidityPct}%. Conviene vigilar viento, perdida de humedad y oportunidad de riego.`;
+  }
+  return `${modeLabel} sobre ${target}: temperatura media de ${summary.meanTemperatureC.toFixed(1)} C y lluvia maxima de ${summary.maxPrecip1hMm.toFixed(1)} mm/h. Conviene ajustar labores al pulso meteorologico del ambito.`;
+}
+
+function buildFrontendInamhiLivePayload(areaId = state.agronomyAreaId) {
+  const anchorFeature = state.currentPlot || getAgronomyAreaFeature(areaId);
+  const stationFeatures = getAgronomyStationFeatures(areaId, anchorFeature).slice(0, areaId === "quevedo" ? 4 : 3);
+  const baseProfile = getAgronomyLiveClimateProfile(areaId);
+  const now = new Date();
+  const minuteOfDay = now.getHours() * 60 + now.getMinutes();
+  const daySignal = Math.sin((minuteOfDay / 1440) * Math.PI * 2);
+  const rainSignal = Math.cos((minuteOfDay / 1440) * Math.PI * 2 + 0.8);
+
+  const stations = stationFeatures.map((feature, index) => {
+    const properties = feature.properties || {};
+    const lng = Number(feature.geometry?.coordinates?.[0]);
+    const lat = Number(feature.geometry?.coordinates?.[1]);
+    const localShift = (index - (stationFeatures.length - 1) / 2) * 0.7;
+    const temperatureC = baseProfile.temperatureC + daySignal * (areaId === "quevedo" ? 3.8 : 5.2) + localShift;
+    const humidityPct = clamp(baseProfile.humidityPct - daySignal * 8 + rainSignal * 6 + index * 1.5, 55, 98);
+    const precip1hMm = clamp(baseProfile.precip1hMm + Math.max(0, rainSignal + index * 0.2) * (areaId === "quevedo" ? 5.6 : 2.2), 0, 18);
+    const windKmh = clamp(baseProfile.windKmh + Math.abs(Math.sin((minuteOfDay / 240) + index)) * 9, 2, 34);
+    const pressureHpa = clamp(baseProfile.pressureHpa + Math.cos((minuteOfDay / 360) + index) * 3, 995, 1022);
+    const solarWm2 = clamp(Math.sin(((minuteOfDay - 360) / 720) * Math.PI) * baseProfile.solarWm2, 0, 1100);
+    const updateAgeMinutes = index * 2 + (minuteOfDay % 3) * 0.4;
+    const timestamp = new Date(now.getTime() - updateAgeMinutes * 60000).toISOString();
+
+    return {
+      id: properties.seriesCode || `station-${index + 1}`,
+      stationCode: properties.seriesCode || `ST-${index + 1}`,
+      name: properties.name || `Estacion ${index + 1}`,
+      provider: properties.provider || "INAMHI",
+      areaId,
+      lat,
+      lon: lng,
+      temperatureC: Number(temperatureC.toFixed(1)),
+      humidityPct: Number(humidityPct.toFixed(0)),
+      precip1hMm: Number(precip1hMm.toFixed(1)),
+      windKmh: Number(windKmh.toFixed(1)),
+      pressureHpa: Number(pressureHpa.toFixed(0)),
+      solarWm2: Number(solarWm2.toFixed(0)),
+      statusLabel: updateAgeMinutes <= 10 ? "En linea" : "Atrasada",
+      updateAgeMinutes: Number(updateAgeMinutes.toFixed(1)),
+      timestamp,
+    };
+  });
+
+  return {
+    ok: true,
+    mode: "simulated",
+    sourceLabel: "Simulacion operativa",
+    fetchedAt: now.toISOString(),
+    areaId,
+    stations,
+    summary: summarizeInamhiLiveStations(stations),
+    message: "No hay feed operativo conectado; se usa una lectura simulada util del ambito activo.",
+  };
+}
+
+async function fetchInamhiLivePayload(areaId = state.agronomyAreaId) {
+  const backend = await detectBackend(!state.backendAvailable);
+  if (backend.available && state.backendUrl) {
+    try {
+      return await fetchJson(`${state.backendUrl}${backendService.inamhiLivePath}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          areaId,
+          scopeLabel: getAgronomyAreaProfile(areaId).scopeLabel,
+          plotLabel: state.currentPlotLabel,
+        }),
+      });
+    } catch (error) {
+      state.backendAvailable = false;
+      state.backendUrl = null;
+      state.backendChecked = true;
+    }
+  }
+  return buildFrontendInamhiLivePayload(areaId);
+}
+
+async function runInamhiLiveAnalysis(silent = false) {
+  try {
+    const areaProfile = getAgronomyAreaProfile();
+    const targetLabel = state.currentPlot
+      ? `${state.currentPlotLabel} / ${areaProfile.scopeLabel}`
+      : areaProfile.scopeLabel;
+    const payload = await fetchInamhiLivePayload(state.agronomyAreaId);
+    const stations = Array.isArray(payload?.stations)
+      ? payload.stations.filter((station) => Number.isFinite(Number(station?.lat)) && Number.isFinite(Number(station?.lon)))
+      : [];
+
+    if (!stations.length) {
+      resetMetricGrid(dom.inamhiLiveResults, "No hay estaciones operativas disponibles para la lectura en vivo del ambito.");
+      resetVisualPanel(dom.inamhiLiveVisual, "No hay estaciones operativas disponibles para construir la lectura en vivo.");
+      renderInamhiLiveOverlay(null);
+      return null;
+    }
+
+    const summary = payload.summary || summarizeInamhiLiveStations(stations);
+    const tone = getInamhiLiveTone(summary);
+    const modeLabel = payload.mode === "file"
+      ? "Feed local"
+      : payload.mode === "proxy"
+        ? "Fuente local"
+        : "Simulacion operativa";
+    const cards = [
+      {
+        label: "Red activa",
+        value: `${summary.onlineCount}/${summary.stationCount} estaciones`,
+        copy: `${modeLabel} para ${targetLabel}.`,
+      },
+      {
+        label: "Temperatura media",
+        value: `${summary.meanTemperatureC.toFixed(1)} C`,
+        copy: `Lectura sintetica de la red meteorologica activa del ambito.`,
+        highlight: true,
+      },
+      {
+        label: "Humedad media",
+        value: `${summary.meanHumidityPct}%`,
+        copy: `Condicion media de la red meteorologica para soporte de manejo.`,
+      },
+      {
+        label: "Lluvia maxima 1 h",
+        value: `${summary.maxPrecip1hMm.toFixed(1)} mm`,
+        copy: `Pico actual registrado sobre ${summary.rainiestStationName}.`,
+      },
+      {
+        label: "Viento maximo",
+        value: `${summary.maxWindKmh.toFixed(1)} km/h`,
+        copy: "Referencia operativa para deriva, aspersion y labores en campo.",
+      },
+      {
+        label: "Ultima actualizacion",
+        value: formatMinutesAgo(summary.freshestMinutes),
+        copy: payload.message || `${modeLabel} disponible para lectura operativa del ambito.`,
+      },
+    ];
+
+    paintMetricGrid(dom.inamhiLiveResults, cards);
+    const result = {
+      ...payload,
+      stations,
+      summary,
+      tone,
+      targetLabel,
+      modeLabel,
+      readout: buildInamhiLiveReadout(areaProfile, summary, modeLabel),
+    };
+    state.agronomyOutputs.inamhiLive = result;
+    renderInamhiLiveVisual(result);
+    renderInamhiLiveOverlay(result);
+    if (!silent) {
+      setStatus(`Lectura INAMHI en vivo actualizada para ${targetLabel} con ${summary.stationCount} estaciones activas.`);
+    }
+    return result;
+  } catch (error) {
+    console.warn("Fallo la lectura en vivo de INAMHI.", error);
+    resetMetricGrid(dom.inamhiLiveResults, "No se pudo leer la red INAMHI en vivo. Revisa la fuente local o vuelve a intentarlo.");
+    resetVisualPanel(dom.inamhiLiveVisual, "No se pudo construir la lectura operativa en vivo de las estaciones.");
+    renderInamhiLiveOverlay(null);
+    if (!silent) {
+      setStatus(`INAMHI en vivo: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    return null;
+  }
+}
+
+function renderInamhiLiveVisual(result = null) {
+  if (!dom.inamhiLiveVisual) {
+    return;
+  }
+
+  if (!result) {
+    resetVisualPanel(dom.inamhiLiveVisual, "Aqui apareceran la lectura operativa en tiempo real, la ultima actualizacion y el estado de las estaciones activas.");
+    return;
+  }
+
+  const summary = result.summary || summarizeInamhiLiveStations(result.stations);
+  const tempPct = clamp(Math.round((summary.meanTemperatureC / 35) * 100), 10, 100);
+  const humidityPct = clamp(Math.round(summary.meanHumidityPct), 10, 100);
+  const rainPct = clamp(Math.round((summary.maxPrecip1hMm / 18) * 100), 6, 100);
+  const windPct = clamp(Math.round((summary.maxWindKmh / 35) * 100), 8, 100);
+
+  dom.inamhiLiveVisual.classList.remove("empty-state");
+  dom.inamhiLiveVisual.classList.add("has-data");
+  setHtmlIfChanged(dom.inamhiLiveVisual, `
+    <div class="agronomy-visual-head">
+      <div>
+        <p class="section-kicker">Lectura operativa</p>
+        <h4>Red meteorologica en tiempo real</h4>
+      </div>
+      <span class="agronomy-visual-pill tone-${result.tone}">${result.modeLabel}</span>
+    </div>
+    <div class="agronomy-tag-row">
+      <span class="agronomy-visual-pill">${result.targetLabel}</span>
+      <span class="agronomy-visual-pill">${summary.onlineCount} estaciones en linea</span>
+      <span class="agronomy-visual-pill tone-${result.tone}">${formatMinutesAgo(summary.freshestMinutes)}</span>
+      ${(result.stations || []).map((station) => `<span class="agronomy-visual-pill">${station.stationCode || station.name}</span>`).join("")}
+    </div>
+    <div class="agronomy-bar-grid">
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Temperatura media</span>
+          <strong>${summary.meanTemperatureC.toFixed(1)} C</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${tempPct}%"></i>
+        </div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Humedad media</span>
+          <strong>${summary.meanHumidityPct}%</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${humidityPct}%"></i>
+        </div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Lluvia maxima 1 h</span>
+          <strong>${summary.maxPrecip1hMm.toFixed(1)} mm</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${rainPct}%"></i>
+        </div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Viento maximo</span>
+          <strong>${summary.maxWindKmh.toFixed(1)} km/h</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${windPct}%"></i>
+        </div>
+      </article>
+    </div>
+    <div class="gps-device-list">
+      ${(result.stations || []).map((station) => `
+        <article class="gps-device-card">
+          <strong>${station.name}</strong>
+          <p>${station.stationCode || "Sin codigo"} · ${station.provider || "INAMHI"}</p>
+          <p>${station.temperatureC.toFixed(1)} C · ${station.humidityPct}% HR · ${station.precip1hMm.toFixed(1)} mm/h</p>
+          <p>${station.windKmh.toFixed(1)} km/h · ${formatMinutesAgo(station.updateAgeMinutes)}</p>
+        </article>
+      `).join("")}
+    </div>
+    <p class="agronomy-visual-copy">${result.readout}</p>
+  `);
+}
+
+function renderInamhiLiveOverlay(result = state.agronomyOutputs.inamhiLive) {
+  if (!mapState.map) {
+    return;
+  }
+
+  if (mapState.inamhiLiveLayer) {
+    mapState.map.removeLayer(mapState.inamhiLiveLayer);
+    mapState.inamhiLiveLayer = null;
+  }
+
+  const stations = Array.isArray(result?.stations) ? result.stations : [];
+  if (!stations.length || state.entryRoute !== "agronomia") {
+    return;
+  }
+
+  const collection = {
+    type: "FeatureCollection",
+    features: stations.map((station) => pointFeature(station.name, [Number(station.lon), Number(station.lat)], {
+      ...station,
+      name: station.name,
+    })),
+  };
+
+  mapState.inamhiLiveLayer = L.geoJSON(collection, {
+    pointToLayer(feature, latlng) {
+      const precip = Number(feature.properties?.precip1hMm) || 0;
+      const humidity = Number(feature.properties?.humidityPct) || 0;
+      const color = precip >= 8
+        ? "#b55a3f"
+        : humidity >= 85
+          ? "#d2a544"
+          : "#2f7f5f";
+      return L.circleMarker(latlng, {
+        radius: 7,
+        color,
+        weight: 2,
+        fillColor: "#ffffff",
+        fillOpacity: 0.96,
+      });
+    },
+    onEachFeature(feature, layer) {
+      const properties = feature.properties || {};
+      layer.bindPopup(`
+        <strong>${properties.name || "Estacion"}</strong><br>
+        ${properties.stationCode || "Sin codigo"} · ${properties.provider || "INAMHI"}<br>
+        Temp: ${Number(properties.temperatureC || 0).toFixed(1)} C<br>
+        Humedad: ${Number(properties.humidityPct || 0).toFixed(0)}%<br>
+        Lluvia 1 h: ${Number(properties.precip1hMm || 0).toFixed(1)} mm<br>
+        Viento: ${Number(properties.windKmh || 0).toFixed(1)} km/h
+      `);
+    },
+  }).addTo(mapState.map);
+}
+
+function normalizeGpsHeading(value) {
+  const heading = Number(value);
+  if (!Number.isFinite(heading)) {
+    return 0;
+  }
+  return Math.round(((heading % 360) + 360) % 360);
+}
+
+function getGpsRoutesForArea(areaId = state.agronomyAreaId) {
+  return agronomyGpsRouteCatalog[areaId] || agronomyGpsRouteCatalog.mejia;
+}
+
+function interpolateGpsRoutePoint(route = [], progress = 0) {
+  const safeRoute = Array.isArray(route) ? route.filter((point) => Array.isArray(point) && point.length >= 2) : [];
+  if (!safeRoute.length) {
+    return { lon: Number.NaN, lat: Number.NaN, headingDeg: 0 };
+  }
+  if (safeRoute.length === 1) {
+    return { lon: safeRoute[0][0], lat: safeRoute[0][1], headingDeg: 0 };
+  }
+
+  const segmentLengths = [];
+  let totalLengthKm = 0;
+  for (let index = 0; index < safeRoute.length - 1; index += 1) {
+    const start = turf.point(safeRoute[index]);
+    const end = turf.point(safeRoute[index + 1]);
+    const lengthKm = turf.distance(start, end, { units: "kilometers" });
+    segmentLengths.push(lengthKm);
+    totalLengthKm += lengthKm;
+  }
+
+  if (!Number.isFinite(totalLengthKm) || totalLengthKm <= 0) {
+    return { lon: safeRoute[0][0], lat: safeRoute[0][1], headingDeg: 0 };
+  }
+
+  let remaining = (((progress % 1) + 1) % 1) * totalLengthKm;
+  for (let index = 0; index < segmentLengths.length; index += 1) {
+    const segmentLengthKm = segmentLengths[index];
+    if (remaining > segmentLengthKm && index < segmentLengths.length - 1) {
+      remaining -= segmentLengthKm;
+      continue;
+    }
+
+    const start = safeRoute[index];
+    const end = safeRoute[index + 1];
+    const ratio = segmentLengthKm > 0 ? remaining / segmentLengthKm : 0;
+    const lon = start[0] + ((end[0] - start[0]) * ratio);
+    const lat = start[1] + ((end[1] - start[1]) * ratio);
+    const headingDeg = normalizeGpsHeading(turf.bearing(turf.point(start), turf.point(end)));
+    return { lon, lat, headingDeg };
+  }
+
+  const lastPoint = safeRoute[safeRoute.length - 1];
+  return { lon: lastPoint[0], lat: lastPoint[1], headingDeg: 0 };
+}
+
+function buildFrontendGpsPayload(areaId = state.agronomyAreaId, mode = "feed") {
+  const routes = getGpsRoutesForArea(areaId);
+  const now = new Date();
+  const tickBase = now.getTime() / 1000;
+  const devices = routes.map((entry, index) => {
+    const progress = (tickBase / (185 + index * 45) + index * 0.17) % 1;
+    const position = interpolateGpsRoutePoint(entry.route, progress);
+    const speedBase = areaId === "quevedo" ? 17 : 11;
+    return {
+      id: entry.id,
+      label: entry.label,
+      deviceType: entry.deviceType,
+      areaId,
+      lat: Number(position.lat.toFixed(6)),
+      lon: Number(position.lon.toFixed(6)),
+      speedKmh: Number((speedBase + Math.abs(Math.sin(tickBase / 70 + index)) * 14).toFixed(1)),
+      headingDeg: position.headingDeg,
+      batteryPct: Math.max(38, 96 - ((Math.floor(tickBase / 90) + index * 7) % 48)),
+      accuracyM: 4 + index * 2,
+      timestamp: new Date(now.getTime() - index * 5000).toISOString(),
+      statusLabel: "En movimiento",
+    };
+  });
+
+  return {
+    ok: true,
+    mode: mode === "demo" ? "demo" : "simulated",
+    sourceLabel: mode === "demo" ? "Demo GPS" : "Feed local simulado",
+    fetchedAt: now.toISOString(),
+    areaId,
+    devices,
+    message: mode === "demo"
+      ? "Se esta usando un recorrido demo para validar la navegacion y el seguimiento."
+      : "No hay feed GPS local conectado; se usa una trayectoria simulada del ambito activo.",
+  };
+}
+
+async function fetchGpsLivePayload(areaId = state.agronomyAreaId) {
+  const backend = await detectBackend(!state.backendAvailable);
+  if (backend.available && state.backendUrl) {
+    try {
+      return await fetchJson(`${state.backendUrl}${backendService.gpsLivePath}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          areaId,
+          scopeLabel: getAgronomyAreaProfile(areaId).scopeLabel,
+        }),
+      });
+    } catch (error) {
+      state.backendAvailable = false;
+      state.backendUrl = null;
+      state.backendChecked = true;
+    }
+  }
+  return buildFrontendGpsPayload(areaId, "feed");
+}
+
+function getGpsDistanceKm(track = []) {
+  if (!Array.isArray(track) || track.length < 2) {
+    return 0;
+  }
+
+  let totalKm = 0;
+  for (let index = 1; index < track.length; index += 1) {
+    totalKm += turf.distance(turf.point(track[index - 1]), turf.point(track[index]), { units: "kilometers" });
+  }
+  return Number(totalKm.toFixed(2));
+}
+
+function formatGpsSignalAge(timestamp) {
+  const parsed = timestamp ? new Date(timestamp).getTime() : Number.NaN;
+  if (!Number.isFinite(parsed)) {
+    return "sin dato";
+  }
+  const diffSeconds = Math.max(0, (Date.now() - parsed) / 1000);
+  if (diffSeconds < 60) {
+    return `hace ${Math.round(diffSeconds)} s`;
+  }
+  return formatMinutesAgo(diffSeconds / 60);
+}
+
+function getGpsTone(speedKmh, accuracyM) {
+  if ((Number(speedKmh) || 0) >= 24 || (Number(accuracyM) || 0) >= 25) {
+    return "high";
+  }
+  if ((Number(speedKmh) || 0) >= 10 || (Number(accuracyM) || 0) >= 12) {
+    return "mid";
+  }
+  return "low";
+}
+
+function buildGpsReadout(result) {
+  const active = result.activeDevice;
+  if (!active) {
+    return "No hay dispositivos activos en este momento.";
+  }
+  const speed = Number(active.speedKmh || 0).toFixed(1);
+  const signalAge = formatGpsSignalAge(active.timestamp);
+  return `${result.sourceLabel} sobre ${result.targetLabel}: ${active.label} reporta ${speed} km/h, rumbo ${active.headingDeg || 0}° y ultima senal ${signalAge}.`;
+}
+
+function appendGpsTrackPoint(device) {
+  if (!device || !Number.isFinite(Number(device.lon)) || !Number.isFinite(Number(device.lat))) {
+    return;
+  }
+
+  const nextPoint = [Number(device.lon), Number(device.lat)];
+  const track = Array.isArray(state.gpsTracking.track) ? [...state.gpsTracking.track] : [];
+  const previousPoint = track[track.length - 1];
+  if (!previousPoint) {
+    track.push(nextPoint);
+  } else {
+    const distanceMeters = turf.distance(turf.point(previousPoint), turf.point(nextPoint), { units: "kilometers" }) * 1000;
+    if (distanceMeters >= 2) {
+      track.push(nextPoint);
+    } else {
+      track[track.length - 1] = nextPoint;
+    }
+  }
+
+  state.gpsTracking.track = track.slice(-180);
+}
+
+function applyGpsTrackingSnapshot(payload, options = {}) {
+  const devices = Array.isArray(payload?.devices)
+    ? payload.devices.filter((device) => Number.isFinite(Number(device?.lat)) && Number.isFinite(Number(device?.lon)))
+    : [];
+
+  if (!devices.length) {
+    resetMetricGrid(dom.gpsResults, "No hay dispositivos GPS visibles para el ambito activo.");
+    resetVisualPanel(dom.gpsVisual, "No hay dispositivos GPS disponibles para construir la lectura operativa.");
+    renderGpsTrackingOverlay(null);
+    return null;
+  }
+
+  const nextActiveId = state.gpsTracking.activeDeviceId && devices.some((device) => device.id === state.gpsTracking.activeDeviceId)
+    ? state.gpsTracking.activeDeviceId
+    : devices[0].id;
+  const activeDevice = devices.find((device) => device.id === nextActiveId) || devices[0];
+
+  if (options.resetTrack) {
+    state.gpsTracking.track = [];
+  }
+  appendGpsTrackPoint(activeDevice);
+
+  state.gpsTracking.mode = options.mode || payload.mode || "feed";
+  state.gpsTracking.devices = devices;
+  state.gpsTracking.activeDeviceId = activeDevice.id;
+  state.gpsTracking.accuracyM = Number(options.accuracyM ?? activeDevice.accuracyM) || null;
+  state.gpsTracking.lastDeviceSnapshot = activeDevice;
+
+  const track = [...state.gpsTracking.track];
+  const tone = getGpsTone(activeDevice.speedKmh, state.gpsTracking.accuracyM);
+  const result = {
+    ...payload,
+    mode: state.gpsTracking.mode,
+    sourceLabel: payload.sourceLabel || (state.gpsTracking.mode === "browser" ? "Mi GPS" : state.gpsTracking.mode === "demo" ? "Demo GPS" : "Feed local"),
+    devices,
+    activeDevice,
+    track,
+    targetLabel: getCurrentAgronomyScopeLabel(),
+    tone,
+    summary: {
+      deviceCount: devices.length,
+      activeCount: devices.filter((device) => device.statusLabel !== "Sin senal").length,
+      totalDistanceKm: getGpsDistanceKm(track),
+      maxSpeedKmh: Math.max(...devices.map((device) => Number(device.speedKmh) || 0), 0),
+      activeSignalAge: formatGpsSignalAge(activeDevice.timestamp),
+    },
+  };
+  result.readout = buildGpsReadout(result);
+  state.agronomyOutputs.gps = result;
+  renderGpsTrackingResults(result);
+  renderGpsTrackingVisual(result);
+  renderGpsTrackingOverlay(result);
+  if (options.fitOnFirst && mapState.map && Number.isFinite(Number(activeDevice.lat)) && Number.isFinite(Number(activeDevice.lon))) {
+    mapState.map.flyTo([Number(activeDevice.lat), Number(activeDevice.lon)], Math.max(mapState.map.getZoom(), getAgronomyAreaMapView().zoom + 1), {
+      animate: true,
+      duration: 0.8,
+    });
+  }
+  return result;
+}
+
+function renderGpsTrackingResults(result = null) {
+  if (!dom.gpsResults) {
+    return;
+  }
+
+  if (!result?.activeDevice) {
+    resetMetricGrid(dom.gpsResults, "Activa el modulo para seguir un dispositivo, un feed local o un recorrido demo sobre el mapa.");
+    return;
+  }
+
+  const active = result.activeDevice;
+  const cards = [
+    {
+      label: "Fuente",
+      value: result.sourceLabel,
+      copy: `${result.summary.activeCount}/${result.summary.deviceCount} dispositivos con senal en ${result.targetLabel}.`,
+    },
+    {
+      label: "Dispositivo activo",
+      value: active.label,
+      copy: `${active.deviceType || "Dispositivo"} · rumbo ${active.headingDeg || 0}°`,
+      highlight: true,
+    },
+    {
+      label: "Velocidad actual",
+      value: `${Number(active.speedKmh || 0).toFixed(1)} km/h`,
+      copy: active.statusLabel || "Sin estado",
+    },
+    {
+      label: "Recorrido",
+      value: `${result.summary.totalDistanceKm.toFixed(2)} km`,
+      copy: `Trayectoria acumulada del dispositivo activo sobre el mapa.`,
+    },
+    {
+      label: "Precision",
+      value: `${Math.round(Number(state.gpsTracking.accuracyM || active.accuracyM || 0))} m`,
+      copy: `Lectura ${result.mode === "browser" ? "desde navegador" : result.sourceLabel.toLowerCase()}.`,
+    },
+    {
+      label: "Ultima senal",
+      value: result.summary.activeSignalAge,
+      copy: result.message || "Seguimiento operativo listo para continuar.",
+    },
+  ];
+  paintMetricGrid(dom.gpsResults, cards);
+}
+
+function renderGpsTrackingVisual(result = null) {
+  if (!dom.gpsVisual) {
+    return;
+  }
+
+  if (!result?.activeDevice) {
+    resetVisualPanel(dom.gpsVisual, "Aqui apareceran la trayectoria, velocidad, precision y estado operativo del seguimiento GPS.");
+    return;
+  }
+
+  const active = result.activeDevice;
+  const speedPct = clamp(Math.round((Number(active.speedKmh || 0) / 40) * 100), 6, 100);
+  const batteryPct = clamp(Math.round(Number(active.batteryPct || 0)), 10, 100);
+  const accuracyPct = clamp(Math.round((Math.max(1, 30 - Number(state.gpsTracking.accuracyM || active.accuracyM || 15)) / 30) * 100), 10, 100);
+  const distancePct = clamp(Math.round((Number(result.summary.totalDistanceKm || 0) / 6) * 100), 6, 100);
+
+  dom.gpsVisual.classList.remove("empty-state");
+  dom.gpsVisual.classList.add("has-data");
+  setHtmlIfChanged(dom.gpsVisual, `
+    <div class="agronomy-visual-head">
+      <div>
+        <p class="section-kicker">Seguimiento operativo</p>
+        <h4>Trayectoria y estado GPS del ambito</h4>
+      </div>
+      <span class="agronomy-visual-pill tone-${result.tone}">${result.sourceLabel}</span>
+    </div>
+    <div class="agronomy-tag-row">
+      <span class="agronomy-visual-pill">${result.targetLabel}</span>
+      <span class="agronomy-visual-pill">${result.summary.deviceCount} dispositivos</span>
+      <span class="agronomy-visual-pill">${active.deviceType || "Dispositivo"}</span>
+      <span class="agronomy-visual-pill tone-${result.tone}">${active.statusLabel || "En seguimiento"}</span>
+    </div>
+    <div class="agronomy-bar-grid">
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Velocidad actual</span>
+          <strong>${Number(active.speedKmh || 0).toFixed(1)} km/h</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${speedPct}%"></i>
+        </div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Trayectoria acumulada</span>
+          <strong>${Number(result.summary.totalDistanceKm || 0).toFixed(2)} km</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${distancePct}%"></i>
+        </div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Precision</span>
+          <strong>${Math.round(Number(state.gpsTracking.accuracyM || active.accuracyM || 0))} m</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${accuracyPct}%"></i>
+        </div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Bateria</span>
+          <strong>${Math.round(Number(active.batteryPct || 0))}%</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${batteryPct}%"></i>
+        </div>
+      </article>
+    </div>
+    <div class="gps-device-list">
+      ${(result.devices || []).map((device) => `
+        <article class="gps-device-card">
+          <strong>${device.label}</strong>
+          <p>${device.deviceType || "Dispositivo"} · ${device.statusLabel || "En seguimiento"}</p>
+          <p>${Number(device.speedKmh || 0).toFixed(1)} km/h · ${Math.round(Number(device.batteryPct || 0))}% bateria</p>
+          <p>${formatGpsSignalAge(device.timestamp)}</p>
+        </article>
+      `).join("")}
+    </div>
+    <p class="agronomy-visual-copy">${result.readout}</p>
+  `);
+}
+
+function renderGpsTrackingOverlay(result = state.agronomyOutputs.gps) {
+  if (!mapState.map) {
+    return;
+  }
+
+  ["gpsDeviceLayer", "gpsTrackLayer", "gpsAccuracyLayer"].forEach((layerName) => {
+    if (mapState[layerName]) {
+      mapState.map.removeLayer(mapState[layerName]);
+      mapState[layerName] = null;
+    }
+  });
+
+  if (!result?.activeDevice || state.entryRoute !== "agronomia") {
+    return;
+  }
+
+  const collection = {
+    type: "FeatureCollection",
+    features: (result.devices || []).map((device) => pointFeature(device.label, [Number(device.lon), Number(device.lat)], {
+      ...device,
+      active: device.id === result.activeDevice.id,
+    })),
+  };
+
+  mapState.gpsDeviceLayer = L.geoJSON(collection, {
+    pointToLayer(feature, latlng) {
+      const active = !!feature.properties?.active;
+      return L.circleMarker(latlng, {
+        radius: active ? 8 : 6,
+        color: active ? "#214d3a" : "#6a8db5",
+        weight: 2,
+        fillColor: active ? "#d2a544" : "#ffffff",
+        fillOpacity: 0.96,
+      });
+    },
+    onEachFeature(feature, layer) {
+      const properties = feature.properties || {};
+      layer.bindPopup(`
+        <strong>${properties.name || properties.label || "Dispositivo"}</strong><br>
+        ${properties.deviceType || "GPS"} · ${properties.statusLabel || "En seguimiento"}<br>
+        Velocidad: ${Number(properties.speedKmh || 0).toFixed(1)} km/h<br>
+        Bateria: ${Math.round(Number(properties.batteryPct || 0))}%<br>
+        Ultima senal: ${formatGpsSignalAge(properties.timestamp)}
+      `);
+    },
+  }).addTo(mapState.map);
+
+  if (Array.isArray(result.track) && result.track.length >= 2) {
+    mapState.gpsTrackLayer = L.geoJSON(lineFeature("Trayectoria GPS", result.track, {
+      category: "gps-track",
+    }), {
+      style: {
+        color: "#2f7f5f",
+        weight: 4,
+        opacity: 0.88,
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (Number.isFinite(Number(state.gpsTracking.accuracyM)) && state.gpsTracking.accuracyM > 0) {
+    mapState.gpsAccuracyLayer = L.circle([Number(result.activeDevice.lat), Number(result.activeDevice.lon)], {
+      radius: Number(state.gpsTracking.accuracyM),
+      color: "#d2a544",
+      weight: 1,
+      fillColor: "#d2a544",
+      fillOpacity: 0.1,
+    }).addTo(mapState.map);
+  }
+}
+
+function stopGpsTracking(options = {}) {
+  const settings = {
+    silent: false,
+    preservePanels: true,
+    ...options,
+  };
+
+  if (state.gpsTracking.watchId != null && navigator.geolocation?.clearWatch) {
+    navigator.geolocation.clearWatch(state.gpsTracking.watchId);
+  }
+  if (state.gpsTracking.pollId != null) {
+    window.clearInterval(state.gpsTracking.pollId);
+  }
+  if (state.gpsTracking.demoTimerId != null) {
+    window.clearInterval(state.gpsTracking.demoTimerId);
+  }
+
+  state.gpsTracking = {
+    mode: "idle",
+    watchId: null,
+    pollId: null,
+    demoTimerId: null,
+    activeDeviceId: null,
+    devices: [],
+    track: [],
+    accuracyM: null,
+    lastDeviceSnapshot: null,
+  };
+  state.agronomyOutputs.gps = null;
+  renderGpsTrackingOverlay(null);
+
+  if (!settings.preservePanels) {
+    resetMetricGrid(dom.gpsResults, "Activa el modulo para seguir un dispositivo, un feed local o un recorrido demo sobre el mapa.");
+    resetVisualPanel(dom.gpsVisual, "Aqui apareceran la trayectoria, velocidad, precision y estado operativo del seguimiento GPS.");
+  }
+
+  if (!settings.silent) {
+    setStatus("Seguimiento GPS detenido. Puedes activar otra fuente cuando quieras.");
+  }
+}
+
+function getBrowserGpsSpeedKmh(nextPoint, timestamp) {
+  const previous = state.gpsTracking.lastDeviceSnapshot;
+  if (!previous?.timestamp || !Number.isFinite(Number(previous.lat)) || !Number.isFinite(Number(previous.lon))) {
+    return null;
+  }
+  const previousTime = new Date(previous.timestamp).getTime();
+  const currentTime = new Date(timestamp).getTime();
+  if (!Number.isFinite(previousTime) || !Number.isFinite(currentTime) || currentTime <= previousTime) {
+    return null;
+  }
+  const distanceKm = turf.distance(turf.point([Number(previous.lon), Number(previous.lat)]), turf.point([nextPoint.lon, nextPoint.lat]), {
+    units: "kilometers",
+  });
+  const hours = (currentTime - previousTime) / 3600000;
+  if (hours <= 0) {
+    return null;
+  }
+  return Number((distanceKm / hours).toFixed(1));
+}
+
+async function startBrowserGpsTracking() {
+  stopGpsTracking({ silent: true, preservePanels: false });
+  if (!navigator.geolocation) {
+    resetMetricGrid(dom.gpsResults, "Este navegador no expone geolocalizacion para seguimiento GPS.");
+    resetVisualPanel(dom.gpsVisual, "No se pudo activar la geolocalizacion del navegador en este equipo.");
+    setStatus("Seguimiento GPS: el navegador no ofrece geolocalizacion en este dispositivo.");
+    return null;
+  }
+
+  state.gpsTracking.mode = "browser";
+  setStatus("Seguimiento GPS activo: esperando la primera posicion del navegador.");
+
+  const success = (position) => {
+    const timestamp = new Date(position.timestamp || Date.now()).toISOString();
+    const coords = position.coords || {};
+    const lon = Number(coords.longitude);
+    const lat = Number(coords.latitude);
+    const derivedSpeed = getBrowserGpsSpeedKmh({ lon, lat }, timestamp);
+    const device = {
+      id: "browser-device",
+      label: "Mi dispositivo",
+      deviceType: "GPS navegador",
+      lat,
+      lon,
+      speedKmh: Number.isFinite(Number(coords.speed)) && Number(coords.speed) >= 0
+        ? Number((Number(coords.speed) * 3.6).toFixed(1))
+        : (derivedSpeed ?? 0),
+      headingDeg: Number.isFinite(Number(coords.heading)) ? normalizeGpsHeading(coords.heading) : 0,
+      batteryPct: 100,
+      accuracyM: Number(coords.accuracy) || null,
+      timestamp,
+      statusLabel: "En seguimiento",
+    };
+    applyGpsTrackingSnapshot({
+      ok: true,
+      mode: "browser",
+      sourceLabel: "Mi GPS",
+      fetchedAt: timestamp,
+      devices: [device],
+      message: "Geolocalizacion activa desde el navegador.",
+    }, {
+      mode: "browser",
+      accuracyM: device.accuracyM,
+      fitOnFirst: !state.gpsTracking.track.length,
+    });
+  };
+
+  const failure = (error) => {
+    stopGpsTracking({ silent: true, preservePanels: false });
+    const message = error?.code === 1
+      ? "Permiso de ubicacion denegado para el seguimiento GPS."
+      : error?.code === 3
+        ? "La geolocalizacion tardo demasiado en responder."
+        : "No se pudo leer la ubicacion del navegador.";
+    resetMetricGrid(dom.gpsResults, message);
+    resetVisualPanel(dom.gpsVisual, "No se pudo activar el seguimiento GPS desde el navegador.");
+    setStatus(`Seguimiento GPS: ${message}`);
+  };
+
+  state.gpsTracking.watchId = navigator.geolocation.watchPosition(success, failure, {
+    enableHighAccuracy: true,
+    maximumAge: 4000,
+    timeout: 15000,
+  });
+
+  return true;
+}
+
+async function startGpsFeedTracking() {
+  stopGpsTracking({ silent: true, preservePanels: false });
+  state.gpsTracking.mode = "feed";
+
+  const tick = async (fitOnFirst = false) => {
+    try {
+      const payload = await fetchGpsLivePayload(state.agronomyAreaId);
+      applyGpsTrackingSnapshot(payload, {
+        mode: payload.mode === "file" ? "feed" : payload.mode === "proxy" ? "feed" : "feed",
+        fitOnFirst,
+        resetTrack: false,
+      });
+    } catch (error) {
+      console.warn("Fallo la lectura del feed GPS.", error);
+      stopGpsTracking({ silent: true, preservePanels: false });
+      resetMetricGrid(dom.gpsResults, "No se pudo leer el feed GPS local. Revisa el backend o vuelve a intentarlo.");
+      resetVisualPanel(dom.gpsVisual, "No se pudo construir la lectura operativa del feed GPS.");
+      setStatus(`Seguimiento GPS: ${error.message || "no se pudo leer el feed local"}.`);
+    }
+  };
+
+  await tick(true);
+  state.gpsTracking.pollId = window.setInterval(() => {
+    tick(false);
+  }, 6000);
+  setStatus(`Seguimiento GPS activo sobre ${getAgronomyAreaProfile().scopeLabel} usando feed local.`);
+  return true;
+}
+
+function startGpsDemoTracking() {
+  stopGpsTracking({ silent: true, preservePanels: false });
+  state.gpsTracking.mode = "demo";
+
+  const tick = (fitOnFirst = false) => {
+    const payload = buildFrontendGpsPayload(state.agronomyAreaId, "demo");
+    applyGpsTrackingSnapshot(payload, {
+      mode: "demo",
+      fitOnFirst,
+    });
+  };
+
+  tick(true);
+  state.gpsTracking.demoTimerId = window.setInterval(() => {
+    tick(false);
+  }, 2800);
+  setStatus(`Seguimiento GPS demo activo sobre ${getAgronomyAreaProfile().scopeLabel}.`);
+  return true;
 }
 
 function getPlanning3dEmptyCollection() {

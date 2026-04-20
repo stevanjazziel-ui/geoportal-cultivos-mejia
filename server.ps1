@@ -34,6 +34,179 @@ $Planning3dDatasets = @{
 }
 
 $Planning3dPhotoRoot = "E:\FOTOS MACHACHI"
+$AgronomyInamhiLiveFeedPath = Join-Path $Root "data\inamhi_live_feed.json"
+$AgronomyGpsLiveFeedPath = Join-Path $Root "data\gps_live_feed.json"
+$AgronomyRealtimeStations = @(
+  @{
+    stationCode = "M120"
+    name = "EMA Machachi"
+    provider = "INAMHI"
+    areaIds = @("mejia", "machachi")
+    lat = -0.4900
+    lon = -78.5800
+  },
+  @{
+    stationCode = "M113"
+    name = "EMA Aloag"
+    provider = "INAMHI"
+    areaIds = @("mejia", "machachi")
+    lat = -0.4700
+    lon = -78.6800
+  },
+  @{
+    stationCode = "M003"
+    name = "EMA Tambillo"
+    provider = "INAMHI"
+    areaIds = @("mejia", "machachi")
+    lat = -0.4500
+    lon = -78.5200
+  },
+  @{
+    stationCode = "M363"
+    name = "EMA Cutuglagua"
+    provider = "INAMHI"
+    areaIds = @("mejia", "cutuglagua")
+    lat = -0.3660
+    lon = -78.5940
+  },
+  @{
+    stationCode = "M116"
+    name = "EMA Quevedo"
+    provider = "INAMHI"
+    areaIds = @("quevedo")
+    lat = -1.0280
+    lon = -79.4680
+  },
+  @{
+    stationCode = "M354"
+    name = "INIAP Pichilingue"
+    provider = "INIAP / INAMHI"
+    areaIds = @("quevedo")
+    lat = -1.0490
+    lon = -79.4970
+  },
+  @{
+    stationCode = "M362"
+    name = "EMA San Carlos"
+    provider = "INAMHI"
+    areaIds = @("quevedo")
+    lat = -1.0140
+    lon = -79.4460
+  }
+)
+$AgronomyGpsRoutes = @{
+  mejia = @(
+    @{
+      id = "tractor-mejia-01"
+      label = "Tractor demostrativo Mejia"
+      deviceType = "Maquinaria"
+      route = @(
+        @(-78.618, -0.490),
+        @(-78.612, -0.504),
+        @(-78.602, -0.503),
+        @(-78.598, -0.492),
+        @(-78.607, -0.485),
+        @(-78.618, -0.490)
+      )
+    },
+    @{
+      id = "brigada-mejia-02"
+      label = "Brigada de campo Mejia"
+      deviceType = "Brigada"
+      route = @(
+        @(-78.560, -0.463),
+        @(-78.552, -0.479),
+        @(-78.541, -0.476),
+        @(-78.544, -0.462),
+        @(-78.560, -0.463)
+      )
+    }
+  )
+  machachi = @(
+    @{
+      id = "tractor-machachi-01"
+      label = "Tractor Machachi"
+      deviceType = "Maquinaria"
+      route = @(
+        @(-78.603, -0.488),
+        @(-78.599, -0.500),
+        @(-78.608, -0.509),
+        @(-78.621, -0.503),
+        @(-78.619, -0.492),
+        @(-78.603, -0.488)
+      )
+    },
+    @{
+      id = "riego-machachi-02"
+      label = "Cuadrilla de riego"
+      deviceType = "Brigada"
+      route = @(
+        @(-78.589, -0.497),
+        @(-78.580, -0.505),
+        @(-78.572, -0.514),
+        @(-78.579, -0.523),
+        @(-78.591, -0.515),
+        @(-78.589, -0.497)
+      )
+    }
+  )
+  cutuglagua = @(
+    @{
+      id = "pickup-cutuglagua-01"
+      label = "Camioneta tecnica Cutuglagua"
+      deviceType = "Vehiculo"
+      route = @(
+        @(-78.602, -0.353),
+        @(-78.594, -0.362),
+        @(-78.586, -0.370),
+        @(-78.579, -0.378),
+        @(-78.588, -0.382),
+        @(-78.601, -0.372),
+        @(-78.602, -0.353)
+      )
+    }
+  )
+  quevedo = @(
+    @{
+      id = "tractor-quevedo-01"
+      label = "Tractor Quevedo"
+      deviceType = "Maquinaria"
+      route = @(
+        @(-79.503, -1.034),
+        @(-79.495, -1.046),
+        @(-79.486, -1.044),
+        @(-79.489, -1.032),
+        @(-79.503, -1.034)
+      )
+    },
+    @{
+      id = "brigada-quevedo-02"
+      label = "Brigada fitosanitaria"
+      deviceType = "Brigada"
+      route = @(
+        @(-79.458, -1.014),
+        @(-79.451, -1.024),
+        @(-79.443, -1.030),
+        @(-79.439, -1.020),
+        @(-79.447, -1.012),
+        @(-79.458, -1.014)
+      )
+    },
+    @{
+      id = "riego-quevedo-03"
+      label = "Monitoreo drenaje"
+      deviceType = "Riego"
+      route = @(
+        @(-79.521, -1.064),
+        @(-79.514, -1.074),
+        @(-79.503, -1.078),
+        @(-79.499, -1.069),
+        @(-79.507, -1.061),
+        @(-79.521, -1.064)
+      )
+    }
+  )
+}
 $PlanningOrthophoto = @{
   label = "Ortofoto Machachi"
   tifPath = "E:\Ortofotos\actuales\07 MACHACHI\MACHACHIOTF.TIF"
@@ -1143,6 +1316,372 @@ function Get-Planning3dFacadeProfiles() {
   return $payload
 }
 
+function Read-LiveJsonFile([string]$Path) {
+  if (-not [System.IO.File]::Exists($Path)) {
+    return $null
+  }
+
+  try {
+    return Get-Content -LiteralPath $Path -Raw | ConvertFrom-Json
+  } catch {
+    return $null
+  }
+}
+
+function Get-AgronomyLiveWeatherBase([string]$AreaId) {
+  switch ($AreaId) {
+    "machachi" {
+      return @{
+        temperatureC = 14.3
+        humidityPct = 76
+        precip1hMm = 0.7
+        windKmh = 12
+        pressureHpa = 1016
+        solarWm2 = 790
+      }
+    }
+    "cutuglagua" {
+      return @{
+        temperatureC = 16.1
+        humidityPct = 72
+        precip1hMm = 0.6
+        windKmh = 13
+        pressureHpa = 1014
+        solarWm2 = 810
+      }
+    }
+    "quevedo" {
+      return @{
+        temperatureC = 26.6
+        humidityPct = 86
+        precip1hMm = 3.2
+        windKmh = 9
+        pressureHpa = 1008
+        solarWm2 = 690
+      }
+    }
+    default {
+      return @{
+        temperatureC = 15.4
+        humidityPct = 78
+        precip1hMm = 0.9
+        windKmh = 11
+        pressureHpa = 1015
+        solarWm2 = 760
+      }
+    }
+  }
+}
+
+function Get-AgronomyRealtimeStationsForArea([string]$AreaId) {
+  $targetArea = if ([string]::IsNullOrWhiteSpace($AreaId)) { "mejia" } else { $AreaId.ToLowerInvariant() }
+  return @(
+    $AgronomyRealtimeStations | Where-Object {
+      @($_.areaIds) -contains $targetArea
+    }
+  )
+}
+
+function Get-InamhiLiveSummary($Stations) {
+  $stationList = @($Stations)
+  if (-not $stationList.Count) {
+    return @{
+      stationCount = 0
+      onlineCount = 0
+      meanTemperatureC = 0
+      meanHumidityPct = 0
+      maxWindKmh = 0
+      maxPrecip1hMm = 0
+      rainiestStationName = "Sin dato"
+      freshestMinutes = 999
+    }
+  }
+
+  $meanTemperature = [Math]::Round((($stationList | Measure-Object -Property temperatureC -Average).Average), 1)
+  $meanHumidity = [Math]::Round((($stationList | Measure-Object -Property humidityPct -Average).Average), 0)
+  $maxWind = [Math]::Round((($stationList | Measure-Object -Property windKmh -Maximum).Maximum), 1)
+  $maxPrecip = [Math]::Round((($stationList | Measure-Object -Property precip1hMm -Maximum).Maximum), 1)
+  $freshest = [Math]::Round((($stationList | Measure-Object -Property updateAgeMinutes -Minimum).Minimum), 1)
+  $rainiest = $stationList | Sort-Object precip1hMm -Descending | Select-Object -First 1
+  $onlineCount = @($stationList | Where-Object { (Convert-ToInvariantDouble $_.updateAgeMinutes 999) -le 20 }).Count
+
+  return @{
+    stationCount = $stationList.Count
+    onlineCount = $onlineCount
+    meanTemperatureC = $meanTemperature
+    meanHumidityPct = $meanHumidity
+    maxWindKmh = $maxWind
+    maxPrecip1hMm = $maxPrecip
+    rainiestStationName = if ($rainiest) { $rainiest.name } else { "Sin dato" }
+    freshestMinutes = $freshest
+  }
+}
+
+function Get-AgronomyInamhiLivePayload($Body) {
+  $areaId = if ($Body -and $Body.areaId) { [string]$Body.areaId } else { "mejia" }
+  $now = Get-Date
+  $feed = Read-LiveJsonFile $AgronomyInamhiLiveFeedPath
+
+  if ($feed -and $feed.stations) {
+    $stations = @(
+      foreach ($station in @($feed.stations)) {
+        $stationAreaId = if ($station.PSObject.Properties.Name -contains "areaId") { [string]$station.areaId } else { "" }
+        if (-not [string]::IsNullOrWhiteSpace($stationAreaId) -and $stationAreaId.ToLowerInvariant() -ne $areaId.ToLowerInvariant()) {
+          continue
+        }
+
+        [pscustomobject]@{
+          id = if ($station.id) { [string]$station.id } else { [string]$station.stationCode }
+          stationCode = [string]$station.stationCode
+          name = [string]$station.name
+          provider = if ($station.provider) { [string]$station.provider } else { "INAMHI" }
+          areaId = if ($stationAreaId) { $stationAreaId } else { $areaId }
+          lat = Convert-ToInvariantDouble $station.lat
+          lon = Convert-ToInvariantDouble $station.lon
+          temperatureC = [Math]::Round((Convert-ToInvariantDouble $station.temperatureC), 1)
+          humidityPct = [Math]::Round((Convert-ToInvariantDouble $station.humidityPct), 0)
+          precip1hMm = [Math]::Round((Convert-ToInvariantDouble $station.precip1hMm), 1)
+          windKmh = [Math]::Round((Convert-ToInvariantDouble $station.windKmh), 1)
+          pressureHpa = [Math]::Round((Convert-ToInvariantDouble $station.pressureHpa 1012), 0)
+          solarWm2 = [Math]::Round((Convert-ToInvariantDouble $station.solarWm2), 0)
+          statusLabel = if ($station.statusLabel) { [string]$station.statusLabel } else { "En linea" }
+          updateAgeMinutes = [Math]::Round((Convert-ToInvariantDouble $station.updateAgeMinutes), 1)
+          timestamp = if ($station.timestamp) { [string]$station.timestamp } else { $now.ToString("o") }
+        }
+      }
+    ) | Where-Object {
+      $lat = [double]$_.lat
+      $lon = [double]$_.lon
+      (-not [double]::IsNaN($lat)) -and (-not [double]::IsInfinity($lat)) -and (-not [double]::IsNaN($lon)) -and (-not [double]::IsInfinity($lon))
+    }
+
+    if ($stations.Count -gt 0) {
+      return @{
+        ok = $true
+        mode = "file"
+        sourceLabel = "Feed local"
+        fetchedAt = if ($feed.fetchedAt) { [string]$feed.fetchedAt } else { $now.ToString("o") }
+        areaId = $areaId
+        stations = $stations
+        summary = Get-InamhiLiveSummary $stations
+        message = "Lectura meteorologica entregada por feed local."
+      }
+    }
+  }
+
+  $base = Get-AgronomyLiveWeatherBase $areaId
+  $stations = Get-AgronomyRealtimeStationsForArea $areaId
+  $minuteOfDay = ($now.Hour * 60) + $now.Minute
+  $daySignal = [Math]::Sin(($minuteOfDay / 1440.0) * [Math]::PI * 2)
+  $rainSignal = [Math]::Cos(($minuteOfDay / 1440.0) * [Math]::PI * 2 + 0.8)
+  $records = @()
+  $index = 0
+
+  foreach ($station in $stations) {
+    $localShift = ($index - (($stations.Count - 1) / 2.0)) * 0.7
+    $temperature = $base.temperatureC + $daySignal * $(if ($areaId -eq "quevedo") { 3.8 } else { 5.2 }) + $localShift
+    $humidity = Clamp ($base.humidityPct - $daySignal * 8 + $rainSignal * 6 + $index * 1.5) 55 98
+    $precip = Clamp ($base.precip1hMm + [Math]::Max(0, $rainSignal + $index * 0.2) * $(if ($areaId -eq "quevedo") { 5.6 } else { 2.2 })) 0 18
+    $wind = Clamp ($base.windKmh + [Math]::Abs([Math]::Sin(($minuteOfDay / 240.0) + $index)) * 9) 2 34
+    $pressure = Clamp ($base.pressureHpa + [Math]::Cos(($minuteOfDay / 360.0) + $index) * 3) 995 1022
+    $solar = Clamp ([Math]::Sin((($minuteOfDay - 360) / 720.0) * [Math]::PI) * $base.solarWm2) 0 1100
+    $updateAge = [Math]::Round(($index * 2) + (($minuteOfDay % 3) * 0.4), 1)
+
+    $records += [pscustomobject]@{
+      id = $station.stationCode
+      stationCode = $station.stationCode
+      name = $station.name
+      provider = $station.provider
+      areaId = $areaId
+      lat = [double]$station.lat
+      lon = [double]$station.lon
+      temperatureC = [Math]::Round($temperature, 1)
+      humidityPct = [Math]::Round($humidity, 0)
+      precip1hMm = [Math]::Round($precip, 1)
+      windKmh = [Math]::Round($wind, 1)
+      pressureHpa = [Math]::Round($pressure, 0)
+      solarWm2 = [Math]::Round($solar, 0)
+      statusLabel = if ($updateAge -le 10) { "En linea" } else { "Atrasada" }
+      updateAgeMinutes = $updateAge
+      timestamp = $now.AddMinutes(-$updateAge).ToString("o")
+    }
+    $index += 1
+  }
+
+  return @{
+    ok = $true
+    mode = "simulated"
+    sourceLabel = "Simulacion operativa"
+    fetchedAt = $now.ToString("o")
+    areaId = $areaId
+    stations = $records
+    summary = Get-InamhiLiveSummary $records
+    message = "No hay feed local conectado; se entrega una lectura operativa simulada del ambito."
+  }
+}
+
+function Get-AgronomyGpsRoutesForArea([string]$AreaId) {
+  $key = if ([string]::IsNullOrWhiteSpace($AreaId)) { "mejia" } else { $AreaId.ToLowerInvariant() }
+  if ($AgronomyGpsRoutes.ContainsKey($key)) {
+    return @($AgronomyGpsRoutes[$key])
+  }
+  return @($AgronomyGpsRoutes["mejia"])
+}
+
+function Get-InterpolatedGpsRoutePosition($Route, [double]$Progress) {
+  $points = @($Route)
+  if ($points.Count -lt 2) {
+    return @{
+      lon = Convert-ToInvariantDouble $points[0][0]
+      lat = Convert-ToInvariantDouble $points[0][1]
+      headingDeg = 0
+    }
+  }
+
+  $segments = @()
+  $totalLength = 0.0
+  for ($index = 0; $index -lt ($points.Count - 1); $index++) {
+    $start = $points[$index]
+    $end = $points[$index + 1]
+    $dx = (Convert-ToInvariantDouble $end[0]) - (Convert-ToInvariantDouble $start[0])
+    $dy = (Convert-ToInvariantDouble $end[1]) - (Convert-ToInvariantDouble $start[1])
+    $length = [Math]::Sqrt(($dx * $dx) + ($dy * $dy))
+    $segments += @{
+      start = $start
+      end = $end
+      length = $length
+    }
+    $totalLength += $length
+  }
+
+  if ($totalLength -le 0) {
+    return @{
+      lon = Convert-ToInvariantDouble $points[0][0]
+      lat = Convert-ToInvariantDouble $points[0][1]
+      headingDeg = 0
+    }
+  }
+
+  $remaining = ((((($Progress % 1) + 1) % 1)) * $totalLength)
+  foreach ($segment in $segments) {
+    if ($remaining -gt $segment.length) {
+      $remaining -= $segment.length
+      continue
+    }
+
+    $ratio = if ($segment.length -gt 0) { $remaining / $segment.length } else { 0 }
+    $startLon = Convert-ToInvariantDouble $segment.start[0]
+    $startLat = Convert-ToInvariantDouble $segment.start[1]
+    $endLon = Convert-ToInvariantDouble $segment.end[0]
+    $endLat = Convert-ToInvariantDouble $segment.end[1]
+    $lon = $startLon + (($endLon - $startLon) * $ratio)
+    $lat = $startLat + (($endLat - $startLat) * $ratio)
+    $heading = [Math]::Atan2(($endLon - $startLon), ($endLat - $startLat)) * 180 / [Math]::PI
+    if ($heading -lt 0) {
+      $heading += 360
+    }
+    return @{
+      lon = [Math]::Round($lon, 6)
+      lat = [Math]::Round($lat, 6)
+      headingDeg = [Math]::Round($heading, 0)
+    }
+  }
+
+  $last = $points[$points.Count - 1]
+  return @{
+    lon = Convert-ToInvariantDouble $last[0]
+    lat = Convert-ToInvariantDouble $last[1]
+    headingDeg = 0
+  }
+}
+
+function Get-AgronomyGpsLivePayload($Body) {
+  $areaId = if ($Body -and $Body.areaId) { [string]$Body.areaId } else { "mejia" }
+  $now = Get-Date
+  $feed = Read-LiveJsonFile $AgronomyGpsLiveFeedPath
+
+  if ($feed -and $feed.devices) {
+    $devices = @(
+      foreach ($device in @($feed.devices)) {
+        $deviceAreaId = if ($device.PSObject.Properties.Name -contains "areaId") { [string]$device.areaId } else { "" }
+        if (-not [string]::IsNullOrWhiteSpace($deviceAreaId) -and $deviceAreaId.ToLowerInvariant() -ne $areaId.ToLowerInvariant()) {
+          continue
+        }
+
+        [pscustomobject]@{
+          id = if ($device.id) { [string]$device.id } else { [string]$device.label }
+          label = if ($device.label) { [string]$device.label } else { "Dispositivo GPS" }
+          deviceType = if ($device.deviceType) { [string]$device.deviceType } else { "GPS" }
+          areaId = if ($deviceAreaId) { $deviceAreaId } else { $areaId }
+          lat = Convert-ToInvariantDouble $device.lat
+          lon = Convert-ToInvariantDouble $device.lon
+          speedKmh = [Math]::Round((Convert-ToInvariantDouble $device.speedKmh), 1)
+          headingDeg = [Math]::Round((Convert-ToInvariantDouble $device.headingDeg), 0)
+          batteryPct = [Math]::Round((Convert-ToInvariantDouble $device.batteryPct 100), 0)
+          accuracyM = [Math]::Round((Convert-ToInvariantDouble $device.accuracyM 8), 0)
+          timestamp = if ($device.timestamp) { [string]$device.timestamp } else { $now.ToString("o") }
+          statusLabel = if ($device.statusLabel) { [string]$device.statusLabel } else { "En seguimiento" }
+        }
+      }
+    ) | Where-Object {
+      $lat = [double]$_.lat
+      $lon = [double]$_.lon
+      (-not [double]::IsNaN($lat)) -and (-not [double]::IsInfinity($lat)) -and (-not [double]::IsNaN($lon)) -and (-not [double]::IsInfinity($lon))
+    }
+
+    if ($devices.Count -gt 0) {
+      return @{
+        ok = $true
+        mode = "file"
+        sourceLabel = "Feed local"
+        fetchedAt = if ($feed.fetchedAt) { [string]$feed.fetchedAt } else { $now.ToString("o") }
+        areaId = $areaId
+        devices = $devices
+        message = "Seguimiento GPS entregado por feed local."
+      }
+    }
+  }
+
+  $routes = Get-AgronomyGpsRoutesForArea $areaId
+  $unixSeconds = [DateTimeOffset]::new($now).ToUnixTimeSeconds()
+  $devices = @()
+  $index = 0
+
+  foreach ($route in $routes) {
+    $progress = (($unixSeconds / (185 + ($index * 45))) + ($index * 0.17)) % 1
+    $position = Get-InterpolatedGpsRoutePosition $route.route $progress
+    $speedBase = if ($areaId -eq "quevedo") { 17 } else { 11 }
+    $speed = $speedBase + ([Math]::Abs([Math]::Sin(($unixSeconds / 70.0) + $index)) * 14)
+    $battery = [Math]::Max(38, 96 - (([Math]::Floor($unixSeconds / 90) + ($index * 7)) % 48))
+
+    $devices += [pscustomobject]@{
+      id = [string]$route.id
+      label = [string]$route.label
+      deviceType = [string]$route.deviceType
+      areaId = $areaId
+      lat = $position.lat
+      lon = $position.lon
+      speedKmh = [Math]::Round($speed, 1)
+      headingDeg = [Math]::Round($position.headingDeg, 0)
+      batteryPct = [Math]::Round($battery, 0)
+      accuracyM = 4 + ($index * 2)
+      timestamp = $now.AddSeconds(-($index * 5)).ToString("o")
+      statusLabel = "En movimiento"
+    }
+    $index += 1
+  }
+
+  return @{
+    ok = $true
+    mode = "simulated"
+    sourceLabel = "Feed local simulado"
+    fetchedAt = $now.ToString("o")
+    areaId = $areaId
+    devices = $devices
+    message = "No hay feed GPS local conectado; se entrega un seguimiento simulado del ambito."
+  }
+}
+
 function Invoke-StacSearch($Body) {
   $bbox = ($Body.bbox | ForEach-Object { [string]$_ }) -join ","
   $fields = "id,geometry,bbox,collection,assets.thumbnail,properties.datetime,properties.eo:cloud_cover,properties.grid:code,properties.platform,properties.sat:relative_orbit,properties.processing:level,properties.product:timeliness_category"
@@ -1283,6 +1822,18 @@ try {
         if ($cached) { Write-Json $stream 200 @{ summary = $cached.summary; quality = $cached.quality; management = $cached.management; diagnostics = $cached.diagnostics; generatedAt = $cached.generatedAt; cacheHit = $true; cacheEntries = $Cache.Count }; continue }
         $result = Invoke-Analysis ($request.Body | ConvertFrom-Json); Set-Cached $key $result
         Write-Json $stream 200 @{ summary = $result.summary; quality = $result.quality; management = $result.management; diagnostics = $result.diagnostics; generatedAt = $result.generatedAt; cacheHit = $false; cacheEntries = $Cache.Count }; continue
+      }
+      if ($request.Path -eq "/api/agronomy/inamhi-live" -and $request.Method -eq "POST") {
+        $body = if ([string]::IsNullOrWhiteSpace($request.Body)) { @{} } else { $request.Body | ConvertFrom-Json }
+        $result = Get-AgronomyInamhiLivePayload $body
+        Write-Json $stream 200 $result
+        continue
+      }
+      if ($request.Path -eq "/api/agronomy/gps/live" -and $request.Method -eq "POST") {
+        $body = if ([string]::IsNullOrWhiteSpace($request.Body)) { @{} } else { $request.Body | ConvertFrom-Json }
+        $result = Get-AgronomyGpsLivePayload $body
+        Write-Json $stream 200 $result
+        continue
       }
       if ($request.Path -eq "/api/planning/3d/manifest") {
         $result = Get-Planning3dManifest
