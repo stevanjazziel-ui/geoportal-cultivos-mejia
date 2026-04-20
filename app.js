@@ -4090,6 +4090,9 @@ function getSceneLayerStatusLabel(imageOrSensor = null, layerKind = state.sceneL
   if (layerKind === "preview") {
     return "preview bbox";
   }
+  if (imageOrSensor && typeof imageOrSensor === "object" && isSceneOutOfScaleForUrbanZoom(imageOrSensor)) {
+    return "detalle base (10 m)";
+  }
   return "sin capa";
 }
 
@@ -7724,6 +7727,10 @@ function getAnalysisOverlayOpacity(image) {
     return satelliteBase ? (zoom >= 14 ? 0.2 : 0.14) : 0.32;
   }
 
+  if (isSceneOutOfScaleForUrbanZoom(image)) {
+    return satelliteBase ? 0.04 : 0.1;
+  }
+
   if (image?.source === "real" && state.showScenePreview) {
     if (state.sceneLayerKind === "exact") {
       return satelliteBase
@@ -7849,6 +7856,10 @@ function canRenderSceneLayer(image = getSelectedImage()) {
     return false;
   }
 
+  if (isSceneOutOfScaleForUrbanZoom(image) && state.baseLayer === "satellite") {
+    return false;
+  }
+
   if (canUseExactSceneRaster(image)) {
     return true;
   }
@@ -7874,6 +7885,20 @@ function canUseExactSceneRaster(image = getSelectedImage()) {
   }
 
   return zoom >= 11.8;
+}
+
+function isSceneOutOfScaleForUrbanZoom(image = getSelectedImage()) {
+  if (!image || image.source !== "real" || state.baseLayer !== "satellite" || !mapState.map) {
+    return false;
+  }
+
+  const sensor = getSensorForImage(image);
+  if (sensor.id !== "sentinel2") {
+    return false;
+  }
+
+  const zoom = Number(mapState.map.getZoom?.()) || 0;
+  return zoom >= 15.2;
 }
 
 function canRenderThumbnailPreview(image = getSelectedImage()) {
@@ -20370,7 +20395,10 @@ function updateMapSummary(force = false) {
           ? "AOI local"
           : "motor demo";
     setTextIfChanged(dom.mapTitle, `${indexConfig[state.selectedIndex].label} sobre ${analysis.context.scopeLabel}`);
-    setTextIfChanged(dom.mapSubtitle, `Media ${formatValue(stats.mean, indexConfig[state.selectedIndex])} con ${modeLabel}.`);
+    const outOfScaleNote = isSceneOutOfScaleForUrbanZoom(image)
+      ? " A este zoom la escena Sentinel-2 de 10 m queda fuera de escala urbana, por eso se usa la base satelital para el detalle fino."
+      : "";
+    setTextIfChanged(dom.mapSubtitle, `Media ${formatValue(stats.mean, indexConfig[state.selectedIndex])} con ${modeLabel}.${outOfScaleNote}`);
     return;
   }
 
