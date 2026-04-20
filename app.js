@@ -257,6 +257,12 @@ const backendService = {
   defaultOrigins: ["http://127.0.0.1:8765", "http://localhost:8765"],
 };
 
+const mapboxService = {
+  storageKey: "geoportal.mapboxToken",
+  styleId: "mapbox/satellite-streets-v12",
+  attribution: "Mapbox | OpenStreetMap",
+};
+
 const exactSceneCache = new Map();
 const exactSceneMatchCache = new Map();
 
@@ -5443,6 +5449,7 @@ function initializeMap() {
       maxZoom: 22,
     }
   );
+  mapState.baseLayers.mapbox = ensureMapboxBaseLayer();
 
   setBaseLayer(state.baseLayer, true);
 
@@ -7635,7 +7642,7 @@ function getExactSceneRenderResolution() {
 
 function getScenePreviewRenderOpacity(image = getSelectedImage()) {
   const sensor = getSensorForImage(image);
-  if (state.baseLayer === "satellite") {
+  if (isSatelliteVisualBase()) {
     if (sensor.id === "sentinel2") {
       return clamp(Math.max(state.scenePreviewOpacity, 0.82), 0.68, 0.96);
     }
@@ -7660,7 +7667,7 @@ function syncAgronomyBaseLayerOpacity() {
   const image = getSelectedImage();
   const hasSceneBackdrop = Boolean(
     state.entryRoute === "agronomia"
-    && state.baseLayer === "satellite"
+    && isSatelliteVisualBase()
     && state.showScenePreview
     && image
     && (state.sceneLayerKind !== "off" || canRenderSceneLayer(image))
@@ -7722,7 +7729,7 @@ function toneMapVisualChannel(value, divisor = 255) {
 function getAnalysisOverlayOpacity(image) {
   const sensor = getSensorForImage(image);
   const zoom = Number(mapState.map?.getZoom?.()) || 12;
-  const satelliteBase = state.baseLayer === "satellite";
+  const satelliteBase = isSatelliteVisualBase();
   if (state.surfaceMode === "change") {
     return satelliteBase ? (zoom >= 14 ? 0.2 : 0.14) : 0.32;
   }
@@ -7856,7 +7863,7 @@ function canRenderSceneLayer(image = getSelectedImage()) {
     return false;
   }
 
-  if (isSceneOutOfScaleForUrbanZoom(image) && state.baseLayer === "satellite") {
+  if (isSceneOutOfScaleForUrbanZoom(image) && isSatelliteVisualBase()) {
     return false;
   }
 
@@ -7888,7 +7895,7 @@ function canUseExactSceneRaster(image = getSelectedImage()) {
 }
 
 function isSceneOutOfScaleForUrbanZoom(image = getSelectedImage()) {
-  if (!image || image.source !== "real" || state.baseLayer !== "satellite" || !mapState.map) {
+  if (!image || image.source !== "real" || !isSatelliteVisualBase() || !mapState.map) {
     return false;
   }
 
@@ -20664,9 +20671,31 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
 }
 
 function setBaseLayer(baseId, initial = false) {
-  state.baseLayer = baseId;
+  let resolvedBaseId = baseId;
+  let nextLayer = null;
+  let baseStatusMessage = null;
+
+  if (baseId === "mapbox") {
+    nextLayer = ensureMapboxBaseLayer({ prompt: !initial });
+    if (!nextLayer) {
+      resolvedBaseId = "satellite";
+      nextLayer = mapState.baseLayers.satellite;
+      if (!initial) {
+        baseStatusMessage = "Mapbox HR necesita un access token. Se mantiene la base satelital actual.";
+      }
+    }
+  } else {
+    nextLayer = mapState.baseLayers[baseId];
+  }
+
+  if (!nextLayer) {
+    resolvedBaseId = "satellite";
+    nextLayer = mapState.baseLayers.satellite;
+  }
+
+  state.baseLayer = resolvedBaseId;
   dom.baseButtons.forEach((button) => {
-    button.classList.toggle("active", button.dataset.base === baseId);
+    button.classList.toggle("active", button.dataset.base === resolvedBaseId);
   });
 
   if (!mapState.map) {
@@ -20677,7 +20706,7 @@ function setBaseLayer(baseId, initial = false) {
     mapState.map.removeLayer(mapState.activeBaseLayer);
   }
 
-  mapState.activeBaseLayer = mapState.baseLayers[baseId];
+  mapState.activeBaseLayer = nextLayer;
   mapState.activeBaseLayer.addTo(mapState.map);
   syncAgronomyBaseLayerOpacity();
 
@@ -20686,12 +20715,93 @@ function setBaseLayer(baseId, initial = false) {
   }
 
   if (!initial) {
-    setStatus(`Mapa base cambiado a ${baseId === "satellite" ? "Satelite" : "Calles"}.`);
+    if (baseStatusMessage) {
+      setStatus(baseStatusMessage);
+    } else {
+      const baseLabel = resolvedBaseId === "mapbox"
+        ? "Mapbox HR"
+        : resolvedBaseId === "satellite"
+          ? "Satelite"
+          : "Calles";
+      setStatus(`Mapa base cambiado a ${baseLabel}.`);
+    }
   }
 }
 
 function setStatus(text) {
   dom.statusBar.textContent = text;
+}
+
+function isSatelliteVisualBase(baseId = state.baseLayer) {
+  return baseId === "satellite" || baseId === "mapbox";
+}
+
+function getStoredMapboxToken() {
+  try {
+    return (window.localStorage.getItem(mapboxService.storageKey) || "").trim();
+  } catch (error) {
+    return "";
+  }
+}
+
+function storeMapboxToken(token) {
+  try {
+    if (token) {
+      window.localStorage.setItem(mapboxService.storageKey, token);
+    } else {
+      window.localStorage.removeItem(mapboxService.storageKey);
+    }
+  } catch (error) {
+    // Ignora bloqueos de storage del navegador.
+  }
+}
+
+function createMapboxBaseLayer(token) {
+  const encodedToken = encodeURIComponent(token);
+  const layer = L.tileLayer(
+    `https://api.mapbox.com/styles/v1/${mapboxService.styleId}/tiles/512/{z}/{x}/{y}@2x?access_token=${encodedToken}`,
+    {
+      attribution: mapboxService.attribution,
+      tileSize: 512,
+      zoomOffset: -1,
+      maxNativeZoom: 22,
+      maxZoom: 22,
+      crossOrigin: true,
+    }
+  );
+  layer.codexToken = token;
+  layer.on("tileerror", () => {
+    if (state.baseLayer === "mapbox") {
+      setStatus("Mapbox HR no pudo cargar tiles. Revisa tu access token o usa otra base.");
+    }
+  });
+  return layer;
+}
+
+function ensureMapboxBaseLayer(options = {}) {
+  const { prompt = false } = options;
+  let token = getStoredMapboxToken();
+
+  if (!token && prompt) {
+    const promptedToken = window.prompt(
+      "Pega tu access token de Mapbox para activar la base visual de alta resolucion.",
+      ""
+    );
+    token = (promptedToken || "").trim();
+    if (token) {
+      storeMapboxToken(token);
+    }
+  }
+
+  if (!token) {
+    return null;
+  }
+
+  if (!mapState.baseLayers.mapbox || mapState.baseLayers.mapbox.codexToken !== token) {
+    mapState.baseLayers.mapbox = createMapboxBaseLayer(token);
+  }
+
+  return mapState.baseLayers.mapbox;
 }
 
 function getSurfaceConfig() {
