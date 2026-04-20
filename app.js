@@ -4452,7 +4452,7 @@ function bindUI() {
       mapState.sceneExactLayer.setOpacity(state.scenePreviewOpacity);
     }
     if (mapState.scenePreviewLayer) {
-      mapState.scenePreviewLayer.setOpacity(state.scenePreviewOpacity);
+      mapState.scenePreviewLayer.setOpacity(getScenePreviewRenderOpacity(getSelectedImage()));
     }
   });
 
@@ -7224,9 +7224,10 @@ function renderScenePreview(image) {
     return;
   }
   const sensor = getSensorForImage(image);
+  const effectiveOpacity = getScenePreviewRenderOpacity(image);
 
   mapState.scenePreviewLayer = L.imageOverlay(previewHref, bounds, {
-    opacity: state.scenePreviewOpacity,
+    opacity: effectiveOpacity,
     interactive: false,
     className: `scene-preview-overlay scene-preview-${sensor.id}`,
     crossOrigin: "anonymous",
@@ -7293,8 +7294,9 @@ function renderFootprintScenePreview(image) {
   shadowPath.setAttribute("vector-effect", "non-scaling-stroke");
   svg.appendChild(shadowPath);
 
+  const effectiveOpacity = getScenePreviewRenderOpacity(image);
   mapState.scenePreviewLayer = L.svgOverlay(svg, bounds, {
-    opacity: state.scenePreviewOpacity,
+    opacity: effectiveOpacity,
     interactive: false,
     className: `scene-preview-overlay scene-preview-${sensor.id}`,
   }).addTo(mapState.map);
@@ -7370,6 +7372,10 @@ async function renderSceneLayer(image) {
 
 function renderImmediateScenePreview(image) {
   const previewImage = getRenderableScenePreviewImage(image);
+
+  if (shouldDeferLowResolutionPreview(previewImage)) {
+    return null;
+  }
 
   if (
     previewImage?.id === state.selectedImageId
@@ -7613,6 +7619,27 @@ function getExactSceneRenderResolution() {
   return 112;
 }
 
+function getScenePreviewRenderOpacity(image = getSelectedImage()) {
+  const sensor = getSensorForImage(image);
+  if (state.baseLayer === "satellite") {
+    if (sensor.id === "sentinel2") {
+      return Math.min(state.scenePreviewOpacity, 0.4);
+    }
+    if (sensor.id === "landsat") {
+      return Math.min(state.scenePreviewOpacity, 0.5);
+    }
+  }
+  return state.scenePreviewOpacity;
+}
+
+function shouldDeferLowResolutionPreview(image = getSelectedImage()) {
+  if (!image || image.source !== "real") {
+    return false;
+  }
+  const sensor = getSensorForImage(image);
+  return state.baseLayer === "satellite" && sensor.id === "sentinel2";
+}
+
 function colorizeVisualPixel(values) {
   if (!Array.isArray(values) || values.length < 3) {
     return null;
@@ -7640,25 +7667,35 @@ function toneMapVisualChannel(value, divisor = 255) {
 
 function getAnalysisOverlayOpacity(image) {
   const sensor = getSensorForImage(image);
+  const zoom = Number(mapState.map?.getZoom?.()) || 12;
+  const satelliteBase = state.baseLayer === "satellite";
   if (state.surfaceMode === "change") {
-    return 0.42;
+    return satelliteBase ? (zoom >= 14 ? 0.2 : 0.14) : 0.32;
   }
 
   if (image?.source === "real" && state.showScenePreview) {
     if (state.sceneLayerKind === "exact") {
-      return sensor.id === "sentinel2" ? 0.1 : 0.14;
+      return satelliteBase
+        ? (sensor.id === "sentinel2" ? 0.06 : 0.1)
+        : (sensor.id === "sentinel2" ? 0.1 : 0.14);
     }
     if (state.sceneLayerKind === "footprint") {
-      return sensor.id === "sentinel1" ? 0.18 : 0.12;
+      return satelliteBase
+        ? (sensor.id === "sentinel1" ? 0.12 : 0.08)
+        : (sensor.id === "sentinel1" ? 0.18 : 0.12);
     }
-    return sensor.id === "sentinel1" ? 0.22 : 0.15;
+    return satelliteBase
+      ? (sensor.id === "sentinel1" ? 0.14 : 0.1)
+      : (sensor.id === "sentinel1" ? 0.22 : 0.15);
   }
 
   if (image?.source === "real") {
-    return sensor.id === "sentinel1" ? 0.34 : 0.32;
+    return satelliteBase
+      ? (sensor.id === "sentinel1" ? 0.16 : zoom >= 14 ? 0.12 : 0.09)
+      : (sensor.id === "sentinel1" ? 0.34 : 0.26);
   }
 
-  return 0.46;
+  return satelliteBase ? 0.14 : 0.32;
 }
 
 function maybeRefreshScenePreviewQuality() {
@@ -7782,10 +7819,10 @@ function canUseExactSceneRaster(image = getSelectedImage()) {
   const target = getCurrentAnalysisTarget();
 
   if (target.scopeType === "plot") {
-    return zoom >= 11.5;
+    return zoom >= 10.8;
   }
 
-  return zoom >= 13.5;
+  return zoom >= 11.8;
 }
 
 function canRenderThumbnailPreview(image = getSelectedImage()) {
@@ -20561,6 +20598,10 @@ function setBaseLayer(baseId, initial = false) {
 
   mapState.activeBaseLayer = mapState.baseLayers[baseId];
   mapState.activeBaseLayer.addTo(mapState.map);
+
+  if (!initial && state.entryRoute === "agronomia" && getSelectedImage()) {
+    renderSentinelOverlay();
+  }
 
   if (!initial) {
     setStatus(`Mapa base cambiado a ${baseId === "satellite" ? "Satelite" : "Calles"}.`);
