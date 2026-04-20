@@ -7615,13 +7615,19 @@ function getRenderableScenePreviewImage(image, earthItem = null) {
 
 function getExactSceneRenderResolution() {
   const zoom = mapState.map?.getZoom?.() || 11;
-  if (zoom >= 14) {
-    return 192;
+  if (zoom >= 15.8) {
+    return 320;
   }
-  if (zoom >= 12) {
-    return 144;
+  if (zoom >= 14.4) {
+    return 256;
   }
-  return 112;
+  if (zoom >= 12.8) {
+    return 208;
+  }
+  if (zoom >= 11.4) {
+    return 168;
+  }
+  return 136;
 }
 
 function getScenePreviewRenderOpacity(image = getSelectedImage()) {
@@ -7657,7 +7663,14 @@ function syncAgronomyBaseLayerOpacity() {
     && (state.sceneLayerKind !== "off" || canRenderSceneLayer(image))
   );
 
-  satelliteLayer.setOpacity(hasSceneBackdrop ? 0.38 : 1);
+  const backdropOpacity = !hasSceneBackdrop
+    ? 1
+    : state.sceneLayerKind === "exact"
+      ? 0.24
+      : state.sceneLayerKind === "preview" || state.sceneLayerKind === "footprint"
+        ? 0.34
+        : 0.42;
+  satelliteLayer.setOpacity(backdropOpacity);
   streetsLayer.setOpacity(1);
 }
 
@@ -7671,7 +7684,7 @@ function colorizeVisualPixel(values) {
     return null;
   }
 
-  const divisor = Math.max(red, green, blue) > 255 ? 2800 : 255;
+  const divisor = getVisualToneDivisor(red, green, blue);
   const channels = [red, green, blue].map((value) => toneMapVisualChannel(value, divisor));
   if (channels.every((value) => value < 4)) {
     return null;
@@ -7679,11 +7692,28 @@ function colorizeVisualPixel(values) {
   return `rgb(${channels[0]}, ${channels[1]}, ${channels[2]})`;
 }
 
+function getVisualToneDivisor(...channels) {
+  const peak = Math.max(...channels.map((value) => Number(value) || 0));
+  if (peak <= 255) {
+    return 255;
+  }
+  if (peak <= 1200) {
+    return 1200;
+  }
+  if (peak <= 2200) {
+    return 1800;
+  }
+  if (peak <= 3600) {
+    return 2200;
+  }
+  return 2800;
+}
+
 function toneMapVisualChannel(value, divisor = 255) {
   const normalized = clamp(value / divisor, 0, 1);
-  const lifted = clamp((normalized - 0.03) / 0.9, 0, 1);
-  const gamma = Math.pow(lifted, 0.88);
-  return Math.round(clamp(gamma * 255 * 1.04, 0, 255));
+  const lifted = clamp((normalized - 0.018) / 0.82, 0, 1);
+  const gamma = Math.pow(lifted, 0.9);
+  return Math.round(clamp(gamma * 255 * 1.08, 0, 255));
 }
 
 function getAnalysisOverlayOpacity(image) {
