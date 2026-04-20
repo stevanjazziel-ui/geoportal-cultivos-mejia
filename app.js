@@ -892,13 +892,52 @@ const geoSources = {
   estaciones: {
     type: "FeatureCollection",
     features: [
-      pointFeature("EMA Machachi", [-78.58, -0.49], { category: "meteo" }),
-      pointFeature("EMA Aloag", [-78.68, -0.47], { category: "meteo" }),
-      pointFeature("EMA Tambillo", [-78.52, -0.45], { category: "meteo" }),
-      pointFeature("EMA Cutuglagua", [-78.594, -0.366], { category: "meteo" }),
-      pointFeature("EMA Quevedo", [-79.468, -1.028], { category: "meteo", territoryId: "quevedo" }),
-      pointFeature("INIAP Pichilingue", [-79.497, -1.049], { category: "meteo", territoryId: "quevedo" }),
-      pointFeature("EMA San Carlos", [-79.446, -1.014], { category: "meteo", territoryId: "quevedo" }),
+      pointFeature("EMA Machachi", [-78.58, -0.49], {
+        category: "meteo",
+        provider: "INAMHI",
+        seriesCode: "M120",
+        summary: "Estacion de referencia para el valle de Machachi con lectura interandina de apoyo agronomico.",
+      }),
+      pointFeature("EMA Aloag", [-78.68, -0.47], {
+        category: "meteo",
+        provider: "INAMHI",
+        seriesCode: "M113",
+        summary: "Estacion de apoyo para gradiente occidental de Mejia y lectura de transicion altitudinal.",
+      }),
+      pointFeature("EMA Tambillo", [-78.52, -0.45], {
+        category: "meteo",
+        provider: "INAMHI",
+        seriesCode: "M003",
+        summary: "Estacion de referencia para el corredor oriental de Mejia y borde productivo de Tambillo.",
+      }),
+      pointFeature("EMA Cutuglagua", [-78.594, -0.366], {
+        category: "meteo",
+        provider: "INAMHI",
+        seriesCode: "M363",
+        territoryId: "cutuglagua",
+        summary: "Estacion de apoyo periurbano para Cutuglagua con lectura de ventana seca mas marcada.",
+      }),
+      pointFeature("EMA Quevedo", [-79.468, -1.028], {
+        category: "meteo",
+        provider: "INAMHI",
+        seriesCode: "M116",
+        territoryId: "quevedo",
+        summary: "Estacion principal de Quevedo para lectura de lluvia anual alta y ventana humeda dominante.",
+      }),
+      pointFeature("INIAP Pichilingue", [-79.497, -1.049], {
+        category: "meteo",
+        provider: "INIAP / INAMHI",
+        seriesCode: "M354",
+        territoryId: "quevedo",
+        summary: "Estacion de soporte agroclimatico para el eje Pichilingue con referencia de humedad tropical.",
+      }),
+      pointFeature("EMA San Carlos", [-79.446, -1.014], {
+        category: "meteo",
+        provider: "INAMHI",
+        seriesCode: "M362",
+        territoryId: "quevedo",
+        summary: "Estacion de apoyo para San Carlos y anillo productivo noreste de Quevedo.",
+      }),
     ],
   },
   manchaUrbana: {
@@ -2797,6 +2836,18 @@ function getAgronomyAreaFeatures(features, areaId = state.agronomyAreaId) {
 
 function getAgronomyDemoPlots(areaId = state.agronomyAreaId) {
   return getAgronomyAreaFeatures(geoSources.lotes?.features, areaId);
+}
+
+function getAgronomyStationFeatures(areaId = state.agronomyAreaId, anchorFeature = null) {
+  const pointOfReference = anchorFeature
+    ? anchorFeature.geometry?.type === "Point"
+      ? cloneFeature(anchorFeature)
+      : turf.centroid(anchorFeature)
+    : turf.centroid(getAgronomyAreaFeature(areaId));
+
+  return getAgronomyAreaFeatures(geoSources.estaciones?.features, areaId)
+    .map(cloneFeature)
+    .sort((left, right) => distanceToFeatureKm(pointOfReference, left) - distanceToFeatureKm(pointOfReference, right));
 }
 
 function resetAgronomySelectionState() {
@@ -5314,7 +5365,7 @@ function buildLayerDescription(layerId, properties = {}) {
     return `${properties.crop || "Cultivo"} / ${properties.owner || "Unidad de manejo"}. Toca el lote para usarlo como parcela activa.`;
   }
   if (layerId === "estaciones") {
-    return "Punto de referencia climatica para integraciones futuras.";
+    return `${properties.provider || "Estacion meteorologica"}${properties.seriesCode ? ` con serie ${properties.seriesCode}` : ""}. ${properties.summary || "Punto de referencia climatica del ambito agronomico."}`;
   }
   if (layerId === "canales") {
     return "Infraestructura de riego demostrativa para analisis hidrico.";
@@ -7914,15 +7965,23 @@ function selectInamhiStationsForArea(catalog, areaId = state.agronomyAreaId) {
     ? catalog.climateHistory.stations.filter((station) => !!station?.stationCode)
     : [];
   const reference = getInamhiReferenceProfile(areaId);
+  const stationFeatures = getAgronomyStationFeatures(areaId, state.currentPlot || getAgronomyAreaFeature(areaId));
   const stationMap = new Map(
     series.map((station) => [String(station.stationCode || "").trim().toUpperCase(), station])
   );
-  const selected = reference.stationCodes
-    .map((code) => stationMap.get(String(code).trim().toUpperCase()))
+  const preferredCodes = [
+    ...stationFeatures
+      .map((feature) => String(feature?.properties?.seriesCode || "").trim().toUpperCase())
+      .filter(Boolean),
+    ...reference.stationCodes.map((code) => String(code).trim().toUpperCase()),
+  ];
+  const selected = [...new Set(preferredCodes)]
+    .map((code) => stationMap.get(code))
     .filter(Boolean);
 
   return {
     reference,
+    stationFeatures,
     stations: selected.length ? selected : selectInamhiFallbackStations(series, areaId),
   };
 }
@@ -8010,12 +8069,19 @@ async function runInamhiAnalysis(silent = false) {
   try {
     const catalog = await loadFieldEvidenceCatalog();
     const areaProfile = getAgronomyAreaProfile();
-    const targetLabel = areaProfile.scopeLabel;
-    const { reference, stations } = selectInamhiStationsForArea(catalog, state.agronomyAreaId);
+    const targetLabel = state.currentPlot
+      ? `${state.currentPlotLabel} / ${areaProfile.scopeLabel}`
+      : areaProfile.scopeLabel;
+    const { reference, stations, stationFeatures } = selectInamhiStationsForArea(catalog, state.agronomyAreaId);
 
-    if (!stations.length) {
+    if (!stations.length && !stationFeatures.length) {
       resetMetricGrid(dom.inamhiResults, "No hay series INAMHI disponibles para el ambito agronomico activo.");
       resetVisualPanel(dom.inamhiVisual, "No hay series INAMHI disponibles para construir la lectura visual.");
+      return null;
+    }
+    if (!stations.length) {
+      resetMetricGrid(dom.inamhiResults, "No hay series historicas INAMHI asociadas a las estaciones del ambito activo.");
+      resetVisualPanel(dom.inamhiVisual, "No hay series historicas suficientes para construir la lectura visual del ambito.");
       return null;
     }
 
@@ -8035,17 +8101,29 @@ async function runInamhiAnalysis(silent = false) {
     const tone = getInamhiReadingTone(annualMean, seasonalityRatio);
     const recommendation = getInamhiManagementFocus(state.agronomyAreaId, annualMean, seasonalityRatio);
     const stationCodes = stations.map((station) => station.stationCode).join(", ");
+    const stationNames = stationFeatures.map((feature) => feature.properties?.name).filter(Boolean);
+    const nearestStation = stationFeatures[0] || null;
+    const nearestStationLabel = nearestStation?.properties?.name || reference.label;
+    const providerLabel = [...new Set(stationFeatures.map((feature) => feature.properties?.provider).filter(Boolean))].join(", ") || "INAMHI";
+    const stationNetworkLabel = stationNames.length
+      ? stationNames.slice(0, 3).join(", ") + (stationNames.length > 3 ? ` +${stationNames.length - 3}` : "")
+      : reference.label;
 
     const cards = [
       {
-        label: "Series base",
-        value: `${stations.length} estaciones`,
-        copy: `${reference.label}: ${stationCodes}.`,
+        label: "Red local",
+        value: `${stationFeatures.length || stations.length} estaciones`,
+        copy: `${providerLabel}: ${stationNetworkLabel}.`,
+      },
+      {
+        label: "Estacion guia",
+        value: nearestStationLabel,
+        copy: nearestStation?.properties?.summary || reference.note,
       },
       {
         label: "Cobertura historica",
         value: `${yearStart}-${yearEnd}`,
-        copy: `Cobertura media de ${Math.round(avgSampleCount)} anios por serie.`,
+        copy: `Cobertura media de ${Math.round(avgSampleCount)} anios por serie INAMHI (${stationCodes}).`,
       },
       {
         label: "Lluvia media anual",
@@ -8077,6 +8155,10 @@ async function runInamhiAnalysis(silent = false) {
     const result = {
       reference,
       stations,
+      stationFeatures,
+      stationNames,
+      nearestStationLabel,
+      providerLabel,
       cards,
       tone,
       targetLabel,
@@ -18273,11 +18355,19 @@ function renderInamhiVisual(result = null) {
     <div class="agronomy-visual-head">
       <div>
         <p class="section-kicker">Lectura historica</p>
-        <h4>Estaciones INAMHI de referencia</h4>
+        <h4>Estaciones meteorologicas del ambito</h4>
       </div>
       <span class="agronomy-visual-pill tone-${result.tone}">${result.regimeLabel}</span>
     </div>
     <div class="agronomy-tag-row">
+      ${result.stationFeatures?.length
+        ? result.stationFeatures
+          .map((feature) => `<span class="agronomy-visual-pill">${feature.properties?.name || "Estacion"}</span>`)
+          .join("")
+        : result.stations
+          .map((station) => `<span class="agronomy-visual-pill">${station.stationCode}</span>`)
+          .join("")}
+      <span class="agronomy-visual-pill">${result.providerLabel || "INAMHI"}</span>
       ${result.stations
         .map((station) => `<span class="agronomy-visual-pill">${station.stationCode}</span>`)
         .join("")}
