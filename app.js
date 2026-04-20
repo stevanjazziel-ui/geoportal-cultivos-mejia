@@ -2253,6 +2253,7 @@ const state = {
   sentinelError: null,
   sentinelLoading: false,
   sentinelRequestId: 0,
+  sceneLayerRequestId: 0,
   sentinelQueryScopeLabel: "Canton Mejia",
   sentinelTransport: "direct",
   sentinelCacheHit: false,
@@ -7072,48 +7073,126 @@ async function renderSceneLayer(image) {
     return;
   }
 
+  const requestId = ++state.sceneLayerRequestId;
   state.sceneLayerKind = "loading";
   updateMapSummary();
 
-  let exactMatch = null;
+  const previewRendered = renderImmediateScenePreview(image);
+  if (previewRendered && image.id === state.selectedImageId && state.showScenePreview) {
+    state.sceneLayerKind = previewRendered;
+    updateMapSummary();
+  }
 
   if (image.source === "real" && getSensorForImage(image).exactRaster) {
+    queueExactSceneLayerUpgrade(image, requestId, previewRendered);
+    return;
+  }
+
+  state.sceneLayerKind = previewRendered || "off";
+  updateMapSummary();
+}
+
+function renderImmediateScenePreview(image) {
+  const previewImage = getRenderableScenePreviewImage(image);
+
+  if (
+    previewImage?.id === state.selectedImageId
+    && state.showScenePreview
+    && previewImage.source === "real"
+    && renderFootprintScenePreview(previewImage)
+  ) {
+    return "footprint";
+  }
+
+  if (previewImage?.id === state.selectedImageId && state.showScenePreview && canRenderThumbnailPreview(previewImage)) {
+    renderScenePreview(previewImage);
+    return "preview";
+  }
+
+  return null;
+}
+
+async function queueExactSceneLayerUpgrade(image, requestId, initialLayerKind = null) {
+  let exactMatch = null;
+  try {
     exactMatch = await fetchEarthSearchMatch(image);
-    const exactLayer = await createExactSceneLayer(image, exactMatch);
-    if (exactLayer && image.id === state.selectedImageId && state.showScenePreview) {
-      mapState.sceneExactLayer = exactLayer.addTo(mapState.map);
-      if (mapState.sceneExactLayer.bringToBack) {
-        mapState.sceneExactLayer.bringToBack();
-      }
-      if (mapState.currentPlotLayer) {
-        mapState.currentPlotLayer.bringToFront();
-      }
-      if (mapState.managementLayer) {
-        mapState.managementLayer.bringToFront();
-      }
-      state.sceneLayerKind = "exact";
-      updateMapSummary();
+    if (!isSceneLayerRequestCurrent(image, requestId)) {
       return;
     }
-  }
 
-  const previewImage = getRenderableScenePreviewImage(image, exactMatch);
+    const previewImage = getRenderableScenePreviewImage(image, exactMatch);
+    const upgradedPreviewKind = maybeUpgradeScenePreview(previewImage);
+    if (upgradedPreviewKind && isSceneLayerRequestCurrent(image, requestId)) {
+      state.sceneLayerKind = upgradedPreviewKind;
+      updateMapSummary();
+    }
 
-  if (previewImage.id === state.selectedImageId && state.showScenePreview && previewImage.source === "real" && renderFootprintScenePreview(previewImage)) {
-    state.sceneLayerKind = "footprint";
+    const exactLayer = await createExactSceneLayer(image, exactMatch);
+    if (!exactLayer || !isSceneLayerRequestCurrent(image, requestId)) {
+      if (!upgradedPreviewKind && !initialLayerKind && isSceneLayerRequestCurrent(image, requestId)) {
+        state.sceneLayerKind = "off";
+        updateMapSummary();
+      }
+      return;
+    }
+
+    if (mapState.scenePreviewLayer) {
+      mapState.map.removeLayer(mapState.scenePreviewLayer);
+      mapState.scenePreviewLayer = null;
+    }
+
+    mapState.sceneExactLayer = exactLayer.addTo(mapState.map);
+    if (mapState.sceneExactLayer.bringToBack) {
+      mapState.sceneExactLayer.bringToBack();
+    }
+    if (mapState.currentPlotLayer) {
+      mapState.currentPlotLayer.bringToFront();
+    }
+    if (mapState.managementLayer) {
+      mapState.managementLayer.bringToFront();
+    }
+    state.sceneLayerKind = "exact";
     updateMapSummary();
-    return;
+  } catch (error) {
+    if (!isSceneLayerRequestCurrent(image, requestId)) {
+      return;
+    }
+    console.warn("No se pudo completar el upgrade del raster exacto de Sentinel.", error);
+    state.sceneLayerKind = initialLayerKind || "off";
+    updateMapSummary();
+  }
+}
+
+function maybeUpgradeScenePreview(previewImage) {
+  if (!previewImage || !state.showScenePreview || previewImage.id !== state.selectedImageId) {
+    return null;
   }
 
-  if (previewImage.id === state.selectedImageId && state.showScenePreview && canRenderThumbnailPreview(previewImage)) {
+  if (mapState.scenePreviewLayer) {
+    mapState.map.removeLayer(mapState.scenePreviewLayer);
+    mapState.scenePreviewLayer = null;
+  }
+
+  if (previewImage.source === "real" && renderFootprintScenePreview(previewImage)) {
+    return "footprint";
+  }
+
+  if (canRenderThumbnailPreview(previewImage)) {
     renderScenePreview(previewImage);
-    state.sceneLayerKind = "preview";
-    updateMapSummary();
-    return;
+    return "preview";
   }
 
-  state.sceneLayerKind = "off";
-  updateMapSummary();
+  return null;
+}
+
+function isSceneLayerRequestCurrent(image, requestId) {
+  return Boolean(
+    mapState.map
+    && state.showScenePreview
+    && image?.id
+    && image.id === state.selectedImageId
+    && requestId === state.sceneLayerRequestId
+  );
 }
 
 async function createExactSceneLayer(image, earthItem = null) {
