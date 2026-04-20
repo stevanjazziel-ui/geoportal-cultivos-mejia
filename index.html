@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Geoportal Cultivos Mejia</title>
+  <title>Geoportal Cultivos | Mejia y Quevedo</title>
   <meta
     name="description"
-    content="Geoportal para analisis agronomico y planificacion territorial en el canton Mejia con imagenes satelitales multifuente, modulos tematicos y analisis por AOI."
+    content="Geoportal para analisis agronomico en Mejia y Quevedo, y planificacion territorial en Mejia, con imagenes satelitales multifuente, modulos tematicos y analisis por AOI."
   >
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -38,10 +38,10 @@
     <section class="login-card">
       <div class="login-copy">
         <span class="eyebrow">Geoportal Territorial y Agronomico</span>
-        <h1>Geoportal de Cultivos para el canton Mejia</h1>
+        <h1>Geoportal de Cultivos y Territorio</h1>
         <p class="lead">
           Visor web listo para PC y celular que combina imagenes satelitales multifuente,
-          analisis agronomico, lectura territorial y modulos beta para manejo de lotes y equipamientos.
+          analisis agronomico para Mejia y Quevedo, lectura territorial y modulos beta para manejo de lotes y equipamientos.
         </p>
         <div class="login-features">
           <article>
@@ -68,7 +68,7 @@
             <button id="openAgronomyBtn" class="entry-option" type="button">
               <span class="entry-eyebrow">Ruta 1</span>
               <strong>Agronomia</strong>
-              <span>Abre imagenes satelitales, indices, lotes y diagnostico productivo.</span>
+              <span>Abre imagenes satelitales, indices, lotes y diagnostico productivo en Mejia y Quevedo.</span>
             </button>
             <button id="openPlanningBtn" class="entry-option planning" type="button">
               <span class="entry-eyebrow">Ruta 2</span>
@@ -96,7 +96,7 @@
           Panel
         </button>
         <div>
-          <span class="eyebrow">Mejia, Ecuador</span>
+          <span class="eyebrow">Mejia + Quevedo, Ecuador</span>
           <h1>Geoportal de Cultivos</h1>
         </div>
       </div>
@@ -179,7 +179,16 @@
                    <option value="sentinel1">Sentinel-1 GRD</option>
                  </select>
               </label>
-               <label class="field">
+              <label class="field">
+                <span>Ambito agronomico</span>
+                <select id="agronomyAreaSelect" name="agronomyAreaSelect">
+                  <option value="mejia">Todo Mejia</option>
+                  <option value="machachi">Machachi</option>
+                  <option value="cutuglagua">Cutuglagua</option>
+                  <option value="quevedo">Quevedo</option>
+                </select>
+              </label>
+              <label class="field">
                  <span>Fecha inicial</span>
                  <input id="startDate" type="date" name="startDate">
               </label>
@@ -258,7 +267,7 @@
                </div>
                <div class="action-row analysis-actions">
                  <button id="rerunAnalysisBtn" class="secondary-button" type="button">Reprocesar AOI</button>
-                 <button id="useStudyAreaBtn" class="ghost-button" type="button">Usar canton completo</button>
+                 <button id="useStudyAreaBtn" class="ghost-button" type="button">Usar ambito completo</button>
                </div>
                <p class="service-note">
                  Modo recomendado: ejecuta <code>powershell -ExecutionPolicy Bypass -File .\server.ps1</code> para activar proxy local, cache STAC y procesamiento asistido del AOI.
@@ -764,7 +773,7 @@
             <span class="map-badge">Sin escena</span>
           </div>
           <p id="mapSubtitle">
-            Selecciona una escena y un indice para pintar la vista satelital sobre Mejia.
+            Selecciona una escena y un indice para pintar la vista satelital sobre el ambito agronomico activo.
           </p>
         </div>
 
@@ -906,6 +915,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260418-24" defer></script>
+  <script src="./app.js?v=20260419-1" defer></script>
 </body>
 </html>

@@ -600,6 +600,61 @@ const territorialAreaCatalog = {
   },
 };
 
+const agronomyAreaCatalog = {
+  mejia: {
+    id: "mejia",
+    label: "Todo Mejia",
+    shortLabel: "Mejia",
+    scopeLabel: "Canton Mejia",
+    feature: studyArea,
+    mapView: {
+      center: [-0.503, -78.59],
+      zoom: 11,
+    },
+  },
+  machachi: {
+    id: "machachi",
+    label: "Machachi",
+    shortLabel: "Machachi",
+    scopeLabel: "Machachi",
+    feature: territorialAreaCatalog.machachi.feature,
+    mapView: {
+      center: [-0.515, -78.585],
+      zoom: 13,
+    },
+  },
+  cutuglagua: {
+    id: "cutuglagua",
+    label: "Cutuglagua",
+    shortLabel: "Cutuglagua",
+    scopeLabel: "Cutuglagua",
+    feature: territorialAreaCatalog.cutuglagua.feature,
+    mapView: {
+      center: [-0.362, -78.593],
+      zoom: 13,
+    },
+  },
+  quevedo: {
+    id: "quevedo",
+    label: "Quevedo",
+    shortLabel: "Quevedo",
+    scopeLabel: "Quevedo",
+    feature: polygonFeature("Quevedo", [
+      [-79.585, -0.944],
+      [-79.431, -0.939],
+      [-79.375, -0.992],
+      [-79.388, -1.096],
+      [-79.499, -1.119],
+      [-79.584, -1.077],
+      [-79.596, -0.989],
+    ], { category: "territorio", territoryId: "quevedo" }),
+    mapView: {
+      center: [-1.028, -79.463],
+      zoom: 12,
+    },
+  },
+};
+
 const geoSources = {
   parroquias: {
     type: "FeatureCollection",
@@ -634,6 +689,22 @@ const geoSources = {
         [-78.607, -0.389],
         [-78.629, -0.364],
       ], { category: "parroquia" }),
+      polygonFeature("Quevedo centro productivo", [
+        [-79.523, -1.001],
+        [-79.454, -0.994],
+        [-79.433, -1.028],
+        [-79.454, -1.061],
+        [-79.518, -1.055],
+        [-79.535, -1.028],
+      ], { category: "parroquia", territoryId: "quevedo" }),
+      polygonFeature("San Carlos / Pichilingue", [
+        [-79.519, -1.033],
+        [-79.462, -1.028],
+        [-79.446, -1.069],
+        [-79.473, -1.094],
+        [-79.53, -1.088],
+        [-79.545, -1.056],
+      ], { category: "parroquia", territoryId: "quevedo" }),
     ],
   },
   vias: {
@@ -656,6 +727,18 @@ const geoSources = {
         [-78.591, -0.364],
         [-78.576, -0.381],
       ], { category: "vial" }),
+      lineFeature("Eje Quevedo - San Carlos", [
+        [-79.53, -1.006],
+        [-79.491, -1.02],
+        [-79.463, -1.04],
+        [-79.439, -1.066],
+      ], { category: "vial", territoryId: "quevedo" }),
+      lineFeature("Corredor Quevedo - Valencia", [
+        [-79.533, -1.032],
+        [-79.488, -1.04],
+        [-79.43, -1.046],
+        [-79.392, -1.037],
+      ], { category: "vial", territoryId: "quevedo" }),
     ],
   },
   canales: {
@@ -679,6 +762,18 @@ const geoSources = {
         [-78.594, -0.366],
         [-78.581, -0.382],
       ], { category: "hidrico" }),
+      lineFeature("Canal Pichilingue", [
+        [-79.525, -1.01],
+        [-79.498, -1.026],
+        [-79.47, -1.041],
+        [-79.446, -1.056],
+      ], { category: "hidrico", territoryId: "quevedo" }),
+      lineFeature("Dren Quevedo bajo", [
+        [-79.517, -1.055],
+        [-79.49, -1.062],
+        [-79.458, -1.073],
+        [-79.426, -1.083],
+      ], { category: "hidrico", territoryId: "quevedo" }),
     ],
   },
   lotes: {
@@ -717,6 +812,54 @@ const geoSources = {
         crop: "Pasto",
         owner: "Bloque ganadero oeste",
       }),
+      polygonFeature("Lote Hortaliza Cutuglagua", [
+        [-78.598, -0.358],
+        [-78.586, -0.357],
+        [-78.582, -0.369],
+        [-78.594, -0.374],
+        [-78.603, -0.366],
+      ], {
+        category: "lote",
+        crop: "Hortaliza",
+        owner: "Bloque periurbano Cutuglagua",
+        territoryId: "cutuglagua",
+      }),
+      polygonFeature("Lote Cacao Pichilingue", [
+        [-79.499, -1.035],
+        [-79.488, -1.034],
+        [-79.483, -1.046],
+        [-79.495, -1.05],
+        [-79.503, -1.043],
+      ], {
+        category: "lote",
+        crop: "Cacao",
+        owner: "Corredor experimental Pichilingue",
+        territoryId: "quevedo",
+      }),
+      polygonFeature("Lote Banano San Carlos", [
+        [-79.458, -1.016],
+        [-79.445, -1.014],
+        [-79.439, -1.026],
+        [-79.451, -1.033],
+        [-79.463, -1.025],
+      ], {
+        category: "lote",
+        crop: "Banano",
+        owner: "Bloque productivo San Carlos",
+        territoryId: "quevedo",
+      }),
+      polygonFeature("Lote Maiz La Esperanza", [
+        [-79.521, -1.064],
+        [-79.506, -1.062],
+        [-79.5, -1.075],
+        [-79.514, -1.081],
+        [-79.526, -1.072],
+      ], {
+        category: "lote",
+        crop: "Maiz",
+        owner: "Productores del anillo oeste",
+        territoryId: "quevedo",
+      }),
     ],
   },
   estaciones: {
@@ -726,6 +869,9 @@ const geoSources = {
       pointFeature("EMA Aloag", [-78.68, -0.47], { category: "meteo" }),
       pointFeature("EMA Tambillo", [-78.52, -0.45], { category: "meteo" }),
       pointFeature("EMA Cutuglagua", [-78.594, -0.366], { category: "meteo" }),
+      pointFeature("EMA Quevedo", [-79.468, -1.028], { category: "meteo", territoryId: "quevedo" }),
+      pointFeature("INIAP Pichilingue", [-79.497, -1.049], { category: "meteo", territoryId: "quevedo" }),
+      pointFeature("EMA San Carlos", [-79.446, -1.014], { category: "meteo", territoryId: "quevedo" }),
     ],
   },
   manchaUrbana: {
@@ -1462,9 +1608,9 @@ const landChangeLensCatalog = {
   },
   quebradas: {
     id: "quebradas",
-    label: "Quebradas y riesgo",
+    label: "Hidrologia y riesgo",
     shortLabel: "Riesgo",
-    headline: "Ocupacion en bordes de quebrada y escorrentia",
+    headline: "Ocupacion en franjas hidrologicas y drenaje",
     soilWeight: 0.2,
     riskWeight: 0.46,
     corridorWeight: 0.18,
@@ -1487,7 +1633,7 @@ const landChangeMethodPillCatalog = [
   "Huella 2016",
   "Huella 2022",
   "Suelo rural transformado",
-  "Presion en quebradas",
+  "Presion hidrologica",
   "Ocupacion por corredores",
 ];
 
@@ -2047,6 +2193,7 @@ const state = {
   activeWizard: "Monitoreo",
   currentPlot: null,
   currentPlotLabel: "Sin seleccionar",
+  agronomyAreaId: "mejia",
   baseLayer: "satellite",
   backendChecked: false,
   backendAvailable: false,
@@ -2593,6 +2740,185 @@ function setTerritorialArea(areaId = state.territorialAreaId, options = {}) {
 
   if (!options.silent && changed) {
     setStatus(`Ambito territorial ajustado a ${areaProfile.scopeLabel}. El visor y los modulos ya pueden trabajar sobre este nucleo.`);
+  }
+
+  return changed;
+}
+
+function getAgronomyAreaProfile(areaId = state.agronomyAreaId) {
+  return agronomyAreaCatalog[areaId] || agronomyAreaCatalog.mejia;
+}
+
+function getAgronomyAreaFeature(areaId = state.agronomyAreaId) {
+  return cloneFeature(getAgronomyAreaProfile(areaId).feature || studyArea);
+}
+
+function getCurrentAgronomyScopeLabel() {
+  return state.currentPlot ? state.currentPlotLabel : getAgronomyAreaProfile().scopeLabel;
+}
+
+function getAgronomyAreaMapView(areaId = state.agronomyAreaId) {
+  return getAgronomyAreaProfile(areaId).mapView || agronomyAreaCatalog.mejia.mapView;
+}
+
+function getAgronomyAreaFeatures(features, areaId = state.agronomyAreaId) {
+  const featureList = Array.isArray(features) ? features.filter((feature) => !!feature?.geometry) : [];
+  const areaFeature = getAgronomyAreaFeature(areaId);
+  return featureList.filter((feature) => doesFeatureIntersectTerritorialArea(feature, areaFeature));
+}
+
+function getAgronomyDemoPlots(areaId = state.agronomyAreaId) {
+  return getAgronomyAreaFeatures(geoSources.lotes?.features, areaId);
+}
+
+function resetAgronomySelectionState() {
+  state.sentinelRequestId += 1;
+  state.analysisRequestId += 1;
+  state.currentPlot = null;
+  state.currentPlotLabel = "Sin seleccionar";
+  state.selectedImageId = null;
+  state.selectedCompareImageId = null;
+  state.filteredImages = [];
+  state.sentinelLoading = false;
+  state.analysisBusy = false;
+  state.analysisError = null;
+  state.analysisData = null;
+  state.compareAnalysis = null;
+  state.changeAnalysis = null;
+  state.sceneLayerKind = "off";
+  state.surfaceMode = "primary";
+  state.sentinelMode = "loading";
+  state.sentinelTransport = "direct";
+  state.sentinelCacheHit = false;
+  state.sentinelError = null;
+  state.agronomyOutputs.intralote = null;
+  state.agronomyOutputs.dem = null;
+  state.agronomyOutputs.climate = null;
+
+  if (dom.overlayPlot) {
+    dom.overlayPlot.textContent = state.currentPlotLabel;
+  }
+
+  if (mapState.controlGroup) {
+    mapState.controlGroup.clearLayers();
+  }
+
+  clearAgronomyMapContext();
+
+  resetMetricGrid(dom.intraloteResults, "Dibuja un lote en el mapa para empezar.");
+  resetMetricGrid(dom.demResults, "Elige un lote o dibuja un poligono para estimar relieve.");
+  resetMetricGrid(dom.climateResults, "Ejecuta el modulo para cargar indicadores climaticos.");
+  resetVisualPanel(dom.intraloteVisual, "Aqui apareceran la distribucion de zonas de manejo y la lectura grafica de indices del lote.");
+  resetVisualPanel(dom.demVisual, "Aqui apareceran el perfil de pendiente, la altitud relativa y el riesgo topografico del lote.");
+  resetVisualPanel(dom.climateVisual, "Aqui apareceran la lectura visual de lluvia, humedad, temperatura y estres termico.");
+  renderSceneControls();
+  renderSentinelResults();
+  renderSentinelSourceStatus();
+  renderAnalysisStatus();
+  renderAnalysisSummary();
+  renderCompareSummary();
+  renderLegend();
+  renderWizardAssistantState();
+  updateMapSummary();
+}
+
+function syncAgronomyAreaUi() {
+  if (dom.agronomyAreaSelect && dom.agronomyAreaSelect.value !== state.agronomyAreaId) {
+    dom.agronomyAreaSelect.value = state.agronomyAreaId;
+  }
+
+  state.sentinelQueryScopeLabel = getCurrentAgronomyScopeLabel();
+
+  if (state.entryRoute === "agronomia") {
+    if (dom.sidebarSubtitle) {
+      dom.sidebarSubtitle.textContent = `Capas de ejemplo, analisis satelital e instrumentos beta para monitoreo de cultivos en ${getAgronomyAreaProfile().scopeLabel}.`;
+    }
+  }
+}
+
+function renderStudyAreaLayer() {
+  if (!mapState.map) {
+    return;
+  }
+
+  if (mapState.studyAreaLayer) {
+    mapState.map.removeLayer(mapState.studyAreaLayer);
+    mapState.studyAreaLayer = null;
+  }
+
+  mapState.studyAreaLayer = L.geoJSON(getAgronomyAreaFeature(), {
+    style: {
+      color: "#d6a96f",
+      weight: 2,
+      fillOpacity: 0,
+      dashArray: "6 8",
+    },
+  }).addTo(mapState.map);
+}
+
+function fitAgronomyArea() {
+  if (!mapState.map) {
+    return;
+  }
+
+  const areaFeature = getAgronomyAreaFeature();
+  const areaLayer = L.geoJSON(areaFeature);
+  mapState.map.fitBounds(areaLayer.getBounds(), {
+    padding: [28, 28],
+    maxZoom: getAgronomyAreaMapView().zoom,
+  });
+}
+
+function refreshVisibleGeoLayers(layerIds = null) {
+  if (!mapState.map || !dom.layersTree) {
+    return;
+  }
+
+  const allowed = Array.isArray(layerIds) ? new Set(layerIds) : null;
+  Array.from(dom.layersTree.querySelectorAll("input[data-layer]")).forEach((input) => {
+    const layerId = input.dataset.layer;
+    if (!input.checked) {
+      return;
+    }
+    if (allowed && !allowed.has(layerId)) {
+      return;
+    }
+    const key = layerKey(layerId);
+    if (mapState[key]) {
+      mapState.map.removeLayer(mapState[key]);
+      mapState[key] = null;
+    }
+  });
+
+  updateLayerVisibility();
+}
+
+async function setAgronomyArea(areaId = state.agronomyAreaId, options = {}) {
+  const nextAreaId = agronomyAreaCatalog[areaId] ? areaId : "mejia";
+  const changed = state.agronomyAreaId !== nextAreaId;
+  state.agronomyAreaId = nextAreaId;
+
+  syncAgronomyAreaUi();
+  syncEntryRouteUi(state.entryRoute);
+
+  if (changed || options.forceReset) {
+    resetAgronomySelectionState();
+  }
+
+  if (mapState.map) {
+    renderStudyAreaLayer();
+    refreshVisibleGeoLayers(["parroquias", "vias", "canales", "lotes", "estaciones"]);
+    if (options.fit !== false) {
+      fitAgronomyArea();
+    }
+  }
+
+  if (options.fetchScenes !== false) {
+    await filterSentinelImages();
+  }
+
+  if (!options.silent && changed) {
+    setStatus(`Ambito agronomico ajustado a ${getAgronomyAreaProfile().scopeLabel}. Ya puedes consultar escenas, lotes demo y analisis sobre esta zona.`);
   }
 
   return changed;
@@ -3387,10 +3713,15 @@ function getFallbackScene() {
   if (!fallback) {
     return null;
   }
+  const areaFeature = getAgronomyAreaFeature();
+  const areaProfile = getAgronomyAreaProfile();
   return enrichSceneMetadata({
     ...fallback,
     source: "demo",
     datetime: `${fallback.date}T10:15:00Z`,
+    geometry: areaFeature.geometry,
+    bbox: turf.bbox(areaFeature),
+    note: `${fallback.note} Ambito demo ajustado a ${areaProfile.scopeLabel}.`,
   });
 }
 
@@ -3465,6 +3796,7 @@ function cacheDom() {
   dom.tabPanels = Array.from(document.querySelectorAll(".tab-panel"));
   dom.layersTree = document.querySelector("#layersTree");
   dom.sensorSelect = document.querySelector("#sensorSelect");
+  dom.agronomyAreaSelect = document.querySelector("#agronomyAreaSelect");
   dom.sensorSupportNote = document.querySelector("#sensorSupportNote");
   dom.sentinelForm = document.querySelector("#sentinelForm");
   dom.startDate = document.querySelector("#startDate");
@@ -3613,6 +3945,7 @@ function bootstrapApp() {
   setPlanning3dSunDefaults();
   applyPlanning3dAreaProfile(planning3dState.areaId);
   bindUI();
+  syncAgronomyAreaUi();
   ensureSelectedIndex();
   updateSensorControls();
   renderLayerTree();
@@ -3682,6 +4015,12 @@ function bindUI() {
       renderSentinelOverlay();
       updateMapSummary();
       filterSentinelImages();
+    });
+  }
+
+  if (dom.agronomyAreaSelect) {
+    dom.agronomyAreaSelect.addEventListener("change", () => {
+      setAgronomyArea(dom.agronomyAreaSelect.value || "mejia");
     });
   }
 
@@ -4469,6 +4808,10 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   if (isPlanningRoute(route)) {
     state.territorialFocus = "planning";
     clearAgronomyMapContext();
+    if (mapState.studyAreaLayer) {
+      mapState.map.removeLayer(mapState.studyAreaLayer);
+      mapState.studyAreaLayer = null;
+    }
     if (state.planningData) {
       renderPlanningOverlay(state.planningData);
     }
@@ -4502,6 +4845,10 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     setActiveTab("modulos");
     closePlanning3dViewer(true);
     clearAgronomyMapContext();
+    if (mapState.studyAreaLayer) {
+      mapState.map.removeLayer(mapState.studyAreaLayer);
+      mapState.studyAreaLayer = null;
+    }
     clearPlanningOverlay();
     clearLandChangeOverlay();
     clearHydrologyOverlay();
@@ -4541,8 +4888,12 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   clearLandChangeOverlay();
   clearHydrologyOverlay();
   clearFieldEvidenceOverlay();
+  renderStudyAreaLayer();
+  refreshVisibleGeoLayers(["parroquias", "vias", "canales", "lotes", "estaciones"]);
   if (state.currentPlot) {
     renderCurrentPlotLayer();
+  } else {
+    fitAgronomyArea();
   }
   if (getSelectedImage()) {
     renderSentinelOverlay();
@@ -4551,7 +4902,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     dom.sidebarTitle.textContent = "Centro de trabajo agronomico";
   }
   if (dom.sidebarSubtitle) {
-    dom.sidebarSubtitle.textContent = "Capas de ejemplo, analisis satelital e instrumentos beta para monitoreo de cultivos.";
+    dom.sidebarSubtitle.textContent = `Capas de ejemplo, analisis satelital e instrumentos beta para monitoreo de cultivos en ${getAgronomyAreaProfile().scopeLabel}.`;
   }
   if (dom.overlayMode) {
     dom.overlayMode.textContent = state.activeWizard;
@@ -4658,7 +5009,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
       ? "Ruta territorial con modulos de aptitud, transformacion del suelo rural, estudio hidrico, priorizacion de candidatos y visor 3D urbano."
       : isEvidence
         ? "Ruta dedicada a quebradas, estaciones, areas sensibles, memoria historica y soporte tecnico de campo para volver mas precisa la lectura territorial."
-        : "Nucleo del sistema para agricultura de precision, relieve, clima y flujos guiados para monitoreo productivo.";
+        : `Nucleo del sistema para agricultura de precision, relieve, clima y flujos guiados para monitoreo productivo en ${getAgronomyAreaProfile().scopeLabel}.`;
   }
   if (dom.modeFooterPill) {
     dom.modeFooterPill.textContent = isPlanning
@@ -4685,11 +5036,12 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
 }
 
 function initializeMap() {
+  const initialAgronomyView = getAgronomyAreaMapView();
   mapState.map = L.map("map", {
     zoomControl: false,
     attributionControl: true,
     maxZoom: 22,
-  }).setView([-0.503, -78.59], 11);
+  }).setView(initialAgronomyView.center, initialAgronomyView.zoom);
 
   L.control.zoom({ position: "bottomright" }).addTo(mapState.map);
 
@@ -4715,14 +5067,7 @@ function initializeMap() {
 
   setBaseLayer(state.baseLayer, true);
 
-  mapState.studyAreaLayer = L.geoJSON(studyArea, {
-    style: {
-      color: "#d6a96f",
-      weight: 2,
-      fillOpacity: 0,
-      dashArray: "6 8",
-    },
-  }).addTo(mapState.map);
+  renderStudyAreaLayer();
 
   mapState.controlGroup = new L.FeatureGroup();
   mapState.map.addLayer(mapState.controlGroup);
@@ -4872,7 +5217,7 @@ function updateLayerVisibility() {
 }
 
 function addGeoLayer(layerId) {
-  const geojson = geoSources[layerId];
+  const geojson = getGeoLayerSource(layerId);
   if (!geojson) {
     return;
   }
@@ -4901,6 +5246,22 @@ function addGeoLayer(layerId) {
 
   layer.addTo(mapState.map);
   mapState[layerKey(layerId)] = layer;
+}
+
+function getGeoLayerSource(layerId) {
+  const geojson = geoSources[layerId];
+  if (!geojson) {
+    return null;
+  }
+
+  if (!["parroquias", "vias", "canales", "lotes", "estaciones"].includes(layerId)) {
+    return geojson;
+  }
+
+  return {
+    ...geojson,
+    features: getAgronomyAreaFeatures(geojson.features),
+  };
 }
 
 function buildLayerDescription(layerId, properties = {}) {
@@ -5033,7 +5394,7 @@ function buildSentinelQuery() {
   const maxCloud = Number(dom.cloudRange.value);
   const searchArea = getSearchArea();
 
-  state.sentinelQueryScopeLabel = state.currentPlot ? state.currentPlotLabel : "Canton Mejia";
+  state.sentinelQueryScopeLabel = getCurrentAgronomyScopeLabel();
 
   return {
     sensorId: state.activeSensorId,
@@ -5333,7 +5694,9 @@ function filterDemoSentinelImages() {
   const { start, end } = normalizeDateRange(dom.startDate.value, dom.endDate.value);
   const maxCloud = Number(dom.cloudRange.value);
   const sensor = getActiveSensor();
-  state.sentinelQueryScopeLabel = state.currentPlot ? state.currentPlotLabel : "Canton Mejia";
+  const areaFeature = getAgronomyAreaFeature();
+  const areaProfile = getAgronomyAreaProfile();
+  state.sentinelQueryScopeLabel = getCurrentAgronomyScopeLabel();
 
   return sensor.demoImages
     .filter((image) => {
@@ -5343,10 +5706,11 @@ function filterDemoSentinelImages() {
     })
     .map((image) => enrichSceneMetadata({
       ...image,
+      note: `${image.note} Ventana demo orientada a ${areaProfile.scopeLabel}.`,
       datetime: `${image.date}T10:15:00Z`,
       source: "demo",
-      geometry: image.geometry || null,
-      bbox: image.bbox || turf.bbox(studyArea),
+      geometry: image.geometry || areaFeature.geometry,
+      bbox: image.bbox || turf.bbox(areaFeature),
     }))
     .sort((a, b) => b.date.localeCompare(a.date));
 }
@@ -5804,7 +6168,7 @@ function getCurrentAnalysisTarget() {
   const feature = getSearchArea();
   return {
     feature,
-    scopeLabel: state.currentPlot ? state.currentPlotLabel : "Canton Mejia",
+    scopeLabel: getCurrentAgronomyScopeLabel(),
     scopeType: state.currentPlot ? "plot" : "studyArea",
     targetKey: getFeatureKey(feature),
   };
@@ -6177,7 +6541,7 @@ function renderAnalysisStatus() {
 
   if (state.analysisBusy) {
     dom.analysisStatus.classList.add("loading");
-    dom.analysisStatus.textContent = `Procesando ${indexConfig[state.selectedIndex].label} para ${state.currentPlot ? state.currentPlotLabel : "Canton Mejia"}...`;
+    dom.analysisStatus.textContent = `Procesando ${indexConfig[state.selectedIndex].label} para ${getCurrentAgronomyScopeLabel()}...`;
     return;
   }
 
@@ -6730,7 +7094,7 @@ async function fetchEarthSearchMatch(image) {
         ? image.bbox
         : turf.bbox({
         type: "Feature",
-        geometry: image.geometry || studyArea.geometry,
+        geometry: image.geometry || getAgronomyAreaFeature().geometry,
           properties: {},
         });
       const payload = await fetchJson(`${earthSearchService.catalogUrl}/search`, {
@@ -7000,7 +7364,7 @@ function syncAnalysisDrivenModules() {
 }
 
 function getDefaultModulePlot() {
-  const feature = geoSources.lotes?.features?.[0];
+  const feature = getAgronomyDemoPlots()[0];
   if (!feature) {
     return null;
   }
@@ -7399,7 +7763,7 @@ function runDemAnalysis(silent = false) {
 
 function runClimateAnalysis(silent = false) {
   try {
-    const anchorFeature = state.currentPlot || studyArea;
+    const anchorFeature = state.currentPlot || getAgronomyAreaFeature();
     const image = ensureModuleSceneContext("Clima agricola", silent);
     if (!image) {
       resetMetricGrid(dom.climateResults, "No hay escena disponible para calcular el clima agricola.");
@@ -7414,10 +7778,10 @@ function runClimateAnalysis(silent = false) {
         targetKey: getFeatureKey(state.currentPlot),
       }
       : {
-        feature: studyArea,
-        scopeLabel: "Canton Mejia",
+        feature: getAgronomyAreaFeature(),
+        scopeLabel: getAgronomyAreaProfile().scopeLabel,
         scopeType: "studyArea",
-        targetKey: getFeatureKey(studyArea),
+        targetKey: getFeatureKey(getAgronomyAreaFeature()),
       };
     const analysis = resolveAnalysisForTarget(image, target);
     const centroid = turf.centroid(anchorFeature).geometry.coordinates;
@@ -10707,7 +11071,7 @@ function renderPlanningModule() {
     const lens = getLandChangeLensProfile();
     setTextIfChanged(
       dom.landChangeSourceNote,
-      `Replica metodologica inspirada en estudios de transformacion del suelo rural y prevencion del riesgo: huella urbana ${period.shortLabel}, lectura ${lens.headline.toLowerCase()} y escenario ${scenario.label.toLowerCase()} para ${areaProfile.scopeLabel}. Aqui el crecimiento se interpreta con una regla base: el agua busca su cauce y la planificacion debe preceder a la ocupacion. ${state.fieldEvidenceData ? `La corrida actual ya incorpora ${state.fieldEvidenceData.summary.supportLabel.toLowerCase()}, ${state.fieldEvidenceData.summary.sensitiveThemeCount} temas sensibles y ${state.fieldEvidenceData.summary.stationCount} estaciones para endurecer los hotspots.` : "La evidencia de campo, estaciones y consultoria sensible se integra automaticamente cuando esta disponible."}`
+      `Replica metodologica inspirada en estudios de transformacion del suelo rural y prevencion del riesgo: huella urbana ${period.shortLabel}, lectura ${lens.headline.toLowerCase()} y escenario ${scenario.label.toLowerCase()} para ${areaProfile.scopeLabel}. La corrida ya integra ajustes territoriales internos cuando existe soporte local, pero la salida grafica se concentra solo en los resultados principales.`
     );
   }
   if (dom.hydrologySourceNote) {
@@ -10716,7 +11080,7 @@ function renderPlanningModule() {
     const demand = getHydrologyDemandProfile();
     setTextIfChanged(
       dom.hydrologySourceNote,
-      `Replica metodologica inspirada en el estudio hidrico del DMQ: cubo hidroclimatico, modelo semidistribuido tipo GR4, demanda 2020-2100 y sesgo climatico corregido. En esta fase el geoportal usa una simulacion territorial sintetica para ${areaProfile.scopeLabel} con ${climate.label}, ${horizon.label} y ${demand.label}. ${state.fieldEvidenceData ? `La calibracion territorial ya cruza ${state.fieldEvidenceData.summary.stationCount} estaciones, ${state.fieldEvidenceData.summary.climateSeriesCount} series climaticas, ${state.fieldEvidenceData.summary.historyCount} apoyos historicos y ${state.fieldEvidenceData.summary.sensitiveThemeCount} temas sensibles.` : "La evidencia de estaciones, series climaticas y areas sensibles se incorpora automaticamente cuando esta disponible."}`
+      `Replica metodologica inspirada en el estudio hidrico del DMQ: cubo hidroclimatico, modelo semidistribuido tipo GR4, demanda 2020-2100 y sesgo climatico corregido. En esta fase el geoportal usa una simulacion territorial sintetica para ${areaProfile.scopeLabel} con ${climate.label}, ${horizon.label} y ${demand.label}. La calibracion local ya se incorpora dentro del modelo sin añadir ruido a la lectura grafica.`
     );
   }
   if (isTerritorialRoute() && !state.planningData) {
@@ -10826,9 +11190,9 @@ function renderLandChangeDoctrine(analysis = null) {
   const riskFocus = lens.id === "quebradas" || (activeAnalysis?.summary?.meanScore || 0) >= 70;
   const lead = activeAnalysis
     ? riskFocus
-      ? `${period.shortLabel} bajo ${scenario.label.toLowerCase()} en ${areaProfile.scopeLabel}: ${formatLandChangeHa(riskHa)} ha quedan en vigilancia por quebradas y drenaje. ${hotspot?.name || "El frente dominante"} exige ordenamiento previo, no ocupacion espontanea.`
+      ? `${period.shortLabel} bajo ${scenario.label.toLowerCase()} en ${areaProfile.scopeLabel}: ${formatLandChangeHa(riskHa)} ha quedan en vigilancia por drenaje y tension hidrologica. ${hotspot?.name || "El frente dominante"} exige ordenamiento previo, no ocupacion espontanea.`
       : `${period.shortLabel} bajo ${scenario.label.toLowerCase()} en ${areaProfile.scopeLabel}: ${formatLandChangeHa(transformedHa)} ha cambian de huella y ${formatLandChangeHa(productiveLossHa)} ha de suelo rural entran en tension. La lectura territorial debe anticiparse a la ocupacion.`
-    : `Marco preventivo para ${areaProfile.scopeLabel}: la urbanizacion de quebradas no es solo crecimiento urbano, es exposicion al riesgo. La planificacion debe preceder a la ocupacion.`;
+    : `Marco preventivo para ${areaProfile.scopeLabel}: la ocupacion sobre franjas hidrologicas no es solo crecimiento urbano, es exposicion al riesgo. La planificacion debe preceder a la ocupacion.`;
 
   dom.landChangeDoctrine.classList.remove("empty-state");
   dom.landChangeDoctrine.classList.add("has-data");
@@ -10838,7 +11202,7 @@ function renderLandChangeDoctrine(analysis = null) {
       <article class="risk-doctrine-item">
         <p class="risk-doctrine-kicker">Principio 1</p>
         <h4>El agua busca su cauce</h4>
-        <p>No se debe consolidar urbanizacion en quebradas, drenajes ni bordes de escorrentia activa; esos frentes requieren proteccion y control.</p>
+        <p>No se debe consolidar urbanizacion en drenajes ni bordes de escorrentia activa; esos frentes requieren proteccion y control.</p>
       </article>
       <article class="risk-doctrine-item">
         <p class="risk-doctrine-kicker">Principio 2</p>
@@ -10889,20 +11253,15 @@ async function runLandChangeAnalysis(silent = false) {
         value: `${formatLandChangeHa(analysis.summary.productiveLossHa)} ha`,
         copy: `${analysis.summary.productiveLabel}. Enfoque ${analysis.lens.label.toLowerCase()}.`,
       },
-      {
-        label: "Riesgo territorial",
-        value: analysis.summary.riskLabel,
-        copy: `${formatLandChangeHa(analysis.summary.riskHa)} ha en corredores de vigilancia por quebradas o drenaje.`,
-      },
-      {
-        label: "Soporte de precision",
-        value: analysis.summary.evidence.supportLabel,
-        copy: `${analysis.summary.evidence.supportScore}/100 con ${analysis.summary.evidence.impactedSensitiveThemeCount} temas sensibles, ${analysis.summary.evidence.impactedSectorCount} sectores de campo y ${analysis.summary.evidence.impactedStationCount} estaciones que endurecen la lectura de ${analysis.context.scopeLabel}.`,
-      },
-      {
-        label: "Hotspot dominante",
-        value: analysis.summary.hotspotLabel,
-        copy: analysis.summary.hotspotCopy,
+    {
+      label: "Riesgo territorial",
+      value: analysis.summary.riskLabel,
+      copy: `${formatLandChangeHa(analysis.summary.riskHa)} ha en franjas de vigilancia por riesgo hidrologico y drenaje.`,
+    },
+    {
+      label: "Hotspot dominante",
+      value: analysis.summary.hotspotLabel,
+      copy: analysis.summary.hotspotCopy,
       },
       {
         label: "Metodo",
@@ -11292,11 +11651,11 @@ function buildLandChangeSectors(series, period, scenario, lens, evidenceProfiles
 
 function pickLandChangeDominantDriver({ soilPressure, riskPressure, corridorPressure, densityPressure, evidenceImpact = null }) {
   if ((evidenceImpact?.hydricSectorCount || 0) > 0 && riskPressure >= Math.max(soilPressure * 0.86, corridorPressure, densityPressure)) {
-    return "Quebradas";
+    return "Riesgo hidrico";
   }
   const entries = [
     { key: "Suelo rural", value: soilPressure },
-    { key: "Quebradas", value: riskPressure },
+    { key: "Riesgo hidrico", value: riskPressure },
     { key: "Corredor vial", value: corridorPressure },
     { key: "Densidad", value: densityPressure },
   ].sort((left, right) => right.value - left.value);
@@ -11304,27 +11663,23 @@ function pickLandChangeDominantDriver({ soilPressure, riskPressure, corridorPres
 }
 
 function buildLandChangeSectorSummary({ name, period, transformedHa, productiveLossHa, riskHa, dominantDriver, scenario, lens, evidenceImpact = null }) {
-  const evidenceCopy = evidenceImpact?.copy ? ` ${evidenceImpact.copy}` : "";
-  return `${name} agrega ${formatLandChangeHa(Math.max(0, transformedHa))} ha de huella entre ${period.fromYear} y ${period.toYear}, compromete ${formatLandChangeHa(productiveLossHa)} ha de suelo rural y deja ${formatLandChangeHa(riskHa)} ha bajo vigilancia. Driver dominante: ${dominantDriver.toLowerCase()} con escenario ${scenario.label.toLowerCase()} y enfoque ${lens.label.toLowerCase()}.${evidenceCopy}`;
+  return `${name} agrega ${formatLandChangeHa(Math.max(0, transformedHa))} ha de huella entre ${period.fromYear} y ${period.toYear}, compromete ${formatLandChangeHa(productiveLossHa)} ha de suelo rural y deja ${formatLandChangeHa(riskHa)} ha bajo vigilancia. Driver dominante: ${dominantDriver.toLowerCase()} con escenario ${scenario.label.toLowerCase()} y enfoque ${lens.label.toLowerCase()}.`;
 }
 
 function getLandChangeRecommendation({ score, dominantDriver, lens, scenario, evidenceImpact = null }) {
-  const evidenceNote = evidenceImpact?.supportScore
-    ? ` Soporte de evidencia ${evidenceImpact.supportScore}/100 con ${evidenceImpact.supportLabel.toLowerCase()}.`
-    : "";
-  if (dominantDriver === "Quebradas") {
-    return `Accion sugerida: declarar proteccion estricta en quebradas y drenajes, recuperar el cauce libre y exigir ordenamiento previo antes de cualquier licencia u ocupacion.${evidenceNote}`;
+  if (dominantDriver === "Riesgo hidrico") {
+    return "Accion sugerida: ordenar franjas hidrologicas y drenajes, recuperar espacio de escorrentia y exigir manejo previo antes de cualquier licencia u ocupacion.";
   }
   if (dominantDriver === "Corredor vial") {
-    return `Accion sugerida: orientar usos mixtos compactos, limitar saltos dispersos y asegurar servicios antes de habilitar nueva ocupacion.${evidenceNote}`;
+    return "Accion sugerida: orientar usos mixtos compactos, limitar saltos dispersos y asegurar servicios antes de habilitar nueva ocupacion.";
   }
   if (dominantDriver === "Densidad") {
-    return `Accion sugerida: densificacion regulada, mejora de espacio publico y soporte de equipamientos para absorber crecimiento sin expandir borde.${evidenceNote}`;
+    return "Accion sugerida: densificacion regulada, mejora de espacio publico y soporte de equipamientos para absorber crecimiento sin expandir borde.";
   }
   if (score >= 72 || lens.id === "suelo" || scenario.id === "expansivo") {
-    return `Accion sugerida: blindar reserva agricola, consolidar borde urbano y priorizar reutilizacion de vacios antes de abrir nuevo suelo.${evidenceNote}`;
+    return "Accion sugerida: blindar reserva agricola, consolidar borde urbano y priorizar reutilizacion de vacios antes de abrir nuevo suelo.";
   }
-  return `Accion sugerida: seguimiento anual, lectura satelital comparada y ordenamiento preventivo antes de consolidar nuevas licencias.${evidenceNote}`;
+  return "Accion sugerida: seguimiento anual, lectura satelital comparada y ordenamiento preventivo antes de consolidar nuevas licencias.";
 }
 
 function summarizeLandChangeAnalysis(series, sectors, period, scenario, lens, evidenceProfiles = null) {
@@ -11351,7 +11706,7 @@ function summarizeLandChangeAnalysis(series, sectors, period, scenario, lens, ev
     annualGrowthPct,
     hotspotLabel: hotspot?.name || "Sin hotspot",
     hotspotCopy: hotspot
-      ? `${hotspot.name} aparece como frente dominante por ${hotspot.pressureLabel.toLowerCase()} y driver ${hotspot.dominantDriver.toLowerCase()}. ${hotspot.evidence?.copy || evidence.copy}`
+      ? `${hotspot.name} aparece como frente dominante por ${hotspot.pressureLabel.toLowerCase()} y driver ${hotspot.dominantDriver.toLowerCase()}.`
       : "Aun no hay hotspots priorizados.",
     productiveLabel: productiveLossHa >= transformedHa * 0.8 ? "Perdida fuerte de borde productivo" : productiveLossHa >= transformedHa * 0.55 ? "Presion media sobre suelo rural" : "Presion contenida sobre suelo rural",
     riskLabel: meanScore >= 74 || evidence.supportScore >= 78 ? "Alta vigilancia" : meanScore >= 58 || evidence.supportScore >= 58 ? "Vigilancia media" : "Vigilancia baja",
@@ -11520,7 +11875,6 @@ function renderLandChangeDrivers(analysis) {
     analysis.scenario.label,
     analysis.lens.headline,
     `Hotspot ${analysis.summary.hotspotLabel}`,
-    analysis.summary.evidence.supportLabel,
   ].map((item) => `<span class="planning-pill emphasis">${item}</span>`).join(""));
 }
 
@@ -11595,17 +11949,13 @@ function renderLandChangeSectors(analysis) {
           <span>Puntaje</span>
           <strong>${sector.score}/100</strong>
         </article>
-        <article class="land-change-sector-metric">
-          <span>Precision</span>
-          <strong>${sector.evidence?.supportScore || 0}/100</strong>
-        </article>
       </div>
       <div class="land-change-sector-tags">
         <span>Prioridad ${index + 1}</span>
         <span>Driver ${sector.dominantDriver}</span>
-        ${sector.tags.map((tag) => `<span>${tag}</span>`).join("")}
+        ${sector.tags.slice(0, 4).map((tag) => `<span>${tag}</span>`).join("")}
       </div>
-      <p class="land-change-sector-note">${sector.recommendation}${sector.evidence?.copy ? ` ${sector.evidence.copy}` : ""}</p>
+      <p class="land-change-sector-note">${sector.recommendation}</p>
       <button class="ghost-button" type="button" data-land-change-sector-id="${sector.id}">Ver en mapa</button>
     </article>
   `).join(""));
@@ -11708,11 +12058,6 @@ async function runHydrologyAnalysis(silent = false) {
       label: "Seguridad hidrica",
       value: `${hydrology.summary.coveragePct}%`,
       copy: `Cobertura relativa entre oferta util y demanda en ${hydrology.climate.label}.`,
-    },
-    {
-      label: "Calibracion territorial",
-      value: hydrology.summary.evidence.supportLabel,
-      copy: `${hydrology.summary.evidence.supportScore}/100 con ${hydrology.summary.evidence.impactedStationCount} estaciones, ${hydrology.summary.evidence.impactedSensitiveThemeCount} temas sensibles y ${hydrology.summary.evidence.impactedHistoryCount} coberturas historicas integradas a ${hydrology.context.scopeLabel}.`,
     },
     {
       label: "Metodo",
@@ -12067,7 +12412,7 @@ function summarizeHydrologyAnalysis(sectors, climate, horizon, demand, evidenceP
     coveragePct: Math.round(totals.coverage / count),
     criticalSectorLabel: criticalSector?.name || "Sin lectura",
     criticalCopy: criticalSector
-      ? `${criticalSector.name} queda como sector mas sensible por ${criticalSector.balanceLabel.toLowerCase()}, estiaje ${criticalSector.droughtRisk}% y crecida ${criticalSector.floodRisk}%. ${criticalSector.evidence?.copy || evidence.copy}`
+      ? `${criticalSector.name} queda como sector mas sensible por ${criticalSector.balanceLabel.toLowerCase()}, estiaje ${criticalSector.droughtRisk}% y crecida ${criticalSector.floodRisk}%.`
       : "Aun no hay lectura hidrica disponible.",
     balanceLabel: getHydrologyBalanceLabel(totals.balance),
     methodLabel: `${climate.shortLabel} + ${horizon.shortLabel} + ${demand.shortLabel}`,
@@ -12093,7 +12438,7 @@ function buildHydrologyTimeline(climate, demand, activeHorizonId, sourceFeatures
       resilience: summary.meanResilience,
       balanceLabel: summary.balanceLabel,
       tone: getHydrologyBalanceTone(summary.balanceHm3),
-      copy: `Oferta ${formatHydrologyHm3(summary.supplyHm3)} hm3/anio, demanda ${formatHydrologyHm3(summary.demandHm3)} hm3/anio, resiliencia ${summary.meanResilience}/100 y ${summary.evidence.supportLabel.toLowerCase()} para soporte local.`,
+      copy: `Oferta ${formatHydrologyHm3(summary.supplyHm3)} hm3/anio, demanda ${formatHydrologyHm3(summary.demandHm3)} hm3/anio y resiliencia ${summary.meanResilience}/100.`,
     };
   });
 }
@@ -12127,7 +12472,6 @@ function renderHydrologyDrivers(hydrology) {
     hydrology.horizon.label,
     hydrology.demand.label,
     `Sector critico ${hydrology.summary.criticalSectorLabel}`,
-    hydrology.summary.evidence.supportLabel,
   ].map((item) => `<span class="planning-pill emphasis">${item}</span>`).join(""));
 }
 
@@ -12211,16 +12555,12 @@ function renderHydrologySectors(hydrology) {
           <span>Resiliencia</span>
           <strong>${sector.resilience}/100</strong>
         </article>
-        <article class="hydrology-sector-metric">
-          <span>Calibracion</span>
-          <strong>${sector.evidence?.supportScore || 0}/100</strong>
-        </article>
       </div>
       <div class="hydrology-sector-tags">
         <span>Prioridad ${index + 1}</span>
-        ${sector.tags.map((tag) => `<span>${tag}</span>`).join("")}
+        ${sector.tags.slice(0, 4).map((tag) => `<span>${tag}</span>`).join("")}
       </div>
-      <p class="hydrology-sector-note">${sector.intervention}${sector.evidence?.copy ? ` ${sector.evidence.copy}` : ""}</p>
+      <p class="hydrology-sector-note">${sector.intervention}</p>
       <button class="ghost-button" type="button" data-hydrology-sector-id="${sector.id}">Ver en mapa</button>
     </article>
   `).join(""));
@@ -12251,21 +12591,11 @@ function buildHydrologySectorSummary({ name, role, balanceHm3, droughtRisk, floo
   const balanceCopy = balanceHm3 >= 0
     ? `mantiene un saldo disponible de ${formatHydrologyHm3(balanceHm3)} hm3`
     : `entra en tension con un deficit de ${formatHydrologyHm3(Math.abs(balanceHm3))} hm3`;
-  const evidenceCopy = evidenceImpact?.copy ? ` ${evidenceImpact.copy}` : "";
-  return `${name} (${role}) ${balanceCopy}, con presion dominante de ${mainPressure} bajo ${climate.shortLabel} y ${demand.shortLabel}. Resiliencia ${resilience}/100.${evidenceCopy}`;
+  return `${name} (${role}) ${balanceCopy}, con presion dominante de ${mainPressure} bajo ${climate.shortLabel} y ${demand.shortLabel}. Resiliencia ${resilience}/100.`;
 }
 
 function buildHydrologyInterventionReadout(baseIntervention, evidenceImpact = null) {
-  if (!evidenceImpact?.supportScore) {
-    return baseIntervention;
-  }
-  if (evidenceImpact.hydricSectorCount > 0 || evidenceImpact.sensitiveCount > 0) {
-    return `${baseIntervention} La evidencia de campo pide resguardar cauces, franjas sensibles y puntos criticos ya reconocidos por levantamiento y procedimiento tecnico.`;
-  }
-  if (evidenceImpact.stationCount > 0 || evidenceImpact.historyCount > 0) {
-    return `${baseIntervention} Existen estaciones y memoria historica cercanas para validar caudales, lluvia maxima y seguimiento de escenario.`;
-  }
-  return `${baseIntervention} ${evidenceImpact.supportLabel} para seguimiento territorial.`;
+  return baseIntervention;
 }
 
 function pickHydrologyIntervention(context) {
@@ -12947,9 +13277,9 @@ async function runPlanningAnalysis(silent = false) {
       copy: `${planning.imageryProfile.shortLabel} prioriza ${planning.summary.landCopy}.`,
     },
     {
-      label: "Areas sensibles",
-      value: `${planning.restrictions.sensitiveThemeCount || 0} temas`,
-      copy: `${formatLandChangeHa(planning.restrictions.sensitiveProtectedAreaHa || 0)} ha del ambito ya entran con lectura preventiva de la consultoria tecnica.`,
+      label: "Condicionantes territoriales",
+      value: `${formatLandChangeHa(planning.restrictions.uniqueRestrictedAreaHa || 0)} ha`,
+      copy: `${planning.restrictions.items.length} frentes visibles de ordenamiento condicionan la implantacion dentro del ambito activo.`,
     },
     {
       label: "Fuente satelital",
@@ -13658,6 +13988,13 @@ function computePlanningSensitiveImpact(feature, sensitiveProfiles = []) {
   };
 }
 
+function isHiddenPlanningProcessRestrictionId(restrictionId = "") {
+  const normalizedId = String(restrictionId || "").trim().toLowerCase();
+  return normalizedId === "water"
+    || normalizedId === "floodplain"
+    || normalizedId.startsWith("sensitive-");
+}
+
 function buildPlanningRestrictionReadout(features, program, targetFeature, sensitiveProfiles = []) {
   const totalAreaHa = Math.max(turf.area(targetFeature) / 10000, 0.1);
   const profiles = [
@@ -13731,8 +14068,9 @@ function buildPlanningRestrictionReadout(features, program, targetFeature, sensi
       && feature.properties.sensitiveConstraintIds.includes(profile.id),
   }));
   const effectiveProfiles = [...profiles, ...consultancyProfiles];
+  const visibleProfiles = effectiveProfiles.filter((profile) => !isHiddenPlanningProcessRestrictionId(profile.id));
 
-  const items = effectiveProfiles.map((profile) => {
+  const items = visibleProfiles.map((profile) => {
     const matching = features.filter((feature) => profile.predicate(feature));
     const areaHa = Number(matching.reduce((sum, feature) => sum + turf.area(feature) / 10000, 0).toFixed(1));
     return {
@@ -13764,14 +14102,23 @@ function buildPlanningRestrictionReadout(features, program, targetFeature, sensi
     .filter((feature) => effectiveProfiles.some((profile) => profile.predicate(feature)))
     .reduce((sum, feature) => sum + turf.area(feature) / 10000, 0)
     .toFixed(1));
+  const hiddenRestrictedAreaHa = Number(features
+    .filter((feature) => effectiveProfiles.some((profile) => isHiddenPlanningProcessRestrictionId(profile.id) && profile.predicate(feature)))
+    .reduce((sum, feature) => sum + turf.area(feature) / 10000, 0)
+    .toFixed(1));
   const dominant = items[0] || null;
 
   return {
-    headline: dominant ? dominant.label : "Sin restricciones dominantes",
-    copy: dominant
-      ? `${formatLandChangeHa(uniqueRestrictedAreaHa)} ha del ambito quedan condicionadas por ${dominant.label.toLowerCase()}${sensitiveProfiles.length ? `. La consultoria tecnica incorpora ${sensitiveProfiles.length} temas sensibles y ${formatLandChangeHa(sensitiveProtectedAreaHa)} ha bajo lectura preventiva` : ""}.`
+    headline: dominant
+      ? dominant.label
+      : uniqueRestrictedAreaHa > 0
+        ? "Condicionantes territoriales integradas"
+        : "Sin restricciones dominantes",
+    copy: uniqueRestrictedAreaHa > 0
+      ? `${formatLandChangeHa(uniqueRestrictedAreaHa)} ha del ambito quedan bajo condicionantes territoriales y de ordenamiento preventivo${hiddenRestrictedAreaHa > 0 ? `, con ${formatLandChangeHa(hiddenRestrictedAreaHa)} ha incorporadas como ajuste interno del modelo` : ""}.`
       : "No aparecieron restricciones fuertes sobre el ambito activo en esta corrida.",
     uniqueRestrictedAreaHa,
+    hiddenRestrictedAreaHa,
     sensitiveThemeCount: sensitiveProfiles.length,
     sensitiveProtectedAreaHa,
     sensitiveDominantLabel: sensitiveProfiles[0]?.label || "Sin areas sensibles",
@@ -14151,7 +14498,7 @@ function buildTerritorialDecisionSnapshot() {
       title: "Normativa y restriccion",
       metric: `${restrictedShare}%`,
       copy: `${formatLandChangeHa(planning.restrictions.uniqueRestrictedAreaHa)} ha del ambito quedan bajo restriccion o contencion territorial.`,
-      note: `${planning.restrictions.items.length} franjas normativas activas entre rondas, pendientes, inundabilidad, borde agro-rural y ${planning.restrictions.sensitiveThemeCount || 0} temas sensibles de la consultoria tecnica.`,
+      note: `${planning.restrictions.items.length} franjas normativas visibles entre pendientes, inundabilidad, borde agro-rural y accesibilidad territorial.`,
     });
 
     const solarScore = clamp(
@@ -14209,20 +14556,6 @@ function buildTerritorialDecisionSnapshot() {
     });
   }
 
-  if (state.fieldEvidenceData) {
-    const fieldEvidence = state.fieldEvidenceData;
-    const score = fieldEvidence.summary.supportScore;
-    items.push({
-      id: "fieldEvidence",
-      score,
-      signal: getTerritorialSignalState(score),
-      title: "Soporte de evidencia",
-      metric: `${fieldEvidence.summary.sectorCount} sectores`,
-      copy: `${fieldEvidence.summary.stationCount} estaciones, ${fieldEvidence.summary.sensitiveThemeCount} temas sensibles, ${fieldEvidence.summary.historyCount} insumos historicos y ${fieldEvidence.summary.inventoryItemCount} objetos catalogados respaldan la lectura de ${fieldEvidence.context.scopeLabel}.`,
-      note: `${fieldEvidence.summary.supportLabel} con predominio ${fieldEvidence.summary.dominantSectorType.toLowerCase()}, ${fieldEvidence.summary.stationLabel.toLowerCase()} y ${fieldEvidence.summary.sensitiveLabel.toLowerCase()}.`,
-    });
-  }
-
   if (!items.length) {
     return null;
   }
@@ -14265,7 +14598,6 @@ function buildTerritorialSectorSheets() {
           { label: "Brecha", value: coverageItem ? coverageItem.weakestLabel || `${coverageItem.shortLabel} ${coverageItem.coveragePct}%` : state.planningData.serviceCoverage.weakestLabel },
           { label: "Restriccion", value: state.planningData.restrictions.headline },
           { label: "Solar", value: state.planningData.solarReadout.exposures.find((item) => item.candidateId === candidate.id)?.solarSignal || state.planningData.solarReadout.solarLabel },
-          ...(feature.sensitiveThemeCount ? [{ label: "Area sensible", value: feature.sensitiveConstraintLabel || "Si" }] : []),
         ],
         actionAttr: `data-candidate-id="${candidate.id}"`,
       });
@@ -14320,68 +14652,6 @@ function buildTerritorialSectorSheets() {
     });
   }
 
-  if (state.fieldEvidenceData?.topSectors?.length) {
-    state.fieldEvidenceData.topSectors.slice(0, 2).forEach((sector) => {
-      sheets.push({
-        id: sector.id,
-        module: "Evidencia de campo",
-        title: sector.name,
-        tone: sector.tone,
-        kicker: sector.sectorType,
-        summary: sector.summary,
-        note: `${sector.supportLabel} con ${sector.rasterCount} raster(s) y ${sector.areaHa.toFixed(1)} ha aproximadas de cobertura levantada en campo.`,
-        metrics: [
-          { label: "Cobertura", value: `${sector.areaHa.toFixed(1)} ha` },
-          { label: "Rasters", value: `${sector.rasterCount}` },
-          { label: "Soporte", value: sector.supportLabel },
-          { label: "Prioridad", value: `${sector.rank}` },
-        ],
-        actionAttr: `data-field-sector-id="${sector.id}"`,
-      });
-    });
-  }
-
-  if (state.fieldEvidenceData?.topStations?.length) {
-    const station = state.fieldEvidenceData.topStations[0];
-    sheets.push({
-      id: station.id,
-      module: "Monitoreo",
-      title: station.name,
-      tone: station.tone,
-      kicker: station.kind,
-      summary: station.summary,
-      note: `Estacion ${station.code} con lectura ${station.annualMetricLabel}, historico ${station.historicalMetricLabel} y pico ${station.peakMetricLabel}.`,
-      metrics: [
-        { label: "Codigo", value: station.code },
-        { label: "Tipo", value: station.kind },
-        { label: "Anual", value: station.annualMetricLabel },
-        { label: "Historico", value: station.historicalMetricLabel },
-      ],
-      actionAttr: `data-field-station-id="${station.id}"`,
-    });
-  }
-
-  if (state.fieldEvidenceData?.topSensitiveThemes?.length) {
-    state.fieldEvidenceData.topSensitiveThemes.slice(0, 2).forEach((theme) => {
-      sheets.push({
-        id: theme.id,
-        module: "Areas sensibles",
-        title: theme.label,
-        tone: theme.tone,
-        kicker: theme.groupLabel,
-        summary: theme.summary,
-        note: `${theme.featureCount} elementos sintetizados mediante ${theme.renderMode === "envelope" ? "envolvente operativa" : "geometria integrada"} desde ${theme.sourceLayer}.`,
-        metrics: [
-          { label: "Grupo", value: theme.groupLabel },
-          { label: "Elementos", value: `${theme.featureCount}` },
-          { label: "Cobertura", value: `${theme.coverageHa.toFixed(1)} ha` },
-          { label: "Modo", value: theme.renderMode === "envelope" ? "Envolvente web" : "Union" },
-        ],
-        actionAttr: `data-field-sensitive-id="${theme.id}"`,
-      });
-    });
-  }
-
   return sheets.slice(0, 10);
 }
 
@@ -14415,9 +14685,9 @@ function buildTerritorialAlerts() {
         alerts.push({
           id: `alert-planning-sensitive-${candidate.id}`,
           tone: (props.sensitivePenaltyScore || 0) >= 22 ? "critical" : "watch",
-          module: "Areas sensibles",
-          title: `${candidate.title}: cruce sensible activo`,
-          copy: `${props.sensitiveConstraintLabel || "Area sensible"} reduce la aptitud territorial y exige ${props.sensitiveRegime?.toLowerCase() || "control preventivo"} antes de ocupar.`,
+          module: "Condicionantes",
+          title: `${candidate.title}: ajuste territorial activo`,
+          copy: "El candidato entra en una franja condicionada del modelo y requiere control preventivo antes de ocupar.",
           actionAttr: `data-candidate-id="${candidate.id}"`,
         });
       }
@@ -14426,13 +14696,13 @@ function buildTerritorialAlerts() {
 
   if (state.landChangeData?.prioritySectors?.length) {
     state.landChangeData.prioritySectors.slice(0, 3).forEach((sector) => {
-      if (sector.dominantDriver === "Quebradas" || sector.riskHa >= sector.transformedHa * 0.45) {
+      if (sector.dominantDriver === "Riesgo hidrico" || sector.riskHa >= sector.transformedHa * 0.45) {
         alerts.push({
           id: `alert-land-${sector.id}`,
           tone: "critical",
           module: "Huella urbana",
-          title: `${sector.name}: presion sobre quebradas`,
-          copy: `${formatLandChangeHa(sector.riskHa)} ha quedan bajo vigilancia por drenaje, quebradas o escorrentia en este hotspot.`,
+          title: `${sector.name}: presion hidrologica`,
+          copy: `${formatLandChangeHa(sector.riskHa)} ha quedan bajo vigilancia por drenaje, escorrentia o tension hidrologica en este hotspot.`,
           actionAttr: `data-land-change-sector-id="${sector.id}"`,
         });
       }
@@ -14451,43 +14721,6 @@ function buildTerritorialAlerts() {
           actionAttr: `data-hydrology-sector-id="${sector.id}"`,
         });
       }
-    });
-  }
-
-  if (state.fieldEvidenceData?.topSectors?.length) {
-    state.fieldEvidenceData.topSectors.slice(0, 2).forEach((sector) => {
-      alerts.push({
-        id: `alert-field-sector-${sector.id}`,
-        tone: sector.sectorType.toLowerCase().includes("rio") ? "critical" : "watch",
-        module: "Evidencia de campo",
-        title: `${sector.name}: seguimiento territorial activo`,
-        copy: `${sector.supportLabel} sobre ${sector.sectorType.toLowerCase()} con ${sector.areaHa.toFixed(1)} ha y ${sector.rasterCount} raster(s) de soporte para control preventivo.`,
-        actionAttr: `data-field-sector-id="${sector.id}"`,
-      });
-    });
-  }
-
-  if (state.fieldEvidenceData?.topStations?.length) {
-    const station = state.fieldEvidenceData.topStations[0];
-    alerts.push({
-      id: `alert-field-station-${station.id}`,
-      tone: "watch",
-      module: "Monitoreo",
-      title: `${station.name}: soporte hidrometeorologico listo`,
-      copy: `${station.annualMetricLabel} y ${station.historicalMetricLabel} disponibles para validar escenarios territoriales en ${state.fieldEvidenceData.context.scopeLabel}.`,
-      actionAttr: `data-field-station-id="${station.id}"`,
-    });
-  }
-
-  if (state.fieldEvidenceData?.topSensitiveThemes?.length) {
-    const theme = state.fieldEvidenceData.topSensitiveThemes[0];
-    alerts.push({
-      id: `alert-field-sensitive-${theme.id}`,
-      tone: theme.tone === "high" ? "critical" : "watch",
-      module: "Areas sensibles",
-      title: `${theme.label}: regularizacion prioritaria`,
-      copy: `${theme.summary} ${theme.featureCount} elementos y lectura ${theme.groupLabel.toLowerCase()} requieren control territorial preventivo.`,
-      actionAttr: `data-field-sensitive-id="${theme.id}"`,
     });
   }
 
@@ -14840,38 +15073,6 @@ function buildTerritorialReportHtml() {
               <p>${escapeHtmlContent(state.planningData.solarReadout.copy)}</p>
             </article>
           </div>
-        </section>
-      ` : ""}
-      ${state.fieldEvidenceData ? `
-        <section>
-          <p class="kicker">Soporte de evidencia</p>
-          <h2>Campo, areas sensibles y memoria historica</h2>
-          <div class="grid">
-            <article class="card">
-              <p class="kicker">Levantamiento</p>
-              <div class="metric">${escapeHtmlContent(String(state.fieldEvidenceData.summary.sectorCount))}</div>
-              <p>${escapeHtmlContent(`${state.fieldEvidenceData.summary.surveyedAreaHa.toFixed(1)} ha aproximadas con predominio ${state.fieldEvidenceData.summary.dominantSectorType.toLowerCase()}.`)}</p>
-            </article>
-            <article class="card">
-              <p class="kicker">Estaciones</p>
-              <div class="metric">${escapeHtmlContent(String(state.fieldEvidenceData.summary.stationCount))}</div>
-              <p>${escapeHtmlContent(`${state.fieldEvidenceData.summary.stationLabel}. Altitud media ${state.fieldEvidenceData.summary.stationCoverageAltitudeM || 0} msnm.`)}</p>
-            </article>
-            <article class="card">
-              <p class="kicker">Memoria</p>
-              <div class="metric">${escapeHtmlContent(String(state.fieldEvidenceData.summary.historyCount))}</div>
-              <p>${escapeHtmlContent(`${state.fieldEvidenceData.summary.historicalLabel} con ${state.fieldEvidenceData.summary.climateSeriesCount} series climaticas y ${state.fieldEvidenceData.summary.inventoryItemCount} objetos catalogados.`)}</p>
-            </article>
-            <article class="card">
-              <p class="kicker">Areas sensibles</p>
-              <div class="metric">${escapeHtmlContent(String(state.fieldEvidenceData.summary.sensitiveThemeCount))}</div>
-              <p>${escapeHtmlContent(`${state.fieldEvidenceData.summary.sensitiveLabel}. ${state.fieldEvidenceData.summary.sensitiveFeatureCount} elementos y ${state.fieldEvidenceData.summary.consultancyProjectCount} proyectos tecnicos integrados.`)}</p>
-            </article>
-          </div>
-          <ul>
-            ${state.fieldEvidenceData.topSectors.slice(0, 3).map((sector) => `<li><strong>${escapeHtmlContent(sector.name)}:</strong> ${escapeHtmlContent(sector.summary)}</li>`).join("")}
-            ${state.fieldEvidenceData.topSensitiveThemes.slice(0, 2).map((theme) => `<li><strong>${escapeHtmlContent(theme.label)}:</strong> ${escapeHtmlContent(theme.summary)}</li>`).join("")}
-          </ul>
         </section>
       ` : ""}
       ${sheets.length ? `
@@ -15350,9 +15551,6 @@ function selectPlanningCandidates(features, program, imageryProfile, scopeType) 
         `Crecimiento ${feature.properties.growthScore}%`,
         `Servicio ${feature.properties.serviceScore}%`,
         `Resiliencia ${feature.properties.resilienceScore}%`,
-        ...(feature.properties.sensitiveThemeCount
-          ? [`Restriccion ${feature.properties.sensitiveConstraintLabel}`]
-          : []),
       ],
     });
   });
@@ -15386,7 +15584,7 @@ function renderPlanningWeights(planning) {
       <span class="planning-pill emphasis">${planning.imagerySummary.headline}</span>
       <span class="planning-pill emphasis">${planning.horizon.label}</span>
       <span class="planning-pill emphasis">${planning.scenario.label}</span>
-      <span class="planning-pill emphasis">${planning.restrictions.sensitiveThemeCount || 0} areas sensibles</span>
+      <span class="planning-pill emphasis">${formatLandChangeHa(planning.restrictions.uniqueRestrictedAreaHa || 0)} ha condicionadas</span>
     `);
 }
 
@@ -15575,7 +15773,7 @@ function renderPlanningTerritoryReadout() {
       <article class="territorial-readout-card tone-risk">
         <div class="territorial-readout-head">
           <div>
-            <p class="section-kicker">Restricciones reales</p>
+            <p class="section-kicker">Condicionantes territoriales</p>
             <h4>${planning.restrictions.headline}</h4>
           </div>
           <span class="scenario-chip tone-low">${formatLandChangeHa(planning.restrictions.uniqueRestrictedAreaHa)} ha</span>
@@ -15757,9 +15955,7 @@ function renderTerritorialExportPanel() {
     planning: state.planningData?.candidates?.length || 0,
     land: state.landChangeData?.prioritySectors?.length || 0,
     hydrology: state.hydrologyData?.prioritySectors?.length || 0,
-    fieldEvidence: (state.fieldEvidenceData?.summary?.sectorCount || 0)
-      + (state.fieldEvidenceData?.summary?.stationCount || 0)
-      + (state.fieldEvidenceData?.summary?.historyCount || 0),
+    fieldEvidence: 0,
   };
   dom.territorialExportPanel.classList.remove("empty-state");
   dom.territorialExportPanel.classList.add("has-data");
@@ -15770,17 +15966,16 @@ function renderTerritorialExportPanel() {
           <p class="section-kicker">Salida tecnica</p>
           <h4>Exportables territoriales de ${areaProfile.scopeLabel}</h4>
         </div>
-        <span class="planning-pill emphasis">${exportCounts.planning + exportCounts.land + exportCounts.hydrology + exportCounts.fieldEvidence} fichas activas</span>
+        <span class="planning-pill emphasis">${exportCounts.planning + exportCounts.land + exportCounts.hydrology} fichas activas</span>
       </div>
       <p class="territorial-readout-copy">
         Descarga un consolidado tabular, una capa GeoJSON combinada, un resumen JSON o abre un informe ejecutivo con semaforo,
-        fichas, alertas, evidencia de campo y resumen territorial del escenario vigente sobre ${areaProfile.scopeLabel}.
+        fichas, alertas y resumen territorial del escenario vigente sobre ${areaProfile.scopeLabel}.
       </p>
       <div class="territorial-export-pills">
         <span class="planning-pill emphasis">${exportCounts.planning} candidatos</span>
         <span class="planning-pill emphasis">${exportCounts.land} hotspots</span>
         <span class="planning-pill emphasis">${exportCounts.hydrology} sectores hidricos</span>
-        <span class="planning-pill emphasis">${exportCounts.fieldEvidence} evidencias</span>
       </div>
       <div class="action-row analysis-actions">
         <button class="secondary-button" type="button" data-export-format="report">Abrir informe</button>
@@ -16254,7 +16449,15 @@ function renderLandChangeOverlay(analysis) {
   }).addTo(mapState.map);
 
   if (analysis.pressureSurface?.features?.length) {
-    mapState.landChangePressureLayer = L.geoJSON(analysis.pressureSurface, {
+    const visiblePressureCollection = {
+      type: "FeatureCollection",
+      features: analysis.pressureSurface.features.filter((feature) => {
+        const surfaceType = feature.properties?.surfaceType;
+        return surfaceType !== "quebrada" && surfaceType !== "evidencia" && surfaceType !== "sensible";
+      }),
+    };
+    if (visiblePressureCollection.features.length) {
+    mapState.landChangePressureLayer = L.geoJSON(visiblePressureCollection, {
       style: (feature) => {
         const surfaceType = feature.properties?.surfaceType;
         if (surfaceType === "quebrada" || surfaceType === "evidencia") {
@@ -16289,6 +16492,7 @@ function renderLandChangeOverlay(analysis) {
         );
       },
     }).addTo(mapState.map);
+    }
   }
 
   if (heatCollection.features.length) {
@@ -17091,7 +17295,7 @@ function setWizardAssistantStatus(message, tone = "loading") {
 }
 
 function getWizardDemoPlot() {
-  const sourceFeature = geoSources.lotes?.features?.[0];
+  const sourceFeature = getAgronomyDemoPlots()[0];
   if (!sourceFeature) {
     return null;
   }
@@ -17207,7 +17411,7 @@ function buildWizardOperationalReport(mode = state.activeWizard) {
   const progress = getWizardProgress(mode);
   const steps = wizardConfig[mode] || [];
   const completedCount = progress.steps.filter((step) => step.status === "done").length;
-  const plotLabel = state.currentPlot ? state.currentPlotLabel : "Canton Mejia";
+  const plotLabel = getCurrentAgronomyScopeLabel();
   const scene = getSelectedImage() || state.filteredImages[0] || getFallbackScene();
   const sceneLabel = formatWizardSceneLabel(scene);
   const intralote = state.agronomyOutputs.intralote;
@@ -17845,25 +18049,24 @@ function updateMapSummary(force = false) {
       setTextIfChanged(
         dom.mapSubtitle,
         `${landChangePeriod.shortLabel}, ${landChangeScenario.label} y enfoque ${landChangeLens.label.toLowerCase()}. ${formatLandChangeHa(landChange.summary.transformedHa)} ha de suelo rural transformado con hotspots, calor de presion y buffers de vigilancia sobre ${landChange.summary.hotspotLabel}.`
-        + ` ${landChange.summary.evidence.copy}`
       );
     } else if (showHydrology) {
       setTextIfChanged(dom.overlayIndex, "Balance");
       setTextIfChanged(dom.mapTitle, `Disponibilidad hidrica sobre ${hydrology.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `${hydrologyClimate.shortLabel}, ${hydrologyHorizon.label} y ${hydrologyDemand.label}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio con ${hydrology.prioritySectors.length} sectores en vigilancia, buffers de proteccion y franjas de atencion hidrica. ${hydrology.summary.evidence.copy}`
+        `${hydrologyClimate.shortLabel}, ${hydrologyHorizon.label} y ${hydrologyDemand.label}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio con ${hydrology.prioritySectors.length} sectores en vigilancia, buffers de proteccion y franjas de atencion hidrica.`
       );
     } else if (planning) {
       setTextIfChanged(dom.mapTitle, `${planning.program.longLabel} sobre ${planning.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `Fuente ${planning.imageryProfile.shortLabel}, horizonte ${planning.horizon.label}, escenario ${planning.scenario.label}, ${planning.candidates.length} candidatos priorizados, ${planning.restrictions.headline.toLowerCase()}, ${planning.restrictions.sensitiveThemeCount || 0} temas sensibles integrados, cobertura ${planning.serviceCoverage.overallCoverage}% y lectura solar ${planning.solarReadout.sunPosition.elevation}° sobre el horizonte.`
+        `Fuente ${planning.imageryProfile.shortLabel}, horizonte ${planning.horizon.label}, escenario ${planning.scenario.label}, ${planning.candidates.length} candidatos priorizados, condicionantes visibles por ${formatLandChangeHa(planning.restrictions.uniqueRestrictedAreaHa)} ha, cobertura ${planning.serviceCoverage.overallCoverage}% y lectura solar ${planning.solarReadout.sunPosition.elevation}° sobre el horizonte.`
       );
     } else if (hydrology) {
       setTextIfChanged(dom.overlayIndex, "Balance");
       setTextIfChanged(dom.mapTitle, "Estudio hidrico de Mejia listo");
-      setTextIfChanged(dom.mapSubtitle, `${hydrology.climate.shortLabel}, ${hydrology.horizon.label} y ${hydrology.demand.label} con balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio, franjas de proteccion activas y ${hydrology.summary.evidence.supportLabel.toLowerCase()} para la calibracion local.`);
+      setTextIfChanged(dom.mapSubtitle, `${hydrology.climate.shortLabel}, ${hydrology.horizon.label} y ${hydrology.demand.label} con balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio y franjas de proteccion activas.`);
     } else if (fieldEvidence) {
       setTextIfChanged(dom.overlayIndex, "Campo");
       setTextIfChanged(dom.mapTitle, "Evidencia de campo integrada");
@@ -17871,7 +18074,7 @@ function updateMapSummary(force = false) {
     } else if (landChange) {
       setTextIfChanged(dom.overlayIndex, "Huella");
       setTextIfChanged(dom.mapTitle, "Estudio de transformacion del suelo listo");
-      setTextIfChanged(dom.mapSubtitle, `${landChange.period.shortLabel} con ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas, ${landChange.summary.riskLabel.toLowerCase()} y foco ${landChange.summary.hotspotLabel} con halos de presion. ${landChange.summary.evidence.copy}`);
+      setTextIfChanged(dom.mapSubtitle, `${landChange.period.shortLabel} con ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas, ${landChange.summary.riskLabel.toLowerCase()} y foco ${landChange.summary.hotspotLabel} con halos de presion.`);
     } else if (evidenceRouteActive) {
       setTextIfChanged(dom.overlayIndex, "Campo");
       setTextIfChanged(dom.mapTitle, "Evidencia territorial lista");
@@ -17898,7 +18101,7 @@ function updateMapSummary(force = false) {
   if (!image) {
     setTextIfChanged(dom.mapTitle, "No hay escena activa");
     renderMapBadges();
-    setTextIfChanged(dom.mapSubtitle, `Ajusta el filtro de ${sensor.label} para cargar una imagen sobre el visor.`);
+    setTextIfChanged(dom.mapSubtitle, `Ajusta el filtro de ${sensor.label} para cargar una imagen sobre ${getAgronomyAreaProfile().scopeLabel}.`);
     return;
   }
 
@@ -18006,7 +18209,7 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
           },
           {
             tone: "neutral",
-            label: `${landChange.summary.evidence.impactedSensitiveThemeCount} sensibles + ${landChange.summary.evidence.impactedSectorCount} campo`,
+            label: `${formatLandChangeHa(landChange.summary.riskHa)} ha en vigilancia`,
           },
         ]
       : state.territorialFocus === "hydrology" && hydrology
@@ -18033,7 +18236,7 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
           },
           {
             tone: "neutral",
-            label: `${hydrology.summary.evidence.impactedStationCount} estaciones + ${hydrology.summary.evidence.impactedSensitiveThemeCount} sensibles`,
+            label: `${hydrology.prioritySectors.length} prioridades`,
           },
         ]
       : evidenceRouteActive
@@ -18066,9 +18269,7 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
           },
           {
             tone: "neutral",
-            label: planning?.restrictions?.sensitiveThemeCount
-              ? `${planning.restrictions.sensitiveThemeCount} sensibles`
-              : imageryProfile.spatialLabel,
+            label: imageryProfile.spatialLabel,
           },
           planning
             ? {
@@ -18374,7 +18575,7 @@ function normalizeDateRange(start, end) {
 }
 
 function getSearchArea() {
-  return state.currentPlot || studyArea;
+  return state.currentPlot || getAgronomyAreaFeature();
 }
 
 function getSentinelSearchArea() {
