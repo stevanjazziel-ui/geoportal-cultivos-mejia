@@ -5309,6 +5309,7 @@ function clearAgronomyMapContext() {
 
   mapState.map.closePopup?.();
   state.sceneLayerKind = "off";
+  syncAgronomyBaseLayerOpacity();
 }
 
 function focusModuleCard(card) {
@@ -7623,21 +7624,37 @@ function getScenePreviewRenderOpacity(image = getSelectedImage()) {
   const sensor = getSensorForImage(image);
   if (state.baseLayer === "satellite") {
     if (sensor.id === "sentinel2") {
-      return Math.min(state.scenePreviewOpacity, 0.4);
+      return clamp(Math.max(state.scenePreviewOpacity, 0.82), 0.68, 0.96);
     }
     if (sensor.id === "landsat") {
-      return Math.min(state.scenePreviewOpacity, 0.5);
+      return clamp(Math.max(state.scenePreviewOpacity, 0.76), 0.62, 0.92);
     }
   }
   return state.scenePreviewOpacity;
 }
 
 function shouldDeferLowResolutionPreview(image = getSelectedImage()) {
-  if (!image || image.source !== "real") {
-    return false;
+  return false;
+}
+
+function syncAgronomyBaseLayerOpacity() {
+  const satelliteLayer = mapState.baseLayers?.satellite;
+  const streetsLayer = mapState.baseLayers?.streets;
+  if (!satelliteLayer?.setOpacity || !streetsLayer?.setOpacity) {
+    return;
   }
-  const sensor = getSensorForImage(image);
-  return state.baseLayer === "satellite" && sensor.id === "sentinel2";
+
+  const image = getSelectedImage();
+  const hasSceneBackdrop = Boolean(
+    state.entryRoute === "agronomia"
+    && state.baseLayer === "satellite"
+    && state.showScenePreview
+    && image
+    && (state.sceneLayerKind !== "off" || canRenderSceneLayer(image))
+  );
+
+  satelliteLayer.setOpacity(hasSceneBackdrop ? 0.38 : 1);
+  streetsLayer.setOpacity(1);
 }
 
 function colorizeVisualPixel(values) {
@@ -20279,6 +20296,8 @@ function updateMapSummary(force = false) {
     return;
   }
 
+  syncAgronomyBaseLayerOpacity();
+
   const image = getSelectedImage();
   const sensor = image ? getSensorForImage(image) : getActiveSensor();
   const analysis = getRenderableAnalysis(image);
@@ -20598,6 +20617,7 @@ function setBaseLayer(baseId, initial = false) {
 
   mapState.activeBaseLayer = mapState.baseLayers[baseId];
   mapState.activeBaseLayer.addTo(mapState.map);
+  syncAgronomyBaseLayerOpacity();
 
   if (!initial && state.entryRoute === "agronomia" && getSelectedImage()) {
     renderSentinelOverlay();
