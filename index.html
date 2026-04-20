@@ -28,7 +28,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260420-1">
+  <link rel="stylesheet" href="./styles.css?v=20260420-2">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -391,26 +391,26 @@
               <div class="module-head">
                 <div>
                   <p class="module-kicker">Operacion y campo</p>
-                  <h3>Seguimiento GPS en tiempo real</h3>
+                  <h3>Seguimiento GPS y telemetria en tiempo real</h3>
                 </div>
               </div>
               <p class="module-copy">
-                Sigue maquinaria, brigadas o dispositivos con GPS sobre el mapa del modulo agricola, con trayectoria, velocidad, estado y ultima posicion del ambito activo.
+                Sigue maquinaria, brigadas, celulares, drones o avionetas con tracker GPS sobre el mapa del modulo agricola, con trayectoria, velocidad, altura, estado y ultima posicion del ambito activo.
               </p>
               <div class="action-row module-action-row">
                 <button id="startGpsBrowserBtn" class="secondary-button" type="button">Seguir mi GPS</button>
                 <button id="startGpsFeedBtn" class="ghost-button" type="button">Leer feed</button>
-                <button id="startGpsDemoBtn" class="ghost-button" type="button">Demo GPS</button>
+                <button id="startGpsDemoBtn" class="ghost-button" type="button">Demo GPS / aereo</button>
                 <button id="stopGpsTrackingBtn" class="ghost-button" type="button">Detener</button>
               </div>
               <div id="gpsResults" class="metrics-grid empty-state">
-                Activa el modulo para seguir un dispositivo, un feed local o un recorrido demo sobre el mapa.
+                Activa el modulo para seguir un dispositivo terrestre o aereo, un feed local o un recorrido demo sobre el mapa.
               </div>
               <div id="gpsVisual" class="agronomy-visual empty-state">
-                Aqui apareceran la trayectoria, velocidad, precision y estado operativo del seguimiento GPS.
+                Aqui apareceran la trayectoria, velocidad, altura, precision y estado operativo del seguimiento GPS.
               </div>
               <p class="service-note">
-                Este modulo admite geolocalizacion del navegador, un feed local desde <code>server.ps1</code> o una simulacion de recorrido mientras se conecta una fuente real.
+                Este modulo admite geolocalizacion del navegador, un feed local desde <code>server.ps1</code> o una simulacion de recorrido mientras se conecta una fuente real. El feed puede venir de un celular, un dron o una avioneta si entregan <code>lat</code>, <code>lon</code>, <code>timestamp</code> y, opcionalmente, <code>altitudeM</code>, <code>speedKmh</code>, <code>headingDeg</code> y <code>batteryPct</code>. Deje un ejemplo listo en <code>data/gps_live_feed.example.json</code>.
               </p>
             </article>
 
@@ -973,6 +973,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260420-1" defer></script>
+  <script src="./app.js?v=20260420-2" defer></script>
 </body>
 </html>

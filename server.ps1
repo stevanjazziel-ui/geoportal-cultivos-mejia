@@ -100,6 +100,7 @@ $AgronomyGpsRoutes = @{
       id = "tractor-mejia-01"
       label = "Tractor demostrativo Mejia"
       deviceType = "Maquinaria"
+      mobilityMode = "ground"
       route = @(
         @(-78.618, -0.490),
         @(-78.612, -0.504),
@@ -113,12 +114,32 @@ $AgronomyGpsRoutes = @{
       id = "brigada-mejia-02"
       label = "Brigada de campo Mejia"
       deviceType = "Brigada"
+      mobilityMode = "ground"
       route = @(
         @(-78.560, -0.463),
         @(-78.552, -0.479),
         @(-78.541, -0.476),
         @(-78.544, -0.462),
         @(-78.560, -0.463)
+      )
+    },
+    @{
+      id = "dron-mejia-03"
+      label = "Dron de reconocimiento Mejia"
+      deviceType = "Dron"
+      mobilityMode = "air"
+      homePoint = @(-78.607, -0.486)
+      altitudeBaseM = 82
+      altitudeSwingM = 18
+      climbSwingMps = 1.8
+      cruiseSpeedKmh = 38
+      route = @(
+        @(-78.612, -0.486),
+        @(-78.606, -0.495),
+        @(-78.596, -0.494),
+        @(-78.593, -0.486),
+        @(-78.602, -0.480),
+        @(-78.612, -0.486)
       )
     }
   )
@@ -127,6 +148,7 @@ $AgronomyGpsRoutes = @{
       id = "tractor-machachi-01"
       label = "Tractor Machachi"
       deviceType = "Maquinaria"
+      mobilityMode = "ground"
       route = @(
         @(-78.603, -0.488),
         @(-78.599, -0.500),
@@ -140,6 +162,7 @@ $AgronomyGpsRoutes = @{
       id = "riego-machachi-02"
       label = "Cuadrilla de riego"
       deviceType = "Brigada"
+      mobilityMode = "ground"
       route = @(
         @(-78.589, -0.497),
         @(-78.580, -0.505),
@@ -148,6 +171,25 @@ $AgronomyGpsRoutes = @{
         @(-78.591, -0.515),
         @(-78.589, -0.497)
       )
+    },
+    @{
+      id = "dron-machachi-03"
+      label = "Dron de seguimiento Machachi"
+      deviceType = "Dron"
+      mobilityMode = "air"
+      homePoint = @(-78.603, -0.497)
+      altitudeBaseM = 88
+      altitudeSwingM = 24
+      climbSwingMps = 2.1
+      cruiseSpeedKmh = 42
+      route = @(
+        @(-78.607, -0.493),
+        @(-78.596, -0.498),
+        @(-78.587, -0.507),
+        @(-78.595, -0.516),
+        @(-78.609, -0.508),
+        @(-78.607, -0.493)
+      )
     }
   )
   cutuglagua = @(
@@ -155,6 +197,7 @@ $AgronomyGpsRoutes = @{
       id = "pickup-cutuglagua-01"
       label = "Camioneta tecnica Cutuglagua"
       deviceType = "Vehiculo"
+      mobilityMode = "ground"
       route = @(
         @(-78.602, -0.353),
         @(-78.594, -0.362),
@@ -164,6 +207,25 @@ $AgronomyGpsRoutes = @{
         @(-78.601, -0.372),
         @(-78.602, -0.353)
       )
+    },
+    @{
+      id = "dron-cutuglagua-02"
+      label = "Dron de inspeccion Cutuglagua"
+      deviceType = "Dron"
+      mobilityMode = "air"
+      homePoint = @(-78.596, -0.366)
+      altitudeBaseM = 76
+      altitudeSwingM = 16
+      climbSwingMps = 1.5
+      cruiseSpeedKmh = 34
+      route = @(
+        @(-78.598, -0.361),
+        @(-78.589, -0.368),
+        @(-78.582, -0.375),
+        @(-78.589, -0.381),
+        @(-78.600, -0.374),
+        @(-78.598, -0.361)
+      )
     }
   )
   quevedo = @(
@@ -171,6 +233,7 @@ $AgronomyGpsRoutes = @{
       id = "tractor-quevedo-01"
       label = "Tractor Quevedo"
       deviceType = "Maquinaria"
+      mobilityMode = "ground"
       route = @(
         @(-79.503, -1.034),
         @(-79.495, -1.046),
@@ -183,6 +246,7 @@ $AgronomyGpsRoutes = @{
       id = "brigada-quevedo-02"
       label = "Brigada fitosanitaria"
       deviceType = "Brigada"
+      mobilityMode = "ground"
       route = @(
         @(-79.458, -1.014),
         @(-79.451, -1.024),
@@ -196,6 +260,7 @@ $AgronomyGpsRoutes = @{
       id = "riego-quevedo-03"
       label = "Monitoreo drenaje"
       deviceType = "Riego"
+      mobilityMode = "ground"
       route = @(
         @(-79.521, -1.064),
         @(-79.514, -1.074),
@@ -203,6 +268,27 @@ $AgronomyGpsRoutes = @{
         @(-79.499, -1.069),
         @(-79.507, -1.061),
         @(-79.521, -1.064)
+      )
+    },
+    @{
+      id = "avioneta-quevedo-04"
+      label = "Avioneta de monitoreo Quevedo"
+      deviceType = "Avioneta"
+      mobilityMode = "air"
+      homePoint = @(-79.473, -1.028)
+      altitudeBaseM = 340
+      altitudeSwingM = 110
+      climbSwingMps = 3.2
+      cruiseSpeedKmh = 152
+      route = @(
+        @(-79.510, -1.020),
+        @(-79.485, -1.002),
+        @(-79.450, -1.008),
+        @(-79.436, -1.030),
+        @(-79.447, -1.058),
+        @(-79.482, -1.072),
+        @(-79.515, -1.056),
+        @(-79.510, -1.020)
       )
     }
   )
@@ -1612,6 +1698,7 @@ function Get-AgronomyGpsLivePayload($Body) {
           id = if ($device.id) { [string]$device.id } else { [string]$device.label }
           label = if ($device.label) { [string]$device.label } else { "Dispositivo GPS" }
           deviceType = if ($device.deviceType) { [string]$device.deviceType } else { "GPS" }
+          mobilityMode = if ($device.mobilityMode) { [string]$device.mobilityMode } else { "" }
           areaId = if ($deviceAreaId) { $deviceAreaId } else { $areaId }
           lat = Convert-ToInvariantDouble $device.lat
           lon = Convert-ToInvariantDouble $device.lon
@@ -1619,6 +1706,11 @@ function Get-AgronomyGpsLivePayload($Body) {
           headingDeg = [Math]::Round((Convert-ToInvariantDouble $device.headingDeg), 0)
           batteryPct = [Math]::Round((Convert-ToInvariantDouble $device.batteryPct 100), 0)
           accuracyM = [Math]::Round((Convert-ToInvariantDouble $device.accuracyM 8), 0)
+          altitudeM = if ($device.PSObject.Properties.Name -contains "altitudeM") { [Math]::Round((Convert-ToInvariantDouble $device.altitudeM), 1) } else { $null }
+          verticalSpeedMps = if ($device.PSObject.Properties.Name -contains "verticalSpeedMps") { [Math]::Round((Convert-ToInvariantDouble $device.verticalSpeedMps), 1) } else { $null }
+          homeLat = if ($device.PSObject.Properties.Name -contains "homeLat") { [Math]::Round((Convert-ToInvariantDouble $device.homeLat), 6) } else { $null }
+          homeLon = if ($device.PSObject.Properties.Name -contains "homeLon") { [Math]::Round((Convert-ToInvariantDouble $device.homeLon), 6) } else { $null }
+          flightStatus = if ($device.flightStatus) { [string]$device.flightStatus } else { $null }
           timestamp = if ($device.timestamp) { [string]$device.timestamp } else { $now.ToString("o") }
           statusLabel = if ($device.statusLabel) { [string]$device.statusLabel } else { "En seguimiento" }
         }
@@ -1650,14 +1742,41 @@ function Get-AgronomyGpsLivePayload($Body) {
   foreach ($route in $routes) {
     $progress = (($unixSeconds / (185 + ($index * 45))) + ($index * 0.17)) % 1
     $position = Get-InterpolatedGpsRoutePosition $route.route $progress
-    $speedBase = if ($areaId -eq "quevedo") { 17 } else { 11 }
-    $speed = $speedBase + ([Math]::Abs([Math]::Sin(($unixSeconds / 70.0) + $index)) * 14)
-    $battery = [Math]::Max(38, 96 - (([Math]::Floor($unixSeconds / 90) + ($index * 7)) % 48))
+    $isAerial = ($route.mobilityMode -eq "air") -or ([string]$route.deviceType -match "Dron|Drone|UAV|Avioneta|Aeronave|Aircraft")
+    $speedBase = if ($route.cruiseSpeedKmh) { Convert-ToInvariantDouble $route.cruiseSpeedKmh } elseif ($isAerial) { if ($areaId -eq "quevedo") { 138 } else { 34 } } else { if ($areaId -eq "quevedo") { 17 } else { 11 } }
+    $speedAmplitude = if ($isAerial) { 18 } else { 14 }
+    $speed = $speedBase + ([Math]::Abs([Math]::Sin(($unixSeconds / 70.0) + $index)) * $speedAmplitude)
+    $battery = if ($isAerial) {
+      [Math]::Max(24, 96 - (([Math]::Floor($unixSeconds / 90) + ($index * 7)) % 62))
+    } else {
+      [Math]::Max(38, 96 - (([Math]::Floor($unixSeconds / 90) + ($index * 7)) % 48))
+    }
+    $altitudeBase = if ($route.altitudeBaseM) { Convert-ToInvariantDouble $route.altitudeBaseM } else { 0 }
+    $altitudeSwing = if ($route.altitudeSwingM) { Convert-ToInvariantDouble $route.altitudeSwingM } else { 0 }
+    $verticalSwing = if ($route.climbSwingMps) { Convert-ToInvariantDouble $route.climbSwingMps } else { 1.5 }
+    $altitude = if ($isAerial) {
+      [Math]::Round(($altitudeBase + ([Math]::Sin(($unixSeconds / (31.0 + ($index * 3))) + $index) * $altitudeSwing)), 1)
+    } else {
+      $null
+    }
+    $verticalSpeed = if ($isAerial) {
+      [Math]::Round(([Math]::Cos(($unixSeconds / (25.0 + ($index * 2))) + $index) * $verticalSwing), 1)
+    } else {
+      $null
+    }
+    $homePoint = if ($route.homePoint -and $route.homePoint.Count -ge 2) { $route.homePoint } else { $null }
+    $statusLabel = if ($isAerial) { "En vuelo" } else { "En movimiento" }
+    $flightStatus = if ($isAerial) {
+      if ($altitude -ge [Math]::Max(40, ($altitudeBase * 0.45))) { "En vuelo" } else { "En ascenso" }
+    } else {
+      $null
+    }
 
     $devices += [pscustomobject]@{
       id = [string]$route.id
       label = [string]$route.label
       deviceType = [string]$route.deviceType
+      mobilityMode = if ($isAerial) { "air" } else { "ground" }
       areaId = $areaId
       lat = $position.lat
       lon = $position.lon
@@ -1665,8 +1784,13 @@ function Get-AgronomyGpsLivePayload($Body) {
       headingDeg = [Math]::Round($position.headingDeg, 0)
       batteryPct = [Math]::Round($battery, 0)
       accuracyM = 4 + ($index * 2)
+      altitudeM = $altitude
+      verticalSpeedMps = $verticalSpeed
+      homeLat = if ($homePoint) { [Math]::Round((Convert-ToInvariantDouble $homePoint[1]), 6) } else { $null }
+      homeLon = if ($homePoint) { [Math]::Round((Convert-ToInvariantDouble $homePoint[0]), 6) } else { $null }
+      flightStatus = $flightStatus
       timestamp = $now.AddSeconds(-($index * 5)).ToString("o")
-      statusLabel = "En movimiento"
+      statusLabel = $statusLabel
     }
     $index += 1
   }

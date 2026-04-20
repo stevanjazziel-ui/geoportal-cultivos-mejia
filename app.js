@@ -690,6 +690,7 @@ const agronomyGpsRouteCatalog = {
       id: "tractor-mejia-01",
       label: "Tractor demostrativo Mejia",
       deviceType: "Maquinaria",
+      mobilityMode: "ground",
       route: [
         [-78.618, -0.49],
         [-78.612, -0.504],
@@ -703,6 +704,7 @@ const agronomyGpsRouteCatalog = {
       id: "brigada-mejia-02",
       label: "Brigada de campo Mejia",
       deviceType: "Brigada",
+      mobilityMode: "ground",
       route: [
         [-78.56, -0.463],
         [-78.552, -0.479],
@@ -711,12 +713,32 @@ const agronomyGpsRouteCatalog = {
         [-78.56, -0.463],
       ],
     },
+    {
+      id: "dron-mejia-03",
+      label: "Dron de reconocimiento Mejia",
+      deviceType: "Dron",
+      mobilityMode: "air",
+      homePoint: [-78.607, -0.486],
+      altitudeBaseM: 82,
+      altitudeSwingM: 18,
+      climbSwingMps: 1.8,
+      cruiseSpeedKmh: 38,
+      route: [
+        [-78.612, -0.486],
+        [-78.606, -0.495],
+        [-78.596, -0.494],
+        [-78.593, -0.486],
+        [-78.602, -0.48],
+        [-78.612, -0.486],
+      ],
+    },
   ],
   machachi: [
     {
       id: "tractor-machachi-01",
       label: "Tractor Machachi",
       deviceType: "Maquinaria",
+      mobilityMode: "ground",
       route: [
         [-78.603, -0.488],
         [-78.599, -0.5],
@@ -730,6 +752,7 @@ const agronomyGpsRouteCatalog = {
       id: "riego-machachi-02",
       label: "Cuadrilla de riego",
       deviceType: "Brigada",
+      mobilityMode: "ground",
       route: [
         [-78.589, -0.497],
         [-78.58, -0.505],
@@ -739,12 +762,32 @@ const agronomyGpsRouteCatalog = {
         [-78.589, -0.497],
       ],
     },
+    {
+      id: "dron-machachi-03",
+      label: "Dron de seguimiento Machachi",
+      deviceType: "Dron",
+      mobilityMode: "air",
+      homePoint: [-78.603, -0.497],
+      altitudeBaseM: 88,
+      altitudeSwingM: 24,
+      climbSwingMps: 2.1,
+      cruiseSpeedKmh: 42,
+      route: [
+        [-78.607, -0.493],
+        [-78.596, -0.498],
+        [-78.587, -0.507],
+        [-78.595, -0.516],
+        [-78.609, -0.508],
+        [-78.607, -0.493],
+      ],
+    },
   ],
   cutuglagua: [
     {
       id: "pickup-cutuglagua-01",
       label: "Camioneta tecnica Cutuglagua",
       deviceType: "Vehiculo",
+      mobilityMode: "ground",
       route: [
         [-78.602, -0.353],
         [-78.594, -0.362],
@@ -755,12 +798,32 @@ const agronomyGpsRouteCatalog = {
         [-78.602, -0.353],
       ],
     },
+    {
+      id: "dron-cutuglagua-02",
+      label: "Dron de inspeccion Cutuglagua",
+      deviceType: "Dron",
+      mobilityMode: "air",
+      homePoint: [-78.596, -0.366],
+      altitudeBaseM: 76,
+      altitudeSwingM: 16,
+      climbSwingMps: 1.5,
+      cruiseSpeedKmh: 34,
+      route: [
+        [-78.598, -0.361],
+        [-78.589, -0.368],
+        [-78.582, -0.375],
+        [-78.589, -0.381],
+        [-78.6, -0.374],
+        [-78.598, -0.361],
+      ],
+    },
   ],
   quevedo: [
     {
       id: "tractor-quevedo-01",
       label: "Tractor Quevedo",
       deviceType: "Maquinaria",
+      mobilityMode: "ground",
       route: [
         [-79.503, -1.034],
         [-79.495, -1.046],
@@ -773,6 +836,7 @@ const agronomyGpsRouteCatalog = {
       id: "brigada-quevedo-02",
       label: "Brigada fitosanitaria",
       deviceType: "Brigada",
+      mobilityMode: "ground",
       route: [
         [-79.458, -1.014],
         [-79.451, -1.024],
@@ -786,6 +850,7 @@ const agronomyGpsRouteCatalog = {
       id: "riego-quevedo-03",
       label: "Monitoreo drenaje",
       deviceType: "Riego",
+      mobilityMode: "ground",
       route: [
         [-79.521, -1.064],
         [-79.514, -1.074],
@@ -793,6 +858,27 @@ const agronomyGpsRouteCatalog = {
         [-79.499, -1.069],
         [-79.507, -1.061],
         [-79.521, -1.064],
+      ],
+    },
+    {
+      id: "avioneta-quevedo-04",
+      label: "Avioneta de monitoreo Quevedo",
+      deviceType: "Avioneta",
+      mobilityMode: "air",
+      homePoint: [-79.473, -1.028],
+      altitudeBaseM: 340,
+      altitudeSwingM: 110,
+      climbSwingMps: 3.2,
+      cruiseSpeedKmh: 152,
+      route: [
+        [-79.51, -1.02],
+        [-79.485, -1.002],
+        [-79.45, -1.008],
+        [-79.436, -1.03],
+        [-79.447, -1.058],
+        [-79.482, -1.072],
+        [-79.515, -1.056],
+        [-79.51, -1.02],
       ],
     },
   ],
@@ -2469,6 +2555,7 @@ const mapState = {
   gpsDeviceLayer: null,
   gpsTrackLayer: null,
   gpsAccuracyLayer: null,
+  gpsHomeLayer: null,
   studyAreaLayer: null,
   currentPlotLayer: null,
 };
@@ -3027,13 +3114,13 @@ function resetAgronomySelectionState() {
   resetMetricGrid(dom.climateResults, "Ejecuta el modulo para cargar indicadores climaticos.");
   resetMetricGrid(dom.inamhiResults, "Ejecuta el modulo para cargar estaciones INAMHI de referencia.");
   resetMetricGrid(dom.inamhiLiveResults, "Ejecuta la lectura en vivo para ver temperatura, humedad, lluvia y viento de la red activa.");
-  resetMetricGrid(dom.gpsResults, "Activa el modulo para seguir un dispositivo, un feed local o un recorrido demo sobre el mapa.");
+  resetMetricGrid(dom.gpsResults, "Activa el modulo para seguir un dispositivo terrestre o aereo, un feed local o un recorrido demo sobre el mapa.");
   resetVisualPanel(dom.intraloteVisual, "Aqui apareceran la distribucion de zonas de manejo y la lectura grafica de indices del lote.");
   resetVisualPanel(dom.demVisual, "Aqui apareceran el perfil de pendiente, la altitud relativa y el riesgo topografico del lote.");
   resetVisualPanel(dom.climateVisual, "Aqui apareceran la lectura visual de lluvia, humedad, temperatura y estres termico.");
   resetVisualPanel(dom.inamhiVisual, "Aqui apareceran la lectura visual de lluvia historica, ventana humeda/seca y cobertura temporal de las estaciones.");
   resetVisualPanel(dom.inamhiLiveVisual, "Aqui apareceran la lectura operativa en tiempo real, la ultima actualizacion y el estado de las estaciones activas.");
-  resetVisualPanel(dom.gpsVisual, "Aqui apareceran la trayectoria, velocidad, precision y estado operativo del seguimiento GPS.");
+  resetVisualPanel(dom.gpsVisual, "Aqui apareceran la trayectoria, velocidad, altura, precision y estado operativo del seguimiento GPS.");
   renderSceneControls();
   renderSentinelResults();
   renderSentinelSourceStatus();
@@ -5208,6 +5295,7 @@ function clearAgronomyMapContext() {
     "gpsDeviceLayer",
     "gpsTrackLayer",
     "gpsAccuracyLayer",
+    "gpsHomeLayer",
   ].forEach((layerKeyName) => {
     if (mapState[layerKeyName]) {
       mapState.map.removeLayer(mapState[layerKeyName]);
@@ -8881,6 +8969,32 @@ function normalizeGpsHeading(value) {
   return Math.round(((heading % 360) + 360) % 360);
 }
 
+function isAerialTelemetryDevice(device = {}) {
+  if (!device || typeof device !== "object") {
+    return false;
+  }
+  const mobilityMode = String(device.mobilityMode || device.mode || "").toLowerCase();
+  if (mobilityMode === "air" || mobilityMode === "aerial") {
+    return true;
+  }
+  const type = String(device.deviceType || "").toLowerCase();
+  return ["dron", "drone", "uav", "avioneta", "aeronave", "aircraft", "helicoptero"].some((token) => type.includes(token));
+}
+
+function formatGpsAltitude(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "sin dato";
+  }
+  return `${Number(value).toFixed(1)} m`;
+}
+
+function formatGpsVerticalSpeed(value) {
+  if (!Number.isFinite(Number(value))) {
+    return "sin dato";
+  }
+  return `${Number(value).toFixed(1)} m/s`;
+}
+
 function getGpsRoutesForArea(areaId = state.agronomyAreaId) {
   return agronomyGpsRouteCatalog[areaId] || agronomyGpsRouteCatalog.mejia;
 }
@@ -8929,39 +9043,64 @@ function interpolateGpsRoutePoint(route = [], progress = 0) {
   return { lon: lastPoint[0], lat: lastPoint[1], headingDeg: 0 };
 }
 
+function buildSimulatedTelemetrySnapshot(entry, areaId, tickBase, now, index, mode = "feed") {
+  const progress = (tickBase / (185 + index * 45) + index * 0.17) % 1;
+  const position = interpolateGpsRoutePoint(entry.route, progress);
+  const aerial = isAerialTelemetryDevice(entry);
+  const defaultSpeed = aerial
+    ? areaId === "quevedo" ? 138 : 34
+    : areaId === "quevedo" ? 17 : 11;
+  const speedAmplitude = aerial ? 18 : 14;
+  const speedKmh = Number(((Number(entry.cruiseSpeedKmh || defaultSpeed)) + Math.abs(Math.sin(tickBase / 70 + index)) * speedAmplitude).toFixed(1));
+  const batteryPct = Math.max(aerial ? 24 : 38, 96 - ((Math.floor(tickBase / 90) + index * 7) % (aerial ? 62 : 48)));
+  const altitudeBaseM = Number(entry.altitudeBaseM || 0);
+  const altitudeSwingM = Number(entry.altitudeSwingM || 0);
+  const altitudeM = aerial
+    ? Number((altitudeBaseM + Math.sin(tickBase / (31 + index * 3) + index) * altitudeSwingM).toFixed(1))
+    : null;
+  const verticalSpeedMps = aerial
+    ? Number((Math.cos(tickBase / (25 + index * 2) + index) * Number(entry.climbSwingMps || 1.5)).toFixed(1))
+    : null;
+  const homePoint = Array.isArray(entry.homePoint) && entry.homePoint.length >= 2 ? entry.homePoint : null;
+
+  return {
+    id: entry.id,
+    label: entry.label,
+    deviceType: entry.deviceType,
+    mobilityMode: aerial ? "air" : "ground",
+    areaId,
+    lat: Number(position.lat.toFixed(6)),
+    lon: Number(position.lon.toFixed(6)),
+    speedKmh,
+    headingDeg: position.headingDeg,
+    batteryPct,
+    accuracyM: aerial ? 5 + index * 2 : 4 + index * 2,
+    altitudeM,
+    verticalSpeedMps,
+    homeLon: homePoint ? Number(homePoint[0].toFixed(6)) : null,
+    homeLat: homePoint ? Number(homePoint[1].toFixed(6)) : null,
+    flightStatus: aerial ? (altitudeM >= Math.max(40, altitudeBaseM * 0.45) ? "En vuelo" : "En ascenso") : null,
+    timestamp: new Date(now.getTime() - index * 5000).toISOString(),
+    statusLabel: aerial ? "En vuelo" : "En movimiento",
+    sourceLabel: mode === "demo" ? "Demo GPS y telemetria" : "Feed local simulado",
+  };
+}
+
 function buildFrontendGpsPayload(areaId = state.agronomyAreaId, mode = "feed") {
   const routes = getGpsRoutesForArea(areaId);
   const now = new Date();
   const tickBase = now.getTime() / 1000;
-  const devices = routes.map((entry, index) => {
-    const progress = (tickBase / (185 + index * 45) + index * 0.17) % 1;
-    const position = interpolateGpsRoutePoint(entry.route, progress);
-    const speedBase = areaId === "quevedo" ? 17 : 11;
-    return {
-      id: entry.id,
-      label: entry.label,
-      deviceType: entry.deviceType,
-      areaId,
-      lat: Number(position.lat.toFixed(6)),
-      lon: Number(position.lon.toFixed(6)),
-      speedKmh: Number((speedBase + Math.abs(Math.sin(tickBase / 70 + index)) * 14).toFixed(1)),
-      headingDeg: position.headingDeg,
-      batteryPct: Math.max(38, 96 - ((Math.floor(tickBase / 90) + index * 7) % 48)),
-      accuracyM: 4 + index * 2,
-      timestamp: new Date(now.getTime() - index * 5000).toISOString(),
-      statusLabel: "En movimiento",
-    };
-  });
+  const devices = routes.map((entry, index) => buildSimulatedTelemetrySnapshot(entry, areaId, tickBase, now, index, mode));
 
   return {
     ok: true,
     mode: mode === "demo" ? "demo" : "simulated",
-    sourceLabel: mode === "demo" ? "Demo GPS" : "Feed local simulado",
+    sourceLabel: mode === "demo" ? "Demo GPS y telemetria" : "Feed local simulado",
     fetchedAt: now.toISOString(),
     areaId,
     devices,
     message: mode === "demo"
-      ? "Se esta usando un recorrido demo para validar la navegacion y el seguimiento."
+      ? "Se esta usando un recorrido demo para validar la navegacion, la telemetria y el seguimiento."
       : "No hay feed GPS local conectado; se usa una trayectoria simulada del ambito activo.",
   };
 }
@@ -9317,6 +9456,276 @@ function renderGpsTrackingOverlay(result = state.agronomyOutputs.gps) {
   }
 }
 
+function getGpsAerialSummary(result = null) {
+  const devices = Array.isArray(result?.devices) ? result.devices : [];
+  return {
+    aerialCount: devices.filter((device) => isAerialTelemetryDevice(device)).length,
+    maxAltitudeM: Math.max(...devices.map((device) => Number(device.altitudeM) || 0), 0),
+  };
+}
+
+function buildGpsReadout(result) {
+  const active = result?.activeDevice;
+  if (!active) {
+    return "No hay dispositivos activos en este momento.";
+  }
+  const speed = Number(active.speedKmh || 0).toFixed(1);
+  const signalAge = formatGpsSignalAge(active.timestamp);
+  const aerial = isAerialTelemetryDevice(active);
+  const altitudeCopy = aerial ? `, altura ${formatGpsAltitude(active.altitudeM)} y estado ${active.flightStatus || active.statusLabel || "en vuelo"}` : "";
+  return `${result.sourceLabel} sobre ${result.targetLabel}: ${active.label} reporta ${speed} km/h, rumbo ${active.headingDeg || 0} deg${altitudeCopy} y ultima senal ${signalAge}.`;
+}
+
+function renderGpsTrackingResults(result = null) {
+  if (!dom.gpsResults) {
+    return;
+  }
+
+  if (!result?.activeDevice) {
+    resetMetricGrid(dom.gpsResults, "Activa el modulo para seguir un dispositivo terrestre o aereo, un feed local o un recorrido demo sobre el mapa.");
+    return;
+  }
+
+  const active = result.activeDevice;
+  const aerial = isAerialTelemetryDevice(active);
+  const summary = getGpsAerialSummary(result);
+  const cards = [
+    {
+      label: "Fuente",
+      value: result.sourceLabel,
+      copy: `${result.summary.activeCount}/${result.summary.deviceCount} dispositivos con senal en ${result.targetLabel}.`,
+    },
+    {
+      label: "Dispositivo activo",
+      value: active.label,
+      copy: `${active.deviceType || "Dispositivo"} · rumbo ${active.headingDeg || 0} deg`,
+      highlight: true,
+    },
+    {
+      label: "Velocidad actual",
+      value: `${Number(active.speedKmh || 0).toFixed(1)} km/h`,
+      copy: active.flightStatus || active.statusLabel || "Sin estado",
+    },
+    {
+      label: aerial ? "Altura" : "Recorrido",
+      value: aerial ? formatGpsAltitude(active.altitudeM) : `${Number(result.summary.totalDistanceKm || 0).toFixed(2)} km`,
+      copy: aerial
+        ? "Altura reportada por la telemetria del dispositivo aereo activo."
+        : "Trayectoria acumulada del dispositivo activo sobre el mapa.",
+    },
+    {
+      label: "Precision",
+      value: `${Math.round(Number(state.gpsTracking.accuracyM || active.accuracyM || 0))} m`,
+      copy: `Lectura ${result.mode === "browser" ? "desde navegador" : result.sourceLabel.toLowerCase()}.`,
+    },
+    {
+      label: aerial ? "Ascenso" : "Bateria",
+      value: aerial ? formatGpsVerticalSpeed(active.verticalSpeedMps) : `${Math.round(Number(active.batteryPct || 0))}%`,
+      copy: aerial ? "Velocidad vertical derivada del seguimiento aereo." : "Autonomia estimada del dispositivo activo.",
+    },
+    {
+      label: "Ultima senal",
+      value: result.summary.activeSignalAge,
+      copy: result.message || "Seguimiento operativo listo para continuar.",
+    },
+    {
+      label: "Modalidad",
+      value: summary.aerialCount ? `${summary.aerialCount} aereos` : "Terrestre",
+      copy: summary.aerialCount
+        ? "La red activa mezcla dispositivos terrestres y aereos dentro del ambito."
+        : "La red activa solo reporta dispositivos de superficie en este momento.",
+    },
+  ];
+  paintMetricGrid(dom.gpsResults, cards);
+}
+
+function renderGpsTrackingVisual(result = null) {
+  if (!dom.gpsVisual) {
+    return;
+  }
+
+  if (!result?.activeDevice) {
+    resetVisualPanel(dom.gpsVisual, "Aqui apareceran la trayectoria, velocidad, altura, precision y estado operativo del seguimiento GPS.");
+    return;
+  }
+
+  const active = result.activeDevice;
+  const aerial = isAerialTelemetryDevice(active);
+  const aerialSummary = getGpsAerialSummary(result);
+  const speedPct = clamp(Math.round((Number(active.speedKmh || 0) / (aerial ? 180 : 40)) * 100), 6, 100);
+  const batteryPct = clamp(Math.round(Number(active.batteryPct || 0)), 10, 100);
+  const accuracyPct = clamp(Math.round((Math.max(1, 30 - Number(state.gpsTracking.accuracyM || active.accuracyM || 15)) / 30) * 100), 10, 100);
+  const distancePct = clamp(Math.round((Number(result.summary.totalDistanceKm || 0) / 6) * 100), 6, 100);
+  const altitudePct = clamp(Math.round((Number(active.altitudeM || 0) / Math.max(120, Number(aerialSummary.maxAltitudeM || 120))) * 100), 6, 100);
+  const verticalPct = clamp(Math.round((Math.abs(Number(active.verticalSpeedMps || 0)) / 6) * 100), 6, 100);
+
+  dom.gpsVisual.classList.remove("empty-state");
+  dom.gpsVisual.classList.add("has-data");
+  setHtmlIfChanged(dom.gpsVisual, `
+    <div class="agronomy-visual-head">
+      <div>
+        <p class="section-kicker">Seguimiento operativo</p>
+        <h4>Trayectoria y telemetria del ambito</h4>
+      </div>
+      <span class="agronomy-visual-pill tone-${result.tone}">${result.sourceLabel}</span>
+    </div>
+    <div class="agronomy-tag-row">
+      <span class="agronomy-visual-pill">${result.targetLabel}</span>
+      <span class="agronomy-visual-pill">${result.summary.deviceCount} dispositivos</span>
+      <span class="agronomy-visual-pill">${active.deviceType || "Dispositivo"}</span>
+      <span class="agronomy-visual-pill tone-${result.tone}">${active.flightStatus || active.statusLabel || "En seguimiento"}</span>
+      ${aerial ? `<span class="agronomy-visual-pill">${formatGpsAltitude(active.altitudeM)}</span>` : ""}
+    </div>
+    <div class="agronomy-bar-grid">
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Velocidad actual</span>
+          <strong>${Number(active.speedKmh || 0).toFixed(1)} km/h</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${speedPct}%"></i>
+        </div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>${aerial ? "Altura actual" : "Trayectoria acumulada"}</span>
+          <strong>${aerial ? formatGpsAltitude(active.altitudeM) : `${Number(result.summary.totalDistanceKm || 0).toFixed(2)} km`}</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${aerial ? altitudePct : distancePct}%"></i>
+        </div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Precision</span>
+          <strong>${Math.round(Number(state.gpsTracking.accuracyM || active.accuracyM || 0))} m</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${accuracyPct}%"></i>
+        </div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>${aerial ? "Ascenso / descenso" : "Bateria"}</span>
+          <strong>${aerial ? formatGpsVerticalSpeed(active.verticalSpeedMps) : `${Math.round(Number(active.batteryPct || 0))}%`}</strong>
+        </div>
+        <div class="agronomy-bar-track">
+          <i style="width: ${aerial ? verticalPct : batteryPct}%"></i>
+        </div>
+      </article>
+    </div>
+    <div class="gps-device-list">
+      ${(result.devices || []).map((device) => `
+        <article class="gps-device-card">
+          <strong>${device.label}</strong>
+          <p>${device.deviceType || "Dispositivo"} · ${device.flightStatus || device.statusLabel || "En seguimiento"}</p>
+          <p>${Number(device.speedKmh || 0).toFixed(1)} km/h · ${Math.round(Number(device.batteryPct || 0))}% bateria${isAerialTelemetryDevice(device) ? ` · ${formatGpsAltitude(device.altitudeM)}` : ""}</p>
+          <p>${formatGpsSignalAge(device.timestamp)}</p>
+        </article>
+      `).join("")}
+    </div>
+    <p class="agronomy-visual-copy">${buildGpsReadout(result)}</p>
+  `);
+}
+
+function renderGpsTrackingOverlay(result = state.agronomyOutputs.gps) {
+  if (!mapState.map) {
+    return;
+  }
+
+  ["gpsDeviceLayer", "gpsTrackLayer", "gpsAccuracyLayer", "gpsHomeLayer"].forEach((layerName) => {
+    if (mapState[layerName]) {
+      mapState.map.removeLayer(mapState[layerName]);
+      mapState[layerName] = null;
+    }
+  });
+
+  if (!result?.activeDevice || state.entryRoute !== "agronomia") {
+    return;
+  }
+
+  const collection = {
+    type: "FeatureCollection",
+    features: (result.devices || []).map((device) => pointFeature(device.label, [Number(device.lon), Number(device.lat)], {
+      ...device,
+      active: device.id === result.activeDevice.id,
+    })),
+  };
+
+  mapState.gpsDeviceLayer = L.geoJSON(collection, {
+    pointToLayer(feature, latlng) {
+      const active = !!feature.properties?.active;
+      const aerial = isAerialTelemetryDevice(feature.properties || {});
+      return L.circleMarker(latlng, {
+        radius: active ? (aerial ? 9 : 8) : (aerial ? 7 : 6),
+        color: active ? (aerial ? "#7b4f9f" : "#214d3a") : (aerial ? "#4c69a8" : "#6a8db5"),
+        weight: 2,
+        fillColor: active ? (aerial ? "#f3d27a" : "#d2a544") : "#ffffff",
+        fillOpacity: 0.96,
+      });
+    },
+    onEachFeature(feature, layer) {
+      const properties = feature.properties || {};
+      const aerial = isAerialTelemetryDevice(properties);
+      layer.bindPopup(`
+        <strong>${properties.name || properties.label || "Dispositivo"}</strong><br>
+        ${properties.deviceType || "GPS"} · ${properties.flightStatus || properties.statusLabel || "En seguimiento"}<br>
+        Velocidad: ${Number(properties.speedKmh || 0).toFixed(1)} km/h<br>
+        ${aerial ? `Altura: ${formatGpsAltitude(properties.altitudeM)}<br>` : ""}
+        ${aerial ? `Ascenso: ${formatGpsVerticalSpeed(properties.verticalSpeedMps)}<br>` : ""}
+        Bateria: ${Math.round(Number(properties.batteryPct || 0))}%<br>
+        Ultima senal: ${formatGpsSignalAge(properties.timestamp)}
+      `);
+    },
+  }).addTo(mapState.map);
+
+  if (Array.isArray(result.track) && result.track.length >= 2) {
+    mapState.gpsTrackLayer = L.geoJSON(lineFeature("Trayectoria GPS", result.track, {
+      category: "gps-track",
+    }), {
+      style: {
+        color: "#2f7f5f",
+        weight: 4,
+        opacity: 0.88,
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (Number.isFinite(Number(state.gpsTracking.accuracyM)) && state.gpsTracking.accuracyM > 0) {
+    mapState.gpsAccuracyLayer = L.circle([Number(result.activeDevice.lat), Number(result.activeDevice.lon)], {
+      radius: Number(state.gpsTracking.accuracyM),
+      color: "#d2a544",
+      weight: 1,
+      fillColor: "#d2a544",
+      fillOpacity: 0.1,
+    }).addTo(mapState.map);
+  }
+
+  if (Number.isFinite(Number(result.activeDevice.homeLat)) && Number.isFinite(Number(result.activeDevice.homeLon))) {
+    mapState.gpsHomeLayer = L.geoJSON(pointFeature("Base de salida", [Number(result.activeDevice.homeLon), Number(result.activeDevice.homeLat)], {
+      ...result.activeDevice,
+      name: "Base de salida",
+    }), {
+      pointToLayer(feature, latlng) {
+        return L.circleMarker(latlng, {
+          radius: 6,
+          color: "#7b4f9f",
+          weight: 2,
+          fillColor: "#ffffff",
+          fillOpacity: 0.92,
+        });
+      },
+      onEachFeature(feature, layer) {
+        layer.bindPopup(`
+          <strong>Base de salida</strong><br>
+          ${feature.properties.deviceType || "Dispositivo"} · ${feature.properties.label || "Equipo activo"}<br>
+          Coordenada de referencia para despegue o control.
+        `);
+      },
+    }).addTo(mapState.map);
+  }
+}
+
 function stopGpsTracking(options = {}) {
   const settings = {
     silent: false,
@@ -9349,8 +9758,8 @@ function stopGpsTracking(options = {}) {
   renderGpsTrackingOverlay(null);
 
   if (!settings.preservePanels) {
-    resetMetricGrid(dom.gpsResults, "Activa el modulo para seguir un dispositivo, un feed local o un recorrido demo sobre el mapa.");
-    resetVisualPanel(dom.gpsVisual, "Aqui apareceran la trayectoria, velocidad, precision y estado operativo del seguimiento GPS.");
+    resetMetricGrid(dom.gpsResults, "Activa el modulo para seguir un dispositivo terrestre o aereo, un feed local o un recorrido demo sobre el mapa.");
+    resetVisualPanel(dom.gpsVisual, "Aqui apareceran la trayectoria, velocidad, altura, precision y estado operativo del seguimiento GPS.");
   }
 
   if (!settings.silent) {
@@ -9408,6 +9817,11 @@ async function startBrowserGpsTracking() {
       headingDeg: Number.isFinite(Number(coords.heading)) ? normalizeGpsHeading(coords.heading) : 0,
       batteryPct: 100,
       accuracyM: Number(coords.accuracy) || null,
+      altitudeM: Number.isFinite(Number(coords.altitude)) ? Number(Number(coords.altitude).toFixed(1)) : null,
+      verticalSpeedMps: null,
+      homeLat: null,
+      homeLon: null,
+      flightStatus: null,
       timestamp,
       statusLabel: "En seguimiento",
     };
@@ -9471,7 +9885,7 @@ async function startGpsFeedTracking() {
   state.gpsTracking.pollId = window.setInterval(() => {
     tick(false);
   }, 6000);
-  setStatus(`Seguimiento GPS activo sobre ${getAgronomyAreaProfile().scopeLabel} usando feed local.`);
+  setStatus(`Seguimiento GPS activo sobre ${getAgronomyAreaProfile().scopeLabel} usando feed local para tierra o aire.`);
   return true;
 }
 
@@ -9491,7 +9905,7 @@ function startGpsDemoTracking() {
   state.gpsTracking.demoTimerId = window.setInterval(() => {
     tick(false);
   }, 2800);
-  setStatus(`Seguimiento GPS demo activo sobre ${getAgronomyAreaProfile().scopeLabel}.`);
+  setStatus(`Seguimiento GPS demo activo sobre ${getAgronomyAreaProfile().scopeLabel}, incluyendo telemetria terrestre y aerea.`);
   return true;
 }
 

@@ -1,0 +1,60 @@
+{
+  "fetchedAt": "2026-04-20T12:00:00-05:00",
+  "devices": [
+    {
+      "id": "cel-amigo-01",
+      "label": "Celular de campo",
+      "deviceType": "Celular",
+      "mobilityMode": "ground",
+      "areaId": "machachi",
+      "lat": -0.501245,
+      "lon": -78.594382,
+      "speedKmh": 6.2,
+      "headingDeg": 142,
+      "batteryPct": 81,
+      "accuracyM": 7,
+      "timestamp": "2026-04-20T11:59:54-05:00",
+      "statusLabel": "En movimiento"
+    },
+    {
+      "id": "dron-lote-01",
+      "label": "Dron de monitoreo",
+      "deviceType": "Dron",
+      "mobilityMode": "air",
+      "areaId": "machachi",
+      "lat": -0.498211,
+      "lon": -78.601733,
+      "speedKmh": 39.4,
+      "headingDeg": 88,
+      "batteryPct": 63,
+      "accuracyM": 5,
+      "altitudeM": 92.4,
+      "verticalSpeedMps": 1.2,
+      "homeLat": -0.497812,
+      "homeLon": -78.603102,
+      "flightStatus": "En vuelo",
+      "timestamp": "2026-04-20T11:59:56-05:00",
+      "statusLabel": "En vuelo"
+    },
+    {
+      "id": "avioneta-externa-01",
+      "label": "Avioneta de reconocimiento",
+      "deviceType": "Avioneta",
+      "mobilityMode": "air",
+      "areaId": "quevedo",
+      "lat": -1.022518,
+      "lon": -79.471118,
+      "speedKmh": 148.6,
+      "headingDeg": 304,
+      "batteryPct": 100,
+      "accuracyM": 9,
+      "altitudeM": 420.0,
+      "verticalSpeedMps": -0.8,
+      "homeLat": -1.028000,
+      "homeLon": -79.473000,
+      "flightStatus": "En vuelo",
+      "timestamp": "2026-04-20T11:59:50-05:00",
+      "statusLabel": "En vuelo"
+    }
+  ]
+}
