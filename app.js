@@ -2531,6 +2531,7 @@ const mapState = {
   sceneExactLayer: null,
   scenePreviewLayer: null,
   sceneFootprintLayer: null,
+  sceneFootprintFocusId: null,
   managementLayer: null,
   planningLayer: null,
   planningCandidatesLayer: null,
@@ -5309,6 +5310,7 @@ function clearAgronomyMapContext() {
 
   mapState.map.closePopup?.();
   state.sceneLayerKind = "off";
+  mapState.sceneFootprintFocusId = null;
   syncAgronomyBaseLayerOpacity();
 }
 
@@ -7211,10 +7213,12 @@ function renderRealSceneFootprint(image, fitBounds = false) {
     mapState.managementLayer.bringToFront();
   }
 
-  if (fitBounds) {
+  const footprintFocusId = `${state.agronomyAreaId}:${image.id}`;
+  if (fitBounds && mapState.sceneFootprintFocusId !== footprintFocusId) {
     mapState.map.fitBounds(mapState.sceneFootprintLayer.getBounds(), {
       padding: [36, 36],
     });
+    mapState.sceneFootprintFocusId = footprintFocusId;
   }
 }
 
