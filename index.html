@@ -401,7 +401,7 @@
               <div class="action-row module-action-row">
                 <button id="startGpsBrowserBtn" class="secondary-button" type="button">Seguir mi GPS</button>
                 <button id="startGpsFeedBtn" class="ghost-button" type="button">Leer feed</button>
-                <button id="openGpsBridgeBtn" class="ghost-button" type="button">Puente GPS</button>
+                <button id="openGpsBridgeBtn" class="ghost-button" type="button">Conectar emisor GPS</button>
                 <button id="startGpsDemoBtn" class="ghost-button" type="button">Demo GPS / aereo</button>
                 <button id="stopGpsTrackingBtn" class="ghost-button" type="button">Detener</button>
               </div>
@@ -412,7 +412,7 @@
                 Aqui apareceran la trayectoria, velocidad, altura, precision y estado operativo del seguimiento GPS.
               </div>
               <p class="service-note">
-                Este modulo admite geolocalizacion del navegador, un feed local desde <code>server.ps1</code> o una simulacion de recorrido mientras se conecta una fuente real. El feed puede venir de un celular, una laptop, un dron o una avioneta si entregan <code>lat</code>, <code>lon</code>, <code>timestamp</code> y, opcionalmente, <code>altitudeM</code>, <code>speedKmh</code>, <code>headingDeg</code> y <code>batteryPct</code>. Ya deje un puente listo en <code>/gps-bridge.html</code> y un ejemplo en <code>data/gps_live_feed.example.json</code>.
+                Este modulo admite geolocalizacion del navegador, un feed local desde <code>server.ps1</code> o una simulacion de recorrido mientras se conecta una fuente real. El feed puede venir de un celular, una laptop, un dron o una avioneta si entregan <code>lat</code>, <code>lon</code>, <code>timestamp</code> y, opcionalmente, <code>altitudeM</code>, <code>speedKmh</code>, <code>headingDeg</code> y <code>batteryPct</code>. Ya deje una pagina emisora en <code>/gps-bridge.html</code> para que el otro dispositivo solo mande senal, y un ejemplo en <code>data/gps_live_feed.example.json</code>.
               </p>
             </article>
 
@@ -975,6 +975,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260420-9" defer></script>
+  <script src="./app.js?v=20260420-10" defer></script>
 </body>
 </html>

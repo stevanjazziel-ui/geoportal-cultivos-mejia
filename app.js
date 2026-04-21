@@ -10017,7 +10017,7 @@ function openGpsBridgePage() {
   if (!popup) {
     window.location.href = bridgeUrl;
   }
-  setStatus("Puente GPS abierto. Puedes compartir ubicacion desde un celular o computadora hacia el geoportal.");
+  setStatus("Emisor GPS abierto. El otro dispositivo solo enviara ubicacion y el geoportal la mostrara en tiempo real.");
   return true;
 }
 

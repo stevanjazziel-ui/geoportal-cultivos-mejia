@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Puente GPS | Geoportal Cultivos</title>
+  <title>Emisor GPS | Geoportal Cultivos</title>
   <style>
     :root {
       color-scheme: light;
@@ -283,11 +283,11 @@
   <main>
     <section class="hero">
       <p class="kicker">GPS en vivo</p>
-      <h1>Puente GPS para celular o computadora</h1>
+      <h1>Emisor GPS para celular o computadora</h1>
       <p>
         Esta pagina toma la geolocalizacion del dispositivo y la envia al geoportal para que aparezca en
-        <strong>Agronomia &gt; Seguimiento GPS y telemetria en tiempo real</strong>. Funciona con celular, laptop o
-        cualquier equipo que entregue ubicacion desde el navegador.
+        <strong>Agronomia &gt; Seguimiento GPS y telemetria en tiempo real</strong>. Este equipo no necesita
+        visualizar el geoportal: aqui solo manda la senal GPS.
       </p>
     </section>
 
@@ -346,10 +346,9 @@
         </div>
 
         <div class="actions">
-          <button id="startBtn" class="primary" type="button">Iniciar seguimiento</button>
-          <button id="sendOnceBtn" class="secondary" type="button">Enviar una lectura</button>
+          <button id="startBtn" class="primary" type="button">Iniciar envio</button>
+          <button id="sendOnceBtn" class="secondary" type="button">Enviar una vez</button>
           <button id="stopBtn" class="ghost" type="button">Detener</button>
-          <button id="openPortalBtn" class="ghost" type="button">Abrir geoportal</button>
         </div>
       </section>
 
@@ -357,8 +356,8 @@
         <section class="status-card">
           <span id="statusPill" class="status-pill">Listo para conectar</span>
           <p id="statusCopy" class="status-copy">
-            Configura el dispositivo y pulsa <strong>Iniciar seguimiento</strong>. El puente enviara la ubicacion al
-            backend del geoportal.
+            Configura el dispositivo y pulsa <strong>Iniciar envio</strong>. Este dispositivo solo compartira
+            coordenadas hacia el backend del geoportal.
           </p>
           <div class="metrics">
             <div class="metric">
@@ -382,9 +381,9 @@
 
         <section class="telemetry-card">
           <p class="kicker" style="margin-bottom: 10px;">Endpoint</p>
-          <p>El puente publica lecturas en:</p>
+          <p>El emisor publica lecturas en:</p>
           <p id="endpointValue" class="endpoint"><code>/api/agronomy/gps/ingest</code></p>
-          <p id="liveValue" class="endpoint">Luego el modulo agricola las lee desde <code>/api/agronomy/gps/live</code>.</p>
+          <p id="liveValue" class="endpoint">El otro equipo las visualiza desde <code>/api/agronomy/gps/live</code>.</p>
         </section>
 
         <section id="networkNote" class="note-card">
@@ -400,8 +399,8 @@
           <p class="kicker" style="margin-bottom: 10px;">Importante</p>
           <p>
             En algunos celulares, la geolocalizacion del navegador solo funciona en <strong>HTTPS</strong> o
-            <strong>localhost</strong>. Si tu navegador bloquea el GPS al usar una IP local, el endpoint de ingestión ya
-            queda listo para que una app externa o un atajo HTTP envie el mismo JSON al geoportal.
+            <strong>localhost</strong>. Si tu navegador bloquea el GPS al usar una IP local, este mismo flujo puede
+            reemplazarse por una app externa que envie el JSON al endpoint del geoportal.
           </p>
         </section>
       </aside>
@@ -427,7 +426,6 @@
       startBtn: document.querySelector("#startBtn"),
       sendOnceBtn: document.querySelector("#sendOnceBtn"),
       stopBtn: document.querySelector("#stopBtn"),
-      openPortalBtn: document.querySelector("#openPortalBtn"),
       statusPill: document.querySelector("#statusPill"),
       statusCopy: document.querySelector("#statusCopy"),
       lastSentMetric: document.querySelector("#lastSentMetric"),
@@ -512,7 +510,7 @@
     function updateEndpointPreview() {
       const baseUrl = normalizeUrl(dom.serverUrl.value);
       dom.endpointValue.innerHTML = `<code>${baseUrl}${ingestPath}</code>`;
-      dom.liveValue.innerHTML = `Luego el modulo agricola las lee desde <code>${baseUrl}/api/agronomy/gps/live</code>.`;
+      dom.liveValue.innerHTML = `El otro equipo las visualiza desde <code>${baseUrl}/api/agronomy/gps/live</code>.`;
     }
 
     function updateNetworkNote() {
@@ -520,10 +518,10 @@
       const localOrigin = window.location.origin;
       if (host === "localhost" || host === "127.0.0.1") {
         dom.networkCopy.innerHTML =
-          `Ahora mismo la pagina esta en <code>${localOrigin}</code>. Si vas a conectar otro celular o laptop, puedes abrir <code>Abrir Puente GPS.bat</code> y luego entrar con la IP local del computador, por ejemplo <code>http://192.168.1.50:8765/gps-bridge.html</code>.`;
+          `Ahora mismo la pagina esta en <code>${localOrigin}</code>. Si vas a conectar otro celular o laptop, puedes abrir <code>Abrir Puente GPS.bat</code> y luego entrar con la IP local del computador, por ejemplo <code>http://192.168.1.50:8765/gps-bridge.html</code>. Ese dispositivo solo enviara la senal GPS.`;
       } else {
         dom.networkCopy.innerHTML =
-          `Esta pagina ya esta usando <code>${localOrigin}</code>. Cualquier equipo en la misma red puede abrirla y compartir ubicacion hacia el mismo geoportal.`;
+          `Esta pagina ya esta usando <code>${localOrigin}</code>. Cualquier equipo en la misma red puede abrirla para compartir ubicacion hacia el geoportal sin visualizar el mapa principal.`;
       }
     }
 
@@ -558,10 +556,10 @@
       } catch (_) {
         dom.networkLinks.innerHTML = `
           <div class="metric" style="grid-column: 1 / -1;">
-            <span>Red local</span>
-            <strong>No se pudieron cargar las URLs de la red local.</strong>
-          </div>
-        `;
+          <span>Red local</span>
+          <strong>No se pudieron cargar las URLs de la red local.</strong>
+        </div>
+      `;
       }
     }
 
@@ -676,14 +674,14 @@
       dom.accuracyMetric.textContent = formatNumber(payload.accuracyM, 0, " m");
       dom.speedMetric.textContent = formatNumber(payload.speedKmh, 1, " km/h");
       dom.altitudeMetric.textContent = payload.altitudeM == null ? "Sin datos" : formatNumber(payload.altitudeM, 1, " m");
-      setStatus("", "GPS enviado", `La ultima lectura de ${payload.label} ya esta lista para verse en el modulo agricola del geoportal.`);
+      setStatus("", "GPS enviado", `La ultima lectura de ${payload.label} ya fue enviada. El otro equipo ya puede verla en el geoportal.`);
     }
 
     async function sendCurrentPosition() {
       saveSettings();
       await ensureBatteryState();
       if (!navigator.geolocation) {
-        setStatus("danger", "GPS no disponible", "Este navegador no expone geolocalizacion. Prueba desde otro navegador o envia el JSON desde una app externa.");
+      setStatus("danger", "GPS no disponible", "Este navegador no expone geolocalizacion. Prueba desde otro navegador o envia el JSON desde una app externa.");
         return;
       }
 
@@ -718,7 +716,7 @@
         navigator.geolocation.clearWatch(watchId);
       }
       watchId = null;
-      setStatus("warn", "Seguimiento detenido", "El puente dejó de enviar posiciones. Puedes reactivarlo cuando quieras.");
+      setStatus("warn", "Envio detenido", "Este dispositivo dejo de enviar posiciones. Puedes reactivarlo cuando quieras.");
     }
 
     async function startTracking() {
@@ -729,7 +727,7 @@
         return;
       }
       stopTracking();
-      setStatus("", "Escuchando GPS", "Esperando la primera posicion del navegador para empezar a enviarla al geoportal.");
+      setStatus("", "Escuchando GPS", "Esperando la primera posicion del navegador para empezar a mandarla al geoportal.");
 
       watchId = navigator.geolocation.watchPosition(async (position) => {
         const minDelay = Number(dom.sendEvery.value || 6000);
@@ -757,11 +755,6 @@
       });
     }
 
-    function openPortal() {
-      const baseUrl = normalizeUrl(dom.serverUrl.value);
-      window.open(baseUrl, "_blank", "noopener");
-    }
-
     dom.serverUrl.addEventListener("input", () => {
       updateEndpointPreview();
       saveSettings();
@@ -773,7 +766,6 @@
     dom.startBtn.addEventListener("click", startTracking);
     dom.sendOnceBtn.addEventListener("click", sendCurrentPosition);
     dom.stopBtn.addEventListener("click", stopTracking);
-    dom.openPortalBtn.addEventListener("click", openPortal);
 
     loadSettings();
     loadNetworkHints();
