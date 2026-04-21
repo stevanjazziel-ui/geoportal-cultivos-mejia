@@ -265,6 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
+  bridgeVersion: "20260421-5",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -10146,7 +10147,7 @@ function normalizeGpsRelayDevicePayload(payload = {}) {
   };
 }
 
-function connectGpsRelayBroker(topic) {
+function connectGpsRelayBroker(topic, onMessage = null) {
   const mqttFactory = getMqttClientFactory();
   if (!mqttFactory) {
     return Promise.reject(new Error("La libreria MQTT no esta disponible para el relay publico."));
@@ -10166,6 +10167,9 @@ function connectGpsRelayBroker(topic) {
         connectTimeout: 8000,
         reconnectPeriod: 4500,
       });
+      if (typeof onMessage === "function") {
+        client.on("message", onMessage);
+      }
       let settled = false;
       const timer = window.setTimeout(() => {
         if (settled) {
@@ -10222,11 +10226,7 @@ async function startGpsRelayTracking(topic = getGpsRelayTopic()) {
   ]);
 
   try {
-    const { client, brokerUrl } = await connectGpsRelayBroker(topic);
-    state.gpsTracking.relayClient = client;
-    state.gpsTracking.relayBrokerUrl = brokerUrl;
-    state.gpsTracking.relaySessionId = topic.split("/").pop();
-    client.on("message", (_topic, message) => {
+    const handleRelayMessage = (_topic, message) => {
       try {
         const raw = typeof message?.toString === "function" ? message.toString() : String(message || "");
         const payload = JSON.parse(raw);
@@ -10246,10 +10246,15 @@ async function startGpsRelayTracking(topic = getGpsRelayTopic()) {
           accuracyM: device.accuracyM,
           fitOnFirst: !state.gpsTracking.track.length,
         });
+        setStatus(`GPS en vivo recibido desde ${device.label}. Ultima senal: ${formatGpsSignalAge(device.timestamp)}.`);
       } catch (error) {
         console.warn("Mensaje GPS relay invalido.", error);
       }
-    });
+    };
+    const { client, brokerUrl } = await connectGpsRelayBroker(topic, handleRelayMessage);
+    state.gpsTracking.relayClient = client;
+    state.gpsTracking.relayBrokerUrl = brokerUrl;
+    state.gpsTracking.relaySessionId = topic.split("/").pop();
     client.on("reconnect", () => {
       setStatus("Relay GPS reconectando. Mantengo el canal abierto para recibir la senal externa.");
     });
@@ -10401,6 +10406,7 @@ function getGpsRelayTopic(sessionId = getGpsRelaySessionId()) {
 
 function buildGpsRelaySenderUrl(preset = getGpsSenderPreset(), sessionId = getGpsRelaySessionId()) {
   const url = new URL(gpsRelayService.publicSenderUrl);
+  url.searchParams.set("v", gpsRelayService.bridgeVersion);
   url.searchParams.set("mode", "relay");
   url.searchParams.set("relay", getGpsRelayTopic(sessionId));
   url.searchParams.set("session", sessionId);
