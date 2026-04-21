@@ -369,6 +369,44 @@ function Set-Cached($Key, $Payload) {
   $script:Cache[$Key] = @{ Timestamp = Get-Date; Payload = $Payload }
 }
 
+function Get-LocalNetworkHints([int]$TargetPort) {
+  $addresses = @()
+  foreach ($network in [System.Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces()) {
+    if ($network.OperationalStatus -ne [System.Net.NetworkInformation.OperationalStatus]::Up) {
+      continue
+    }
+    foreach ($unicast in $network.GetIPProperties().UnicastAddresses) {
+      $ip = $unicast.Address
+      if ($ip.AddressFamily -ne [System.Net.Sockets.AddressFamily]::InterNetwork) {
+        continue
+      }
+      $text = $ip.ToString()
+      if ($text.StartsWith("127.") -or $text.StartsWith("169.254.")) {
+        continue
+      }
+      $addresses += [pscustomobject]@{
+        interface = $network.Name
+        address = $text
+        portalUrl = "http://$text`:$TargetPort/"
+        bridgeUrl = "http://$text`:$TargetPort/gps-bridge.html"
+      }
+    }
+  }
+
+  $unique = @{}
+  foreach ($entry in $addresses) {
+    if (-not $unique.ContainsKey($entry.address)) {
+      $unique[$entry.address] = $entry
+    }
+  }
+
+  return @(
+    $unique.GetEnumerator() |
+      Sort-Object Name |
+      ForEach-Object { $_.Value }
+  )
+}
+
 function Get-ContentType([string]$FilePath) {
   switch ([System.IO.Path]::GetExtension($FilePath).ToLowerInvariant()) {
     ".html" { return "text/html; charset=utf-8" }
@@ -2098,6 +2136,17 @@ try {
       $stream = $request.Stream
       if ($request.Method -eq "OPTIONS") { Write-Response $stream 204 "text/plain; charset=utf-8" ([byte[]]@()); continue }
       if ($request.Path -eq "/api/health") { Write-Json $stream 200 @{ ok = $true; cacheEntries = $Cache.Count; startedAt = (Get-Date).ToString("o") }; continue }
+      if ($request.Path -eq "/api/network/local-ip") {
+        Write-Json $stream 200 @{
+          ok = $true
+          bindAddress = $BindAddress
+          port = $Port
+          localhostPortalUrl = "http://127.0.0.1:$Port/"
+          localhostBridgeUrl = "http://127.0.0.1:$Port/gps-bridge.html"
+          addresses = Get-LocalNetworkHints $Port
+        }
+        continue
+      }
       if ($request.Path -eq "/api/stac/search" -and $request.Method -eq "POST") {
         $key = "search|$($request.Body)"; $cached = Get-Cached $key 900
         if ($cached) { Write-Json $stream 200 @{ images = $cached.images; fetchedAt = $cached.fetchedAt; cacheHit = $true; cacheEntries = $Cache.Count }; continue }

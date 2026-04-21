@@ -393,6 +393,7 @@
             Si vas a conectar otro equipo en la misma red, abre esta pagina usando la IP local del computador donde corre
             <code>server.ps1</code>, por ejemplo <code>http://192.168.1.50:8765/gps-bridge.html</code>.
           </p>
+          <div id="networkLinks" class="metrics" style="margin-top: 14px;"></div>
         </section>
 
         <section class="note-card">
@@ -436,6 +437,7 @@
       endpointValue: document.querySelector("#endpointValue"),
       liveValue: document.querySelector("#liveValue"),
       networkCopy: document.querySelector("#networkCopy"),
+      networkLinks: document.querySelector("#networkLinks"),
     };
 
     function formatNumber(value, digits = 1, suffix = "") {
@@ -518,10 +520,48 @@
       const localOrigin = window.location.origin;
       if (host === "localhost" || host === "127.0.0.1") {
         dom.networkCopy.innerHTML =
-          `Ahora mismo la pagina esta en <code>${localOrigin}</code>. Si vas a conectar otro celular o laptop, inicia el backend con <code>powershell -ExecutionPolicy Bypass -File .\\server.ps1 -BindAddress 0.0.0.0</code> y abre esta misma pagina usando la IP local del computador, por ejemplo <code>http://192.168.1.50:8765/gps-bridge.html</code>.`;
+          `Ahora mismo la pagina esta en <code>${localOrigin}</code>. Si vas a conectar otro celular o laptop, puedes abrir <code>Abrir Puente GPS.bat</code> y luego entrar con la IP local del computador, por ejemplo <code>http://192.168.1.50:8765/gps-bridge.html</code>.`;
       } else {
         dom.networkCopy.innerHTML =
           `Esta pagina ya esta usando <code>${localOrigin}</code>. Cualquier equipo en la misma red puede abrirla y compartir ubicacion hacia el mismo geoportal.`;
+      }
+    }
+
+    async function loadNetworkHints() {
+      try {
+        const response = await fetch("/api/network/local-ip");
+        if (!response.ok) {
+          throw new Error("No se pudo leer la red local.");
+        }
+        const payload = await response.json();
+        const addresses = Array.isArray(payload.addresses)
+          ? payload.addresses
+          : payload.addresses
+            ? [payload.addresses]
+            : [];
+        if (!addresses.length) {
+          dom.networkLinks.innerHTML = `
+            <div class="metric" style="grid-column: 1 / -1;">
+              <span>Red local</span>
+              <strong>No se detectaron IPs utiles en este equipo.</strong>
+            </div>
+          `;
+          return;
+        }
+
+        dom.networkLinks.innerHTML = addresses.slice(0, 4).map((item) => `
+          <div class="metric">
+            <span>${item.interface || "LAN"}</span>
+            <strong><a href="${item.bridgeUrl}" target="_blank" rel="noopener">${item.address}</a></strong>
+          </div>
+        `).join("");
+      } catch (_) {
+        dom.networkLinks.innerHTML = `
+          <div class="metric" style="grid-column: 1 / -1;">
+            <span>Red local</span>
+            <strong>No se pudieron cargar las URLs de la red local.</strong>
+          </div>
+        `;
       }
     }
 
@@ -736,6 +776,7 @@
     dom.openPortalBtn.addEventListener("click", openPortal);
 
     loadSettings();
+    loadNetworkHints();
   </script>
 </body>
 </html>
