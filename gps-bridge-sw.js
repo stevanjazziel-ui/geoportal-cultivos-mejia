@@ -1,6 +1,5 @@
 const CACHE_NAME = "geoportal-gps-bridge-v1";
 const CACHE_ASSETS = [
-  "./gps-sender",
   "./gps-bridge.html",
   "./gps-bridge.webmanifest",
   "./gps-bridge-icon.svg",
