@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260421-8",
+  bridgeVersion: "20260421-9",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -2471,7 +2471,7 @@ const state = {
   surfaceMode: "primary",
   showScenePreview: true,
   showAnalysisOverlay: true,
-  scenePreviewOpacity: 1,
+  scenePreviewOpacity: 0.45,
   sceneLayerKind: "off",
   filteredImages: [],
   sentinelMode: "loading",
@@ -7782,20 +7782,39 @@ function getExactSceneRenderResolution() {
 }
 
 function getExactSceneRenderOpacity() {
-  return clamp(Number(state.scenePreviewOpacity) || 1, 0.72, 1);
+  const image = getSelectedImage();
+  const sensor = getSensorForImage(image);
+  const requestedOpacity = Number.isFinite(Number(state.scenePreviewOpacity))
+    ? Number(state.scenePreviewOpacity)
+    : 0.45;
+  if (isSatelliteVisualBase()) {
+    if (sensor.id === "sentinel2") {
+      return clamp(requestedOpacity, 0.24, state.showAnalysisOverlay ? 0.46 : 0.58);
+    }
+    if (sensor.id === "landsat") {
+      return clamp(requestedOpacity, 0.26, state.showAnalysisOverlay ? 0.48 : 0.6);
+    }
+    if (sensor.id === "sentinel1") {
+      return clamp(requestedOpacity, 0.22, state.showAnalysisOverlay ? 0.42 : 0.54);
+    }
+  }
+  return clamp(requestedOpacity, 0.42, 0.82);
 }
 
 function getScenePreviewRenderOpacity(image = getSelectedImage()) {
   const sensor = getSensorForImage(image);
   if (isSatelliteVisualBase()) {
     if (sensor.id === "sentinel2") {
-      return clamp(state.scenePreviewOpacity, 0.7, 0.92);
+      return clamp(state.scenePreviewOpacity, 0.24, state.showAnalysisOverlay ? 0.5 : 0.62);
     }
     if (sensor.id === "landsat") {
-      return clamp(state.scenePreviewOpacity, 0.64, 0.88);
+      return clamp(state.scenePreviewOpacity, 0.26, state.showAnalysisOverlay ? 0.52 : 0.64);
+    }
+    if (sensor.id === "sentinel1") {
+      return clamp(state.scenePreviewOpacity, 0.22, state.showAnalysisOverlay ? 0.46 : 0.58);
     }
   }
-  return state.scenePreviewOpacity;
+  return clamp(state.scenePreviewOpacity, 0.42, 0.82);
 }
 
 function shouldDeferLowResolutionPreview(image = getSelectedImage()) {
@@ -7875,22 +7894,22 @@ function getAnalysisOverlayOpacity(image) {
   if (image?.source === "real" && state.showScenePreview) {
     if (state.sceneLayerKind === "exact") {
       return satelliteBase
-        ? (sensor.id === "sentinel2" ? 0.035 : 0.08)
+        ? (sensor.id === "sentinel2" ? 0.018 : 0.045)
         : (sensor.id === "sentinel2" ? 0.1 : 0.14);
     }
     if (state.sceneLayerKind === "footprint") {
       return satelliteBase
-        ? (sensor.id === "sentinel1" ? 0.1 : 0.055)
+        ? (sensor.id === "sentinel1" ? 0.065 : 0.032)
         : (sensor.id === "sentinel1" ? 0.18 : 0.12);
     }
     return satelliteBase
-      ? (sensor.id === "sentinel1" ? 0.12 : 0.07)
+      ? (sensor.id === "sentinel1" ? 0.075 : 0.038)
       : (sensor.id === "sentinel1" ? 0.22 : 0.15);
   }
 
   if (image?.source === "real") {
     return satelliteBase
-      ? (sensor.id === "sentinel1" ? 0.14 : zoom >= 14 ? 0.08 : 0.06)
+      ? (sensor.id === "sentinel1" ? 0.09 : zoom >= 14 ? 0.045 : 0.035)
       : (sensor.id === "sentinel1" ? 0.34 : 0.26);
   }
 
