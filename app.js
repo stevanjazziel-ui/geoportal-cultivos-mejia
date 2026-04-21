@@ -10254,6 +10254,7 @@ async function refreshGpsSenderLinks(force = false) {
     if (!state.gpsSender.links.length) {
       throw new Error("No hay direcciones IPv4 disponibles para compartir.");
     }
+    ensureGpsReceiverListening();
     setStatus("Links del emisor GPS listos. Copia el recomendado o compartelo al dispositivo que solo enviara senal.");
   } catch (error) {
     console.warn("No se pudieron generar links del emisor GPS.", error);
@@ -10265,6 +10266,18 @@ async function refreshGpsSenderLinks(force = false) {
     renderGpsSenderLinks();
   }
   return state.gpsSender.links;
+}
+
+function ensureGpsReceiverListening() {
+  if (state.gpsTracking.mode === "feed" && state.gpsTracking.pollId) {
+    return;
+  }
+  setModulePendingState(dom.gpsResults, "Escuchando el feed GPS local para recibir el emisor externo...", [
+    { target: dom.gpsVisual, message: "El geoportal quedara atento a la senal del celular, laptop, dron o avioneta emisora." },
+  ]);
+  startGpsFeedTracking().catch((error) => {
+    console.warn("No se pudo iniciar automaticamente el receptor GPS.", error);
+  });
 }
 
 async function copyGpsSenderLink(url) {
