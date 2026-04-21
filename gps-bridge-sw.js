@@ -1,4 +1,4 @@
-const CACHE_NAME = "geoportal-gps-bridge-v4";
+const CACHE_NAME = "geoportal-gps-bridge-v5";
 const CACHE_ASSETS = [
   "./gps-bridge.html",
   "./gps-bridge.webmanifest",

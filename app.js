@@ -265,16 +265,23 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260421-7",
+  bridgeVersion: "20260421-8",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
     "wss://mqtt.eclipseprojects.io/mqtt",
   ],
+  httpRelayBaseUrl: "https://ntfy.sh",
+  httpRelayTopicPrefix: "geoportal-cultivos-mejia-gps",
+  mqttLibraryUrls: [
+    "https://cdn.jsdelivr.net/npm/mqtt/dist/mqtt.min.js",
+    "https://unpkg.com/mqtt/dist/mqtt.min.js",
+  ],
 };
 
 const exactSceneCache = new Map();
 const exactSceneMatchCache = new Map();
+let mqttClientFactoryPromise = null;
 
 const indexConfig = {
   NDVI: {
@@ -2531,6 +2538,8 @@ const state = {
     relaySessionId: null,
     relayBrokerUrl: null,
     relayDevices: {},
+    httpRelayTopic: null,
+    httpRelaySource: null,
     activeDeviceId: null,
     devices: [],
     track: [],
@@ -10064,6 +10073,13 @@ function stopGpsTracking(options = {}) {
       // El cliente puede cerrarse solo si el navegador pierde la conexion.
     }
   }
+  if (state.gpsTracking.httpRelaySource?.close) {
+    try {
+      state.gpsTracking.httpRelaySource.close();
+    } catch (_) {
+      // EventSource puede estar ya cerrado por el navegador.
+    }
+  }
 
   state.gpsTracking = {
     mode: "idle",
@@ -10075,6 +10091,8 @@ function stopGpsTracking(options = {}) {
     relaySessionId: null,
     relayBrokerUrl: null,
     relayDevices: {},
+    httpRelayTopic: null,
+    httpRelaySource: null,
     activeDeviceId: null,
     devices: [],
     track: [],
@@ -10190,6 +10208,68 @@ async function startBrowserGpsTracking() {
 
 function getMqttClientFactory() {
   return typeof window !== "undefined" && window.mqtt?.connect ? window.mqtt : null;
+}
+
+function loadExternalScriptOnce(src, verifier, timeoutMs = 9000) {
+  if (typeof document === "undefined") {
+    return Promise.reject(new Error("No hay documento disponible para cargar librerias."));
+  }
+  if (typeof verifier === "function" && verifier()) {
+    return Promise.resolve(true);
+  }
+
+  return new Promise((resolve, reject) => {
+    const existingScript = document.querySelector(`script[src="${src}"]`);
+    const script = existingScript || document.createElement("script");
+    let settled = false;
+    const finish = (ok, error = null) => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      window.clearTimeout(timer);
+      if (ok || (typeof verifier === "function" && verifier())) {
+        resolve(true);
+        return;
+      }
+      reject(error || new Error(`No se pudo cargar ${src}.`));
+    };
+    const timer = window.setTimeout(() => finish(false, new Error(`Tiempo agotado cargando ${src}.`)), timeoutMs);
+    script.addEventListener("load", () => finish(true), { once: true });
+    script.addEventListener("error", () => finish(false, new Error(`Fallo la carga de ${src}.`)), { once: true });
+    if (!existingScript) {
+      script.src = src;
+      script.async = true;
+      document.head.appendChild(script);
+    }
+  });
+}
+
+async function ensureMqttClientFactory() {
+  const currentFactory = getMqttClientFactory();
+  if (currentFactory) {
+    return currentFactory;
+  }
+  if (!mqttClientFactoryPromise) {
+    mqttClientFactoryPromise = (async () => {
+      let lastError = null;
+      for (const src of gpsRelayService.mqttLibraryUrls) {
+        try {
+          await loadExternalScriptOnce(src, getMqttClientFactory);
+          const loadedFactory = getMqttClientFactory();
+          if (loadedFactory) {
+            return loadedFactory;
+          }
+        } catch (error) {
+          lastError = error;
+        }
+      }
+      throw lastError || new Error("La libreria MQTT no esta disponible para el relay publico.");
+    })().finally(() => {
+      mqttClientFactoryPromise = null;
+    });
+  }
+  return mqttClientFactoryPromise;
 }
 
 function normalizeGpsRelayDevicePayload(payload = {}) {
@@ -10340,12 +10420,8 @@ function renderGpsRelayReceptionStarted(device, connectedDevices = getGpsRelayCo
   updateMapSummary();
 }
 
-function connectGpsRelayBroker(topic, onMessage = null) {
-  const mqttFactory = getMqttClientFactory();
-  if (!mqttFactory) {
-    return Promise.reject(new Error("La libreria MQTT no esta disponible para el relay publico."));
-  }
-
+async function connectGpsRelayBroker(topic, onMessage = null) {
+  const mqttFactory = await ensureMqttClientFactory();
   const brokers = gpsRelayService.brokerUrls.slice();
   const tryBroker = (index = 0) => {
     if (index >= brokers.length) {
@@ -10390,7 +10466,7 @@ function connectGpsRelayBroker(topic, onMessage = null) {
         reject(error instanceof Error ? error : new Error(String(error || "Fallo MQTT")));
       };
       client.on("connect", () => {
-        client.subscribe(topic, { qos: 0 }, (error) => {
+        client.subscribe([topic, `${topic}/#`], { qos: 0 }, (error) => {
           if (settled) {
             return;
           }
@@ -10410,51 +10486,103 @@ function connectGpsRelayBroker(topic, onMessage = null) {
   return tryBroker(0);
 }
 
-async function startGpsRelayTracking(topic = getGpsRelayTopic()) {
+function parseGpsHttpRelayEventData(rawData) {
+  if (!rawData) {
+    return null;
+  }
+  try {
+    const envelope = JSON.parse(rawData);
+    if (envelope.event && envelope.event !== "message") {
+      return null;
+    }
+    const body = envelope.message || envelope;
+    return typeof body === "string" ? JSON.parse(body) : body;
+  } catch (error) {
+    console.warn("Mensaje GPS HTTPS invalido.", error);
+    return null;
+  }
+}
+
+function connectGpsHttpRelay(topic, onPayload) {
+  if (typeof EventSource === "undefined") {
+    throw new Error("Este navegador no soporta EventSource para el relay HTTPS.");
+  }
+  const url = `${gpsRelayService.httpRelayBaseUrl}/${encodeURIComponent(topic)}/sse`;
+  const source = new EventSource(url);
+  source.onopen = () => {
+    if (state.gpsTracking.mode === "relay") {
+      setStatus("Relay GPS HTTPS listo. El geoportal esta escuchando por internet aunque MQTT falle.");
+    }
+  };
+  source.onmessage = (event) => {
+    const payload = parseGpsHttpRelayEventData(event.data);
+    if (payload && typeof onPayload === "function") {
+      onPayload(payload);
+    }
+  };
+  source.onerror = () => {
+    if (state.gpsTracking.mode === "relay") {
+      setStatus("Relay GPS HTTPS reconectando. Mantengo abierto el canal alterno para recibir senal.");
+    }
+  };
+  return source;
+}
+
+async function startGpsRelayTracking(topic = getGpsRelayTopic(), httpRelayTopic = getGpsHttpRelayTopic(String(topic).split("/").pop())) {
   stopGpsTracking({ silent: true, preservePanels: false });
   state.gpsTracking.mode = "relay";
   state.gpsTracking.relayTopic = topic;
+  state.gpsTracking.httpRelayTopic = httpRelayTopic;
   prepareGpsTrackingMapContext({ silent: true });
   setModulePendingState(dom.gpsResults, "Esperando senal GPS desde internet...", [
-    { target: dom.gpsVisual, message: "Comparte el link Internet. El celular puede estar en datos moviles u otra red y publicara sobre un canal temporal." },
+    { target: dom.gpsVisual, message: "Comparte el link Internet. El celular puede estar en datos moviles u otra red y publicara sobre MQTT o HTTPS." },
   ]);
+
+  const handleRelayPayload = (payload) => {
+    const device = mergeGpsRelayDevicePayload(payload);
+    const connectedDevices = getGpsRelayConnectedDevices();
+    const visibleDevices = getGpsRelayConnectedDevices({ withCoordinatesOnly: true });
+    const currentHasPosition = hasGpsCoordinates(payload);
+    if (!visibleDevices.length) {
+      renderGpsRelayReceptionStarted(device, connectedDevices);
+      setStatus(`Se inicio la recepcion de senal GPS desde ${device.label}. Esperando primera coordenada.`);
+      return;
+    }
+    if (currentHasPosition) {
+      state.gpsTracking.activeDeviceId = device.id;
+    }
+    applyGpsTrackingSnapshot({
+      ok: true,
+      mode: "relay",
+      sourceLabel: "Relay internet",
+      fetchedAt: device.timestamp,
+      devices: visibleDevices,
+      connectedDevices,
+      message: currentHasPosition
+        ? `Senal recibida desde ${device.label}.`
+        : `Se inicio la recepcion de senal desde ${device.label}.`,
+    }, {
+      mode: "relay",
+      accuracyM: device.accuracyM,
+      fitOnFirst: currentHasPosition && !state.gpsTracking.track.length,
+      skipTrack: !currentHasPosition,
+    });
+    setStatus(currentHasPosition
+      ? `GPS en vivo recibido desde ${device.label}. ${visibleDevices.length}/${connectedDevices.length} dispositivos visibles en el mapa.`
+      : `Se inicio la recepcion de senal GPS desde ${device.label}. Esperando primera coordenada.`);
+  };
+
+  try {
+    state.gpsTracking.httpRelaySource = connectGpsHttpRelay(httpRelayTopic, handleRelayPayload);
+  } catch (error) {
+    console.warn("No se pudo abrir el relay HTTPS GPS.", error);
+  }
 
   try {
     const handleRelayMessage = (_topic, message) => {
       try {
         const raw = typeof message?.toString === "function" ? message.toString() : String(message || "");
-        const payload = JSON.parse(raw);
-        const device = mergeGpsRelayDevicePayload(payload);
-        const connectedDevices = getGpsRelayConnectedDevices();
-        const visibleDevices = getGpsRelayConnectedDevices({ withCoordinatesOnly: true });
-        const currentHasPosition = hasGpsCoordinates(payload);
-        if (!visibleDevices.length) {
-          renderGpsRelayReceptionStarted(device, connectedDevices);
-          setStatus(`Se inicio la recepcion de senal GPS desde ${device.label}. Esperando primera coordenada.`);
-          return;
-        }
-        if (currentHasPosition) {
-          state.gpsTracking.activeDeviceId = device.id;
-        }
-        applyGpsTrackingSnapshot({
-          ok: true,
-          mode: "relay",
-          sourceLabel: "Relay internet",
-          fetchedAt: device.timestamp,
-          devices: visibleDevices,
-          connectedDevices,
-          message: currentHasPosition
-            ? `Senal recibida desde ${device.label}.`
-            : `Se inicio la recepcion de senal desde ${device.label}.`,
-        }, {
-          mode: "relay",
-          accuracyM: device.accuracyM,
-          fitOnFirst: currentHasPosition && !state.gpsTracking.track.length,
-          skipTrack: !currentHasPosition,
-        });
-        setStatus(currentHasPosition
-          ? `GPS en vivo recibido desde ${device.label}. ${visibleDevices.length}/${connectedDevices.length} dispositivos visibles en el mapa.`
-          : `Se inicio la recepcion de senal GPS desde ${device.label}. Esperando primera coordenada.`);
+        handleRelayPayload(JSON.parse(raw));
       } catch (error) {
         console.warn("Mensaje GPS relay invalido.", error);
       }
@@ -10471,9 +10599,13 @@ async function startGpsRelayTracking(topic = getGpsRelayTopic()) {
         setStatus("Relay GPS pausado: la conexion WebSocket se cerro. Pulsa Conectar emisor GPS para reabrir el canal.");
       }
     });
-    setStatus("Relay GPS listo. Abre el link Internet en el celular y pulsa Iniciar envio.");
+    setStatus("Relay GPS listo por MQTT + HTTPS. Abre el link Internet en el celular y pulsa Iniciar envio.");
     return true;
   } catch (error) {
+    if (state.gpsTracking.httpRelaySource) {
+      setStatus("Relay GPS listo por HTTPS. MQTT no conecto, pero el geoportal queda escuchando el canal alterno.");
+      return true;
+    }
     stopGpsTracking({ silent: true, preservePanels: false });
     resetMetricGrid(dom.gpsResults, "No se pudo abrir el relay publico GPS.");
     resetVisualPanel(dom.gpsVisual, "Revisa la conexion a internet o vuelve a generar el link del emisor.");
@@ -10614,11 +10746,24 @@ function getGpsRelayTopic(sessionId = getGpsRelaySessionId()) {
   return `${gpsRelayService.topicPrefix}/${sessionId}`;
 }
 
+function sanitizeGpsRelayTopicPart(value) {
+  return String(value || "session")
+    .trim()
+    .replace(/[^a-z0-9_-]+/gi, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80) || "session";
+}
+
+function getGpsHttpRelayTopic(sessionId = getGpsRelaySessionId()) {
+  return `${gpsRelayService.httpRelayTopicPrefix}-${sanitizeGpsRelayTopicPart(sessionId)}`;
+}
+
 function buildGpsRelaySenderUrl(preset = getGpsSenderPreset(), sessionId = getGpsRelaySessionId()) {
   const url = new URL(gpsRelayService.publicSenderUrl);
   url.searchParams.set("v", gpsRelayService.bridgeVersion);
   url.searchParams.set("mode", "relay");
   url.searchParams.set("relay", getGpsRelayTopic(sessionId));
+  url.searchParams.set("httpRelay", getGpsHttpRelayTopic(sessionId));
   url.searchParams.set("session", sessionId);
   url.searchParams.set("broker", gpsRelayService.brokerUrls[0]);
   url.searchParams.set("area", preset.areaId || state.agronomyAreaId || "machachi");

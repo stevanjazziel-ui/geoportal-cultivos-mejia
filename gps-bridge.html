@@ -419,13 +419,17 @@
     </div>
   </main>
 
-  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <script>
     const storageKey = "geoportal.gpsBridge.settings";
     const ingestPath = "/api/agronomy/gps/ingest";
     const relayDefaults = {
       brokerUrl: "wss://broker.hivemq.com:8884/mqtt",
       fallbackBrokerUrl: "wss://mqtt.eclipseprojects.io/mqtt",
+      httpRelayBaseUrl: "https://ntfy.sh",
+      mqttLibraryUrls: [
+        "https://cdn.jsdelivr.net/npm/mqtt/dist/mqtt.min.js",
+        "https://unpkg.com/mqtt/dist/mqtt.min.js",
+      ],
     };
     let watchId = null;
     let previousFix = null;
@@ -433,6 +437,7 @@
     let lastSentAt = 0;
     let relayClient = null;
     let relayConnectPromise = null;
+    let mqttClientFactoryPromise = null;
 
     const dom = {
       serverUrl: document.querySelector("#serverUrl"),
@@ -494,6 +499,7 @@
       return {
         mode: params.get("mode") || "",
         relayTopic: params.get("relay") || "",
+        httpRelayTopic: params.get("httpRelay") || "",
         brokerUrl: params.get("broker") || "",
         sessionId: params.get("session") || "",
         serverUrl: params.get("server") || "",
@@ -511,6 +517,10 @@
 
     function getRelayTopic() {
       return getQueryParams().relayTopic;
+    }
+
+    function getHttpRelayTopic() {
+      return getQueryParams().httpRelayTopic;
     }
 
     function getRelayBrokerUrl() {
@@ -564,7 +574,7 @@
     function updateEndpointPreview() {
       if (isRelayMode()) {
         dom.endpointValue.innerHTML = `<code>${getRelayTopic()}</code>`;
-        dom.liveValue.innerHTML = `Modo internet activo por <code>${getRelayBrokerUrl()}</code>. El geoportal receptor se suscribe al mismo canal temporal.`;
+        dom.liveValue.innerHTML = `Modo internet activo por <code>${getRelayBrokerUrl()}</code>${getHttpRelayTopic() ? ` y HTTPS <code>${getHttpRelayTopic()}</code>` : ""}. El geoportal receptor se suscribe al mismo canal temporal.`;
         return;
       }
       const baseUrl = normalizeUrl(dom.serverUrl.value);
@@ -739,7 +749,69 @@
       }
     }
 
-    function connectRelayBroker(useFallback = false) {
+    function getMqttClientFactory() {
+      return window.mqtt?.connect ? window.mqtt : null;
+    }
+
+    function loadExternalScriptOnce(src, verifier, timeoutMs = 9000) {
+      if (typeof verifier === "function" && verifier()) {
+        return Promise.resolve(true);
+      }
+      return new Promise((resolve, reject) => {
+        const existingScript = document.querySelector(`script[src="${src}"]`);
+        const script = existingScript || document.createElement("script");
+        let settled = false;
+        const finish = (ok, error = null) => {
+          if (settled) {
+            return;
+          }
+          settled = true;
+          window.clearTimeout(timer);
+          if (ok || (typeof verifier === "function" && verifier())) {
+            resolve(true);
+            return;
+          }
+          reject(error || new Error(`No se pudo cargar ${src}.`));
+        };
+        const timer = window.setTimeout(() => finish(false, new Error(`Tiempo agotado cargando ${src}.`)), timeoutMs);
+        script.addEventListener("load", () => finish(true), { once: true });
+        script.addEventListener("error", () => finish(false, new Error(`Fallo la carga de ${src}.`)), { once: true });
+        if (!existingScript) {
+          script.src = src;
+          script.async = true;
+          document.head.appendChild(script);
+        }
+      });
+    }
+
+    async function ensureMqttClientFactory() {
+      const currentFactory = getMqttClientFactory();
+      if (currentFactory) {
+        return currentFactory;
+      }
+      if (!mqttClientFactoryPromise) {
+        mqttClientFactoryPromise = (async () => {
+          let lastError = null;
+          for (const src of relayDefaults.mqttLibraryUrls) {
+            try {
+              await loadExternalScriptOnce(src, getMqttClientFactory);
+              const loadedFactory = getMqttClientFactory();
+              if (loadedFactory) {
+                return loadedFactory;
+              }
+            } catch (error) {
+              lastError = error;
+            }
+          }
+          throw lastError || new Error("La libreria MQTT no esta disponible.");
+        })().finally(() => {
+          mqttClientFactoryPromise = null;
+        });
+      }
+      return mqttClientFactoryPromise;
+    }
+
+    async function connectRelayBroker(useFallback = false) {
       if (!isRelayMode()) {
         return Promise.reject(new Error("El modo internet no esta activo."));
       }
@@ -749,13 +821,11 @@
       if (relayConnectPromise) {
         return relayConnectPromise;
       }
-      if (!window.mqtt?.connect) {
-        return Promise.reject(new Error("La libreria MQTT no esta disponible."));
-      }
+      const mqttFactory = await ensureMqttClientFactory();
 
       const brokerUrl = useFallback ? relayDefaults.fallbackBrokerUrl : getRelayBrokerUrl();
       relayConnectPromise = new Promise((resolve, reject) => {
-        const client = window.mqtt.connect(brokerUrl, {
+        const client = mqttFactory.connect(brokerUrl, {
           clientId: `gps_sender_${buildDefaultDeviceId()}`,
           clean: true,
           connectTimeout: 8000,
@@ -811,20 +881,27 @@
       };
     }
 
-    async function publishRelayPosition(payload, options = {}) {
+    function sanitizeRelayTopicPart(value) {
+      return String(value || "device")
+        .trim()
+        .replace(/[#+/\\\s]+/g, "_")
+        .slice(0, 80) || "device";
+    }
+
+    function getRelayDeviceTopic(payload = {}) {
+      return `${getRelayTopic()}/devices/${sanitizeRelayTopicPart(payload.id || payload.deviceId || dom.deviceId.value || "device")}`;
+    }
+
+    async function publishMqttRelayPayload(relayPayload, options = {}) {
       const client = await connectRelayBroker(false);
       const topic = getRelayTopic();
+      const deviceTopic = getRelayDeviceTopic(relayPayload);
       const settings = {
         retain: true,
         ...options,
       };
-      const relayPayload = {
-        ...payload,
-        relayTopic: topic,
-        sentVia: "mqtt-relay",
-      };
-      return new Promise((resolve, reject) => {
-        client.publish(topic, JSON.stringify(relayPayload), { qos: 0, retain: settings.retain }, (error) => {
+      const publishOne = (targetTopic) => new Promise((resolve, reject) => {
+        client.publish(targetTopic, JSON.stringify(relayPayload), { qos: 0, retain: settings.retain }, (error) => {
           if (error) {
             reject(error);
             return;
@@ -832,6 +909,71 @@
           resolve(true);
         });
       });
+      await Promise.all([...new Set([topic, deviceTopic])].map(publishOne));
+      return true;
+    }
+
+    async function publishHttpRelayPayload(relayPayload) {
+      const topic = getHttpRelayTopic();
+      if (!topic) {
+        return false;
+      }
+      const response = await fetch(`${relayDefaults.httpRelayBaseUrl}/${encodeURIComponent(topic)}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          ...relayPayload,
+          sentVia: `${relayPayload.sentVia || "gps"}+https-relay`,
+        }),
+      });
+      if (!response.ok) {
+        throw new Error(`Relay HTTPS respondio ${response.status}.`);
+      }
+      return true;
+    }
+
+    function waitForFirstRelaySuccess(jobs) {
+      return new Promise((resolve, reject) => {
+        const errors = [];
+        let pending = jobs.length;
+        jobs.forEach((job) => {
+          job.then((value) => {
+            if (value === false) {
+              throw new Error("Relay no configurado.");
+            }
+            resolve(true);
+          }).catch((error) => {
+            errors.push(error);
+            pending -= 1;
+            if (pending <= 0) {
+              reject(errors[0] || new Error("No se pudo publicar en ningun relay de internet."));
+            }
+          });
+        });
+      });
+    }
+
+    async function publishRelayPosition(payload, options = {}) {
+      const relayPayload = {
+        ...payload,
+        relayTopic: getRelayTopic(),
+        httpRelayTopic: getHttpRelayTopic(),
+        sentVia: "mqtt-relay",
+      };
+      const jobs = [
+        publishMqttRelayPayload(relayPayload, options),
+        publishHttpRelayPayload(relayPayload),
+      ];
+      try {
+        await waitForFirstRelaySuccess(jobs);
+        return true;
+      } catch (_) {
+        const results = await Promise.allSettled(jobs);
+        const firstError = results.find((result) => result.status === "rejected")?.reason;
+        throw firstError || new Error("No se pudo publicar en ningun relay de internet.");
+      }
     }
 
     async function publishRelayLifecycleEvent(eventType, statusLabel) {
@@ -839,7 +981,7 @@
         return false;
       }
       await publishRelayPosition(buildRelayLifecyclePayload(eventType, statusLabel), {
-        retain: false,
+        retain: true,
       });
       return true;
     }
