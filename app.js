@@ -10367,7 +10367,6 @@ function buildGpsSenderLinkOptions(payload) {
       title: index === 0 ? "Link para celular o tablet" : `Link de red ${index + 1}`,
       label: index === 0 ? "Recomendado" : "Red local",
       description: "Envia este link al celular, laptop, dron con navegador o equipo emisor conectado a la misma red Wi-Fi.",
-      host: `${entry.interface || "Red local"} · ${address || origin}`,
       host: `${entry.interface || "Red local"} - ${address || origin}`,
       recommended: index === 0,
     });
