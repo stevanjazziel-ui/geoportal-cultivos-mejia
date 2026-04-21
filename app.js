@@ -254,6 +254,7 @@ const backendService = {
   analysisPath: "/api/indices/analyze",
   inamhiLivePath: "/api/agronomy/inamhi-live",
   gpsLivePath: "/api/agronomy/gps/live",
+  localIpPath: "/api/network/local-ip",
   defaultOrigins: ["http://127.0.0.1:8765", "http://localhost:8765"],
 };
 
@@ -2522,6 +2523,12 @@ const state = {
     accuracyM: null,
     lastDeviceSnapshot: null,
   },
+  gpsSender: {
+    open: false,
+    loading: false,
+    networkPayload: null,
+    links: [],
+  },
   wizardProgress: {},
   wizardBusy: false,
 };
@@ -3219,6 +3226,10 @@ async function setAgronomyArea(areaId = state.agronomyAreaId, options = {}) {
 
   syncAgronomyAreaUi();
   syncEntryRouteUi(state.entryRoute);
+  if (state.gpsSender.open) {
+    renderGpsSenderContext();
+    renderGpsSenderLinks();
+  }
 
   if (changed || options.forceReset) {
     resetAgronomySelectionState();
@@ -4169,6 +4180,14 @@ function cacheDom() {
   dom.openGpsBridgeBtn = document.querySelector("#openGpsBridgeBtn");
   dom.startGpsDemoBtn = document.querySelector("#startGpsDemoBtn");
   dom.stopGpsTrackingBtn = document.querySelector("#stopGpsTrackingBtn");
+  dom.gpsSenderModal = document.querySelector("#gpsSenderModal");
+  dom.gpsSenderBackdrop = document.querySelector("#gpsSenderBackdrop");
+  dom.gpsSenderCloseBtn = document.querySelector("#gpsSenderCloseBtn");
+  dom.gpsSenderRefreshBtn = document.querySelector("#gpsSenderRefreshBtn");
+  dom.gpsSenderLinks = document.querySelector("#gpsSenderLinks");
+  dom.gpsSenderAreaTitle = document.querySelector("#gpsSenderAreaTitle");
+  dom.gpsSenderAreaCopy = document.querySelector("#gpsSenderAreaCopy");
+  dom.gpsSenderOpenLocalBtn = document.querySelector("#gpsSenderOpenLocalBtn");
   dom.runPlanningBtn = document.querySelector("#runPlanningBtn");
   dom.focusPlanningBtn = document.querySelector("#focusPlanningBtn");
   dom.clearPlanningBtn = document.querySelector("#clearPlanningBtn");
@@ -4516,6 +4535,11 @@ function bindUI() {
     return runModuleAction(dom.startGpsFeedBtn, "Leyendo feed...", () => startGpsFeedTracking());
   });
   dom.openGpsBridgeBtn?.addEventListener("click", () => openGpsBridgePage());
+  dom.gpsSenderCloseBtn?.addEventListener("click", closeGpsSenderModal);
+  dom.gpsSenderBackdrop?.addEventListener("click", closeGpsSenderModal);
+  dom.gpsSenderRefreshBtn?.addEventListener("click", () => refreshGpsSenderLinks(true));
+  dom.gpsSenderOpenLocalBtn?.addEventListener("click", openGpsSenderLocalLink);
+  dom.gpsSenderLinks?.addEventListener("click", handleGpsSenderLinkAction);
   dom.startGpsDemoBtn?.addEventListener("click", () => {
     setModulePendingState(dom.gpsResults, "Levantando recorrido demo sobre el ambito agronomico activo...", [
       { target: dom.gpsVisual, message: "Preparando recorrido demo, velocidad y rastro operativo..." },
@@ -4750,6 +4774,10 @@ function bindUI() {
   });
 
   document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && state.gpsSender.open) {
+      closeGpsSenderModal();
+      return;
+    }
     if (event.key === "Escape" && planning3dState.modalOpen) {
       closePlanning3dViewer();
     }
@@ -10012,13 +10040,307 @@ async function startGpsFeedTracking() {
 }
 
 function openGpsBridgePage() {
-  const bridgeUrl = new URL("./gps-bridge.html", window.location.href).toString();
-  const popup = window.open(bridgeUrl, "_blank", "noopener");
-  if (!popup) {
-    window.location.href = bridgeUrl;
-  }
-  setStatus("Emisor GPS abierto. El otro dispositivo solo enviara ubicacion y el geoportal la mostrara en tiempo real.");
+  openGpsSenderModal();
   return true;
+}
+
+function openGpsSenderModal() {
+  if (!dom.gpsSenderModal) {
+    const fallbackUrl = buildGpsSenderUrl(window.location.origin, getGpsSenderPreset());
+    window.open(fallbackUrl, "_blank", "noopener");
+    return true;
+  }
+
+  state.gpsSender.open = true;
+  dom.gpsSenderModal.classList.remove("hidden");
+  dom.gpsSenderModal.setAttribute("aria-hidden", "false");
+  renderGpsSenderContext();
+  refreshGpsSenderLinks(false);
+  setStatus("Preparando link del emisor GPS. El otro dispositivo solo mandara senal y este geoportal la visualizara.");
+  return true;
+}
+
+function closeGpsSenderModal() {
+  state.gpsSender.open = false;
+  dom.gpsSenderModal?.classList.add("hidden");
+  dom.gpsSenderModal?.setAttribute("aria-hidden", "true");
+}
+
+function getGpsSenderPreset() {
+  const areaProfile = getAgronomyAreaProfile();
+  return {
+    areaId: state.agronomyAreaId || "machachi",
+    areaLabel: areaProfile.scopeLabel || "ambito agricola",
+    deviceLabel: state.currentPlot
+      ? `GPS ${state.currentPlotLabel}`
+      : `Celular ${areaProfile.scopeLabel || "campo"}`,
+    deviceType: "Celular",
+    mobilityMode: "ground",
+  };
+}
+
+function renderGpsSenderContext() {
+  const preset = getGpsSenderPreset();
+  if (dom.gpsSenderAreaTitle) {
+    dom.gpsSenderAreaTitle.textContent = preset.areaLabel;
+  }
+  if (dom.gpsSenderAreaCopy) {
+    dom.gpsSenderAreaCopy.textContent = `Los links se generan para ${preset.areaLabel}. El emisor puede cambiar nombre, tipo de dispositivo o frecuencia antes de iniciar.`;
+  }
+}
+
+function normalizeOrigin(value) {
+  try {
+    return new URL(value, window.location.href).origin;
+  } catch (_) {
+    return window.location.origin;
+  }
+}
+
+function normalizeUrl(value) {
+  return normalizeOrigin(value);
+}
+
+function isLoopbackOrigin(value) {
+  try {
+    const { hostname } = new URL(value);
+    return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+  } catch (_) {
+    return false;
+  }
+}
+
+function buildGpsSenderUrl(origin, preset = getGpsSenderPreset()) {
+  const serverOrigin = normalizeOrigin(origin);
+  const url = new URL("/gps-sender", serverOrigin);
+  url.searchParams.set("server", serverOrigin);
+  url.searchParams.set("area", preset.areaId || state.agronomyAreaId || "machachi");
+  url.searchParams.set("label", preset.deviceLabel || "Celular de campo");
+  url.searchParams.set("type", preset.deviceType || "Celular");
+  url.searchParams.set("mobility", preset.mobilityMode || "ground");
+  return url.toString();
+}
+
+function normalizeGpsSenderAddresses(addresses) {
+  if (Array.isArray(addresses)) {
+    return addresses.filter(Boolean);
+  }
+  if (addresses && typeof addresses === "object") {
+    if ("address" in addresses || "portalUrl" in addresses || "bridgeUrl" in addresses) {
+      return [addresses];
+    }
+    return Object.values(addresses).filter((entry) => entry && typeof entry === "object");
+  }
+  return [];
+}
+
+async function fetchGpsSenderNetworkPayload(force = false) {
+  const backend = await detectBackend(force || !state.backendAvailable);
+  if (!backend.available || !state.backendUrl) {
+    throw new Error("No se detecto el backend local. Abre el geoportal con Abrir Geoportal.bat para generar links de red.");
+  }
+  return fetchJson(`${state.backendUrl}${backendService.localIpPath}`);
+}
+
+function buildGpsSenderLinkOptions(payload) {
+  const preset = getGpsSenderPreset();
+  const links = [];
+  const seen = new Set();
+  const port = Number(payload?.port || 8765);
+  const addresses = normalizeGpsSenderAddresses(payload?.addresses);
+
+  const pushLink = (origin, config = {}) => {
+    const serverOrigin = normalizeOrigin(origin);
+    const url = buildGpsSenderUrl(serverOrigin, preset);
+    if (seen.has(url)) {
+      return;
+    }
+    seen.add(url);
+    links.push({
+      url,
+      origin: serverOrigin,
+      title: config.title || "Emisor GPS",
+      label: config.label || "Link GPS",
+      description: config.description || "Abre este link en el dispositivo que va a enviar ubicacion.",
+      host: config.host || serverOrigin,
+      recommended: Boolean(config.recommended),
+    });
+  };
+
+  addresses.forEach((entry, index) => {
+    const address = entry.address || "";
+    const origin = entry.portalUrl
+      ? normalizeOrigin(entry.portalUrl)
+      : address
+        ? `http://${address}:${port}`
+        : "";
+    if (!origin) {
+      return;
+    }
+    pushLink(origin, {
+      title: index === 0 ? "Link para celular o tablet" : `Link de red ${index + 1}`,
+      label: index === 0 ? "Recomendado" : "Red local",
+      description: "Envia este link al celular, laptop, dron con navegador o equipo emisor conectado a la misma red Wi-Fi.",
+      host: `${entry.interface || "Red local"} · ${address || origin}`,
+      recommended: index === 0,
+    });
+  });
+
+  const localOrigin = state.backendUrl || payload?.localhostPortalUrl || window.location.origin;
+  pushLink(localOrigin, {
+    title: "Prueba en este equipo",
+    label: "Local",
+    description: "Sirve para probar el emisor desde la misma computadora donde corre el backend.",
+    host: normalizeOrigin(localOrigin),
+    recommended: links.length === 0,
+  });
+
+  return links.sort((a, b) => Number(b.recommended) - Number(a.recommended) || Number(isLoopbackOrigin(a.origin)) - Number(isLoopbackOrigin(b.origin)));
+}
+
+function renderGpsSenderLinks() {
+  if (!dom.gpsSenderLinks) {
+    return;
+  }
+  if (state.gpsSender.loading) {
+    dom.gpsSenderLinks.classList.add("empty-state");
+    dom.gpsSenderLinks.innerHTML = "Detectando IP local y preparando links del emisor GPS...";
+    return;
+  }
+
+  const links = Array.isArray(state.gpsSender.links) ? state.gpsSender.links : [];
+  if (!links.length) {
+    dom.gpsSenderLinks.classList.add("empty-state");
+    dom.gpsSenderLinks.innerHTML = `
+      <div>
+        <strong>No se pudo generar un link de red todavia.</strong><br>
+        Abre <code>Abrir Geoportal.bat</code> en esta PC y luego pulsa <strong>Actualizar links</strong>.
+      </div>
+    `;
+    return;
+  }
+
+  dom.gpsSenderLinks.classList.remove("empty-state");
+  dom.gpsSenderLinks.innerHTML = links.map((link, index) => `
+    <article class="gps-sender-link-card${link.recommended ? " recommended" : ""}">
+      <div class="gps-sender-link-meta">
+        <span class="gps-sender-link-label">${escapeHtmlContent(link.label)}</span>
+        <span class="gps-sender-link-host">${escapeHtmlContent(link.host)}</span>
+      </div>
+      <h4>${escapeHtmlContent(link.title)}</h4>
+      <p>${escapeHtmlContent(link.description)}</p>
+      <div class="gps-sender-link-url">${escapeHtmlContent(link.url)}</div>
+      <div class="gps-sender-link-actions">
+        <button class="secondary-button" type="button" data-gps-sender-action="copy" data-gps-sender-index="${index}">Copiar link</button>
+        <button class="ghost-button" type="button" data-gps-sender-action="share" data-gps-sender-index="${index}">Compartir</button>
+        <button class="ghost-button" type="button" data-gps-sender-action="open" data-gps-sender-index="${index}">Abrir aqui</button>
+      </div>
+    </article>
+  `).join("");
+}
+
+async function refreshGpsSenderLinks(force = false) {
+  if (!dom.gpsSenderLinks) {
+    return [];
+  }
+  state.gpsSender.loading = true;
+  renderGpsSenderContext();
+  renderGpsSenderLinks();
+
+  try {
+    const payload = await fetchGpsSenderNetworkPayload(force);
+    state.gpsSender.networkPayload = payload;
+    state.gpsSender.links = buildGpsSenderLinkOptions(payload);
+    if (!state.gpsSender.links.length) {
+      throw new Error("No hay direcciones IPv4 disponibles para compartir.");
+    }
+    setStatus("Links del emisor GPS listos. Copia el recomendado o compartelo al dispositivo que solo enviara senal.");
+  } catch (error) {
+    console.warn("No se pudieron generar links del emisor GPS.", error);
+    state.gpsSender.networkPayload = null;
+    state.gpsSender.links = [];
+    setStatus(`Emisor GPS: ${error.message || "no se pudo detectar la red local"}.`);
+  } finally {
+    state.gpsSender.loading = false;
+    renderGpsSenderLinks();
+  }
+  return state.gpsSender.links;
+}
+
+async function copyGpsSenderLink(url) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(url);
+    return true;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = url;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.left = "-9999px";
+  document.body.appendChild(textarea);
+  textarea.select();
+  let copied = false;
+  try {
+    copied = document.execCommand("copy");
+  } finally {
+    textarea.remove();
+  }
+  return copied;
+}
+
+async function handleGpsSenderLinkAction(event) {
+  const button = event.target.closest("[data-gps-sender-action]");
+  if (!button || !dom.gpsSenderLinks?.contains(button)) {
+    return;
+  }
+  const index = Number(button.dataset.gpsSenderIndex);
+  const action = button.dataset.gpsSenderAction;
+  const link = state.gpsSender.links[index];
+  if (!link?.url) {
+    return;
+  }
+
+  if (action === "open") {
+    window.open(link.url, "_blank", "noopener");
+    return;
+  }
+
+  if (action === "share" && navigator.share) {
+    try {
+      await navigator.share({
+        title: "Emisor GPS del geoportal",
+        text: "Abre este link, acepta ubicacion y pulsa Iniciar envio. Ese dispositivo solo mandara senal GPS.",
+        url: link.url,
+      });
+      setStatus("Link del emisor GPS compartido desde el navegador.");
+      return;
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        return;
+      }
+    }
+  }
+
+  try {
+    await copyGpsSenderLink(link.url);
+    setStatus("Link del emisor GPS copiado. Envialo al dispositivo que solo mandara senal.");
+  } catch (error) {
+    setStatus("No se pudo copiar automaticamente. Selecciona el link y copialo manualmente.");
+  }
+}
+
+async function openGpsSenderLocalLink() {
+  let links = state.gpsSender.links;
+  if (!Array.isArray(links) || !links.length) {
+    links = await refreshGpsSenderLinks(false);
+  }
+  const link = links.find((entry) => isLoopbackOrigin(entry.origin)) || links[0];
+  if (!link?.url) {
+    setStatus("No hay un link local disponible todavia. Abre el backend local y vuelve a actualizar.");
+    return;
+  }
+  window.open(link.url, "_blank", "noopener");
 }
 
 function startGpsDemoTracking() {

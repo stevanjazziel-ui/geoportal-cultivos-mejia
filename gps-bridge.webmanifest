@@ -1,0 +1,18 @@
+{
+  "name": "Emisor GPS Geoportal",
+  "short_name": "Emisor GPS",
+  "description": "Aplicacion ligera para enviar la ubicacion del celular o computadora al geoportal.",
+  "start_url": "./gps-sender",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#eef2ec",
+  "theme_color": "#8c5c3c",
+  "icons": [
+    {
+      "src": "./gps-bridge-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

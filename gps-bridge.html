@@ -4,6 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Emisor GPS | Geoportal Cultivos</title>
+  <meta name="theme-color" content="#8c5c3c" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Emisor GPS" />
+  <link rel="manifest" href="./gps-bridge.webmanifest" />
+  <link rel="icon" href="./gps-bridge-icon.svg" type="image/svg+xml" />
   <style>
     :root {
       color-scheme: light;
@@ -170,6 +176,11 @@
       background: rgba(255, 255, 255, 0.48);
       color: var(--muted);
       border: 1px dashed rgba(34, 49, 43, 0.18);
+    }
+
+    .button-full {
+      width: 100%;
+      justify-content: center;
     }
 
     .status-card,
@@ -349,6 +360,7 @@
           <button id="startBtn" class="primary" type="button">Iniciar envio</button>
           <button id="sendOnceBtn" class="secondary" type="button">Enviar una vez</button>
           <button id="stopBtn" class="ghost" type="button">Detener</button>
+          <button id="installBtn" class="ghost button-full" type="button" hidden>Instalar app emisora</button>
         </div>
       </section>
 
@@ -426,6 +438,7 @@
       startBtn: document.querySelector("#startBtn"),
       sendOnceBtn: document.querySelector("#sendOnceBtn"),
       stopBtn: document.querySelector("#stopBtn"),
+      installBtn: document.querySelector("#installBtn"),
       statusPill: document.querySelector("#statusPill"),
       statusCopy: document.querySelector("#statusCopy"),
       lastSentMetric: document.querySelector("#lastSentMetric"),
@@ -437,6 +450,7 @@
       networkCopy: document.querySelector("#networkCopy"),
       networkLinks: document.querySelector("#networkLinks"),
     };
+    let deferredInstallPrompt = null;
 
     function formatNumber(value, digits = 1, suffix = "") {
       if (!Number.isFinite(Number(value))) {
@@ -468,6 +482,17 @@
       return withProtocol.replace(/\/+$/, "");
     }
 
+    function getQueryParams() {
+      const params = new URLSearchParams(window.location.search);
+      return {
+        serverUrl: params.get("server") || "",
+        areaId: params.get("area") || "",
+        deviceLabel: params.get("label") || "",
+        deviceType: params.get("type") || "",
+        mobilityMode: params.get("mobility") || "",
+      };
+    }
+
     function buildDefaultDeviceId() {
       const randomTail = typeof crypto !== "undefined" && crypto.randomUUID
         ? crypto.randomUUID().split("-")[0]
@@ -482,13 +507,14 @@
       } catch (_) {
         saved = {};
       }
+      const query = getQueryParams();
 
-      dom.serverUrl.value = saved.serverUrl || window.location.origin;
+      dom.serverUrl.value = query.serverUrl || saved.serverUrl || window.location.origin;
       dom.deviceId.value = saved.deviceId || buildDefaultDeviceId();
-      dom.deviceLabel.value = saved.deviceLabel || "Celular de campo";
-      dom.deviceType.value = saved.deviceType || "Celular";
-      dom.areaId.value = saved.areaId || "machachi";
-      dom.mobilityMode.value = saved.mobilityMode || "ground";
+      dom.deviceLabel.value = query.deviceLabel || saved.deviceLabel || "Celular de campo";
+      dom.deviceType.value = query.deviceType || saved.deviceType || "Celular";
+      dom.areaId.value = query.areaId || saved.areaId || "machachi";
+      dom.mobilityMode.value = query.mobilityMode || saved.mobilityMode || "ground";
       dom.sendEvery.value = saved.sendEvery || "6000";
       updateEndpointPreview();
       updateNetworkNote();
@@ -510,7 +536,7 @@
     function updateEndpointPreview() {
       const baseUrl = normalizeUrl(dom.serverUrl.value);
       dom.endpointValue.innerHTML = `<code>${baseUrl}${ingestPath}</code>`;
-      dom.liveValue.innerHTML = `El otro equipo las visualiza desde <code>${baseUrl}/api/agronomy/gps/live</code>.`;
+      dom.liveValue.innerHTML = `El geoportal receptor las visualiza desde <code>${baseUrl}/api/agronomy/gps/live</code>.`;
     }
 
     function updateNetworkNote() {
@@ -518,7 +544,7 @@
       const localOrigin = window.location.origin;
       if (host === "localhost" || host === "127.0.0.1") {
         dom.networkCopy.innerHTML =
-          `Ahora mismo la pagina esta en <code>${localOrigin}</code>. Si vas a conectar otro celular o laptop, puedes abrir <code>Abrir Puente GPS.bat</code> y luego entrar con la IP local del computador, por ejemplo <code>http://192.168.1.50:8765/gps-bridge.html</code>. Ese dispositivo solo enviara la senal GPS.`;
+          `Ahora mismo la pagina esta en <code>${localOrigin}</code>. Si vas a conectar otro celular o laptop, puedes abrir <code>Abrir Puente GPS.bat</code> y luego entrar con la IP local del computador, por ejemplo <code>http://192.168.1.50:8765/gps-sender</code>. Ese dispositivo solo enviara la senal GPS.`;
       } else {
         dom.networkCopy.innerHTML =
           `Esta pagina ya esta usando <code>${localOrigin}</code>. Cualquier equipo en la misma red puede abrirla para compartir ubicacion hacia el geoportal sin visualizar el mapa principal.`;
@@ -567,6 +593,42 @@
       dom.statusPill.className = `status-pill${kind ? ` ${kind}` : ""}`;
       dom.statusPill.textContent = title;
       dom.statusCopy.textContent = copy;
+    }
+
+    function bindInstallPrompt() {
+      window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredInstallPrompt = event;
+        dom.installBtn.hidden = false;
+      });
+
+      dom.installBtn.addEventListener("click", async () => {
+        if (!deferredInstallPrompt) {
+          return;
+        }
+        deferredInstallPrompt.prompt();
+        try {
+          await deferredInstallPrompt.userChoice;
+        } catch (_) {
+          // No-op
+        }
+        deferredInstallPrompt = null;
+        dom.installBtn.hidden = true;
+      });
+
+      window.addEventListener("appinstalled", () => {
+        deferredInstallPrompt = null;
+        dom.installBtn.hidden = true;
+      });
+    }
+
+    function registerServiceWorker() {
+      if (!("serviceWorker" in navigator)) {
+        return;
+      }
+      navigator.serviceWorker.register("./gps-bridge-sw.js").catch(() => {
+        // Si falla, la pagina sigue operando como emisor sin cache local.
+      });
     }
 
     function haversineKm(lat1, lon1, lat2, lon2) {
@@ -769,6 +831,8 @@
 
     loadSettings();
     loadNetworkHints();
+    bindInstallPrompt();
+    registerServiceWorker();
   </script>
 </body>
 </html>

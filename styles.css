@@ -3561,6 +3561,167 @@ button {
   opacity: 0.68;
 }
 
+.gps-sender-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1350;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.gps-sender-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(17, 26, 22, 0.5);
+  backdrop-filter: blur(10px);
+}
+
+.gps-sender-shell {
+  position: relative;
+  width: min(1120px, calc(100vw - 36px));
+  max-height: calc(100vh - 42px);
+  display: grid;
+  gap: 18px;
+  padding: 24px;
+  overflow: auto;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background:
+    linear-gradient(155deg, rgba(255, 252, 247, 0.98), rgba(244, 241, 235, 0.92)),
+    radial-gradient(circle at top right, rgba(140, 92, 60, 0.12), transparent 28%);
+  box-shadow: 0 30px 90px rgba(26, 37, 31, 0.24);
+}
+
+.gps-sender-header,
+.gps-sender-header-actions,
+.gps-sender-link-actions,
+.gps-sender-link-meta {
+  display: flex;
+  align-items: center;
+}
+
+.gps-sender-header {
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.gps-sender-header h2,
+.gps-sender-card h3,
+.gps-sender-link-card h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
+}
+
+.gps-sender-subtitle {
+  margin: 10px 0 0;
+  max-width: 68ch;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.gps-sender-header-actions {
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.gps-sender-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(300px, 0.8fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.gps-sender-side,
+.gps-sender-links {
+  display: grid;
+  gap: 14px;
+}
+
+.gps-sender-card,
+.gps-sender-link-card {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(16px);
+}
+
+.gps-sender-card {
+  padding: 18px;
+}
+
+.gps-sender-link-card {
+  padding: 18px 18px 16px;
+}
+
+.gps-sender-link-card.recommended {
+  border-color: rgba(47, 127, 95, 0.24);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.84), rgba(240, 248, 243, 0.94));
+}
+
+.gps-sender-link-meta {
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.gps-sender-link-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  border-radius: 999px;
+  background: rgba(47, 127, 95, 0.12);
+  color: var(--leaf-deep);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.gps-sender-link-host {
+  color: var(--muted);
+  font-size: 0.9rem;
+  word-break: break-word;
+}
+
+.gps-sender-link-card p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.gps-sender-link-url {
+  margin: 14px 0 0;
+  padding: 13px 14px;
+  border-radius: 16px;
+  background: rgba(35, 48, 41, 0.06);
+  border: 1px solid rgba(35, 48, 41, 0.08);
+  font-size: 0.92rem;
+  line-height: 1.6;
+  word-break: break-all;
+}
+
+.gps-sender-link-actions {
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.gps-sender-link-actions .ghost-button,
+.gps-sender-link-actions .secondary-button {
+  flex: 0 0 auto;
+}
+
+.gps-sender-shell .empty-state {
+  min-height: 92px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
 .mobile-only {
   display: none;
 }
@@ -3583,6 +3744,10 @@ button {
 
   .workspace {
     grid-template-columns: minmax(340px, 400px) minmax(0, 1fr);
+  }
+
+  .gps-sender-layout {
+    grid-template-columns: 1fr;
   }
 
   .login-card {
@@ -3676,6 +3841,26 @@ button {
   .planning-3d-panel > .service-banner,
   .planning-3d-panel > .planning-3d-progress {
     grid-column: 1 / -1;
+  }
+
+  .gps-sender-modal {
+    padding: 14px;
+  }
+
+  .gps-sender-shell {
+    width: min(100vw - 20px, 1120px);
+    max-height: calc(100vh - 20px);
+    padding: 18px;
+  }
+
+  .gps-sender-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .gps-sender-header-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 }
 
@@ -3787,6 +3972,19 @@ button {
 
   .planning-candidate-head {
     flex-direction: column;
+  }
+
+  .gps-sender-shell {
+    gap: 14px;
+    padding: 16px;
+    border-radius: 22px;
+  }
+
+  .gps-sender-link-actions .ghost-button,
+  .gps-sender-link-actions .secondary-button,
+  .gps-sender-header-actions .ghost-button,
+  .gps-sender-header-actions .secondary-button {
+    width: 100%;
   }
 
   .territorial-decision-hero {

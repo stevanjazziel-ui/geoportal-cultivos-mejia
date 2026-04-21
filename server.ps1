@@ -12,6 +12,12 @@ $StaticFiles = @{
   "/index.html" = "index.html"
   "/styles.css" = "styles.css"
   "/app.js" = "app.js"
+  "/gps-bridge.html" = "gps-bridge.html"
+  "/gps-sender" = "gps-bridge.html"
+  "/gps-sender.html" = "gps-bridge.html"
+  "/gps-bridge.webmanifest" = "gps-bridge.webmanifest"
+  "/gps-bridge-sw.js" = "gps-bridge-sw.js"
+  "/gps-bridge-icon.svg" = "gps-bridge-icon.svg"
   "/.nojekyll" = ".nojekyll"
 }
 
@@ -388,7 +394,7 @@ function Get-LocalNetworkHints([int]$TargetPort) {
         interface = $network.Name
         address = $text
         portalUrl = "http://$text`:$TargetPort/"
-        bridgeUrl = "http://$text`:$TargetPort/gps-bridge.html"
+        bridgeUrl = "http://$text`:$TargetPort/gps-sender"
       }
     }
   }
@@ -412,6 +418,7 @@ function Get-ContentType([string]$FilePath) {
     ".html" { return "text/html; charset=utf-8" }
     ".css" { return "text/css; charset=utf-8" }
     ".js" { return "application/javascript; charset=utf-8" }
+    ".webmanifest" { return "application/manifest+json; charset=utf-8" }
     ".json" { return "application/json; charset=utf-8" }
     ".geojson" { return "application/geo+json; charset=utf-8" }
     ".svg" { return "image/svg+xml" }
@@ -2142,7 +2149,7 @@ try {
           bindAddress = $BindAddress
           port = $Port
           localhostPortalUrl = "http://127.0.0.1:$Port/"
-          localhostBridgeUrl = "http://127.0.0.1:$Port/gps-bridge.html"
+          localhostBridgeUrl = "http://127.0.0.1:$Port/gps-sender"
           addresses = Get-LocalNetworkHints $Port
         }
         continue
