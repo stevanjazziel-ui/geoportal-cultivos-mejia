@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260421-5",
+  bridgeVersion: "20260421-7",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -2530,6 +2530,7 @@ const state = {
     relayTopic: null,
     relaySessionId: null,
     relayBrokerUrl: null,
+    relayDevices: {},
     activeDeviceId: null,
     devices: [],
     track: [],
@@ -9444,8 +9445,11 @@ function appendGpsTrackPoint(device) {
 
 function applyGpsTrackingSnapshot(payload, options = {}) {
   const devices = Array.isArray(payload?.devices)
-    ? payload.devices.filter((device) => Number.isFinite(Number(device?.lat)) && Number.isFinite(Number(device?.lon)))
+    ? payload.devices.filter(hasGpsCoordinates)
     : [];
+  const connectedDevices = Array.isArray(payload?.connectedDevices) && payload.connectedDevices.length
+    ? payload.connectedDevices
+    : devices;
 
   if (!devices.length) {
     resetMetricGrid(dom.gpsResults, "No hay dispositivos GPS visibles para el ambito activo.");
@@ -9462,7 +9466,9 @@ function applyGpsTrackingSnapshot(payload, options = {}) {
   if (options.resetTrack) {
     state.gpsTracking.track = [];
   }
-  appendGpsTrackPoint(activeDevice);
+  if (!options.skipTrack) {
+    appendGpsTrackPoint(activeDevice);
+  }
 
   state.gpsTracking.mode = options.mode || payload.mode || "feed";
   state.gpsTracking.devices = devices;
@@ -9477,12 +9483,15 @@ function applyGpsTrackingSnapshot(payload, options = {}) {
     mode: state.gpsTracking.mode,
     sourceLabel: payload.sourceLabel || (state.gpsTracking.mode === "browser" ? "Mi GPS" : state.gpsTracking.mode === "demo" ? "Demo GPS" : "Feed local"),
     devices,
+    connectedDevices,
     activeDevice,
     track,
     targetLabel: getCurrentAgronomyScopeLabel(),
     tone,
     summary: {
-      deviceCount: devices.length,
+      deviceCount: connectedDevices.length || devices.length,
+      visibleDeviceCount: devices.length,
+      connectedCount: connectedDevices.length || devices.length,
       activeCount: devices.filter((device) => device.statusLabel !== "Sin senal").length,
       totalDistanceKm: getGpsDistanceKm(track),
       maxSpeedKmh: Math.max(...devices.map((device) => Number(device.speedKmh) || 0), 0),
@@ -9518,7 +9527,7 @@ function renderGpsTrackingResults(result = null) {
     {
       label: "Fuente",
       value: result.sourceLabel,
-      copy: `${result.summary.activeCount}/${result.summary.deviceCount} dispositivos con senal en ${result.targetLabel}.`,
+      copy: `${result.summary.visibleDeviceCount || result.summary.activeCount}/${result.summary.deviceCount} dispositivos conectados con posicion visible en ${result.targetLabel}.`,
     },
     {
       label: "Dispositivo activo",
@@ -9561,6 +9570,9 @@ function renderGpsTrackingVisual(result = null) {
   }
 
   const active = result.activeDevice;
+  const listedDevices = Array.isArray(result.connectedDevices) && result.connectedDevices.length
+    ? result.connectedDevices
+    : (result.devices || []);
   const speedPct = clamp(Math.round((Number(active.speedKmh || 0) / 40) * 100), 6, 100);
   const batteryPct = clamp(Math.round(Number(active.batteryPct || 0)), 10, 100);
   const accuracyPct = clamp(Math.round((Math.max(1, 30 - Number(state.gpsTracking.accuracyM || active.accuracyM || 15)) / 30) * 100), 10, 100);
@@ -9621,14 +9633,17 @@ function renderGpsTrackingVisual(result = null) {
       </article>
     </div>
     <div class="gps-device-list">
-      ${(result.devices || []).map((device) => `
+      ${listedDevices.map((device) => {
+        const hasPosition = hasGpsCoordinates(device);
+        return `
         <article class="gps-device-card">
           <strong>${device.label}</strong>
           <p>${device.deviceType || "Dispositivo"} · ${device.statusLabel || "En seguimiento"}</p>
           <p>${Number(device.speedKmh || 0).toFixed(1)} km/h · ${Math.round(Number(device.batteryPct || 0))}% bateria</p>
           <p>${formatGpsSignalAge(device.timestamp)}</p>
         </article>
-      `).join("")}
+      `;
+      }).join("")}
     </div>
     <p class="agronomy-visual-copy">${result.readout}</p>
   `);
@@ -9800,6 +9815,9 @@ function renderGpsTrackingVisual(result = null) {
   const active = result.activeDevice;
   const aerial = isAerialTelemetryDevice(active);
   const aerialSummary = getGpsAerialSummary(result);
+  const listedDevices = Array.isArray(result.connectedDevices) && result.connectedDevices.length
+    ? result.connectedDevices
+    : (result.devices || []);
   const speedPct = clamp(Math.round((Number(active.speedKmh || 0) / (aerial ? 180 : 40)) * 100), 6, 100);
   const batteryPct = clamp(Math.round(Number(active.batteryPct || 0)), 10, 100);
   const accuracyPct = clamp(Math.round((Math.max(1, 30 - Number(state.gpsTracking.accuracyM || active.accuracyM || 15)) / 30) * 100), 10, 100);
@@ -9863,7 +9881,7 @@ function renderGpsTrackingVisual(result = null) {
       </article>
     </div>
     <div class="gps-device-list">
-      ${(result.devices || []).map((device) => `
+      ${listedDevices.map((device) => `
         <article class="gps-device-card">
           <strong>${device.label}</strong>
           <p>${device.deviceType || "Dispositivo"} · ${device.flightStatus || device.statusLabel || "En seguimiento"}</p>
@@ -10056,6 +10074,7 @@ function stopGpsTracking(options = {}) {
     relayTopic: null,
     relaySessionId: null,
     relayBrokerUrl: null,
+    relayDevices: {},
     activeDeviceId: null,
     devices: [],
     track: [],
@@ -10175,12 +10194,14 @@ function getMqttClientFactory() {
 
 function normalizeGpsRelayDevicePayload(payload = {}) {
   const timestamp = payload.timestamp || new Date().toISOString();
+  const eventType = payload.eventType || payload.messageType || payload.kind || "position";
   return {
     id: String(payload.id || payload.deviceId || `relay-${getGpsRelaySessionId()}`),
     label: payload.label || payload.deviceLabel || "GPS externo",
     deviceType: payload.deviceType || payload.type || "Celular",
     mobilityMode: payload.mobilityMode || payload.mobility || "ground",
     areaId: payload.areaId || state.agronomyAreaId || "machachi",
+    eventType,
     lat: Number(payload.lat),
     lon: Number(payload.lon),
     speedKmh: Number.isFinite(Number(payload.speedKmh)) ? Number(payload.speedKmh) : 0,
@@ -10193,8 +10214,130 @@ function normalizeGpsRelayDevicePayload(payload = {}) {
     homeLon: Number.isFinite(Number(payload.homeLon)) ? Number(payload.homeLon) : null,
     flightStatus: payload.flightStatus || null,
     timestamp,
-    statusLabel: payload.statusLabel || (payload.mobilityMode === "air" || payload.mobility === "air" ? "En vuelo" : "En seguimiento"),
+    statusLabel: payload.statusLabel || (eventType === "sender-start"
+      ? "Conectado, esperando primera coordenada"
+      : (payload.mobilityMode === "air" || payload.mobility === "air" ? "En vuelo" : "En seguimiento")),
   };
+}
+
+function hasGpsCoordinates(device) {
+  return Number.isFinite(Number(device?.lat)) && Number.isFinite(Number(device?.lon));
+}
+
+function getGpsRelayDeviceRegistry() {
+  if (!state.gpsTracking.relayDevices || typeof state.gpsTracking.relayDevices !== "object") {
+    state.gpsTracking.relayDevices = {};
+  }
+  return state.gpsTracking.relayDevices;
+}
+
+function mergeGpsRelayDevicePayload(payload = {}) {
+  const registry = getGpsRelayDeviceRegistry();
+  const nextDevice = normalizeGpsRelayDevicePayload(payload);
+  const previousDevice = registry[nextDevice.id] || {};
+  const nextHasCoordinates = hasGpsCoordinates(nextDevice);
+  const previousHasCoordinates = hasGpsCoordinates(previousDevice);
+  const mergedDevice = {
+    ...previousDevice,
+    ...nextDevice,
+    lat: nextHasCoordinates ? nextDevice.lat : previousDevice.lat,
+    lon: nextHasCoordinates ? nextDevice.lon : previousDevice.lon,
+    speedKmh: nextHasCoordinates ? nextDevice.speedKmh : (previousDevice.speedKmh ?? nextDevice.speedKmh),
+    headingDeg: nextHasCoordinates ? nextDevice.headingDeg : (previousDevice.headingDeg ?? nextDevice.headingDeg),
+    accuracyM: nextHasCoordinates ? nextDevice.accuracyM : (previousDevice.accuracyM ?? nextDevice.accuracyM),
+    altitudeM: nextHasCoordinates ? nextDevice.altitudeM : (previousDevice.altitudeM ?? nextDevice.altitudeM),
+    statusLabel: nextDevice.statusLabel || previousDevice.statusLabel || "Conectado",
+    lastPositionAt: nextHasCoordinates
+      ? nextDevice.timestamp
+      : (previousHasCoordinates ? previousDevice.lastPositionAt || previousDevice.timestamp : null),
+  };
+  registry[mergedDevice.id] = mergedDevice;
+  return mergedDevice;
+}
+
+function getGpsRelayConnectedDevices(options = {}) {
+  const settings = {
+    withCoordinatesOnly: false,
+    ...options,
+  };
+  return Object.values(getGpsRelayDeviceRegistry())
+    .filter((device) => !settings.withCoordinatesOnly || hasGpsCoordinates(device))
+    .sort((a, b) => new Date(b.timestamp || 0).getTime() - new Date(a.timestamp || 0).getTime());
+}
+
+function renderGpsRelayReceptionStarted(device, connectedDevices = getGpsRelayConnectedDevices()) {
+  state.gpsTracking.lastDeviceSnapshot = device;
+  state.agronomyOutputs.gps = {
+    ok: true,
+    mode: "relay",
+    sourceLabel: "Relay internet",
+    devices: getGpsRelayConnectedDevices({ withCoordinatesOnly: true }),
+    connectedDevices,
+    activeDevice: null,
+    targetLabel: getCurrentAgronomyScopeLabel(),
+    message: "Se inicio la recepcion de senal GPS desde el emisor externo.",
+    summary: {
+      deviceCount: connectedDevices.length,
+      visibleDeviceCount: getGpsRelayConnectedDevices({ withCoordinatesOnly: true }).length,
+      connectedCount: connectedDevices.length,
+      activeCount: 0,
+      totalDistanceKm: getGpsDistanceKm(state.gpsTracking.track || []),
+      maxSpeedKmh: 0,
+      activeSignalAge: formatGpsSignalAge(device.timestamp),
+    },
+  };
+
+  paintMetricGrid(dom.gpsResults, [
+    {
+      label: "Recepcion",
+      value: "Iniciada",
+      copy: "El geoportal ya recibio el aviso del emisor GPS.",
+      highlight: true,
+    },
+    {
+      label: "Dispositivo",
+      value: device.label,
+      copy: `${device.deviceType || "GPS"} conectado por relay internet.`,
+    },
+    {
+      label: "Conectados",
+      value: `${connectedDevices.length}`,
+      copy: "Se mostraran en el mapa apenas reporten coordenadas validas.",
+    },
+    {
+      label: "Estado",
+      value: "Esperando coordenada",
+      copy: "El celular ya inicio el envio; falta la primera lectura del GPS.",
+    },
+  ]);
+
+  if (dom.gpsVisual) {
+    dom.gpsVisual.classList.remove("empty-state");
+    dom.gpsVisual.classList.add("has-data");
+    setHtmlIfChanged(dom.gpsVisual, `
+      <div class="agronomy-visual-head">
+        <div>
+          <p class="section-kicker">Recepcion GPS</p>
+          <h4>Se inicio la recepcion de senal</h4>
+        </div>
+        <span class="agronomy-visual-pill tone-analysis">Relay internet</span>
+      </div>
+      <div class="gps-device-list">
+        ${connectedDevices.map((entry) => `
+          <article class="gps-device-card">
+            <strong>${entry.label}</strong>
+            <p>${entry.deviceType || "GPS"} Â· ${entry.statusLabel || "Conectado"}</p>
+            <p>${hasGpsCoordinates(entry) ? "Posicion recibida y visible en el mapa." : "Esperando primera coordenada GPS."}</p>
+            <p>${formatGpsSignalAge(entry.timestamp)}</p>
+          </article>
+        `).join("")}
+      </div>
+      <p class="agronomy-visual-copy">El mapa se mantiene con base Esri limpia y pintara todos los dispositivos conectados cuando tengan coordenadas.</p>
+    `);
+  }
+
+  renderGpsTrackingOverlay(state.agronomyOutputs.gps);
+  updateMapSummary();
 }
 
 function connectGpsRelayBroker(topic, onMessage = null) {
@@ -10281,23 +10424,37 @@ async function startGpsRelayTracking(topic = getGpsRelayTopic()) {
       try {
         const raw = typeof message?.toString === "function" ? message.toString() : String(message || "");
         const payload = JSON.parse(raw);
-        const device = normalizeGpsRelayDevicePayload(payload);
-        if (!Number.isFinite(device.lat) || !Number.isFinite(device.lon)) {
+        const device = mergeGpsRelayDevicePayload(payload);
+        const connectedDevices = getGpsRelayConnectedDevices();
+        const visibleDevices = getGpsRelayConnectedDevices({ withCoordinatesOnly: true });
+        const currentHasPosition = hasGpsCoordinates(payload);
+        if (!visibleDevices.length) {
+          renderGpsRelayReceptionStarted(device, connectedDevices);
+          setStatus(`Se inicio la recepcion de senal GPS desde ${device.label}. Esperando primera coordenada.`);
           return;
+        }
+        if (currentHasPosition) {
+          state.gpsTracking.activeDeviceId = device.id;
         }
         applyGpsTrackingSnapshot({
           ok: true,
           mode: "relay",
           sourceLabel: "Relay internet",
           fetchedAt: device.timestamp,
-          devices: [device],
-          message: "Senal recibida desde relay publico MQTT.",
+          devices: visibleDevices,
+          connectedDevices,
+          message: currentHasPosition
+            ? `Senal recibida desde ${device.label}.`
+            : `Se inicio la recepcion de senal desde ${device.label}.`,
         }, {
           mode: "relay",
           accuracyM: device.accuracyM,
-          fitOnFirst: !state.gpsTracking.track.length,
+          fitOnFirst: currentHasPosition && !state.gpsTracking.track.length,
+          skipTrack: !currentHasPosition,
         });
-        setStatus(`GPS en vivo recibido desde ${device.label}. Ultima senal: ${formatGpsSignalAge(device.timestamp)}.`);
+        setStatus(currentHasPosition
+          ? `GPS en vivo recibido desde ${device.label}. ${visibleDevices.length}/${connectedDevices.length} dispositivos visibles en el mapa.`
+          : `Se inicio la recepcion de senal GPS desde ${device.label}. Esperando primera coordenada.`);
       } catch (error) {
         console.warn("Mensaje GPS relay invalido.", error);
       }

@@ -798,16 +798,33 @@
       return relayConnectPromise;
     }
 
-    async function publishRelayPosition(payload) {
+    function buildRelayLifecyclePayload(eventType = "sender-start", statusLabel = "Conectado, esperando primera coordenada") {
+      return {
+        eventType,
+        id: dom.deviceId.value.trim() || buildDefaultDeviceId(),
+        label: dom.deviceLabel.value.trim() || "Dispositivo GPS",
+        deviceType: dom.deviceType.value || "Celular",
+        mobilityMode: dom.mobilityMode.value || "ground",
+        areaId: dom.areaId.value || "machachi",
+        timestamp: new Date().toISOString(),
+        statusLabel,
+      };
+    }
+
+    async function publishRelayPosition(payload, options = {}) {
       const client = await connectRelayBroker(false);
       const topic = getRelayTopic();
+      const settings = {
+        retain: true,
+        ...options,
+      };
       const relayPayload = {
         ...payload,
         relayTopic: topic,
         sentVia: "mqtt-relay",
       };
       return new Promise((resolve, reject) => {
-        client.publish(topic, JSON.stringify(relayPayload), { qos: 0, retain: true }, (error) => {
+        client.publish(topic, JSON.stringify(relayPayload), { qos: 0, retain: settings.retain }, (error) => {
           if (error) {
             reject(error);
             return;
@@ -815,6 +832,16 @@
           resolve(true);
         });
       });
+    }
+
+    async function publishRelayLifecycleEvent(eventType, statusLabel) {
+      if (!isRelayMode()) {
+        return false;
+      }
+      await publishRelayPosition(buildRelayLifecyclePayload(eventType, statusLabel), {
+        retain: false,
+      });
+      return true;
     }
 
     async function postPosition(coords, timestamp) {
@@ -939,7 +966,17 @@
         return;
       }
       stopTracking();
-      setStatus("", "Escuchando GPS", "Esperando la primera posicion del navegador para empezar a mandarla al geoportal.");
+      setStatus("", "Avisando al geoportal", "Conectando con el canal para iniciar la recepcion de senal en el visor.");
+      if (isRelayMode()) {
+        try {
+          await publishRelayLifecycleEvent("sender-start", "Conectado, esperando primera coordenada");
+          setStatus("", "Recepcion iniciada", "El geoportal ya fue avisado. Esperando la primera posicion del navegador para pintarla en el mapa.");
+        } catch (error) {
+          setStatus("warn", "Canal pendiente", error.message || "No se pudo avisar al geoportal antes de la primera coordenada.");
+        }
+      } else {
+        setStatus("", "Escuchando GPS", "Esperando la primera posicion del navegador para empezar a mandarla al geoportal.");
+      }
 
       watchId = navigator.geolocation.watchPosition(async (position) => {
         const minDelay = Number(dom.sendEvery.value || 6000);
