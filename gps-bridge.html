@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Puente GPS | Geoportal Cultivos</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #eef2ec;
+      --panel: rgba(255, 255, 255, 0.86);
+      --panel-strong: rgba(255, 255, 255, 0.94);
+      --border: rgba(40, 58, 45, 0.12);
+      --ink: #22312b;
+      --muted: #5d6f66;
+      --accent: #8c5c3c;
+      --accent-strong: #2d6c55;
+      --warn: #a96d1a;
+      --danger: #a54242;
+      --shadow: 0 20px 60px rgba(32, 48, 38, 0.12);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", "Helvetica Neue", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top right, rgba(140, 92, 60, 0.12), transparent 28%),
+        radial-gradient(circle at bottom left, rgba(45, 108, 85, 0.12), transparent 32%),
+        var(--bg);
+    }
+
+    main {
+      width: min(1080px, calc(100vw - 28px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    .hero,
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .hero {
+      padding: 28px;
+      margin-bottom: 18px;
+    }
+
+    .kicker {
+      margin: 0 0 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      font-size: 0.86rem;
+      font-weight: 800;
+      color: var(--accent-strong);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 3vw, 3rem);
+      line-height: 1.05;
+    }
+
+    .hero p {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 1.02rem;
+      line-height: 1.7;
+      max-width: 78ch;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      padding: 22px;
+    }
+
+    .panel h2 {
+      margin: 0 0 14px;
+      font-size: 1.24rem;
+    }
+
+    .field-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .field {
+      display: grid;
+      gap: 8px;
+    }
+
+    .field.wide {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    input,
+    select {
+      width: 100%;
+      padding: 14px 15px;
+      border-radius: 16px;
+      border: 1px solid rgba(34, 49, 43, 0.14);
+      background: var(--panel-strong);
+      color: var(--ink);
+      font: inherit;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 16px;
+      padding: 13px 18px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 180ms ease, box-shadow 180ms ease, opacity 180ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      cursor: wait;
+      opacity: 0.65;
+      transform: none;
+    }
+
+    .primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 14px 28px rgba(140, 92, 60, 0.24);
+    }
+
+    .secondary {
+      background: rgba(255, 255, 255, 0.84);
+      color: var(--ink);
+      border: 1px solid rgba(34, 49, 43, 0.12);
+    }
+
+    .ghost {
+      background: rgba(255, 255, 255, 0.48);
+      color: var(--muted);
+      border: 1px dashed rgba(34, 49, 43, 0.18);
+    }
+
+    .status-card,
+    .note-card,
+    .telemetry-card {
+      border-radius: 18px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.68);
+      padding: 16px;
+    }
+
+    .stack {
+      display: grid;
+      gap: 14px;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.88rem;
+      font-weight: 800;
+      background: rgba(45, 108, 85, 0.12);
+      color: var(--accent-strong);
+    }
+
+    .status-pill.warn {
+      background: rgba(169, 109, 26, 0.14);
+      color: var(--warn);
+    }
+
+    .status-pill.danger {
+      background: rgba(165, 66, 66, 0.14);
+      color: var(--danger);
+    }
+
+    .status-copy,
+    .note-card p,
+    .telemetry-card p {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .metric {
+      border-radius: 16px;
+      padding: 14px;
+      border: 1px solid rgba(34, 49, 43, 0.1);
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .metric span {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .metric strong {
+      font-size: 1.18rem;
+    }
+
+    code {
+      font-family: "Cascadia Code", "Consolas", monospace;
+      font-size: 0.92em;
+      background: rgba(34, 49, 43, 0.06);
+      padding: 0.1em 0.35em;
+      border-radius: 6px;
+    }
+
+    .endpoint {
+      word-break: break-all;
+    }
+
+    @media (max-width: 900px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .field-grid,
+      .metrics {
+        grid-template-columns: 1fr;
+      }
+
+      main {
+        width: min(100vw - 18px, 1080px);
+        padding-top: 18px;
+      }
+
+      .hero,
+      .panel {
+        padding: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <p class="kicker">GPS en vivo</p>
+      <h1>Puente GPS para celular o computadora</h1>
+      <p>
+        Esta pagina toma la geolocalizacion del dispositivo y la envia al geoportal para que aparezca en
+        <strong>Agronomia &gt; Seguimiento GPS y telemetria en tiempo real</strong>. Funciona con celular, laptop o
+        cualquier equipo que entregue ubicacion desde el navegador.
+      </p>
+    </section>
+
+    <div class="layout">
+      <section class="panel">
+        <h2>Configuracion del dispositivo</h2>
+        <div class="field-grid">
+          <div class="field wide">
+            <label for="serverUrl">Servidor del geoportal</label>
+            <input id="serverUrl" type="text" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="deviceId">ID del dispositivo</label>
+            <input id="deviceId" type="text" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="deviceLabel">Nombre visible</label>
+            <input id="deviceLabel" type="text" autocomplete="off" />
+          </div>
+          <div class="field">
+            <label for="deviceType">Tipo</label>
+            <select id="deviceType">
+              <option value="Celular">Celular</option>
+              <option value="Laptop">Laptop</option>
+              <option value="Tracker">Tracker GPS</option>
+              <option value="Vehiculo">Vehiculo</option>
+              <option value="Dron">Dron</option>
+              <option value="Avioneta">Avioneta</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="areaId">Ambito</label>
+            <select id="areaId">
+              <option value="mejia">Todo Mejia</option>
+              <option value="machachi">Machachi</option>
+              <option value="cutuglagua">Cutuglagua</option>
+              <option value="quevedo">Quevedo</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="mobilityMode">Movilidad</label>
+            <select id="mobilityMode">
+              <option value="ground">Tierra</option>
+              <option value="air">Aereo</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="sendEvery">Enviar cada</label>
+            <select id="sendEvery">
+              <option value="4000">4 segundos</option>
+              <option value="6000" selected>6 segundos</option>
+              <option value="10000">10 segundos</option>
+              <option value="15000">15 segundos</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="startBtn" class="primary" type="button">Iniciar seguimiento</button>
+          <button id="sendOnceBtn" class="secondary" type="button">Enviar una lectura</button>
+          <button id="stopBtn" class="ghost" type="button">Detener</button>
+          <button id="openPortalBtn" class="ghost" type="button">Abrir geoportal</button>
+        </div>
+      </section>
+
+      <aside class="stack">
+        <section class="status-card">
+          <span id="statusPill" class="status-pill">Listo para conectar</span>
+          <p id="statusCopy" class="status-copy">
+            Configura el dispositivo y pulsa <strong>Iniciar seguimiento</strong>. El puente enviara la ubicacion al
+            backend del geoportal.
+          </p>
+          <div class="metrics">
+            <div class="metric">
+              <span>Ultimo envio</span>
+              <strong id="lastSentMetric">Sin datos</strong>
+            </div>
+            <div class="metric">
+              <span>Precision</span>
+              <strong id="accuracyMetric">Sin datos</strong>
+            </div>
+            <div class="metric">
+              <span>Velocidad</span>
+              <strong id="speedMetric">Sin datos</strong>
+            </div>
+            <div class="metric">
+              <span>Altura</span>
+              <strong id="altitudeMetric">Sin datos</strong>
+            </div>
+          </div>
+        </section>
+
+        <section class="telemetry-card">
+          <p class="kicker" style="margin-bottom: 10px;">Endpoint</p>
+          <p>El puente publica lecturas en:</p>
+          <p id="endpointValue" class="endpoint"><code>/api/agronomy/gps/ingest</code></p>
+          <p id="liveValue" class="endpoint">Luego el modulo agricola las lee desde <code>/api/agronomy/gps/live</code>.</p>
+        </section>
+
+        <section id="networkNote" class="note-card">
+          <p class="kicker" style="margin-bottom: 10px;">Nota de red</p>
+          <p id="networkCopy">
+            Si vas a conectar otro equipo en la misma red, abre esta pagina usando la IP local del computador donde corre
+            <code>server.ps1</code>, por ejemplo <code>http://192.168.1.50:8765/gps-bridge.html</code>.
+          </p>
+        </section>
+
+        <section class="note-card">
+          <p class="kicker" style="margin-bottom: 10px;">Importante</p>
+          <p>
+            En algunos celulares, la geolocalizacion del navegador solo funciona en <strong>HTTPS</strong> o
+            <strong>localhost</strong>. Si tu navegador bloquea el GPS al usar una IP local, el endpoint de ingestión ya
+            queda listo para que una app externa o un atajo HTTP envie el mismo JSON al geoportal.
+          </p>
+        </section>
+      </aside>
+    </div>
+  </main>
+
+  <script>
+    const storageKey = "geoportal.gpsBridge.settings";
+    const ingestPath = "/api/agronomy/gps/ingest";
+    let watchId = null;
+    let previousFix = null;
+    let batteryLevel = null;
+    let lastSentAt = 0;
+
+    const dom = {
+      serverUrl: document.querySelector("#serverUrl"),
+      deviceId: document.querySelector("#deviceId"),
+      deviceLabel: document.querySelector("#deviceLabel"),
+      deviceType: document.querySelector("#deviceType"),
+      areaId: document.querySelector("#areaId"),
+      mobilityMode: document.querySelector("#mobilityMode"),
+      sendEvery: document.querySelector("#sendEvery"),
+      startBtn: document.querySelector("#startBtn"),
+      sendOnceBtn: document.querySelector("#sendOnceBtn"),
+      stopBtn: document.querySelector("#stopBtn"),
+      openPortalBtn: document.querySelector("#openPortalBtn"),
+      statusPill: document.querySelector("#statusPill"),
+      statusCopy: document.querySelector("#statusCopy"),
+      lastSentMetric: document.querySelector("#lastSentMetric"),
+      accuracyMetric: document.querySelector("#accuracyMetric"),
+      speedMetric: document.querySelector("#speedMetric"),
+      altitudeMetric: document.querySelector("#altitudeMetric"),
+      endpointValue: document.querySelector("#endpointValue"),
+      liveValue: document.querySelector("#liveValue"),
+      networkCopy: document.querySelector("#networkCopy"),
+    };
+
+    function formatNumber(value, digits = 1, suffix = "") {
+      if (!Number.isFinite(Number(value))) {
+        return "Sin datos";
+      }
+      return `${Number(value).toFixed(digits)}${suffix}`;
+    }
+
+    function formatDate(value) {
+      if (!value) {
+        return "Sin datos";
+      }
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return "Sin datos";
+      }
+      return date.toLocaleString("es-EC", {
+        dateStyle: "short",
+        timeStyle: "medium",
+      });
+    }
+
+    function normalizeUrl(value) {
+      const raw = String(value || "").trim();
+      if (!raw) {
+        return window.location.origin;
+      }
+      const withProtocol = /^https?:\/\//i.test(raw) ? raw : `http://${raw}`;
+      return withProtocol.replace(/\/+$/, "");
+    }
+
+    function buildDefaultDeviceId() {
+      const randomTail = typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID().split("-")[0]
+        : Math.random().toString(36).slice(2, 8);
+      return `gps-${randomTail}`;
+    }
+
+    function loadSettings() {
+      let saved = {};
+      try {
+        saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+      } catch (_) {
+        saved = {};
+      }
+
+      dom.serverUrl.value = saved.serverUrl || window.location.origin;
+      dom.deviceId.value = saved.deviceId || buildDefaultDeviceId();
+      dom.deviceLabel.value = saved.deviceLabel || "Celular de campo";
+      dom.deviceType.value = saved.deviceType || "Celular";
+      dom.areaId.value = saved.areaId || "machachi";
+      dom.mobilityMode.value = saved.mobilityMode || "ground";
+      dom.sendEvery.value = saved.sendEvery || "6000";
+      updateEndpointPreview();
+      updateNetworkNote();
+    }
+
+    function saveSettings() {
+      const payload = {
+        serverUrl: normalizeUrl(dom.serverUrl.value),
+        deviceId: dom.deviceId.value.trim() || buildDefaultDeviceId(),
+        deviceLabel: dom.deviceLabel.value.trim() || "Dispositivo GPS",
+        deviceType: dom.deviceType.value,
+        areaId: dom.areaId.value,
+        mobilityMode: dom.mobilityMode.value,
+        sendEvery: dom.sendEvery.value,
+      };
+      localStorage.setItem(storageKey, JSON.stringify(payload));
+    }
+
+    function updateEndpointPreview() {
+      const baseUrl = normalizeUrl(dom.serverUrl.value);
+      dom.endpointValue.innerHTML = `<code>${baseUrl}${ingestPath}</code>`;
+      dom.liveValue.innerHTML = `Luego el modulo agricola las lee desde <code>${baseUrl}/api/agronomy/gps/live</code>.`;
+    }
+
+    function updateNetworkNote() {
+      const host = window.location.hostname;
+      const localOrigin = window.location.origin;
+      if (host === "localhost" || host === "127.0.0.1") {
+        dom.networkCopy.innerHTML =
+          `Ahora mismo la pagina esta en <code>${localOrigin}</code>. Si vas a conectar otro celular o laptop, inicia el backend con <code>powershell -ExecutionPolicy Bypass -File .\\server.ps1 -BindAddress 0.0.0.0</code> y abre esta misma pagina usando la IP local del computador, por ejemplo <code>http://192.168.1.50:8765/gps-bridge.html</code>.`;
+      } else {
+        dom.networkCopy.innerHTML =
+          `Esta pagina ya esta usando <code>${localOrigin}</code>. Cualquier equipo en la misma red puede abrirla y compartir ubicacion hacia el mismo geoportal.`;
+      }
+    }
+
+    function setStatus(kind, title, copy) {
+      dom.statusPill.className = `status-pill${kind ? ` ${kind}` : ""}`;
+      dom.statusPill.textContent = title;
+      dom.statusCopy.textContent = copy;
+    }
+
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      const toRad = (value) => (value * Math.PI) / 180;
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return 6371 * c;
+    }
+
+    function computeDerivedSpeedKmh(lat, lon, timestamp) {
+      if (!previousFix?.timestamp || !Number.isFinite(Number(previousFix.lat)) || !Number.isFinite(Number(previousFix.lon))) {
+        return null;
+      }
+      const previousTime = new Date(previousFix.timestamp).getTime();
+      const currentTime = new Date(timestamp).getTime();
+      if (!Number.isFinite(previousTime) || !Number.isFinite(currentTime) || currentTime <= previousTime) {
+        return null;
+      }
+      const distanceKm = haversineKm(previousFix.lat, previousFix.lon, lat, lon);
+      const hours = (currentTime - previousTime) / 3600000;
+      if (hours <= 0) {
+        return null;
+      }
+      return Number((distanceKm / hours).toFixed(1));
+    }
+
+    function computeHeading(lat, lon) {
+      if (!previousFix || !Number.isFinite(Number(previousFix.lat)) || !Number.isFinite(Number(previousFix.lon))) {
+        return 0;
+      }
+      const y = Math.sin((lon - previousFix.lon) * Math.PI / 180) * Math.cos(lat * Math.PI / 180);
+      const x =
+        Math.cos(previousFix.lat * Math.PI / 180) * Math.sin(lat * Math.PI / 180) -
+        Math.sin(previousFix.lat * Math.PI / 180) * Math.cos(lat * Math.PI / 180) *
+        Math.cos((lon - previousFix.lon) * Math.PI / 180);
+      let bearing = (Math.atan2(y, x) * 180) / Math.PI;
+      if (bearing < 0) {
+        bearing += 360;
+      }
+      return Math.round(bearing);
+    }
+
+    async function ensureBatteryState() {
+      if (!("getBattery" in navigator) || batteryLevel !== null) {
+        return;
+      }
+      try {
+        const battery = await navigator.getBattery();
+        const applyBattery = () => {
+          batteryLevel = Math.round((battery.level || 0) * 100);
+        };
+        applyBattery();
+        battery.addEventListener("levelchange", applyBattery);
+      } catch (_) {
+        batteryLevel = null;
+      }
+    }
+
+    async function postPosition(coords, timestamp) {
+      const baseUrl = normalizeUrl(dom.serverUrl.value);
+      const payload = {
+        id: dom.deviceId.value.trim() || buildDefaultDeviceId(),
+        label: dom.deviceLabel.value.trim() || "Dispositivo GPS",
+        deviceType: dom.deviceType.value || "Celular",
+        mobilityMode: dom.mobilityMode.value || "ground",
+        areaId: dom.areaId.value || "machachi",
+        lat: Number(coords.latitude),
+        lon: Number(coords.longitude),
+        speedKmh: Number.isFinite(Number(coords.speed)) && Number(coords.speed) >= 0
+          ? Number((Number(coords.speed) * 3.6).toFixed(1))
+          : (computeDerivedSpeedKmh(Number(coords.latitude), Number(coords.longitude), timestamp) || 0),
+        headingDeg: Number.isFinite(Number(coords.heading)) ? Math.round(Number(coords.heading)) : computeHeading(Number(coords.latitude), Number(coords.longitude)),
+        batteryPct: Number.isFinite(Number(batteryLevel)) ? Number(batteryLevel) : 100,
+        accuracyM: Number.isFinite(Number(coords.accuracy)) ? Math.round(Number(coords.accuracy)) : 8,
+        altitudeM: Number.isFinite(Number(coords.altitude)) ? Number(Number(coords.altitude).toFixed(1)) : null,
+        timestamp,
+        statusLabel: dom.mobilityMode.value === "air" ? "En vuelo" : "En seguimiento",
+      };
+
+      const response = await fetch(`${baseUrl}${ingestPath}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
+        throw new Error(errorPayload.error || "No se pudo almacenar la posicion GPS.");
+      }
+
+      previousFix = {
+        lat: payload.lat,
+        lon: payload.lon,
+        timestamp,
+      };
+      lastSentAt = Date.now();
+      dom.lastSentMetric.textContent = formatDate(timestamp);
+      dom.accuracyMetric.textContent = formatNumber(payload.accuracyM, 0, " m");
+      dom.speedMetric.textContent = formatNumber(payload.speedKmh, 1, " km/h");
+      dom.altitudeMetric.textContent = payload.altitudeM == null ? "Sin datos" : formatNumber(payload.altitudeM, 1, " m");
+      setStatus("", "GPS enviado", `La ultima lectura de ${payload.label} ya esta lista para verse en el modulo agricola del geoportal.`);
+    }
+
+    async function sendCurrentPosition() {
+      saveSettings();
+      await ensureBatteryState();
+      if (!navigator.geolocation) {
+        setStatus("danger", "GPS no disponible", "Este navegador no expone geolocalizacion. Prueba desde otro navegador o envia el JSON desde una app externa.");
+        return;
+      }
+
+      return new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(async (position) => {
+          try {
+            const timestamp = new Date(position.timestamp || Date.now()).toISOString();
+            await postPosition(position.coords || {}, timestamp);
+            resolve(true);
+          } catch (error) {
+            setStatus("danger", "No se pudo enviar", error.message || "No se pudo enviar la posicion al geoportal.");
+            resolve(false);
+          }
+        }, (error) => {
+          const message = error?.code === 1
+            ? "El navegador no recibió permiso para compartir ubicacion."
+            : error?.code === 3
+              ? "La geolocalizacion tardo demasiado en responder."
+              : "No se pudo leer la ubicacion del dispositivo.";
+          setStatus("danger", "GPS sin permiso", message);
+          resolve(false);
+        }, {
+          enableHighAccuracy: true,
+          maximumAge: 4000,
+          timeout: 15000,
+        });
+      });
+    }
+
+    function stopTracking() {
+      if (watchId != null && navigator.geolocation?.clearWatch) {
+        navigator.geolocation.clearWatch(watchId);
+      }
+      watchId = null;
+      setStatus("warn", "Seguimiento detenido", "El puente dejó de enviar posiciones. Puedes reactivarlo cuando quieras.");
+    }
+
+    async function startTracking() {
+      saveSettings();
+      await ensureBatteryState();
+      if (!navigator.geolocation) {
+        setStatus("danger", "GPS no disponible", "Este navegador no expone geolocalizacion. Puedes usar una app externa que publique JSON al endpoint mostrado.");
+        return;
+      }
+      stopTracking();
+      setStatus("", "Escuchando GPS", "Esperando la primera posicion del navegador para empezar a enviarla al geoportal.");
+
+      watchId = navigator.geolocation.watchPosition(async (position) => {
+        const minDelay = Number(dom.sendEvery.value || 6000);
+        if (Date.now() - lastSentAt < minDelay) {
+          return;
+        }
+        try {
+          const timestamp = new Date(position.timestamp || Date.now()).toISOString();
+          await postPosition(position.coords || {}, timestamp);
+        } catch (error) {
+          setStatus("danger", "Error de envio", error.message || "No se pudo enviar la ultima lectura GPS.");
+        }
+      }, (error) => {
+        stopTracking();
+        const message = error?.code === 1
+          ? "El navegador no recibió permiso para compartir ubicacion."
+          : error?.code === 3
+            ? "La geolocalizacion tardo demasiado en responder."
+            : "No se pudo leer la ubicacion del dispositivo.";
+        setStatus("danger", "GPS sin permiso", message);
+      }, {
+        enableHighAccuracy: true,
+        maximumAge: 4000,
+        timeout: 15000,
+      });
+    }
+
+    function openPortal() {
+      const baseUrl = normalizeUrl(dom.serverUrl.value);
+      window.open(baseUrl, "_blank", "noopener");
+    }
+
+    dom.serverUrl.addEventListener("input", () => {
+      updateEndpointPreview();
+      saveSettings();
+    });
+    [dom.deviceId, dom.deviceLabel, dom.deviceType, dom.areaId, dom.mobilityMode, dom.sendEvery].forEach((input) => {
+      input.addEventListener("change", saveSettings);
+      input.addEventListener("input", saveSettings);
+    });
+    dom.startBtn.addEventListener("click", startTracking);
+    dom.sendOnceBtn.addEventListener("click", sendCurrentPosition);
+    dom.stopBtn.addEventListener("click", stopTracking);
+    dom.openPortalBtn.addEventListener("click", openPortal);
+
+    loadSettings();
+  </script>
+</body>
+</html>

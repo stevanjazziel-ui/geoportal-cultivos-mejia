@@ -4166,6 +4166,7 @@ function cacheDom() {
   dom.runInamhiLiveBtn = document.querySelector("#runInamhiLiveBtn");
   dom.startGpsBrowserBtn = document.querySelector("#startGpsBrowserBtn");
   dom.startGpsFeedBtn = document.querySelector("#startGpsFeedBtn");
+  dom.openGpsBridgeBtn = document.querySelector("#openGpsBridgeBtn");
   dom.startGpsDemoBtn = document.querySelector("#startGpsDemoBtn");
   dom.stopGpsTrackingBtn = document.querySelector("#stopGpsTrackingBtn");
   dom.runPlanningBtn = document.querySelector("#runPlanningBtn");
@@ -4514,6 +4515,7 @@ function bindUI() {
     ]);
     return runModuleAction(dom.startGpsFeedBtn, "Leyendo feed...", () => startGpsFeedTracking());
   });
+  dom.openGpsBridgeBtn?.addEventListener("click", () => openGpsBridgePage());
   dom.startGpsDemoBtn?.addEventListener("click", () => {
     setModulePendingState(dom.gpsResults, "Levantando recorrido demo sobre el ambito agronomico activo...", [
       { target: dom.gpsVisual, message: "Preparando recorrido demo, velocidad y rastro operativo..." },
@@ -10006,6 +10008,16 @@ async function startGpsFeedTracking() {
     tick(false);
   }, 6000);
   setStatus(`Seguimiento GPS activo sobre ${getAgronomyAreaProfile().scopeLabel} usando feed local para tierra o aire.`);
+  return true;
+}
+
+function openGpsBridgePage() {
+  const bridgeUrl = new URL("./gps-bridge.html", window.location.href).toString();
+  const popup = window.open(bridgeUrl, "_blank", "noopener");
+  if (!popup) {
+    window.location.href = bridgeUrl;
+  }
+  setStatus("Puente GPS abierto. Puedes compartir ubicacion desde un celular o computadora hacia el geoportal.");
   return true;
 }
 

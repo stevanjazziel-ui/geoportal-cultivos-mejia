@@ -8,3 +8,5 @@ debug_runner.html
 planning3d_photo_index.json
 tmp/
 tmptiles/
+data/gps_live_feed.json
+data/inamhi_live_feed.json

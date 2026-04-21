@@ -1,6 +1,6 @@
 param(
   [int]$Port = 8765,
-  [string]$BindAddress = "127.0.0.1"
+  [string]$BindAddress = "0.0.0.0"
 )
 
 $ErrorActionPreference = "Stop"
@@ -36,6 +36,7 @@ $Planning3dDatasets = @{
 $Planning3dPhotoRoot = "E:\FOTOS MACHACHI"
 $AgronomyInamhiLiveFeedPath = Join-Path $Root "data\inamhi_live_feed.json"
 $AgronomyGpsLiveFeedPath = Join-Path $Root "data\gps_live_feed.json"
+$AgronomyGpsLiveMemory = $null
 $AgronomyRealtimeStations = @(
   @{
     stationCode = "M120"
@@ -1414,6 +1415,163 @@ function Read-LiveJsonFile([string]$Path) {
   }
 }
 
+function Ensure-ParentDirectory([string]$Path) {
+  $parent = [System.IO.Path]::GetDirectoryName($Path)
+  if (-not [string]::IsNullOrWhiteSpace($parent) -and -not [System.IO.Directory]::Exists($parent)) {
+    [System.IO.Directory]::CreateDirectory($parent) | Out-Null
+  }
+}
+
+function Convert-ToNullableInvariantDouble($Value) {
+  $text = if ($null -eq $Value) { "" } else { [string]$Value }
+  if ([string]::IsNullOrWhiteSpace($text)) {
+    return $null
+  }
+
+  $parsed = 0.0
+  if ([double]::TryParse($text, [System.Globalization.NumberStyles]::Float, [System.Globalization.CultureInfo]::InvariantCulture, [ref]$parsed)) {
+    return $parsed
+  }
+  return $null
+}
+
+function Convert-ToGpsDeviceId([string]$Id, [string]$Label) {
+  $seed = if (-not [string]::IsNullOrWhiteSpace($Id)) { $Id } elseif (-not [string]::IsNullOrWhiteSpace($Label)) { $Label } else { "gps-device" }
+  $slug = [regex]::Replace($seed.Trim().ToLowerInvariant(), "[^a-z0-9]+", "-")
+  $slug = [regex]::Replace($slug, "-{2,}", "-").Trim("-")
+  if ([string]::IsNullOrWhiteSpace($slug)) {
+    return "gps-device"
+  }
+  return $slug
+}
+
+function Normalize-AgronomyAreaId([string]$AreaId) {
+  if ([string]::IsNullOrWhiteSpace($AreaId)) {
+    return "mejia"
+  }
+
+  switch ($AreaId.Trim().ToLowerInvariant()) {
+    "todo mejia" { return "mejia" }
+    "todo_mejia" { return "mejia" }
+    default { return $AreaId.Trim().ToLowerInvariant() }
+  }
+}
+
+function New-AgronomyGpsDeviceRecord($Device, [string]$FallbackAreaId, [datetime]$Now) {
+  if (-not $Device) {
+    return $null
+  }
+
+  $lat = Convert-ToNullableInvariantDouble $Device.lat
+  $lon = Convert-ToNullableInvariantDouble $Device.lon
+  if ($null -eq $lat -or $null -eq $lon -or [double]::IsNaN($lat) -or [double]::IsInfinity($lat) -or [double]::IsNaN($lon) -or [double]::IsInfinity($lon)) {
+    return $null
+  }
+
+  $label = if ($Device.PSObject.Properties.Name -contains "label" -and -not [string]::IsNullOrWhiteSpace([string]$Device.label)) {
+    [string]$Device.label
+  } else {
+    "Dispositivo GPS"
+  }
+  $areaId = Normalize-AgronomyAreaId $(if ($Device.PSObject.Properties.Name -contains "areaId") { [string]$Device.areaId } else { $FallbackAreaId })
+  $timestamp = if ($Device.PSObject.Properties.Name -contains "timestamp" -and -not [string]::IsNullOrWhiteSpace([string]$Device.timestamp)) {
+    [string]$Device.timestamp
+  } else {
+    $Now.ToString("o")
+  }
+
+  return [pscustomobject][ordered]@{
+    id = Convert-ToGpsDeviceId $(if ($Device.PSObject.Properties.Name -contains "id") { [string]$Device.id } else { "" }) $label
+    label = $label
+    deviceType = if ($Device.PSObject.Properties.Name -contains "deviceType" -and -not [string]::IsNullOrWhiteSpace([string]$Device.deviceType)) { [string]$Device.deviceType } else { "GPS" }
+    mobilityMode = if ($Device.PSObject.Properties.Name -contains "mobilityMode" -and -not [string]::IsNullOrWhiteSpace([string]$Device.mobilityMode)) { [string]$Device.mobilityMode } else { "ground" }
+    areaId = $areaId
+    lat = [Math]::Round([double]$lat, 6)
+    lon = [Math]::Round([double]$lon, 6)
+    speedKmh = [Math]::Round((Convert-ToInvariantDouble $Device.speedKmh), 1)
+    headingDeg = [Math]::Round((Convert-ToInvariantDouble $Device.headingDeg), 0)
+    batteryPct = [Math]::Round((Convert-ToInvariantDouble $Device.batteryPct 100), 0)
+    accuracyM = [Math]::Round((Convert-ToInvariantDouble $Device.accuracyM 8), 0)
+    altitudeM = $(if ($Device.PSObject.Properties.Name -contains "altitudeM") { [Math]::Round((Convert-ToInvariantDouble $Device.altitudeM), 1) } else { $null })
+    verticalSpeedMps = $(if ($Device.PSObject.Properties.Name -contains "verticalSpeedMps") { [Math]::Round((Convert-ToInvariantDouble $Device.verticalSpeedMps), 1) } else { $null })
+    homeLat = $(if ($Device.PSObject.Properties.Name -contains "homeLat") { [Math]::Round((Convert-ToInvariantDouble $Device.homeLat), 6) } else { $null })
+    homeLon = $(if ($Device.PSObject.Properties.Name -contains "homeLon") { [Math]::Round((Convert-ToInvariantDouble $Device.homeLon), 6) } else { $null })
+    flightStatus = $(if ($Device.PSObject.Properties.Name -contains "flightStatus" -and -not [string]::IsNullOrWhiteSpace([string]$Device.flightStatus)) { [string]$Device.flightStatus } else { $null })
+    timestamp = $timestamp
+    statusLabel = if ($Device.PSObject.Properties.Name -contains "statusLabel" -and -not [string]::IsNullOrWhiteSpace([string]$Device.statusLabel)) { [string]$Device.statusLabel } else { "En seguimiento" }
+  }
+}
+
+function Save-AgronomyGpsLiveFeed($Body) {
+  $now = Get-Date
+  $defaultAreaId = Normalize-AgronomyAreaId $(if ($Body -and $Body.PSObject.Properties.Name -contains "areaId") { [string]$Body.areaId } else { "mejia" })
+  $incomingDevices = @()
+
+  if ($Body -and $Body.PSObject.Properties.Name -contains "devices" -and $Body.devices) {
+    $incomingDevices = @($Body.devices)
+  } elseif ($Body -and $Body.PSObject.Properties.Name -contains "device" -and $Body.device) {
+    $incomingDevices = @($Body.device)
+  } elseif ($Body) {
+    $incomingDevices = @($Body)
+  }
+
+  $normalizedIncoming = @()
+  foreach ($device in $incomingDevices) {
+    $record = New-AgronomyGpsDeviceRecord $device $defaultAreaId $now
+    if ($record) {
+      $normalizedIncoming += $record
+    }
+  }
+
+  if (-not $normalizedIncoming.Count) {
+    return @{
+      ok = $false
+      error = "No se recibieron coordenadas GPS validas."
+      receivedCount = @($incomingDevices).Count
+    }
+  }
+
+  $merged = @{}
+  $currentFeed = Read-LiveJsonFile $AgronomyGpsLiveFeedPath
+  if ($currentFeed -and $currentFeed.devices) {
+    foreach ($device in @($currentFeed.devices)) {
+      $record = New-AgronomyGpsDeviceRecord $device $defaultAreaId $now
+      if ($record) {
+        $merged[$record.id] = $record
+      }
+    }
+  }
+
+  foreach ($device in $normalizedIncoming) {
+    $merged[$device.id] = $device
+  }
+
+  $devices = @(
+    $merged.GetEnumerator() |
+      Sort-Object Name |
+      ForEach-Object { $_.Value }
+  )
+
+  $payload = [ordered]@{
+    fetchedAt = $now.ToString("o")
+    devices = $devices
+  }
+
+  $script:AgronomyGpsLiveMemory = [pscustomobject]$payload
+  Ensure-ParentDirectory $AgronomyGpsLiveFeedPath
+  $payload | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $AgronomyGpsLiveFeedPath -Encoding UTF8
+
+  return @{
+    ok = $true
+    mode = "ingest"
+    fetchedAt = $payload.fetchedAt
+    savedCount = $normalizedIncoming.Count
+    deviceCount = $devices.Count
+    devices = $devices
+    message = "Lectura GPS almacenada para el geoportal."
+  }
+}
+
 function Get-AgronomyLiveWeatherBase([string]$AreaId) {
   switch ($AreaId) {
     "machachi" {
@@ -1510,36 +1668,38 @@ function Get-AgronomyInamhiLivePayload($Body) {
 
   if ($feed -and $feed.stations) {
     $stations = @(
-      foreach ($station in @($feed.stations)) {
-        $stationAreaId = if ($station.PSObject.Properties.Name -contains "areaId") { [string]$station.areaId } else { "" }
-        if (-not [string]::IsNullOrWhiteSpace($stationAreaId) -and $stationAreaId.ToLowerInvariant() -ne $areaId.ToLowerInvariant()) {
-          continue
-        }
+      @(
+        foreach ($station in @($feed.stations)) {
+          $stationAreaId = if ($station.PSObject.Properties.Name -contains "areaId") { [string]$station.areaId } else { "" }
+          if (-not [string]::IsNullOrWhiteSpace($stationAreaId) -and $stationAreaId.ToLowerInvariant() -ne $areaId.ToLowerInvariant()) {
+            continue
+          }
 
-        [pscustomobject]@{
-          id = if ($station.id) { [string]$station.id } else { [string]$station.stationCode }
-          stationCode = [string]$station.stationCode
-          name = [string]$station.name
-          provider = if ($station.provider) { [string]$station.provider } else { "INAMHI" }
-          areaId = if ($stationAreaId) { $stationAreaId } else { $areaId }
-          lat = Convert-ToInvariantDouble $station.lat
-          lon = Convert-ToInvariantDouble $station.lon
-          temperatureC = [Math]::Round((Convert-ToInvariantDouble $station.temperatureC), 1)
-          humidityPct = [Math]::Round((Convert-ToInvariantDouble $station.humidityPct), 0)
-          precip1hMm = [Math]::Round((Convert-ToInvariantDouble $station.precip1hMm), 1)
-          windKmh = [Math]::Round((Convert-ToInvariantDouble $station.windKmh), 1)
-          pressureHpa = [Math]::Round((Convert-ToInvariantDouble $station.pressureHpa 1012), 0)
-          solarWm2 = [Math]::Round((Convert-ToInvariantDouble $station.solarWm2), 0)
-          statusLabel = if ($station.statusLabel) { [string]$station.statusLabel } else { "En linea" }
-          updateAgeMinutes = [Math]::Round((Convert-ToInvariantDouble $station.updateAgeMinutes), 1)
-          timestamp = if ($station.timestamp) { [string]$station.timestamp } else { $now.ToString("o") }
+          [pscustomobject]@{
+            id = if ($station.id) { [string]$station.id } else { [string]$station.stationCode }
+            stationCode = [string]$station.stationCode
+            name = [string]$station.name
+            provider = if ($station.provider) { [string]$station.provider } else { "INAMHI" }
+            areaId = if ($stationAreaId) { $stationAreaId } else { $areaId }
+            lat = Convert-ToInvariantDouble $station.lat
+            lon = Convert-ToInvariantDouble $station.lon
+            temperatureC = [Math]::Round((Convert-ToInvariantDouble $station.temperatureC), 1)
+            humidityPct = [Math]::Round((Convert-ToInvariantDouble $station.humidityPct), 0)
+            precip1hMm = [Math]::Round((Convert-ToInvariantDouble $station.precip1hMm), 1)
+            windKmh = [Math]::Round((Convert-ToInvariantDouble $station.windKmh), 1)
+            pressureHpa = [Math]::Round((Convert-ToInvariantDouble $station.pressureHpa 1012), 0)
+            solarWm2 = [Math]::Round((Convert-ToInvariantDouble $station.solarWm2), 0)
+            statusLabel = if ($station.statusLabel) { [string]$station.statusLabel } else { "En linea" }
+            updateAgeMinutes = [Math]::Round((Convert-ToInvariantDouble $station.updateAgeMinutes), 1)
+            timestamp = if ($station.timestamp) { [string]$station.timestamp } else { $now.ToString("o") }
+          }
         }
+      ) | Where-Object {
+        $lat = [double]$_.lat
+        $lon = [double]$_.lon
+        (-not [double]::IsNaN($lat)) -and (-not [double]::IsInfinity($lat)) -and (-not [double]::IsNaN($lon)) -and (-not [double]::IsInfinity($lon))
       }
-    ) | Where-Object {
-      $lat = [double]$_.lat
-      $lon = [double]$_.lon
-      (-not [double]::IsNaN($lat)) -and (-not [double]::IsInfinity($lat)) -and (-not [double]::IsNaN($lon)) -and (-not [double]::IsInfinity($lon))
-    }
+    )
 
     if ($stations.Count -gt 0) {
       return @{
@@ -1684,42 +1844,44 @@ function Get-InterpolatedGpsRoutePosition($Route, [double]$Progress) {
 function Get-AgronomyGpsLivePayload($Body) {
   $areaId = if ($Body -and $Body.areaId) { [string]$Body.areaId } else { "mejia" }
   $now = Get-Date
-  $feed = Read-LiveJsonFile $AgronomyGpsLiveFeedPath
+  $feed = if ($script:AgronomyGpsLiveMemory) { $script:AgronomyGpsLiveMemory } else { Read-LiveJsonFile $AgronomyGpsLiveFeedPath }
 
   if ($feed -and $feed.devices) {
     $devices = @(
-      foreach ($device in @($feed.devices)) {
-        $deviceAreaId = if ($device.PSObject.Properties.Name -contains "areaId") { [string]$device.areaId } else { "" }
-        if (-not [string]::IsNullOrWhiteSpace($deviceAreaId) -and $deviceAreaId.ToLowerInvariant() -ne $areaId.ToLowerInvariant()) {
-          continue
-        }
+      @(
+        foreach ($device in @($feed.devices)) {
+          $deviceAreaId = if ($device.PSObject.Properties.Name -contains "areaId") { [string]$device.areaId } else { "" }
+          if (-not [string]::IsNullOrWhiteSpace($deviceAreaId) -and $deviceAreaId.ToLowerInvariant() -ne $areaId.ToLowerInvariant()) {
+            continue
+          }
 
-        [pscustomobject]@{
-          id = if ($device.id) { [string]$device.id } else { [string]$device.label }
-          label = if ($device.label) { [string]$device.label } else { "Dispositivo GPS" }
-          deviceType = if ($device.deviceType) { [string]$device.deviceType } else { "GPS" }
-          mobilityMode = if ($device.mobilityMode) { [string]$device.mobilityMode } else { "" }
-          areaId = if ($deviceAreaId) { $deviceAreaId } else { $areaId }
-          lat = Convert-ToInvariantDouble $device.lat
-          lon = Convert-ToInvariantDouble $device.lon
+          [pscustomobject]@{
+            id = if ($device.id) { [string]$device.id } else { [string]$device.label }
+            label = if ($device.label) { [string]$device.label } else { "Dispositivo GPS" }
+            deviceType = if ($device.deviceType) { [string]$device.deviceType } else { "GPS" }
+            mobilityMode = if ($device.mobilityMode) { [string]$device.mobilityMode } else { "" }
+            areaId = if ($deviceAreaId) { $deviceAreaId } else { $areaId }
+            lat = Convert-ToInvariantDouble $device.lat
+            lon = Convert-ToInvariantDouble $device.lon
           speedKmh = [Math]::Round((Convert-ToInvariantDouble $device.speedKmh), 1)
           headingDeg = [Math]::Round((Convert-ToInvariantDouble $device.headingDeg), 0)
           batteryPct = [Math]::Round((Convert-ToInvariantDouble $device.batteryPct 100), 0)
           accuracyM = [Math]::Round((Convert-ToInvariantDouble $device.accuracyM 8), 0)
-          altitudeM = if ($device.PSObject.Properties.Name -contains "altitudeM") { [Math]::Round((Convert-ToInvariantDouble $device.altitudeM), 1) } else { $null }
-          verticalSpeedMps = if ($device.PSObject.Properties.Name -contains "verticalSpeedMps") { [Math]::Round((Convert-ToInvariantDouble $device.verticalSpeedMps), 1) } else { $null }
-          homeLat = if ($device.PSObject.Properties.Name -contains "homeLat") { [Math]::Round((Convert-ToInvariantDouble $device.homeLat), 6) } else { $null }
-          homeLon = if ($device.PSObject.Properties.Name -contains "homeLon") { [Math]::Round((Convert-ToInvariantDouble $device.homeLon), 6) } else { $null }
-          flightStatus = if ($device.flightStatus) { [string]$device.flightStatus } else { $null }
-          timestamp = if ($device.timestamp) { [string]$device.timestamp } else { $now.ToString("o") }
-          statusLabel = if ($device.statusLabel) { [string]$device.statusLabel } else { "En seguimiento" }
+          altitudeM = if ($device.PSObject.Properties.Name -contains "altitudeM") { $alt = Convert-ToNullableInvariantDouble $device.altitudeM; if ($null -ne $alt) { [Math]::Round([double]$alt, 1) } else { $null } } else { $null }
+          verticalSpeedMps = if ($device.PSObject.Properties.Name -contains "verticalSpeedMps") { $vs = Convert-ToNullableInvariantDouble $device.verticalSpeedMps; if ($null -ne $vs) { [Math]::Round([double]$vs, 1) } else { $null } } else { $null }
+          homeLat = if ($device.PSObject.Properties.Name -contains "homeLat") { $homeLatValue = Convert-ToNullableInvariantDouble $device.homeLat; if ($null -ne $homeLatValue) { [Math]::Round([double]$homeLatValue, 6) } else { $null } } else { $null }
+          homeLon = if ($device.PSObject.Properties.Name -contains "homeLon") { $homeLonValue = Convert-ToNullableInvariantDouble $device.homeLon; if ($null -ne $homeLonValue) { [Math]::Round([double]$homeLonValue, 6) } else { $null } } else { $null }
+            flightStatus = if ($device.flightStatus) { [string]$device.flightStatus } else { $null }
+            timestamp = if ($device.timestamp) { [string]$device.timestamp } else { $now.ToString("o") }
+            statusLabel = if ($device.statusLabel) { [string]$device.statusLabel } else { "En seguimiento" }
+          }
         }
+      ) | Where-Object {
+        $lat = [double]$_.lat
+        $lon = [double]$_.lon
+        (-not [double]::IsNaN($lat)) -and (-not [double]::IsInfinity($lat)) -and (-not [double]::IsNaN($lon)) -and (-not [double]::IsInfinity($lon))
       }
-    ) | Where-Object {
-      $lat = [double]$_.lat
-      $lon = [double]$_.lon
-      (-not [double]::IsNaN($lat)) -and (-not [double]::IsInfinity($lat)) -and (-not [double]::IsNaN($lon)) -and (-not [double]::IsInfinity($lon))
-    }
+    )
 
     if ($devices.Count -gt 0) {
       return @{
@@ -1874,6 +2036,7 @@ function Invoke-Analysis($Body) {
 
 function Get-StatusText([int]$StatusCode) {
   switch ($StatusCode) {
+    400 { "Bad Request" }
     200 { "OK" }
     204 { "No Content" }
     404 { "Not Found" }
@@ -1957,6 +2120,16 @@ try {
         $body = if ([string]::IsNullOrWhiteSpace($request.Body)) { @{} } else { $request.Body | ConvertFrom-Json }
         $result = Get-AgronomyGpsLivePayload $body
         Write-Json $stream 200 $result
+        continue
+      }
+      if ($request.Path -eq "/api/agronomy/gps/ingest" -and $request.Method -eq "POST") {
+        $body = if ([string]::IsNullOrWhiteSpace($request.Body)) { @{} } else { $request.Body | ConvertFrom-Json }
+        $result = Save-AgronomyGpsLiveFeed $body
+        if ($result.ok) {
+          Write-Json $stream 200 $result
+        } else {
+          Write-Json $stream 400 $result
+        }
         continue
       }
       if ($request.Path -eq "/api/planning/3d/manifest") {
