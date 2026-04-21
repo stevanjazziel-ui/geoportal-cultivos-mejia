@@ -7798,23 +7798,7 @@ function syncAgronomyBaseLayerOpacity() {
     return;
   }
 
-  const image = getSelectedImage();
-  const hasSceneBackdrop = Boolean(
-    state.entryRoute === "agronomia"
-    && isSatelliteVisualBase()
-    && state.showScenePreview
-    && image
-    && (state.sceneLayerKind !== "off" || canRenderSceneLayer(image))
-  );
-
-  const backdropOpacity = !hasSceneBackdrop
-    ? 1
-    : state.sceneLayerKind === "exact"
-      ? 0.08
-      : state.sceneLayerKind === "preview" || state.sceneLayerKind === "footprint"
-        ? 0.55
-        : 0.72;
-  satelliteLayer.setOpacity(backdropOpacity);
+  satelliteLayer.setOpacity(1);
   streetsLayer.setOpacity(1);
 }
 
