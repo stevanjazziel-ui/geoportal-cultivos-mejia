@@ -248,6 +248,11 @@ const earthSearchService = {
   limit: 18,
 };
 
+const cogTileService = {
+  tileUrl: "https://titiler.xyz/cog/tiles/WebMercatorQuad/{z}/{x}/{y}.png",
+  attribution: "Sentinel-2 L2A via Earth Search + TiTiler",
+};
+
 const backendService = {
   healthPath: "/api/health",
   searchPath: "/api/stac/search",
@@ -256,12 +261,6 @@ const backendService = {
   gpsLivePath: "/api/agronomy/gps/live",
   localIpPath: "/api/network/local-ip",
   defaultOrigins: ["http://127.0.0.1:8765", "http://localhost:8765"],
-};
-
-const mapboxService = {
-  storageKey: "geoportal.mapboxToken",
-  styleId: "mapbox/satellite-streets-v12",
-  attribution: "Mapbox | OpenStreetMap",
 };
 
 const exactSceneCache = new Map();
@@ -2455,7 +2454,7 @@ const state = {
   surfaceMode: "primary",
   showScenePreview: true,
   showAnalysisOverlay: true,
-  scenePreviewOpacity: 0.85,
+  scenePreviewOpacity: 1,
   sceneLayerKind: "off",
   filteredImages: [],
   sentinelMode: "loading",
@@ -4479,7 +4478,7 @@ function bindUI() {
     state.scenePreviewOpacity = Number(dom.scenePreviewOpacity.value) / 100;
     dom.scenePreviewOpacityValue.textContent = `${Math.round(state.scenePreviewOpacity * 100)}%`;
     if (mapState.sceneExactLayer?.setOpacity) {
-      mapState.sceneExactLayer.setOpacity(state.scenePreviewOpacity);
+      mapState.sceneExactLayer.setOpacity(getExactSceneRenderOpacity());
     }
     if (mapState.scenePreviewLayer) {
       mapState.scenePreviewLayer.setOpacity(getScenePreviewRenderOpacity(getSelectedImage()));
@@ -5450,6 +5449,23 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   }
 }
 
+function ensureLeafletPane(name, zIndex, pointerEvents = "none") {
+  if (!mapState.map) {
+    return;
+  }
+  if (!mapState.map.getPane(name)) {
+    mapState.map.createPane(name);
+  }
+  const pane = mapState.map.getPane(name);
+  pane.style.zIndex = String(zIndex);
+  pane.style.pointerEvents = pointerEvents;
+}
+
+function initializeAgronomyMapPanes() {
+  ensureLeafletPane("sceneRasterPane", 340, "none");
+  ensureLeafletPane("analysisOverlayPane", 390, "auto");
+}
+
 function initializeMap() {
   const initialAgronomyView = getAgronomyAreaMapView();
   mapState.map = L.map("map", {
@@ -5459,6 +5475,7 @@ function initializeMap() {
   }).setView(initialAgronomyView.center, initialAgronomyView.zoom);
 
   L.control.zoom({ position: "bottomright" }).addTo(mapState.map);
+  initializeAgronomyMapPanes();
 
   mapState.baseLayers.satellite = L.tileLayer(
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
@@ -5468,6 +5485,11 @@ function initializeMap() {
       // placeholders that appear in some areas at the deepest native levels.
       maxNativeZoom: 18,
       maxZoom: 22,
+      tileSize: 256,
+      crossOrigin: true,
+      detectRetina: true,
+      updateWhenZooming: false,
+      keepBuffer: 3,
     }
   );
 
@@ -5477,9 +5499,13 @@ function initializeMap() {
       attribution: "OpenStreetMap",
       maxNativeZoom: 19,
       maxZoom: 22,
+      tileSize: 256,
+      crossOrigin: true,
+      detectRetina: true,
+      updateWhenZooming: false,
+      keepBuffer: 3,
     }
   );
-  mapState.baseLayers.mapbox = ensureMapboxBaseLayer();
 
   setBaseLayer(state.baseLayer, true);
 
@@ -5849,11 +5875,11 @@ async function detectBackend(force = false) {
 }
 
 function getBackendCandidates() {
-  const localOrigins = ["127.0.0.1", "localhost"];
   const candidates = [];
 
   if ((window.location.protocol === "http:" || window.location.protocol === "https:")
-    && localOrigins.includes(window.location.hostname)) {
+    && window.location.origin
+    && window.location.origin !== "null") {
     candidates.push(window.location.origin);
   }
 
@@ -7157,6 +7183,7 @@ function renderSentinelOverlay() {
 
   if (state.showAnalysisOverlay && surfaceDataset?.features?.length) {
     mapState.sentinelLayer = L.geoJSON(surfaceDataset, {
+      pane: "analysisOverlayPane",
       style: (feature) => ({
         weight: 0,
         fillOpacity: getAnalysisOverlayOpacity(image),
@@ -7191,12 +7218,6 @@ function renderSentinelOverlay() {
   }
   if (mapState.managementLayer) {
     mapState.managementLayer.bringToFront();
-  }
-  if (mapState.sceneExactLayer?.bringToBack) {
-    mapState.sceneExactLayer.bringToBack();
-  }
-  if (mapState.scenePreviewLayer) {
-    mapState.scenePreviewLayer.bringToBack();
   }
 
   if (!state.analysisBusy) {
@@ -7272,6 +7293,7 @@ function renderScenePreview(image) {
   const effectiveOpacity = getScenePreviewRenderOpacity(image);
 
   mapState.scenePreviewLayer = L.imageOverlay(previewHref, bounds, {
+    pane: "sceneRasterPane",
     opacity: effectiveOpacity,
     interactive: false,
     className: `scene-preview-overlay scene-preview-${sensor.id}`,
@@ -7341,13 +7363,11 @@ function renderFootprintScenePreview(image) {
 
   const effectiveOpacity = getScenePreviewRenderOpacity(image);
   mapState.scenePreviewLayer = L.svgOverlay(svg, bounds, {
+    pane: "sceneRasterPane",
     opacity: effectiveOpacity,
     interactive: false,
     className: `scene-preview-overlay scene-preview-${sensor.id}`,
   }).addTo(mapState.map);
-  if (mapState.scenePreviewLayer?.bringToBack) {
-    mapState.scenePreviewLayer.bringToBack();
-  }
   if (mapState.currentPlotLayer) {
     mapState.currentPlotLayer.bringToFront();
   }
@@ -7454,7 +7474,7 @@ async function queueExactSceneLayerUpgrade(image, requestId, initialLayerKind = 
       updateMapSummary();
     }
 
-    const exactLayer = await createExactSceneLayer(image, exactMatch);
+    const exactLayer = createExactCogTileLayer(image, exactMatch) || await createExactSceneLayer(image, exactMatch);
     if (!exactLayer || !isSceneLayerRequestCurrent(image, requestId)) {
       if (!upgradedPreviewKind && !initialLayerKind && isSceneLayerRequestCurrent(image, requestId)) {
         state.sceneLayerKind = "off";
@@ -7469,9 +7489,6 @@ async function queueExactSceneLayerUpgrade(image, requestId, initialLayerKind = 
     }
 
     mapState.sceneExactLayer = exactLayer.addTo(mapState.map);
-    if (mapState.sceneExactLayer.bringToBack) {
-      mapState.sceneExactLayer.bringToBack();
-    }
     if (mapState.currentPlotLayer) {
       mapState.currentPlotLayer.bringToFront();
     }
@@ -7522,6 +7539,74 @@ function isSceneLayerRequestCurrent(image, requestId) {
   );
 }
 
+function createExactCogTileLayer(image, earthItem = null) {
+  const visualHref = earthItem?.assets?.visual?.href;
+  const bounds = getScenePreviewBounds({
+    ...image,
+    bbox: earthItem?.bbox || image?.bbox,
+    geometry: earthItem?.geometry || image?.geometry,
+  });
+  if (!visualHref || !bounds || typeof L === "undefined" || typeof L.tileLayer !== "function") {
+    return null;
+  }
+
+  const tileUrl = `${cogTileService.tileUrl}?url=${encodeURIComponent(visualHref)}&bidx=1&bidx=2&bidx=3&rescale=0,255`;
+  const layer = L.tileLayer(tileUrl, {
+    pane: "sceneRasterPane",
+    attribution: cogTileService.attribution,
+    opacity: getExactSceneRenderOpacity(),
+    bounds,
+    maxNativeZoom: 15,
+    maxZoom: 22,
+    tileSize: 256,
+    crossOrigin: true,
+    updateWhenIdle: true,
+    updateWhenZooming: false,
+    keepBuffer: 2,
+  });
+
+  layer.codexExactMode = "cog-tiles";
+  layer.codexResolution = "cog-tiles";
+  layer.on("tileerror", () => {
+    if (!layer.codexFallbackStarted) {
+      layer.codexFallbackStarted = true;
+      fallbackExactCogLayerToBufferedRaster(image, earthItem, layer);
+    }
+    if (state.sceneLayerKind === "exact") {
+      setStatus("No se pudo cargar un tile COG de Sentinel-2. Mantengo la escena y el mapa base como respaldo.");
+    }
+  });
+  return layer;
+}
+
+async function fallbackExactCogLayerToBufferedRaster(image, earthItem, failedLayer) {
+  const requestId = state.sceneLayerRequestId;
+  try {
+    const fallbackLayer = await createExactSceneLayer(image, earthItem);
+    if (
+      !fallbackLayer
+      || !isSceneLayerRequestCurrent(image, requestId)
+      || mapState.sceneExactLayer !== failedLayer
+    ) {
+      return;
+    }
+
+    mapState.map.removeLayer(failedLayer);
+    mapState.sceneExactLayer = fallbackLayer.addTo(mapState.map);
+    if (mapState.currentPlotLayer) {
+      mapState.currentPlotLayer.bringToFront();
+    }
+    if (mapState.managementLayer) {
+      mapState.managementLayer.bringToFront();
+    }
+    state.sceneLayerKind = "exact";
+    updateMapSummary();
+    setStatus("Sentinel-2 exacto cargado con raster local como respaldo al servicio de tiles.");
+  } catch (error) {
+    console.warn("No se pudo activar el respaldo local del raster Sentinel.", error);
+  }
+}
+
 async function createExactSceneLayer(image, earthItem = null) {
   const GeoRasterLayerCtor = getGeoRasterLayerCtor();
   const exactScene = await getExactSceneData(image, earthItem);
@@ -7532,7 +7617,8 @@ async function createExactSceneLayer(image, earthItem = null) {
 
   const layer = new GeoRasterLayerCtor({
     georaster: exactScene.georaster,
-    opacity: state.scenePreviewOpacity,
+    pane: "sceneRasterPane",
+    opacity: getExactSceneRenderOpacity(),
     interactive: false,
     resolution: renderResolution,
     updateWhenIdle: true,
@@ -7655,29 +7741,33 @@ function getRenderableScenePreviewImage(image, earthItem = null) {
 
 function getExactSceneRenderResolution() {
   const zoom = mapState.map?.getZoom?.() || 11;
-  if (zoom >= 15.8) {
+  if (zoom >= 16) {
+    return 384;
+  }
+  if (zoom >= 14.6) {
     return 320;
   }
-  if (zoom >= 14.4) {
+  if (zoom >= 13.2) {
     return 256;
   }
-  if (zoom >= 12.8) {
+  if (zoom >= 11.8) {
     return 208;
   }
-  if (zoom >= 11.4) {
-    return 168;
-  }
-  return 136;
+  return 168;
+}
+
+function getExactSceneRenderOpacity() {
+  return clamp(Number(state.scenePreviewOpacity) || 1, 0.72, 1);
 }
 
 function getScenePreviewRenderOpacity(image = getSelectedImage()) {
   const sensor = getSensorForImage(image);
   if (isSatelliteVisualBase()) {
     if (sensor.id === "sentinel2") {
-      return clamp(Math.max(state.scenePreviewOpacity, 0.82), 0.68, 0.96);
+      return clamp(state.scenePreviewOpacity, 0.7, 0.92);
     }
     if (sensor.id === "landsat") {
-      return clamp(Math.max(state.scenePreviewOpacity, 0.76), 0.62, 0.92);
+      return clamp(state.scenePreviewOpacity, 0.64, 0.88);
     }
   }
   return state.scenePreviewOpacity;
@@ -7706,10 +7796,10 @@ function syncAgronomyBaseLayerOpacity() {
   const backdropOpacity = !hasSceneBackdrop
     ? 1
     : state.sceneLayerKind === "exact"
-      ? 0.24
+      ? 0.08
       : state.sceneLayerKind === "preview" || state.sceneLayerKind === "footprint"
-        ? 0.34
-        : 0.42;
+        ? 0.55
+        : 0.72;
   satelliteLayer.setOpacity(backdropOpacity);
   streetsLayer.setOpacity(1);
 }
@@ -7751,9 +7841,14 @@ function getVisualToneDivisor(...channels) {
 
 function toneMapVisualChannel(value, divisor = 255) {
   const normalized = clamp(value / divisor, 0, 1);
-  const lifted = clamp((normalized - 0.018) / 0.82, 0, 1);
-  const gamma = Math.pow(lifted, 0.9);
-  return Math.round(clamp(gamma * 255 * 1.08, 0, 255));
+  if (divisor <= 255) {
+    const contrast = clamp(((normalized - 0.5) * 1.08) + 0.5, 0, 1);
+    return Math.round(clamp(Math.pow(contrast, 0.96) * 255, 0, 255));
+  }
+
+  const lifted = clamp((normalized - 0.012) / 0.9, 0, 1);
+  const gamma = Math.pow(lifted, 0.86);
+  return Math.round(clamp(gamma * 255 * 1.04, 0, 255));
 }
 
 function getAnalysisOverlayOpacity(image) {
@@ -7771,26 +7866,26 @@ function getAnalysisOverlayOpacity(image) {
   if (image?.source === "real" && state.showScenePreview) {
     if (state.sceneLayerKind === "exact") {
       return satelliteBase
-        ? (sensor.id === "sentinel2" ? 0.06 : 0.1)
+        ? (sensor.id === "sentinel2" ? 0.035 : 0.08)
         : (sensor.id === "sentinel2" ? 0.1 : 0.14);
     }
     if (state.sceneLayerKind === "footprint") {
       return satelliteBase
-        ? (sensor.id === "sentinel1" ? 0.12 : 0.08)
+        ? (sensor.id === "sentinel1" ? 0.1 : 0.055)
         : (sensor.id === "sentinel1" ? 0.18 : 0.12);
     }
     return satelliteBase
-      ? (sensor.id === "sentinel1" ? 0.14 : 0.1)
+      ? (sensor.id === "sentinel1" ? 0.12 : 0.07)
       : (sensor.id === "sentinel1" ? 0.22 : 0.15);
   }
 
   if (image?.source === "real") {
     return satelliteBase
-      ? (sensor.id === "sentinel1" ? 0.16 : zoom >= 14 ? 0.12 : 0.09)
+      ? (sensor.id === "sentinel1" ? 0.14 : zoom >= 14 ? 0.08 : 0.06)
       : (sensor.id === "sentinel1" ? 0.34 : 0.26);
   }
 
-  return satelliteBase ? 0.14 : 0.32;
+  return satelliteBase ? 0.1 : 0.32;
 }
 
 function maybeRefreshScenePreviewQuality() {
@@ -7814,6 +7909,10 @@ function maybeRefreshScenePreviewQuality() {
   }
 
   if (state.sceneLayerKind !== "exact" || !mapState.sceneExactLayer) {
+    return;
+  }
+
+  if (mapState.sceneExactLayer.codexExactMode === "cog-tiles") {
     return;
   }
 
@@ -7893,12 +7992,12 @@ function canRenderSceneLayer(image = getSelectedImage()) {
     return false;
   }
 
-  if (isSceneOutOfScaleForUrbanZoom(image) && isSatelliteVisualBase()) {
-    return false;
-  }
-
   if (canUseExactSceneRaster(image)) {
     return true;
+  }
+
+  if (isSceneOutOfScaleForUrbanZoom(image) && isSatelliteVisualBase()) {
+    return false;
   }
 
   return canRenderThumbnailPreview(image);
@@ -7910,7 +8009,7 @@ function canUseExactSceneRaster(image = getSelectedImage()) {
   }
 
   const sensor = getSensorForImage(image);
-  if (!sensor.exactRaster || !getSceneGridCode(image) || !mapState.map) {
+  if (!sensor.exactRaster || !mapState.map) {
     return false;
   }
 
@@ -7918,10 +8017,10 @@ function canUseExactSceneRaster(image = getSelectedImage()) {
   const target = getCurrentAnalysisTarget();
 
   if (target.scopeType === "plot") {
-    return zoom >= 10.8;
+    return zoom >= 10.2;
   }
 
-  return zoom >= 11.8;
+  return zoom >= 10.8;
 }
 
 function isSceneOutOfScaleForUrbanZoom(image = getSelectedImage()) {
@@ -10110,6 +10209,18 @@ function isLoopbackOrigin(value) {
   }
 }
 
+function isPrivateNetworkOrigin(value) {
+  try {
+    const parsed = new URL(value);
+    const host = parsed.hostname;
+    return isLoopbackOrigin(value)
+      || /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(host)
+      || parsed.port === "8765";
+  } catch (_) {
+    return false;
+  }
+}
+
 function buildGpsSenderUrl(origin, preset = getGpsSenderPreset()) {
   const serverOrigin = normalizeOrigin(origin);
   const url = new URL("/gps-sender", serverOrigin);
@@ -10134,6 +10245,57 @@ function normalizeGpsSenderAddresses(addresses) {
   return [];
 }
 
+function getGpsSenderOriginFallbacks() {
+  const origins = [];
+  const pushOrigin = (value) => {
+    const origin = normalizeOrigin(value);
+    if (origin && !origins.includes(origin)) {
+      origins.push(origin);
+    }
+  };
+
+  if ((window.location.protocol === "http:" || window.location.protocol === "https:")
+    && window.location.origin
+    && window.location.origin !== "null"
+    && isPrivateNetworkOrigin(window.location.origin)) {
+    pushOrigin(window.location.origin);
+  }
+  backendService.defaultOrigins.forEach(pushOrigin);
+  return origins;
+}
+
+function buildGpsSenderFallbackNetworkPayload(error = null) {
+  const addresses = getGpsSenderOriginFallbacks().map((origin) => {
+    let hostname = origin;
+    let port = 8765;
+    try {
+      const parsed = new URL(origin);
+      hostname = parsed.hostname;
+      port = Number(parsed.port) || (parsed.protocol === "https:" ? 443 : 80);
+    } catch (_) {
+      // Conserva los valores seguros de respaldo.
+    }
+    return {
+      interface: isLoopbackOrigin(origin) ? "Este equipo" : "Origen actual",
+      address: hostname,
+      portalUrl: `${origin}/`,
+      bridgeUrl: `${origin}/gps-sender`,
+      fallback: true,
+      port,
+    };
+  });
+
+  return {
+    ok: false,
+    fallback: true,
+    error: error?.message || "Backend local no detectado",
+    port: 8765,
+    localhostPortalUrl: "http://127.0.0.1:8765/",
+    localhostBridgeUrl: "http://127.0.0.1:8765/gps-sender",
+    addresses,
+  };
+}
+
 async function fetchGpsSenderNetworkPayload(force = false) {
   const backend = await detectBackend(force || !state.backendAvailable);
   if (!backend.available || !state.backendUrl) {
@@ -10142,12 +10304,36 @@ async function fetchGpsSenderNetworkPayload(force = false) {
   return fetchJson(`${state.backendUrl}${backendService.localIpPath}`);
 }
 
+function getGpsSenderAddressScore(entry) {
+  const address = String(entry?.address || "");
+  const iface = String(entry?.interface || "").toLowerCase();
+  let score = 0;
+  if (/^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[0-1])\.)/.test(address)) {
+    score += 60;
+  }
+  if (/(wi-?fi|wlan|wireless|ethernet|lan)/.test(iface)) {
+    score += 25;
+  }
+  if (/(virtual|vmware|virtualbox|hyper-v|vethernet|docker|wsl|bluetooth|tunnel|tap|vpn)/.test(iface)) {
+    score -= 35;
+  }
+  if (entry?.fallback) {
+    score -= 20;
+  }
+  if (isLoopbackOrigin(entry?.portalUrl || "")) {
+    score -= 50;
+  }
+  return score;
+}
+
 function buildGpsSenderLinkOptions(payload) {
   const preset = getGpsSenderPreset();
   const links = [];
   const seen = new Set();
   const port = Number(payload?.port || 8765);
-  const addresses = normalizeGpsSenderAddresses(payload?.addresses);
+  const addresses = normalizeGpsSenderAddresses(payload?.addresses)
+    .slice()
+    .sort((a, b) => getGpsSenderAddressScore(b) - getGpsSenderAddressScore(a));
 
   const pushLink = (origin, config = {}) => {
     const serverOrigin = normalizeOrigin(origin);
@@ -10182,6 +10368,7 @@ function buildGpsSenderLinkOptions(payload) {
       label: index === 0 ? "Recomendado" : "Red local",
       description: "Envia este link al celular, laptop, dron con navegador o equipo emisor conectado a la misma red Wi-Fi.",
       host: `${entry.interface || "Red local"} · ${address || origin}`,
+      host: `${entry.interface || "Red local"} - ${address || origin}`,
       recommended: index === 0,
     });
   });
@@ -10258,9 +10445,16 @@ async function refreshGpsSenderLinks(force = false) {
     setStatus("Links del emisor GPS listos. Copia el recomendado o compartelo al dispositivo que solo enviara senal.");
   } catch (error) {
     console.warn("No se pudieron generar links del emisor GPS.", error);
-    state.gpsSender.networkPayload = null;
-    state.gpsSender.links = [];
-    setStatus(`Emisor GPS: ${error.message || "no se pudo detectar la red local"}.`);
+    const fallbackPayload = buildGpsSenderFallbackNetworkPayload(error);
+    state.gpsSender.networkPayload = fallbackPayload;
+    state.gpsSender.links = buildGpsSenderLinkOptions(fallbackPayload);
+    if (state.gpsSender.links.length) {
+      ensureGpsReceiverListening();
+      setStatus("Emisor GPS: no pude leer la IP LAN automaticamente, pero deje links locales de respaldo. Si el celular no abre, inicia Abrir Geoportal.bat y actualiza.");
+    } else {
+      state.gpsSender.links = [];
+      setStatus(`Emisor GPS: ${error.message || "no se pudo detectar la red local"}.`);
+    }
   } finally {
     state.gpsSender.loading = false;
     renderGpsSenderLinks();
@@ -21018,22 +21212,8 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
 }
 
 function setBaseLayer(baseId, initial = false) {
-  let resolvedBaseId = baseId;
-  let nextLayer = null;
-  let baseStatusMessage = null;
-
-  if (baseId === "mapbox") {
-    nextLayer = ensureMapboxBaseLayer({ prompt: !initial });
-    if (!nextLayer) {
-      resolvedBaseId = "satellite";
-      nextLayer = mapState.baseLayers.satellite;
-      if (!initial) {
-        baseStatusMessage = "Mapbox HR necesita un access token. Se mantiene la base satelital actual.";
-      }
-    }
-  } else {
-    nextLayer = mapState.baseLayers[baseId];
-  }
+  let resolvedBaseId = mapState.baseLayers[baseId] ? baseId : "satellite";
+  let nextLayer = mapState.baseLayers[resolvedBaseId];
 
   if (!nextLayer) {
     resolvedBaseId = "satellite";
@@ -21062,16 +21242,8 @@ function setBaseLayer(baseId, initial = false) {
   }
 
   if (!initial) {
-    if (baseStatusMessage) {
-      setStatus(baseStatusMessage);
-    } else {
-      const baseLabel = resolvedBaseId === "mapbox"
-        ? "Mapbox HR"
-        : resolvedBaseId === "satellite"
-          ? "Satelite"
-          : "Calles";
-      setStatus(`Mapa base cambiado a ${baseLabel}.`);
-    }
+    const baseLabel = resolvedBaseId === "satellite" ? "Satelite" : "Calles";
+    setStatus(`Mapa base cambiado a ${baseLabel}.`);
   }
 }
 
@@ -21080,75 +21252,7 @@ function setStatus(text) {
 }
 
 function isSatelliteVisualBase(baseId = state.baseLayer) {
-  return baseId === "satellite" || baseId === "mapbox";
-}
-
-function getStoredMapboxToken() {
-  try {
-    return (window.localStorage.getItem(mapboxService.storageKey) || "").trim();
-  } catch (error) {
-    return "";
-  }
-}
-
-function storeMapboxToken(token) {
-  try {
-    if (token) {
-      window.localStorage.setItem(mapboxService.storageKey, token);
-    } else {
-      window.localStorage.removeItem(mapboxService.storageKey);
-    }
-  } catch (error) {
-    // Ignora bloqueos de storage del navegador.
-  }
-}
-
-function createMapboxBaseLayer(token) {
-  const encodedToken = encodeURIComponent(token);
-  const layer = L.tileLayer(
-    `https://api.mapbox.com/styles/v1/${mapboxService.styleId}/tiles/512/{z}/{x}/{y}@2x?access_token=${encodedToken}`,
-    {
-      attribution: mapboxService.attribution,
-      tileSize: 512,
-      zoomOffset: -1,
-      maxNativeZoom: 22,
-      maxZoom: 22,
-      crossOrigin: true,
-    }
-  );
-  layer.codexToken = token;
-  layer.on("tileerror", () => {
-    if (state.baseLayer === "mapbox") {
-      setStatus("Mapbox HR no pudo cargar tiles. Revisa tu access token o usa otra base.");
-    }
-  });
-  return layer;
-}
-
-function ensureMapboxBaseLayer(options = {}) {
-  const { prompt = false } = options;
-  let token = getStoredMapboxToken();
-
-  if (!token && prompt) {
-    const promptedToken = window.prompt(
-      "Pega tu access token de Mapbox para activar la base visual de alta resolucion.",
-      ""
-    );
-    token = (promptedToken || "").trim();
-    if (token) {
-      storeMapboxToken(token);
-    }
-  }
-
-  if (!token) {
-    return null;
-  }
-
-  if (!mapState.baseLayers.mapbox || mapState.baseLayers.mapbox.codexToken !== token) {
-    mapState.baseLayers.mapbox = createMapboxBaseLayer(token);
-  }
-
-  return mapState.baseLayers.mapbox;
+  return baseId === "satellite";
 }
 
 function getSurfaceConfig() {
