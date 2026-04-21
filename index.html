@@ -411,7 +411,7 @@
                 Aqui apareceran la trayectoria, velocidad, altura, precision y estado operativo del seguimiento GPS.
               </div>
               <p class="service-note">
-                Este modulo admite geolocalizacion del navegador, un feed local desde <code>server.ps1</code> o una simulacion de recorrido mientras se conecta una fuente real. El feed puede venir de un celular, una laptop, un dron o una avioneta si entregan <code>lat</code>, <code>lon</code>, <code>timestamp</code> y, opcionalmente, <code>altitudeM</code>, <code>speedKmh</code>, <code>headingDeg</code> y <code>batteryPct</code>. Ya deje una pagina emisora en <code>/gps-sender</code> para que el otro dispositivo solo mande senal, y un ejemplo en <code>data/gps_live_feed.example.json</code>.
+                Este modulo admite geolocalizacion del navegador, relay publico por internet, feed local desde <code>server.ps1</code> o una simulacion de recorrido. El feed puede venir de un celular, una laptop, un dron o una avioneta si entregan <code>lat</code>, <code>lon</code>, <code>timestamp</code> y, opcionalmente, <code>altitudeM</code>, <code>speedKmh</code>, <code>headingDeg</code> y <code>batteryPct</code>. El link <strong>Internet</strong> no requiere estar en la misma Wi-Fi.
               </p>
             </article>
 
@@ -984,7 +984,7 @@
           <p class="section-kicker">Accion recomendada</p>
           <h3>Comparte uno de estos links</h3>
           <p class="section-copy">
-            Abre el emisor GPS en el celular, laptop o tablet que va a enviar la ubicacion. Ese equipo no necesita ver el geoportal.
+            Abre el emisor GPS en el celular, laptop o tablet que va a enviar la ubicacion. Usa el link Internet si el equipo esta en datos moviles u otra red.
           </p>
           <div id="gpsSenderLinks" class="gps-sender-links empty-state">
             Preparando links de emision para la red local...
@@ -1018,7 +1018,7 @@
           <section class="gps-sender-card">
             <p class="section-kicker">Nota importante</p>
             <p class="service-note">
-              Si el celular bloquea GPS sobre HTTP, necesitaremos un relay o tunel HTTPS. En red local, este flujo ya queda listo para abrir y enviar.
+              El link Internet usa HTTPS y un canal WebSocket temporal. No necesita misma Wi-Fi; solo internet en ambos equipos.
             </p>
           </section>
         </aside>
@@ -1038,6 +1038,7 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260421-2" defer></script>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <script src="./app.js?v=20260421-3" defer></script>
 </body>
 </html>

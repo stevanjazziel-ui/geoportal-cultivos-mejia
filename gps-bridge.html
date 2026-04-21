@@ -419,13 +419,20 @@
     </div>
   </main>
 
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <script>
     const storageKey = "geoportal.gpsBridge.settings";
     const ingestPath = "/api/agronomy/gps/ingest";
+    const relayDefaults = {
+      brokerUrl: "wss://broker.hivemq.com:8884/mqtt",
+      fallbackBrokerUrl: "wss://mqtt.eclipseprojects.io/mqtt",
+    };
     let watchId = null;
     let previousFix = null;
     let batteryLevel = null;
     let lastSentAt = 0;
+    let relayClient = null;
+    let relayConnectPromise = null;
 
     const dom = {
       serverUrl: document.querySelector("#serverUrl"),
@@ -485,12 +492,29 @@
     function getQueryParams() {
       const params = new URLSearchParams(window.location.search);
       return {
+        mode: params.get("mode") || "",
+        relayTopic: params.get("relay") || "",
+        brokerUrl: params.get("broker") || "",
+        sessionId: params.get("session") || "",
         serverUrl: params.get("server") || "",
         areaId: params.get("area") || "",
         deviceLabel: params.get("label") || "",
         deviceType: params.get("type") || "",
         mobilityMode: params.get("mobility") || "",
       };
+    }
+
+    function isRelayMode() {
+      const query = getQueryParams();
+      return query.mode === "relay" && Boolean(query.relayTopic);
+    }
+
+    function getRelayTopic() {
+      return getQueryParams().relayTopic;
+    }
+
+    function getRelayBrokerUrl() {
+      return getQueryParams().brokerUrl || relayDefaults.brokerUrl;
     }
 
     function buildDefaultDeviceId() {
@@ -516,13 +540,17 @@
       dom.areaId.value = query.areaId || saved.areaId || "machachi";
       dom.mobilityMode.value = query.mobilityMode || saved.mobilityMode || "ground";
       dom.sendEvery.value = saved.sendEvery || "6000";
+      if (isRelayMode()) {
+        dom.serverUrl.value = "Relay internet activo";
+        dom.serverUrl.disabled = true;
+      }
       updateEndpointPreview();
       updateNetworkNote();
     }
 
     function saveSettings() {
       const payload = {
-        serverUrl: normalizeUrl(dom.serverUrl.value),
+        serverUrl: isRelayMode() ? "" : normalizeUrl(dom.serverUrl.value),
         deviceId: dom.deviceId.value.trim() || buildDefaultDeviceId(),
         deviceLabel: dom.deviceLabel.value.trim() || "Dispositivo GPS",
         deviceType: dom.deviceType.value,
@@ -534,12 +562,22 @@
     }
 
     function updateEndpointPreview() {
+      if (isRelayMode()) {
+        dom.endpointValue.innerHTML = `<code>${getRelayTopic()}</code>`;
+        dom.liveValue.innerHTML = `Modo internet activo por <code>${getRelayBrokerUrl()}</code>. El geoportal receptor se suscribe al mismo canal temporal.`;
+        return;
+      }
       const baseUrl = normalizeUrl(dom.serverUrl.value);
       dom.endpointValue.innerHTML = `<code>${baseUrl}${ingestPath}</code>`;
       dom.liveValue.innerHTML = `El geoportal receptor las visualiza desde <code>${baseUrl}/api/agronomy/gps/live</code>.`;
     }
 
     function updateNetworkNote() {
+      if (isRelayMode()) {
+        dom.networkCopy.innerHTML =
+          `Modo <strong>Internet</strong> activo. Este dispositivo puede estar con datos moviles u otra red; solo necesita permiso de ubicacion y conexion web.`;
+        return;
+      }
       const host = window.location.hostname;
       const localOrigin = window.location.origin;
       if (host === "localhost" || host === "127.0.0.1") {
@@ -552,6 +590,15 @@
     }
 
     async function loadNetworkHints() {
+      if (isRelayMode()) {
+        dom.networkLinks.innerHTML = `
+          <div class="metric" style="grid-column: 1 / -1;">
+            <span>Canal internet</span>
+            <strong>Listo para enviar desde cualquier red</strong>
+          </div>
+        `;
+        return;
+      }
       try {
         const response = await fetch("/api/network/local-ip");
         if (!response.ok) {
@@ -692,8 +739,80 @@
       }
     }
 
+    function connectRelayBroker(useFallback = false) {
+      if (!isRelayMode()) {
+        return Promise.reject(new Error("El modo internet no esta activo."));
+      }
+      if (relayClient?.connected) {
+        return Promise.resolve(relayClient);
+      }
+      if (relayConnectPromise) {
+        return relayConnectPromise;
+      }
+      if (!window.mqtt?.connect) {
+        return Promise.reject(new Error("La libreria MQTT no esta disponible."));
+      }
+
+      const brokerUrl = useFallback ? relayDefaults.fallbackBrokerUrl : getRelayBrokerUrl();
+      relayConnectPromise = new Promise((resolve, reject) => {
+        const client = window.mqtt.connect(brokerUrl, {
+          clientId: `gps_sender_${buildDefaultDeviceId()}`,
+          clean: true,
+          connectTimeout: 8000,
+          reconnectPeriod: 4500,
+        });
+        const timer = window.setTimeout(() => {
+          try {
+            client.end(true);
+          } catch (_) {
+            // No-op.
+          }
+          relayConnectPromise = null;
+          if (!useFallback) {
+            connectRelayBroker(true).then(resolve).catch(reject);
+            return;
+          }
+          reject(new Error("No se pudo conectar al relay publico."));
+        }, 9000);
+        client.once("connect", () => {
+          window.clearTimeout(timer);
+          relayClient = client;
+          relayConnectPromise = null;
+          resolve(client);
+        });
+        client.once("error", (error) => {
+          window.clearTimeout(timer);
+          relayConnectPromise = null;
+          try {
+            client.end(true);
+          } catch (_) {
+            // No-op.
+          }
+          if (!useFallback) {
+            connectRelayBroker(true).then(resolve).catch(reject);
+            return;
+          }
+          reject(error instanceof Error ? error : new Error("Fallo la conexion MQTT."));
+        });
+      });
+      return relayConnectPromise;
+    }
+
+    async function publishRelayPosition(payload) {
+      const client = await connectRelayBroker(false);
+      const topic = getRelayTopic();
+      return new Promise((resolve, reject) => {
+        client.publish(topic, JSON.stringify(payload), { qos: 0, retain: false }, (error) => {
+          if (error) {
+            reject(error);
+            return;
+          }
+          resolve(true);
+        });
+      });
+    }
+
     async function postPosition(coords, timestamp) {
-      const baseUrl = normalizeUrl(dom.serverUrl.value);
       const payload = {
         id: dom.deviceId.value.trim() || buildDefaultDeviceId(),
         label: dom.deviceLabel.value.trim() || "Dispositivo GPS",
@@ -713,6 +832,23 @@
         statusLabel: dom.mobilityMode.value === "air" ? "En vuelo" : "En seguimiento",
       };
 
+      if (isRelayMode()) {
+        await publishRelayPosition(payload);
+        previousFix = {
+          lat: payload.lat,
+          lon: payload.lon,
+          timestamp,
+        };
+        lastSentAt = Date.now();
+        dom.lastSentMetric.textContent = formatDate(timestamp);
+        dom.accuracyMetric.textContent = formatNumber(payload.accuracyM, 0, " m");
+        dom.speedMetric.textContent = formatNumber(payload.speedKmh, 1, " km/h");
+        dom.altitudeMetric.textContent = payload.altitudeM == null ? "Sin datos" : formatNumber(payload.altitudeM, 1, " m");
+        setStatus("", "GPS enviado por internet", `La ultima lectura de ${payload.label} fue enviada al relay. El geoportal receptor la vera en tiempo real.`);
+        return;
+      }
+
+      const baseUrl = normalizeUrl(dom.serverUrl.value);
       const response = await fetch(`${baseUrl}${ingestPath}`, {
         method: "POST",
         headers: {
@@ -777,6 +913,15 @@
       if (watchId != null && navigator.geolocation?.clearWatch) {
         navigator.geolocation.clearWatch(watchId);
       }
+      if (relayClient?.end) {
+        try {
+          relayClient.end(true);
+        } catch (_) {
+          // No-op.
+        }
+      }
+      relayClient = null;
+      relayConnectPromise = null;
       watchId = null;
       setStatus("warn", "Envio detenido", "Este dispositivo dejo de enviar posiciones. Puedes reactivarlo cuando quieras.");
     }

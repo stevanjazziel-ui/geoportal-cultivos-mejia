@@ -263,6 +263,15 @@ const backendService = {
   defaultOrigins: ["http://127.0.0.1:8765", "http://localhost:8765"],
 };
 
+const gpsRelayService = {
+  publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
+  topicPrefix: "geoportal-cultivos-mejia/gps",
+  brokerUrls: [
+    "wss://broker.hivemq.com:8884/mqtt",
+    "wss://mqtt.eclipseprojects.io/mqtt",
+  ],
+};
+
 const exactSceneCache = new Map();
 const exactSceneMatchCache = new Map();
 
@@ -2516,6 +2525,10 @@ const state = {
     watchId: null,
     pollId: null,
     demoTimerId: null,
+    relayClient: null,
+    relayTopic: null,
+    relaySessionId: null,
+    relayBrokerUrl: null,
     activeDeviceId: null,
     devices: [],
     track: [],
@@ -2527,6 +2540,7 @@ const state = {
     loading: false,
     networkPayload: null,
     links: [],
+    relaySessionId: null,
   },
   wizardProgress: {},
   wizardBusy: false,
@@ -9991,12 +10005,23 @@ function stopGpsTracking(options = {}) {
   if (state.gpsTracking.demoTimerId != null) {
     window.clearInterval(state.gpsTracking.demoTimerId);
   }
+  if (state.gpsTracking.relayClient?.end) {
+    try {
+      state.gpsTracking.relayClient.end(true);
+    } catch (_) {
+      // El cliente puede cerrarse solo si el navegador pierde la conexion.
+    }
+  }
 
   state.gpsTracking = {
     mode: "idle",
     watchId: null,
     pollId: null,
     demoTimerId: null,
+    relayClient: null,
+    relayTopic: null,
+    relaySessionId: null,
+    relayBrokerUrl: null,
     activeDeviceId: null,
     devices: [],
     track: [],
@@ -10109,6 +10134,157 @@ async function startBrowserGpsTracking() {
   return true;
 }
 
+function getMqttClientFactory() {
+  return typeof window !== "undefined" && window.mqtt?.connect ? window.mqtt : null;
+}
+
+function normalizeGpsRelayDevicePayload(payload = {}) {
+  const timestamp = payload.timestamp || new Date().toISOString();
+  return {
+    id: String(payload.id || payload.deviceId || `relay-${getGpsRelaySessionId()}`),
+    label: payload.label || payload.deviceLabel || "GPS externo",
+    deviceType: payload.deviceType || payload.type || "Celular",
+    mobilityMode: payload.mobilityMode || payload.mobility || "ground",
+    areaId: payload.areaId || state.agronomyAreaId || "machachi",
+    lat: Number(payload.lat),
+    lon: Number(payload.lon),
+    speedKmh: Number.isFinite(Number(payload.speedKmh)) ? Number(payload.speedKmh) : 0,
+    headingDeg: Number.isFinite(Number(payload.headingDeg)) ? normalizeGpsHeading(payload.headingDeg) : 0,
+    batteryPct: Number.isFinite(Number(payload.batteryPct)) ? Number(payload.batteryPct) : 100,
+    accuracyM: Number.isFinite(Number(payload.accuracyM)) ? Number(payload.accuracyM) : null,
+    altitudeM: Number.isFinite(Number(payload.altitudeM)) ? Number(payload.altitudeM) : null,
+    verticalSpeedMps: Number.isFinite(Number(payload.verticalSpeedMps)) ? Number(payload.verticalSpeedMps) : null,
+    homeLat: Number.isFinite(Number(payload.homeLat)) ? Number(payload.homeLat) : null,
+    homeLon: Number.isFinite(Number(payload.homeLon)) ? Number(payload.homeLon) : null,
+    flightStatus: payload.flightStatus || null,
+    timestamp,
+    statusLabel: payload.statusLabel || (payload.mobilityMode === "air" || payload.mobility === "air" ? "En vuelo" : "En seguimiento"),
+  };
+}
+
+function connectGpsRelayBroker(topic) {
+  const mqttFactory = getMqttClientFactory();
+  if (!mqttFactory) {
+    return Promise.reject(new Error("La libreria MQTT no esta disponible para el relay publico."));
+  }
+
+  const brokers = gpsRelayService.brokerUrls.slice();
+  const tryBroker = (index = 0) => {
+    if (index >= brokers.length) {
+      return Promise.reject(new Error("No se pudo conectar al relay publico MQTT."));
+    }
+
+    const brokerUrl = brokers[index];
+    return new Promise((resolve, reject) => {
+      const client = mqttFactory.connect(brokerUrl, {
+        clientId: `geoportal_${createGpsRelaySessionId()}`,
+        clean: true,
+        connectTimeout: 8000,
+        reconnectPeriod: 4500,
+      });
+      let settled = false;
+      const timer = window.setTimeout(() => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        try {
+          client.end(true);
+        } catch (_) {
+          // No-op.
+        }
+        reject(new Error(`Tiempo agotado conectando a ${brokerUrl}.`));
+      }, 9000);
+      const fail = (error) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        window.clearTimeout(timer);
+        try {
+          client.end(true);
+        } catch (_) {
+          // No-op.
+        }
+        reject(error instanceof Error ? error : new Error(String(error || "Fallo MQTT")));
+      };
+      client.on("connect", () => {
+        client.subscribe(topic, { qos: 0 }, (error) => {
+          if (settled) {
+            return;
+          }
+          if (error) {
+            fail(error);
+            return;
+          }
+          settled = true;
+          window.clearTimeout(timer);
+          resolve({ client, brokerUrl });
+        });
+      });
+      client.once("error", fail);
+    }).catch(() => tryBroker(index + 1));
+  };
+
+  return tryBroker(0);
+}
+
+async function startGpsRelayTracking(topic = getGpsRelayTopic()) {
+  stopGpsTracking({ silent: true, preservePanels: false });
+  state.gpsTracking.mode = "relay";
+  state.gpsTracking.relayTopic = topic;
+  setModulePendingState(dom.gpsResults, "Esperando senal GPS desde internet...", [
+    { target: dom.gpsVisual, message: "Comparte el link Internet. El celular puede estar en datos moviles u otra red y publicara sobre un canal temporal." },
+  ]);
+
+  try {
+    const { client, brokerUrl } = await connectGpsRelayBroker(topic);
+    state.gpsTracking.relayClient = client;
+    state.gpsTracking.relayBrokerUrl = brokerUrl;
+    state.gpsTracking.relaySessionId = topic.split("/").pop();
+    client.on("message", (_topic, message) => {
+      try {
+        const raw = typeof message?.toString === "function" ? message.toString() : String(message || "");
+        const payload = JSON.parse(raw);
+        const device = normalizeGpsRelayDevicePayload(payload);
+        if (!Number.isFinite(device.lat) || !Number.isFinite(device.lon)) {
+          return;
+        }
+        applyGpsTrackingSnapshot({
+          ok: true,
+          mode: "relay",
+          sourceLabel: "Relay internet",
+          fetchedAt: device.timestamp,
+          devices: [device],
+          message: "Senal recibida desde relay publico MQTT.",
+        }, {
+          mode: "relay",
+          accuracyM: device.accuracyM,
+          fitOnFirst: !state.gpsTracking.track.length,
+        });
+      } catch (error) {
+        console.warn("Mensaje GPS relay invalido.", error);
+      }
+    });
+    client.on("reconnect", () => {
+      setStatus("Relay GPS reconectando. Mantengo el canal abierto para recibir la senal externa.");
+    });
+    client.on("close", () => {
+      if (state.gpsTracking.mode === "relay") {
+        setStatus("Relay GPS pausado: la conexion WebSocket se cerro. Pulsa Conectar emisor GPS para reabrir el canal.");
+      }
+    });
+    setStatus("Relay GPS listo. Abre el link Internet en el celular y pulsa Iniciar envio.");
+    return true;
+  } catch (error) {
+    stopGpsTracking({ silent: true, preservePanels: false });
+    resetMetricGrid(dom.gpsResults, "No se pudo abrir el relay publico GPS.");
+    resetVisualPanel(dom.gpsVisual, "Revisa la conexion a internet o vuelve a generar el link del emisor.");
+    setStatus(`Relay GPS: ${error.message || "no se pudo conectar al canal publico"}.`);
+    return false;
+  }
+}
+
 async function startGpsFeedTracking() {
   stopGpsTracking({ silent: true, preservePanels: false });
   state.gpsTracking.mode = "feed";
@@ -10219,6 +10395,37 @@ function isPrivateNetworkOrigin(value) {
   } catch (_) {
     return false;
   }
+}
+
+function createGpsRelaySessionId() {
+  if (typeof crypto !== "undefined" && crypto.randomUUID) {
+    return crypto.randomUUID().replace(/-/g, "").slice(0, 20);
+  }
+  return `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 12)}`;
+}
+
+function getGpsRelaySessionId() {
+  if (!state.gpsSender.relaySessionId) {
+    state.gpsSender.relaySessionId = createGpsRelaySessionId();
+  }
+  return state.gpsSender.relaySessionId;
+}
+
+function getGpsRelayTopic(sessionId = getGpsRelaySessionId()) {
+  return `${gpsRelayService.topicPrefix}/${sessionId}`;
+}
+
+function buildGpsRelaySenderUrl(preset = getGpsSenderPreset(), sessionId = getGpsRelaySessionId()) {
+  const url = new URL(gpsRelayService.publicSenderUrl);
+  url.searchParams.set("mode", "relay");
+  url.searchParams.set("relay", getGpsRelayTopic(sessionId));
+  url.searchParams.set("session", sessionId);
+  url.searchParams.set("broker", gpsRelayService.brokerUrls[0]);
+  url.searchParams.set("area", preset.areaId || state.agronomyAreaId || "machachi");
+  url.searchParams.set("label", preset.deviceLabel || "Celular de campo");
+  url.searchParams.set("type", preset.deviceType || "Celular");
+  url.searchParams.set("mobility", preset.mobilityMode || "ground");
+  return url.toString();
 }
 
 function buildGpsSenderUrl(origin, preset = getGpsSenderPreset()) {
@@ -10337,7 +10544,7 @@ function buildGpsSenderLinkOptions(payload) {
 
   const pushLink = (origin, config = {}) => {
     const serverOrigin = normalizeOrigin(origin);
-    const url = buildGpsSenderUrl(serverOrigin, preset);
+    const url = config.url || buildGpsSenderUrl(serverOrigin, preset);
     if (seen.has(url)) {
       return;
     }
@@ -10350,8 +10557,25 @@ function buildGpsSenderLinkOptions(payload) {
       description: config.description || "Abre este link en el dispositivo que va a enviar ubicacion.",
       host: config.host || serverOrigin,
       recommended: Boolean(config.recommended),
+      relay: Boolean(config.relay),
+      relayTopic: config.relayTopic || null,
+      relaySessionId: config.relaySessionId || null,
     });
   };
+
+  const relaySessionId = getGpsRelaySessionId();
+  const relayTopic = getGpsRelayTopic(relaySessionId);
+  pushLink(gpsRelayService.publicSenderUrl, {
+    url: buildGpsRelaySenderUrl(preset, relaySessionId),
+    title: "Link internet para celular o GPS",
+    label: "Internet",
+    description: "Funciona desde datos moviles u otra red. Usa un canal temporal HTTPS + WSS para mandar la ubicacion al geoportal.",
+    host: "Relay publico seguro por WebSocket - no requiere misma Wi-Fi",
+    recommended: true,
+    relay: true,
+    relayTopic,
+    relaySessionId,
+  });
 
   addresses.forEach((entry, index) => {
     const address = entry.address || "";
@@ -10365,10 +10589,10 @@ function buildGpsSenderLinkOptions(payload) {
     }
     pushLink(origin, {
       title: index === 0 ? "Link para celular o tablet" : `Link de red ${index + 1}`,
-      label: index === 0 ? "Recomendado" : "Red local",
+      label: "Red local",
       description: "Envia este link al celular, laptop, dron con navegador o equipo emisor conectado a la misma red Wi-Fi.",
       host: `${entry.interface || "Red local"} - ${address || origin}`,
-      recommended: index === 0,
+      recommended: false,
     });
   });
 
@@ -10461,7 +10685,23 @@ async function refreshGpsSenderLinks(force = false) {
   return state.gpsSender.links;
 }
 
-function ensureGpsReceiverListening() {
+function ensureGpsReceiverListening(preferredLink = null) {
+  const relayLink = preferredLink?.relay
+    ? preferredLink
+    : state.gpsSender.links.find((link) => link.relay && link.relayTopic);
+  if (relayLink?.relayTopic) {
+    if (state.gpsTracking.mode === "relay" && state.gpsTracking.relayTopic === relayLink.relayTopic) {
+      return;
+    }
+    setModulePendingState(dom.gpsResults, "Escuchando canal GPS por internet...", [
+      { target: dom.gpsVisual, message: "El geoportal queda suscrito al relay publico. Abre el link Internet en el otro dispositivo para empezar a recibir ubicacion." },
+    ]);
+    startGpsRelayTracking(relayLink.relayTopic).catch((error) => {
+      console.warn("No se pudo iniciar automaticamente el relay GPS.", error);
+    });
+    return;
+  }
+
   if (state.gpsTracking.mode === "feed" && state.gpsTracking.pollId) {
     return;
   }
