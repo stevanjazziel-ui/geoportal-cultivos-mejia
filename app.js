@@ -9974,6 +9974,55 @@ function renderGpsTrackingOverlay(result = state.agronomyOutputs.gps) {
   }
 }
 
+function isGpsTrackingActive() {
+  return Boolean(state.gpsTracking?.mode && state.gpsTracking.mode !== "idle");
+}
+
+function clearGpsBlockingImageryLayers() {
+  if (!mapState.map) {
+    return;
+  }
+
+  [
+    "sceneExactLayer",
+    "scenePreviewLayer",
+    "sceneFootprintLayer",
+    "sentinelLayer",
+    "managementLayer",
+  ].forEach((layerKeyName) => {
+    if (mapState[layerKeyName]) {
+      mapState.map.removeLayer(mapState[layerKeyName]);
+      mapState[layerKeyName] = null;
+    }
+  });
+
+  state.sceneLayerKind = "off";
+  mapState.sceneFootprintFocusId = null;
+  syncAgronomyBaseLayerOpacity();
+}
+
+function prepareGpsTrackingMapContext(options = {}) {
+  const settings = {
+    silent: false,
+    ...options,
+  };
+
+  if (state.entryRoute !== "agronomia") {
+    return;
+  }
+
+  setBaseLayer("satellite", false, {
+    silent: true,
+    skipSceneRender: true,
+  });
+  clearGpsBlockingImageryLayers();
+  updateMapSummary();
+
+  if (!settings.silent) {
+    setStatus("Seguimiento GPS usara la imagen satelital base Esri, sin escenas Sentinel ni grillas NDVI superpuestas.");
+  }
+}
+
 function stopGpsTracking(options = {}) {
   const settings = {
     silent: false,
@@ -10056,6 +10105,7 @@ async function startBrowserGpsTracking() {
   }
 
   state.gpsTracking.mode = "browser";
+  prepareGpsTrackingMapContext({ silent: true });
   setStatus("Seguimiento GPS activo: esperando la primera posicion del navegador.");
 
   const success = (position) => {
@@ -10221,6 +10271,7 @@ async function startGpsRelayTracking(topic = getGpsRelayTopic()) {
   stopGpsTracking({ silent: true, preservePanels: false });
   state.gpsTracking.mode = "relay";
   state.gpsTracking.relayTopic = topic;
+  prepareGpsTrackingMapContext({ silent: true });
   setModulePendingState(dom.gpsResults, "Esperando senal GPS desde internet...", [
     { target: dom.gpsVisual, message: "Comparte el link Internet. El celular puede estar en datos moviles u otra red y publicara sobre un canal temporal." },
   ]);
@@ -10277,6 +10328,7 @@ async function startGpsRelayTracking(topic = getGpsRelayTopic()) {
 async function startGpsFeedTracking() {
   stopGpsTracking({ silent: true, preservePanels: false });
   state.gpsTracking.mode = "feed";
+  prepareGpsTrackingMapContext({ silent: true });
 
   const tick = async (fitOnFirst = false) => {
     try {
@@ -10304,6 +10356,7 @@ async function startGpsFeedTracking() {
 }
 
 function openGpsBridgePage() {
+  prepareGpsTrackingMapContext({ silent: true });
   openGpsSenderModal();
   return true;
 }
@@ -10782,6 +10835,7 @@ async function openGpsSenderLocalLink() {
 function startGpsDemoTracking() {
   stopGpsTracking({ silent: true, preservePanels: false });
   state.gpsTracking.mode = "demo";
+  prepareGpsTrackingMapContext({ silent: true });
 
   const tick = (fitOnFirst = false) => {
     const payload = buildFrontendGpsPayload(state.agronomyAreaId, "demo");
@@ -21134,6 +21188,17 @@ function updateMapSummary(force = false) {
 
   syncAgronomyBaseLayerOpacity();
 
+  if (isGpsTrackingActive() || state.agronomyOutputs.gps) {
+    const activeDevice = state.agronomyOutputs.gps?.activeDevice || state.gpsTracking.lastDeviceSnapshot;
+    setTextIfChanged(dom.overlayIndex, "GPS");
+    setTextIfChanged(dom.mapTitle, activeDevice?.label ? `Seguimiento GPS: ${activeDevice.label}` : "Seguimiento GPS en vivo");
+    setTextIfChanged(dom.mapSubtitle, activeDevice
+      ? `Base Esri limpia con ultima senal ${formatGpsSignalAge(activeDevice.timestamp)}. Sin escenas Sentinel ni grillas NDVI superpuestas.`
+      : "Base Esri limpia preparada para recibir el celular, dron, avioneta o feed GPS externo.");
+    renderMapBadges();
+    return;
+  }
+
   const image = getSelectedImage();
   const sensor = image ? getSensorForImage(image) : getActiveSensor();
   const analysis = getRenderableAnalysis(image);
@@ -21373,6 +21438,38 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
     return;
   }
 
+  if (isGpsTrackingActive() || state.agronomyOutputs.gps) {
+    const activeDevice = state.agronomyOutputs.gps?.activeDevice || state.gpsTracking.lastDeviceSnapshot;
+    const badges = [
+      {
+        tone: "analysis",
+        label: activeDevice ? "GPS en vivo" : "GPS listo",
+      },
+      {
+        tone: "neutral",
+        label: "Base Esri",
+      },
+      {
+        tone: "muted",
+        label: "Sin Sentinel",
+      },
+      {
+        tone: "muted",
+        label: "Sin grilla NDVI",
+      },
+    ];
+    if (activeDevice?.accuracyM) {
+      badges.push({
+        tone: "neutral",
+        label: `Precision ${Math.round(Number(activeDevice.accuracyM))} m`,
+      });
+    }
+    setHtmlIfChanged(dom.mapBadges, badges
+      .map((badge) => `<span class="map-badge ${badge.tone}">${badge.label}</span>`)
+      .join(""));
+    return;
+  }
+
   if (!image) {
     const sensor = getActiveSensor();
     const planningBadge = state.planningData
@@ -21440,8 +21537,15 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
     .join(""));
 }
 
-function setBaseLayer(baseId, initial = false) {
-  let resolvedBaseId = mapState.baseLayers[baseId] ? baseId : "satellite";
+function setBaseLayer(baseId, initial = false, options = {}) {
+  const settings = {
+    silent: false,
+    skipSceneRender: false,
+    ...options,
+  };
+  const gpsBaseLocked = state.entryRoute === "agronomia" && isGpsTrackingActive();
+  const requestedBaseId = gpsBaseLocked ? "satellite" : baseId;
+  let resolvedBaseId = mapState.baseLayers[requestedBaseId] ? requestedBaseId : "satellite";
   let nextLayer = mapState.baseLayers[resolvedBaseId];
 
   if (!nextLayer) {
@@ -21465,12 +21569,19 @@ function setBaseLayer(baseId, initial = false) {
   mapState.activeBaseLayer = nextLayer;
   mapState.activeBaseLayer.addTo(mapState.map);
   syncAgronomyBaseLayerOpacity();
+  if (gpsBaseLocked) {
+    clearGpsBlockingImageryLayers();
+  }
 
-  if (!initial && state.entryRoute === "agronomia" && getSelectedImage()) {
+  if (!initial && state.entryRoute === "agronomia" && getSelectedImage() && !settings.skipSceneRender && !gpsBaseLocked) {
     renderSentinelOverlay();
   }
 
-  if (!initial) {
+  if (!initial && !settings.silent) {
+    if (gpsBaseLocked && baseId !== "satellite") {
+      setStatus("Durante seguimiento GPS se mantiene la imagen satelital base Esri para evitar capas confusas.");
+      return;
+    }
     const baseLabel = resolvedBaseId === "satellite" ? "Satelite" : "Calles";
     setStatus(`Mapa base cambiado a ${baseLabel}.`);
   }
