@@ -31,7 +31,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260422-8">
+  <link rel="stylesheet" href="./styles.css?v=20260422-9">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -108,13 +108,20 @@
         <div class="base-switch" role="group" aria-label="Mapa base">
           <button class="base-button active" type="button" data-base="satellite">Satelite</button>
           <button class="base-button" type="button" data-base="streets">Calles</button>
+          <button
+            id="toggleSatelliteLayersBtn"
+            class="base-button satellite-layer-base-toggle active"
+            type="button"
+            data-satellite-layer-toggle
+            data-satellite-toggle-label="base"
+            aria-pressed="true"
+          >
+            Sentinel ON
+          </button>
         </div>
-        <button id="toggleSatelliteLayersBtn" class="scene-layer-toggle active" type="button" data-satellite-layer-toggle aria-pressed="true">
-          Capas sat: ON
-        </button>
         <div class="user-pill">
           <span class="status-dot"></span>
-          Usuario publico · v20260422-8
+          Usuario publico - v20260422-9
         </div>
       </div>
     </header>
@@ -876,10 +883,6 @@
           </div>
         </div>
 
-        <button class="map-satellite-toggle active" type="button" data-satellite-layer-toggle aria-pressed="true">
-          Capas sat: ON
-        </button>
-
         <div id="map" class="map-canvas" aria-label="Mapa del geoportal"></div>
 
         <div class="map-footer">
@@ -1067,6 +1070,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260422-8" defer></script>
+  <script src="./app.js?v=20260422-9" defer></script>
 </body>
 </html>

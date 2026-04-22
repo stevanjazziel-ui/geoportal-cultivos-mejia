@@ -392,6 +392,22 @@ button {
   cursor: not-allowed;
 }
 
+.satellite-layer-base-toggle {
+  box-shadow: inset 0 0 0 1px rgba(47, 127, 95, 0.12);
+  white-space: nowrap;
+}
+
+.satellite-layer-base-toggle.active {
+  color: #f9f6f1;
+  background: linear-gradient(135deg, #2f7f5f, #1f5d47);
+  box-shadow: 0 12px 24px rgba(47, 127, 95, 0.22);
+}
+
+.satellite-layer-base-toggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .map-satellite-toggle {
   position: absolute;
   left: 18px;
