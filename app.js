@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-20",
+  bridgeVersion: "20260422-21",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -288,8 +288,8 @@ const agronomyMapZoomLimits = {
 
 const esriSatelliteNativeZoomLevels = {
   stable: 16,
-  // Esri HR asks for z20 where Esri has it, then falls back per tile to stable parents.
-  high: 20,
+  // Esri HR keeps the deepest stable Esri level for Machachi/Quevedo and overzooms after that.
+  high: 18,
 };
 
 const esriImageryService = {
@@ -5810,7 +5810,7 @@ function setEsriResolutionMode(mode = "high", options = {}) {
   applyEsriSatelliteResolution(true);
   syncEsriResolutionButtons();
   if (!options.silent) {
-    setStatus("Esri HR seleccionado: se intenta z20 y cada tesela cae automaticamente a z19-z16 si Esri no tiene datos.");
+    setStatus("Esri HR seleccionado: se usa z18 estable con render de alta densidad para evitar teselas grises sin datos.");
   }
 }
 
@@ -5829,7 +5829,7 @@ function syncEsriResolutionButtons() {
     button.title = !available
       ? "Los modos Esri se muestran en el modulo agricola."
       : isHighButton
-        ? "Usar Esri HR con teselas z20 y respaldo automatico por tesela."
+        ? "Usar Esri HR estable con teselas z18 y render de alta densidad."
         : "Modo Esri estable heredado.";
   });
 }
@@ -22509,7 +22509,7 @@ function setBaseLayer(baseId, initial = false, options = {}) {
     }
     const baseLabel = resolvedBaseId === "satellite" ? "Esri HR" : "Calles";
     const zoomNote = resolvedBaseId === "satellite"
-      ? ` Zoom profundo ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} con Esri z20 y respaldo automatico por tesela.`
+      ? ` Zoom profundo ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} con Esri z18 estable y render de alta densidad.`
       : "";
     setStatus(`Mapa base cambiado a ${baseLabel}.${zoomNote}`);
   }
