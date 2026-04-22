@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-15",
+  bridgeVersion: "20260422-16",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -288,7 +288,9 @@ const agronomyMapZoomLimits = {
 
 const esriSatelliteNativeZoomLevels = {
   stable: 16,
-  high: 18,
+  // Esri HR now keeps the stable z16 source tile and overzooms it for deep navigation.
+  // This avoids the "Map data not available yet" tiles that appear at native z18+.
+  high: 16,
 };
 
 const agronomyMapNativeZoomLimits = {
@@ -5566,9 +5568,7 @@ function toggleSatelliteLayers() {
 }
 
 function getEsriSatelliteNativeZoom() {
-  return state.satelliteHighResolutionEnabled
-    ? esriSatelliteNativeZoomLevels.high
-    : esriSatelliteNativeZoomLevels.stable;
+  return esriSatelliteNativeZoomLevels.high;
 }
 
 function applyEsriSatelliteResolution(redraw = false) {
@@ -5586,8 +5586,7 @@ function setEsriResolutionMode(mode = "high", options = {}) {
   if (isTerritorialRoute()) {
     return;
   }
-  const highResolution = mode === "high";
-  state.satelliteHighResolutionEnabled = highResolution;
+  state.satelliteHighResolutionEnabled = true;
   if (state.baseLayer !== "satellite") {
     setBaseLayer("satellite", false, {
       silent: true,
@@ -5597,9 +5596,7 @@ function setEsriResolutionMode(mode = "high", options = {}) {
   applyEsriSatelliteResolution(true);
   syncEsriResolutionButtons();
   if (!options.silent) {
-    setStatus(highResolution
-      ? "Modo Esri HR seleccionado: se usan teselas nativas mas detalladas. Si alguna zona muestra aviso de datos no disponibles, cambia a Esri normal."
-      : "Modo Esri normal seleccionado: base estable con sobrezoom para evitar avisos de datos no disponibles.");
+    setStatus("Esri HR seleccionado: se mantiene zoom profundo con tesela estable para evitar avisos de datos no disponibles.");
   }
 }
 
@@ -5618,8 +5615,8 @@ function syncEsriResolutionButtons() {
     button.title = !available
       ? "Los modos Esri se muestran en el modulo agricola."
       : isHighButton
-        ? "Usar teselas Esri nativas mas detalladas."
-        : "Usar base Esri estable con sobrezoom.";
+        ? "Usar Esri HR con sobrezoom estable."
+        : "Modo Esri estable heredado.";
   });
 }
 
@@ -22284,11 +22281,9 @@ function setBaseLayer(baseId, initial = false, options = {}) {
       setStatus("Durante seguimiento GPS se mantiene la imagen satelital base Esri para evitar capas confusas.");
       return;
     }
-    const baseLabel = resolvedBaseId === "satellite" ? "Satelite" : "Calles";
+    const baseLabel = resolvedBaseId === "satellite" ? "Esri HR" : "Calles";
     const zoomNote = resolvedBaseId === "satellite"
-      ? state.satelliteHighResolutionEnabled
-        ? ` Zoom profundo ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} con Esri HR nativo.`
-        : ` Zoom profundo ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} con sobrezoom Esri estable para todas las zonas.`
+      ? ` Zoom profundo ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} con sobrezoom estable para evitar avisos de datos no disponibles.`
       : "";
     setStatus(`Mapa base cambiado a ${baseLabel}.${zoomNote}`);
   }

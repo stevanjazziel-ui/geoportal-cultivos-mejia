@@ -31,7 +31,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260422-15">
+  <link rel="stylesheet" href="./styles.css?v=20260422-16">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -120,10 +120,7 @@
 
       <div class="topbar-actions">
         <div class="base-switch" role="group" aria-label="Mapa base">
-          <button class="base-button esri-resolution-button" type="button" data-esri-resolution="stable">
-            Esri normal
-          </button>
-          <button class="base-button esri-resolution-button active" type="button" data-esri-resolution="high">
+          <button class="base-button esri-resolution-button active" type="button" data-base="satellite">
             Esri HR
           </button>
           <button class="base-button" type="button" data-base="streets">Calles</button>
@@ -148,7 +145,7 @@
         </div>
         <div class="user-pill">
           <span class="status-dot"></span>
-          Usuario publico - v20260422-15
+          Usuario publico - v20260422-16
         </div>
       </div>
     </header>
@@ -1097,6 +1094,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260422-15" defer></script>
+  <script src="./app.js?v=20260422-16" defer></script>
 </body>
 </html>
