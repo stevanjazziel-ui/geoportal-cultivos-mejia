@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-3",
+  bridgeVersion: "20260422-4",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -282,7 +282,12 @@ const gpsRelayService = {
 const gpsRelaySessionStorageKey = "geoportal.gpsRelay.sessionId";
 
 const agronomyMapZoomLimits = {
-  satellite: 16,
+  satellite: 22,
+  streets: 22,
+};
+
+const agronomyMapNativeZoomLimits = {
+  satellite: 18,
   streets: 19,
 };
 
@@ -5513,8 +5518,8 @@ function initializeMap() {
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     {
       attribution: "Esri World Imagery",
-      // Stop before Esri starts returning "Map data not yet available" placeholders.
-      maxNativeZoom: agronomyMapZoomLimits.satellite,
+      // Allows deep navigation while overzooming the last detailed Esri tiles.
+      maxNativeZoom: agronomyMapNativeZoomLimits.satellite,
       maxZoom: agronomyMapZoomLimits.satellite,
       tileSize: 256,
       crossOrigin: true,
@@ -5528,7 +5533,7 @@ function initializeMap() {
     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     {
       attribution: "OpenStreetMap",
-      maxNativeZoom: agronomyMapZoomLimits.streets,
+      maxNativeZoom: agronomyMapNativeZoomLimits.streets,
       maxZoom: agronomyMapZoomLimits.streets,
       tileSize: 256,
       crossOrigin: true,
