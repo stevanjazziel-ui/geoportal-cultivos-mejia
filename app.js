@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-6",
+  bridgeVersion: "20260422-7",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -5523,14 +5523,21 @@ function syncSatelliteLayerToggle() {
   const enabled = Boolean(state.satelliteLayersEnabled);
   const disabled = isTerritorialRoute();
   buttons.forEach((button) => {
+    const fullLabel = button.dataset.satelliteToggleLabel === "full";
     button.classList.toggle("active", enabled && !disabled);
     button.disabled = disabled;
     button.setAttribute("aria-pressed", String(enabled && !disabled));
     button.textContent = disabled
-      ? "Capas sat: N/A"
+      ? fullLabel
+        ? "Capas satelitales no disponibles aqui"
+        : "Capas sat: N/A"
       : enabled
-        ? "Capas sat: ON"
-        : "Capas sat: OFF";
+        ? fullLabel
+          ? "Ocultar capas satelitales"
+          : "Capas sat: ON"
+        : fullLabel
+          ? "Mostrar capas satelitales"
+          : "Capas sat: OFF";
     button.title = disabled
       ? "Las capas satelitales de agricultura no se muestran en rutas territoriales."
       : enabled

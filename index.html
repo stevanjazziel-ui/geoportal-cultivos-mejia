@@ -28,7 +28,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260422-6">
+  <link rel="stylesheet" href="./styles.css?v=20260422-7">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -171,6 +171,25 @@
 
             <div id="sentinelSourceStatus" class="service-banner loading">
               Verificando catalogo satelital...
+            </div>
+
+            <div class="satellite-control-card">
+              <div>
+                <p class="section-kicker">Control de visualizacion</p>
+                <h3>Capas Sentinel y sensores</h3>
+                <p>
+                  Activa o desactiva la escena satelital, la huella y el indice sobre el mapa sin cambiar la base.
+                </p>
+              </div>
+              <button
+                class="satellite-master-toggle active"
+                type="button"
+                data-satellite-layer-toggle
+                data-satellite-toggle-label="full"
+                aria-pressed="true"
+              >
+                Ocultar capas satelitales
+              </button>
             </div>
 
              <form id="sentinelForm" class="stack-form">
@@ -1045,6 +1064,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260422-6" defer></script>
+  <script src="./app.js?v=20260422-7" defer></script>
 </body>
 </html>
