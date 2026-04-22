@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-17",
+  bridgeVersion: "20260422-18",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -2494,7 +2494,7 @@ const state = {
   satelliteSuperResolutionEnabled: true,
   showScenePreview: true,
   showAnalysisOverlay: true,
-  scenePreviewOpacity: 0.45,
+  scenePreviewOpacity: 0.32,
   sceneLayerKind: "off",
   filteredImages: [],
   sentinelMode: "loading",
@@ -5712,6 +5712,11 @@ function initializeMap() {
   mapState.map = L.map("map", {
     zoomControl: false,
     attributionControl: true,
+    preferCanvas: true,
+    fadeAnimation: true,
+    markerZoomAnimation: false,
+    wheelDebounceTime: 26,
+    wheelPxPerZoomLevel: 92,
     maxZoom: getAgronomyMapMaxZoomForBase(state.baseLayer),
   }).setView(initialAgronomyView.center, initialAgronomyView.zoom);
 
@@ -5727,9 +5732,11 @@ function initializeMap() {
       maxZoom: agronomyMapZoomLimits.satellite,
       tileSize: 256,
       crossOrigin: true,
+      className: "basemap-tile esri-tile",
       detectRetina: false,
+      updateWhenIdle: true,
       updateWhenZooming: false,
-      keepBuffer: 3,
+      keepBuffer: 4,
     }
   );
 
@@ -5741,9 +5748,11 @@ function initializeMap() {
       maxZoom: agronomyMapZoomLimits.streets,
       tileSize: 256,
       crossOrigin: true,
+      className: "basemap-tile osm-tile",
       detectRetina: true,
+      updateWhenIdle: true,
       updateWhenZooming: false,
-      keepBuffer: 3,
+      keepBuffer: 4,
     }
   );
 
@@ -7817,7 +7826,7 @@ function createExactCogTileLayer(image, earthItem = null) {
     crossOrigin: true,
     updateWhenIdle: true,
     updateWhenZooming: false,
-    keepBuffer: 2,
+    keepBuffer: 3,
   });
 
   layer.codexExactMode = "cog-tiles";
@@ -8016,16 +8025,16 @@ function getExactSceneRenderOpacity() {
   const sensor = getSensorForImage(image);
   const requestedOpacity = Number.isFinite(Number(state.scenePreviewOpacity))
     ? Number(state.scenePreviewOpacity)
-    : 0.45;
+    : 0.32;
   if (isSatelliteVisualBase()) {
     if (sensor.id === "sentinel2") {
-      return clamp(requestedOpacity, 0.24, state.showAnalysisOverlay ? 0.46 : 0.58);
+      return clamp(requestedOpacity, 0.18, state.showAnalysisOverlay ? 0.38 : 0.52);
     }
     if (sensor.id === "landsat") {
-      return clamp(requestedOpacity, 0.26, state.showAnalysisOverlay ? 0.48 : 0.6);
+      return clamp(requestedOpacity, 0.2, state.showAnalysisOverlay ? 0.4 : 0.54);
     }
     if (sensor.id === "sentinel1") {
-      return clamp(requestedOpacity, 0.22, state.showAnalysisOverlay ? 0.42 : 0.54);
+      return clamp(requestedOpacity, 0.16, state.showAnalysisOverlay ? 0.34 : 0.48);
     }
   }
   return clamp(requestedOpacity, 0.42, 0.82);
@@ -8035,13 +8044,13 @@ function getScenePreviewRenderOpacity(image = getSelectedImage()) {
   const sensor = getSensorForImage(image);
   if (isSatelliteVisualBase()) {
     if (sensor.id === "sentinel2") {
-      return clamp(state.scenePreviewOpacity, 0.24, state.showAnalysisOverlay ? 0.5 : 0.62);
+      return clamp(state.scenePreviewOpacity, 0.18, state.showAnalysisOverlay ? 0.4 : 0.54);
     }
     if (sensor.id === "landsat") {
-      return clamp(state.scenePreviewOpacity, 0.26, state.showAnalysisOverlay ? 0.52 : 0.64);
+      return clamp(state.scenePreviewOpacity, 0.2, state.showAnalysisOverlay ? 0.42 : 0.56);
     }
     if (sensor.id === "sentinel1") {
-      return clamp(state.scenePreviewOpacity, 0.22, state.showAnalysisOverlay ? 0.46 : 0.58);
+      return clamp(state.scenePreviewOpacity, 0.16, state.showAnalysisOverlay ? 0.36 : 0.5);
     }
   }
   return clamp(state.scenePreviewOpacity, 0.42, 0.82);
@@ -11800,11 +11809,12 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
           visibility: isSatellite ? "none" : "visible",
         },
         paint: {
-          "raster-opacity": 0.98,
-          "raster-saturation": -0.45,
-          "raster-brightness-min": 0.28,
+          "raster-opacity": 1,
+          "raster-saturation": -0.28,
+          "raster-brightness-min": 0.18,
           "raster-brightness-max": 1,
-          "raster-contrast": 0.16,
+          "raster-contrast": 0.08,
+          "raster-resampling": "linear",
         },
       },
       {
@@ -11815,10 +11825,10 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
           visibility: isSatellite ? "visible" : "none",
         },
         paint: {
-          "raster-opacity": 0.98,
-          "raster-saturation": -0.08,
-          "raster-contrast": 0.1,
-          "raster-brightness-min": 0.16,
+          "raster-opacity": 1,
+          "raster-saturation": -0.04,
+          "raster-contrast": 0.04,
+          "raster-brightness-min": 0.08,
           "raster-brightness-max": 1,
           "raster-resampling": "linear",
         },
@@ -12433,6 +12443,9 @@ async function initializePlanning3dMap() {
     antialias: true,
     fadeDuration: 0,
     refreshExpiredTiles: false,
+    renderWorldCopies: false,
+    preserveDrawingBuffer: false,
+    failIfMajorPerformanceCaveat: false,
     dragRotate: true,
     pitchWithRotate: true,
   });

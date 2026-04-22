@@ -2723,18 +2723,58 @@ button {
   z-index: 1;
   height: 100%;
   min-height: 0;
+  background: #dfe8e2;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  contain: layout paint;
+}
+
+.map-canvas .leaflet-pane,
+.map-canvas .leaflet-tile-container,
+.map-canvas .leaflet-overlay-pane svg,
+.map-canvas .leaflet-marker-pane,
+.map-canvas .leaflet-tooltip-pane,
+.map-canvas .leaflet-popup-pane {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+}
+
+.map-canvas img.leaflet-tile {
+  image-rendering: auto;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  transition: opacity 120ms linear;
+}
+
+.map-canvas img.basemap-tile.esri-tile {
+  filter: contrast(1.04) saturate(1.06) brightness(1.01);
+}
+
+.map-canvas img.basemap-tile.osm-tile {
+  filter: contrast(1.03) saturate(0.96) brightness(1.02);
+}
+
+.map-canvas .scene-preview-overlay {
+  mix-blend-mode: normal;
+  image-rendering: auto;
+}
+
+.map-canvas .scene-preview-overlay img,
+.map-canvas .scene-preview-overlay image {
+  image-rendering: auto;
+  transform: translateZ(0);
 }
 
 .map-stage.superresolution-active .leaflet-tile-pane img.leaflet-tile {
-  filter: url("#satelliteSuperResolutionFilter") contrast(1.08) saturate(1.12) brightness(1.02);
+  filter: contrast(1.1) saturate(1.1) brightness(1.02);
   image-rendering: auto;
-  transform: translateZ(0) scale(1.001);
+  transform: translateZ(0);
   transform-origin: center;
-  will-change: filter, transform;
+  will-change: auto;
 }
 
 .map-stage.superresolution-active .leaflet-tile-pane {
-  filter: drop-shadow(0 0 0 rgba(0, 0, 0, 0));
+  filter: none;
 }
 
 .map-overlay,
@@ -3192,6 +3232,9 @@ button {
   border: 1px solid rgba(47, 61, 50, 0.1);
   background:
     linear-gradient(180deg, rgba(216, 226, 232, 0.96), rgba(234, 239, 234, 0.9));
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  contain: layout paint;
 }
 
 .planning-3d-map.satellite-mode {
@@ -3228,7 +3271,7 @@ button {
 
 .planning-3d-map.satellite-mode::before,
 .planning-3d-map.satellite-mode::after {
-  opacity: 0.12;
+  opacity: 0.06;
 }
 
 .planning-3d-image-backdrop {
@@ -3275,6 +3318,8 @@ button {
   position: absolute;
   inset: 0;
   z-index: 1;
+  backface-visibility: hidden;
+  image-rendering: auto;
 }
 
 .planning-3d-map .maplibregl-control-container,
@@ -3299,12 +3344,14 @@ button {
   height: 100%;
   overflow: hidden;
   pointer-events: none;
+  shape-rendering: geometricPrecision;
+  text-rendering: geometricPrecision;
 }
 
 .planning-3d-svg-building {
   pointer-events: auto;
   cursor: pointer;
-  filter: url(#planning3dShadow);
+  filter: drop-shadow(0 8px 14px rgba(16, 24, 20, 0.12));
 }
 
 .planning-3d-svg-footprint {
@@ -3334,7 +3381,7 @@ button {
 }
 
 .planning-3d-svg-building.simple {
-  filter: drop-shadow(0 12px 20px rgba(16, 24, 20, 0.18)) drop-shadow(0 3px 7px rgba(16, 24, 20, 0.16));
+  filter: drop-shadow(0 8px 14px rgba(16, 24, 20, 0.16)) drop-shadow(0 2px 5px rgba(16, 24, 20, 0.14));
 }
 
 .planning-3d-svg-building.simple .planning-3d-svg-side {
