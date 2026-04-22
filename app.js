@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-16",
+  bridgeVersion: "20260422-17",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -288,9 +288,8 @@ const agronomyMapZoomLimits = {
 
 const esriSatelliteNativeZoomLevels = {
   stable: 16,
-  // Esri HR now keeps the stable z16 source tile and overzooms it for deep navigation.
-  // This avoids the "Map data not available yet" tiles that appear at native z18+.
-  high: 16,
+  // Esri HR uses the deepest public Esri imagery level that still covers urban detail.
+  high: 18,
 };
 
 const agronomyMapNativeZoomLimits = {
@@ -5596,7 +5595,7 @@ function setEsriResolutionMode(mode = "high", options = {}) {
   applyEsriSatelliteResolution(true);
   syncEsriResolutionButtons();
   if (!options.silent) {
-    setStatus("Esri HR seleccionado: se mantiene zoom profundo con tesela estable para evitar avisos de datos no disponibles.");
+    setStatus("Esri HR seleccionado: se usan teselas nativas z18 para recuperar detalle urbano y viviendas.");
   }
 }
 
@@ -5615,7 +5614,7 @@ function syncEsriResolutionButtons() {
     button.title = !available
       ? "Los modos Esri se muestran en el modulo agricola."
       : isHighButton
-        ? "Usar Esri HR con sobrezoom estable."
+        ? "Usar Esri HR con teselas nativas z18."
         : "Modo Esri estable heredado.";
   });
 }
@@ -22283,7 +22282,7 @@ function setBaseLayer(baseId, initial = false, options = {}) {
     }
     const baseLabel = resolvedBaseId === "satellite" ? "Esri HR" : "Calles";
     const zoomNote = resolvedBaseId === "satellite"
-      ? ` Zoom profundo ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} con sobrezoom estable para evitar avisos de datos no disponibles.`
+      ? ` Zoom profundo ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} con teselas nativas Esri z18 para mayor detalle urbano.`
       : "";
     setStatus(`Mapa base cambiado a ${baseLabel}.${zoomNote}`);
   }
