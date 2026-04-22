@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260421-10",
+  bridgeVersion: "20260422-1",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -10512,24 +10512,74 @@ async function connectGpsRelayBroker(topic, onMessage = null) {
   return tryBroker(0);
 }
 
+function normalizeGpsHttpRelayPayload(envelope = {}) {
+  if (!envelope || typeof envelope !== "object") {
+    return null;
+  }
+  if (envelope.event && envelope.event !== "message") {
+    return null;
+  }
+
+  let payload = envelope.message ?? envelope;
+  if (typeof payload === "string") {
+    try {
+      payload = JSON.parse(payload);
+    } catch (_) {
+      return null;
+    }
+  }
+  if (!payload || typeof payload !== "object") {
+    return null;
+  }
+
+  return {
+    ...payload,
+    relayMessageId: payload.relayMessageId || envelope.id || null,
+    relayReceivedAt: payload.relayReceivedAt || (Number.isFinite(Number(envelope.time))
+      ? new Date(Number(envelope.time) * 1000).toISOString()
+      : new Date().toISOString()),
+  };
+}
+
 function parseGpsHttpRelayEventData(rawData) {
   if (!rawData) {
     return null;
   }
   try {
-    const envelope = JSON.parse(rawData);
-    if (envelope.event && envelope.event !== "message") {
-      return null;
-    }
-    const body = envelope.message || envelope;
-    return typeof body === "string" ? JSON.parse(body) : body;
+    const envelope = typeof rawData === "string" ? JSON.parse(rawData) : rawData;
+    return normalizeGpsHttpRelayPayload(envelope);
   } catch (error) {
     console.warn("Mensaje GPS HTTPS invalido.", error);
     return null;
   }
 }
 
+async function fetchGpsHttpRelayPayloads(topic, options = {}) {
+  if (!topic) {
+    return [];
+  }
+  const since = options.since || "30m";
+  const url = `${gpsRelayService.httpRelayBaseUrl}/${encodeURIComponent(topic)}/json?poll=1&since=${encodeURIComponent(since)}`;
+  const response = await fetch(url, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Relay HTTPS respondio ${response.status}.`);
+  }
+
+  const text = await response.text();
+  return text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map(parseGpsHttpRelayEventData)
+    .filter(Boolean);
+}
+
 function connectGpsHttpRelay(topic, onPayload) {
+  if (!topic) {
+    throw new Error("No hay canal HTTPS configurado para el relay GPS.");
+  }
   if (typeof EventSource === "undefined") {
     throw new Error("Este navegador no soporta EventSource para el relay HTTPS.");
   }
@@ -10564,7 +10614,18 @@ async function startGpsRelayTracking(topic = getGpsRelayTopic(), httpRelayTopic 
     { target: dom.gpsVisual, message: "Comparte el link Internet. El celular puede estar en datos moviles u otra red y publicara sobre MQTT o HTTPS." },
   ]);
 
+  const seenRelayMessages = new Set();
+  const getRelayMessageKey = (payload = {}) => payload.relayMessageId
+    || `${payload.id || payload.deviceId || "gps"}:${payload.timestamp || payload.relayReceivedAt || ""}:${payload.lat ?? ""}:${payload.lon ?? ""}`;
   const handleRelayPayload = (payload) => {
+    const messageKey = getRelayMessageKey(payload);
+    if (messageKey && seenRelayMessages.has(messageKey)) {
+      return false;
+    }
+    if (messageKey) {
+      seenRelayMessages.add(messageKey);
+    }
+
     const device = mergeGpsRelayDevicePayload(payload);
     const connectedDevices = getGpsRelayConnectedDevices();
     const visibleDevices = getGpsRelayConnectedDevices({ withCoordinatesOnly: true });
@@ -10572,7 +10633,7 @@ async function startGpsRelayTracking(topic = getGpsRelayTopic(), httpRelayTopic 
     if (!visibleDevices.length) {
       renderGpsRelayReceptionStarted(device, connectedDevices);
       setStatus(`Se inicio la recepcion de senal GPS desde ${device.label}. Esperando primera coordenada.`);
-      return;
+      return true;
     }
     if (currentHasPosition) {
       state.gpsTracking.activeDeviceId = device.id;
@@ -10596,12 +10657,40 @@ async function startGpsRelayTracking(topic = getGpsRelayTopic(), httpRelayTopic 
     setStatus(currentHasPosition
       ? `GPS en vivo recibido desde ${device.label}. ${visibleDevices.length}/${connectedDevices.length} dispositivos visibles en el mapa.`
       : `Se inicio la recepcion de senal GPS desde ${device.label}. Esperando primera coordenada.`);
+    return true;
+  };
+
+  const pollHttpRelay = async (initial = false) => {
+    if (!httpRelayTopic || state.gpsTracking.mode !== "relay" || state.gpsTracking.httpRelayTopic !== httpRelayTopic) {
+      return;
+    }
+    try {
+      const payloads = await fetchGpsHttpRelayPayloads(httpRelayTopic, {
+        since: initial ? "1h" : "10m",
+      });
+      const processedCount = payloads.reduce((count, payload) => (
+        handleRelayPayload(payload) ? count + 1 : count
+      ), 0);
+      if (processedCount > 0) {
+        setStatus(`Relay GPS HTTPS recupero ${processedCount} mensaje(s) del emisor. Actualizando mapa en vivo.`);
+      }
+    } catch (error) {
+      if (state.gpsTracking.mode === "relay") {
+        setStatus(`Relay GPS HTTPS sin respuesta: ${error.message || "reintentando lectura del canal"}.`);
+      }
+    }
   };
 
   try {
     state.gpsTracking.httpRelaySource = connectGpsHttpRelay(httpRelayTopic, handleRelayPayload);
   } catch (error) {
     console.warn("No se pudo abrir el relay HTTPS GPS.", error);
+  }
+  if (httpRelayTopic) {
+    pollHttpRelay(true);
+    state.gpsTracking.pollId = window.setInterval(() => {
+      pollHttpRelay(false);
+    }, 4500);
   }
 
   try {
@@ -10628,8 +10717,8 @@ async function startGpsRelayTracking(topic = getGpsRelayTopic(), httpRelayTopic 
     setStatus("Relay GPS listo por MQTT + HTTPS. Abre el link Internet en el celular y pulsa Iniciar envio.");
     return true;
   } catch (error) {
-    if (state.gpsTracking.httpRelaySource) {
-      setStatus("Relay GPS listo por HTTPS. MQTT no conecto, pero el geoportal queda escuchando el canal alterno.");
+    if (state.gpsTracking.httpRelaySource || state.gpsTracking.pollId) {
+      setStatus("Relay GPS listo por HTTPS. MQTT no conecto, pero el geoportal queda escuchando y consultando el canal alterno.");
       return true;
     }
     stopGpsTracking({ silent: true, preservePanels: false });
@@ -11063,7 +11152,9 @@ function ensureGpsReceiverListening(preferredLink = null) {
   if (relayLink?.relayTopic) {
     const relaySessionId = relayLink.relaySessionId || String(relayLink.relayTopic).split("/").pop();
     const httpRelayTopic = getGpsHttpRelayTopic(relaySessionId);
-    if (state.gpsTracking.mode === "relay" && state.gpsTracking.relayTopic === relayLink.relayTopic) {
+    if (state.gpsTracking.mode === "relay"
+      && state.gpsTracking.relayTopic === relayLink.relayTopic
+      && (state.gpsTracking.relayClient || state.gpsTracking.httpRelaySource || state.gpsTracking.pollId)) {
       return;
     }
     setModulePendingState(dom.gpsResults, "Escuchando canal GPS por internet...", [
