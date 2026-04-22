@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260421-9",
+  bridgeVersion: "20260421-10",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -277,6 +277,11 @@ const gpsRelayService = {
     "https://cdn.jsdelivr.net/npm/mqtt/dist/mqtt.min.js",
     "https://unpkg.com/mqtt/dist/mqtt.min.js",
   ],
+};
+
+const agronomyMapZoomLimits = {
+  satellite: 17,
+  streets: 19,
 };
 
 const exactSceneCache = new Map();
@@ -5496,7 +5501,7 @@ function initializeMap() {
   mapState.map = L.map("map", {
     zoomControl: false,
     attributionControl: true,
-    maxZoom: 22,
+    maxZoom: getAgronomyMapMaxZoomForBase(state.baseLayer),
   }).setView(initialAgronomyView.center, initialAgronomyView.zoom);
 
   L.control.zoom({ position: "bottomright" }).addTo(mapState.map);
@@ -5506,10 +5511,9 @@ function initializeMap() {
     "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
     {
       attribution: "Esri World Imagery",
-      // Overzoom the last stable Esri tiles to avoid the "Map data not yet available"
-      // placeholders that appear in some areas at the deepest native levels.
-      maxNativeZoom: 18,
-      maxZoom: 22,
+      // Stop before Esri starts returning "Map data not yet available" placeholders.
+      maxNativeZoom: agronomyMapZoomLimits.satellite,
+      maxZoom: agronomyMapZoomLimits.satellite,
       tileSize: 256,
       crossOrigin: true,
       detectRetina: true,
@@ -5522,8 +5526,8 @@ function initializeMap() {
     "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     {
       attribution: "OpenStreetMap",
-      maxNativeZoom: 19,
-      maxZoom: 22,
+      maxNativeZoom: agronomyMapZoomLimits.streets,
+      maxZoom: agronomyMapZoomLimits.streets,
       tileSize: 256,
       crossOrigin: true,
       detectRetina: true,
@@ -9532,7 +9536,8 @@ function applyGpsTrackingSnapshot(payload, options = {}) {
   renderGpsTrackingVisual(result);
   renderGpsTrackingOverlay(result);
   if (options.fitOnFirst && mapState.map && Number.isFinite(Number(activeDevice.lat)) && Number.isFinite(Number(activeDevice.lon))) {
-    mapState.map.flyTo([Number(activeDevice.lat), Number(activeDevice.lon)], Math.max(mapState.map.getZoom(), getAgronomyAreaMapView().zoom + 1), {
+    const targetZoom = getSafeAgronomyMapZoom(Math.max(mapState.map.getZoom(), getAgronomyAreaMapView().zoom + 1));
+    mapState.map.flyTo([Number(activeDevice.lat), Number(activeDevice.lon)], targetZoom, {
       animate: true,
       duration: 0.8,
     });
@@ -10018,6 +10023,8 @@ function renderGpsTrackingOverlay(result = state.agronomyOutputs.gps) {
       },
     }).addTo(mapState.map);
   }
+
+  mapState.gpsDeviceLayer?.bringToFront?.();
 }
 
 function isGpsTrackingActive() {
@@ -11054,13 +11061,15 @@ function ensureGpsReceiverListening(preferredLink = null) {
     ? preferredLink
     : state.gpsSender.links.find((link) => link.relay && link.relayTopic);
   if (relayLink?.relayTopic) {
+    const relaySessionId = relayLink.relaySessionId || String(relayLink.relayTopic).split("/").pop();
+    const httpRelayTopic = getGpsHttpRelayTopic(relaySessionId);
     if (state.gpsTracking.mode === "relay" && state.gpsTracking.relayTopic === relayLink.relayTopic) {
       return;
     }
     setModulePendingState(dom.gpsResults, "Escuchando canal GPS por internet...", [
       { target: dom.gpsVisual, message: "El geoportal queda suscrito al relay publico. Abre el link Internet en el otro dispositivo para empezar a recibir ubicacion." },
     ]);
-    startGpsRelayTracking(relayLink.relayTopic).catch((error) => {
+    startGpsRelayTracking(relayLink.relayTopic, httpRelayTopic).catch((error) => {
       console.warn("No se pudo iniciar automaticamente el relay GPS.", error);
     });
     return;
@@ -11110,6 +11119,8 @@ async function handleGpsSenderLinkAction(event) {
   if (!link?.url) {
     return;
   }
+
+  ensureGpsReceiverListening(link);
 
   if (action === "open") {
     window.open(link.url, "_blank", "noopener");
@@ -21858,6 +21869,30 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
     .join(""));
 }
 
+function getAgronomyMapMaxZoomForBase(baseId = state.baseLayer) {
+  return agronomyMapZoomLimits[baseId] || agronomyMapZoomLimits.satellite;
+}
+
+function clampAgronomyMapZoomForBase(baseId = state.baseLayer) {
+  if (!mapState.map) {
+    return getAgronomyMapMaxZoomForBase(baseId);
+  }
+
+  const maxZoom = getAgronomyMapMaxZoomForBase(baseId);
+  mapState.map.setMaxZoom(maxZoom);
+  if (mapState.map.getZoom() > maxZoom) {
+    mapState.map.setZoom(maxZoom, {
+      animate: false,
+    });
+  }
+  return maxZoom;
+}
+
+function getSafeAgronomyMapZoom(zoom, baseId = state.baseLayer) {
+  const nextZoom = Number.isFinite(Number(zoom)) ? Number(zoom) : getAgronomyAreaMapView().zoom;
+  return Math.min(nextZoom, getAgronomyMapMaxZoomForBase(baseId));
+}
+
 function setBaseLayer(baseId, initial = false, options = {}) {
   const settings = {
     silent: false,
@@ -21889,6 +21924,7 @@ function setBaseLayer(baseId, initial = false, options = {}) {
 
   mapState.activeBaseLayer = nextLayer;
   mapState.activeBaseLayer.addTo(mapState.map);
+  clampAgronomyMapZoomForBase(resolvedBaseId);
   syncAgronomyBaseLayerOpacity();
   if (gpsBaseLocked) {
     clearGpsBlockingImageryLayers();
@@ -21904,7 +21940,10 @@ function setBaseLayer(baseId, initial = false, options = {}) {
       return;
     }
     const baseLabel = resolvedBaseId === "satellite" ? "Satelite" : "Calles";
-    setStatus(`Mapa base cambiado a ${baseLabel}.`);
+    const zoomNote = resolvedBaseId === "satellite"
+      ? ` Zoom maximo seguro ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} para evitar teselas no disponibles.`
+      : "";
+    setStatus(`Mapa base cambiado a ${baseLabel}.${zoomNote}`);
   }
 }
 
