@@ -2739,19 +2739,23 @@ button {
   backface-visibility: hidden;
 }
 
-.map-canvas img.leaflet-tile {
+.map-canvas .leaflet-tile {
   image-rendering: auto;
   backface-visibility: hidden;
   transform: translateZ(0);
   transition: opacity 120ms linear;
 }
 
-.map-canvas img.basemap-tile.esri-tile {
-  filter: contrast(1.04) saturate(1.06) brightness(1.01);
+.map-canvas .basemap-tile.esri-tile {
+  filter: contrast(1.08) saturate(1.09) brightness(1.015);
 }
 
-.map-canvas img.basemap-tile.osm-tile {
+.map-canvas .basemap-tile.osm-tile {
   filter: contrast(1.03) saturate(0.96) brightness(1.02);
+}
+
+.map-canvas .esri-smart-tile {
+  background: #dfe8e2;
 }
 
 .map-canvas .scene-preview-overlay {
@@ -2765,8 +2769,8 @@ button {
   transform: translateZ(0);
 }
 
-.map-stage.superresolution-active .leaflet-tile-pane img.leaflet-tile {
-  filter: contrast(1.1) saturate(1.1) brightness(1.02);
+.map-stage.superresolution-active .leaflet-tile-pane .leaflet-tile {
+  filter: contrast(1.14) saturate(1.12) brightness(1.025);
   image-rendering: auto;
   transform: translateZ(0);
   transform-origin: center;

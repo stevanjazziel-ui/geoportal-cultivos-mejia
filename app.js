@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-18",
+  bridgeVersion: "20260422-19",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -288,8 +288,14 @@ const agronomyMapZoomLimits = {
 
 const esriSatelliteNativeZoomLevels = {
   stable: 16,
-  // Esri HR uses the deepest public Esri imagery level that still covers urban detail.
-  high: 18,
+  // Esri HR asks for z19 where Esri has it, then falls back per tile to stable parents.
+  high: 19,
+};
+
+const esriImageryService = {
+  tileUrl: "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile",
+  attribution: "Esri World Imagery",
+  fallbackCacheLimit: 1800,
 };
 
 const agronomyMapNativeZoomLimits = {
@@ -301,6 +307,7 @@ const agronomyMapNativeZoomLimits = {
 
 const exactSceneCache = new Map();
 const exactSceneMatchCache = new Map();
+const esriTileQualityCache = new Map();
 let mqttClientFactoryPromise = null;
 
 const indexConfig = {
@@ -5581,6 +5588,202 @@ function applyEsriSatelliteResolution(redraw = false) {
   }
 }
 
+function getEsriImageryTileUrl(z, x, y) {
+  return `${esriImageryService.tileUrl}/${z}/${y}/${x}`;
+}
+
+function rememberEsriTileQuality(url, unavailable) {
+  if (!url) {
+    return;
+  }
+  if (esriTileQualityCache.size > esriImageryService.fallbackCacheLimit) {
+    const firstKey = esriTileQualityCache.keys().next().value;
+    if (firstKey) {
+      esriTileQualityCache.delete(firstKey);
+    }
+  }
+  esriTileQualityCache.set(url, Boolean(unavailable));
+}
+
+function isLikelyEsriNoDataTile(image) {
+  const url = image?.currentSrc || image?.src || "";
+  if (esriTileQualityCache.has(url)) {
+    return esriTileQualityCache.get(url);
+  }
+
+  if (!image?.naturalWidth || !image?.naturalHeight) {
+    rememberEsriTileQuality(url, true);
+    return true;
+  }
+
+  const sampleSize = 48;
+  const sampleCanvas = document.createElement("canvas");
+  sampleCanvas.width = sampleSize;
+  sampleCanvas.height = sampleSize;
+  const context = sampleCanvas.getContext("2d", { willReadFrequently: true });
+  if (!context) {
+    rememberEsriTileQuality(url, false);
+    return false;
+  }
+
+  try {
+    context.drawImage(image, 0, 0, sampleSize, sampleSize);
+    const pixels = context.getImageData(0, 0, sampleSize, sampleSize).data;
+    let lightNeutral = 0;
+    let darkNeutral = 0;
+    let chroma = 0;
+    let total = 0;
+
+    for (let index = 0; index < pixels.length; index += 16) {
+      const red = pixels[index];
+      const green = pixels[index + 1];
+      const blue = pixels[index + 2];
+      const maxChannel = Math.max(red, green, blue);
+      const minChannel = Math.min(red, green, blue);
+      const brightness = (red + green + blue) / 3;
+      const saturation = maxChannel ? (maxChannel - minChannel) / maxChannel : 0;
+      total += 1;
+
+      if (brightness > 170 && saturation < 0.13) {
+        lightNeutral += 1;
+      }
+      if (brightness < 96 && saturation < 0.22) {
+        darkNeutral += 1;
+      }
+      if (saturation > 0.18) {
+        chroma += 1;
+      }
+    }
+
+    const lightRatio = lightNeutral / Math.max(total, 1);
+    const darkRatio = darkNeutral / Math.max(total, 1);
+    const chromaRatio = chroma / Math.max(total, 1);
+    const unavailable = lightRatio > 0.62 && darkRatio > 0.006 && darkRatio < 0.18 && chromaRatio < 0.16;
+    rememberEsriTileQuality(url, unavailable);
+    return unavailable;
+  } catch (error) {
+    // If the browser blocks pixel reads, keep the Esri tile instead of hiding valid imagery.
+    rememberEsriTileQuality(url, false);
+    return false;
+  }
+}
+
+function getEsriParentTileCrop(origin, candidateZoom, image) {
+  const zoomDelta = Math.max(0, origin.z - candidateZoom);
+  const factor = 2 ** zoomDelta;
+  const imageWidth = image.naturalWidth || image.width || 256;
+  const imageHeight = image.naturalHeight || image.height || 256;
+  const cropWidth = imageWidth / factor;
+  const cropHeight = imageHeight / factor;
+  const xOffset = ((origin.x % factor) + factor) % factor;
+  const yOffset = ((origin.y % factor) + factor) % factor;
+  return {
+    sx: xOffset * cropWidth,
+    sy: yOffset * cropHeight,
+    sw: cropWidth,
+    sh: cropHeight,
+  };
+}
+
+function drawEsriCandidateTile(context, image, origin, candidateZoom, tileSize) {
+  const crop = getEsriParentTileCrop(origin, candidateZoom, image);
+  context.clearRect(0, 0, tileSize.x, tileSize.y);
+  context.imageSmoothingEnabled = true;
+  context.imageSmoothingQuality = "high";
+  context.drawImage(image, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, tileSize.x, tileSize.y);
+}
+
+function createEsriHighResolutionTileLayer() {
+  if (typeof L === "undefined" || !L.TileLayer) {
+    return null;
+  }
+
+  const EsriSmartTileLayer = L.TileLayer.extend({
+    createTile(coords, done) {
+      const tileSize = this.getTileSize();
+      const canvas = document.createElement("canvas");
+      canvas.width = tileSize.x;
+      canvas.height = tileSize.y;
+      canvas.className = "leaflet-tile basemap-tile esri-tile esri-smart-tile";
+
+      const context = canvas.getContext("2d", { alpha: false });
+      if (!context) {
+        const fallbackImage = document.createElement("img");
+        fallbackImage.alt = "";
+        fallbackImage.crossOrigin = "anonymous";
+        fallbackImage.className = "leaflet-tile basemap-tile esri-tile";
+        fallbackImage.onload = () => done(null, fallbackImage);
+        fallbackImage.onerror = () => done(null, fallbackImage);
+        fallbackImage.src = this.getTileUrl(coords);
+        return fallbackImage;
+      }
+
+      const normalizedCoords = this._wrapCoords ? this._wrapCoords(coords) : coords;
+      const origin = {
+        x: Number(normalizedCoords.x),
+        y: Number(normalizedCoords.y),
+        z: Number(normalizedCoords.z ?? coords.z),
+      };
+      const minZoom = esriSatelliteNativeZoomLevels.stable;
+      if (![origin.x, origin.y, origin.z].every(Number.isFinite)) {
+        context.fillStyle = "#dfe8e2";
+        context.fillRect(0, 0, tileSize.x, tileSize.y);
+        done(null, canvas);
+        return canvas;
+      }
+      const startZoom = Math.min(origin.z, getEsriSatelliteNativeZoom());
+
+      const loadCandidate = (candidateZoom) => {
+        const factor = 2 ** Math.max(0, origin.z - candidateZoom);
+        const candidateX = Math.floor(origin.x / factor);
+        const candidateY = Math.floor(origin.y / factor);
+        const url = getEsriImageryTileUrl(candidateZoom, candidateX, candidateY);
+        const image = new Image();
+        image.crossOrigin = "anonymous";
+        image.decoding = "async";
+
+        image.onload = () => {
+          const shouldFallback = candidateZoom > minZoom && isLikelyEsriNoDataTile(image);
+          if (shouldFallback) {
+            loadCandidate(candidateZoom - 1);
+            return;
+          }
+          drawEsriCandidateTile(context, image, origin, candidateZoom, tileSize);
+          done(null, canvas);
+        };
+
+        image.onerror = () => {
+          if (candidateZoom > minZoom) {
+            loadCandidate(candidateZoom - 1);
+            return;
+          }
+          context.fillStyle = "#dfe8e2";
+          context.fillRect(0, 0, tileSize.x, tileSize.y);
+          done(null, canvas);
+        };
+
+        image.src = url;
+      };
+
+      loadCandidate(Math.max(minZoom, startZoom));
+      return canvas;
+    },
+  });
+
+  return new EsriSmartTileLayer(`${esriImageryService.tileUrl}/{z}/{y}/{x}`, {
+    attribution: esriImageryService.attribution,
+    maxNativeZoom: getEsriSatelliteNativeZoom(),
+    maxZoom: agronomyMapZoomLimits.satellite,
+    tileSize: 256,
+    crossOrigin: true,
+    className: "basemap-tile esri-tile",
+    detectRetina: false,
+    updateWhenIdle: true,
+    updateWhenZooming: false,
+    keepBuffer: 4,
+  });
+}
+
 function setEsriResolutionMode(mode = "high", options = {}) {
   if (isTerritorialRoute()) {
     return;
@@ -5595,7 +5798,7 @@ function setEsriResolutionMode(mode = "high", options = {}) {
   applyEsriSatelliteResolution(true);
   syncEsriResolutionButtons();
   if (!options.silent) {
-    setStatus("Esri HR seleccionado: se usan teselas nativas z18 para recuperar detalle urbano y viviendas.");
+    setStatus("Esri HR seleccionado: se intenta z19 y cada tesela cae automaticamente a z18-z16 si Esri no tiene datos.");
   }
 }
 
@@ -5614,7 +5817,7 @@ function syncEsriResolutionButtons() {
     button.title = !available
       ? "Los modos Esri se muestran en el modulo agricola."
       : isHighButton
-        ? "Usar Esri HR con teselas nativas z18."
+        ? "Usar Esri HR con teselas z19 y respaldo automatico por tesela."
         : "Modo Esri estable heredado.";
   });
 }
@@ -5723,12 +5926,11 @@ function initializeMap() {
   L.control.zoom({ position: "bottomright" }).addTo(mapState.map);
   initializeAgronomyMapPanes();
 
-  mapState.baseLayers.satellite = L.tileLayer(
-    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  mapState.baseLayers.satellite = createEsriHighResolutionTileLayer() || L.tileLayer(
+    `${esriImageryService.tileUrl}/{z}/{y}/{x}`,
     {
-      attribution: "Esri World Imagery",
-      // Allows deep navigation while overzooming the last detailed Esri tiles.
-      maxNativeZoom: getEsriSatelliteNativeZoom(),
+      attribution: esriImageryService.attribution,
+      maxNativeZoom: esriSatelliteNativeZoomLevels.stable,
       maxZoom: agronomyMapZoomLimits.satellite,
       tileSize: 256,
       crossOrigin: true,
@@ -22295,7 +22497,7 @@ function setBaseLayer(baseId, initial = false, options = {}) {
     }
     const baseLabel = resolvedBaseId === "satellite" ? "Esri HR" : "Calles";
     const zoomNote = resolvedBaseId === "satellite"
-      ? ` Zoom profundo ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} con teselas nativas Esri z18 para mayor detalle urbano.`
+      ? ` Zoom profundo ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} con Esri z19 y respaldo automatico por tesela.`
       : "";
     setStatus(`Mapa base cambiado a ${baseLabel}.${zoomNote}`);
   }
