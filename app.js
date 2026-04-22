@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-1",
+  bridgeVersion: "20260422-2",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -278,6 +278,8 @@ const gpsRelayService = {
     "https://unpkg.com/mqtt/dist/mqtt.min.js",
   ],
 };
+
+const gpsRelaySessionStorageKey = "geoportal.gpsRelay.sessionId";
 
 const agronomyMapZoomLimits = {
   satellite: 17,
@@ -10852,7 +10854,18 @@ function createGpsRelaySessionId() {
 
 function getGpsRelaySessionId() {
   if (!state.gpsSender.relaySessionId) {
-    state.gpsSender.relaySessionId = createGpsRelaySessionId();
+    let storedSessionId = "";
+    try {
+      storedSessionId = localStorage.getItem(gpsRelaySessionStorageKey) || "";
+    } catch (_) {
+      storedSessionId = "";
+    }
+    state.gpsSender.relaySessionId = sanitizeGpsRelayTopicPart(storedSessionId) || createGpsRelaySessionId();
+  }
+  try {
+    localStorage.setItem(gpsRelaySessionStorageKey, state.gpsSender.relaySessionId);
+  } catch (_) {
+    // Si localStorage no esta disponible, la sesion sigue viva en memoria.
   }
   return state.gpsSender.relaySessionId;
 }
