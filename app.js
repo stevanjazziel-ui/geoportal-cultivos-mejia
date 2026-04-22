@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-4",
+  bridgeVersion: "20260422-5",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -2481,6 +2481,7 @@ const state = {
   selectedCompareImageId: null,
   selectedIndex: "NDVI",
   surfaceMode: "primary",
+  satelliteLayersEnabled: true,
   showScenePreview: true,
   showAnalysisOverlay: true,
   scenePreviewOpacity: 0.45,
@@ -4126,6 +4127,9 @@ function getSceneLayerStatusLabel(imageOrSensor = null, layerKind = state.sceneL
   const sensor = typeof imageOrSensor === "string"
     ? getSensorConfig(imageOrSensor)
     : getSensorForImage(imageOrSensor);
+  if (!state.satelliteLayersEnabled) {
+    return "capas apagadas";
+  }
   if (!state.showScenePreview) {
     return "capa oculta";
   }
@@ -4166,6 +4170,7 @@ function cacheDom() {
   dom.sidebarClose = document.querySelector("#sidebarClose");
   dom.sidebarTitle = document.querySelector("#sidebarTitle");
   dom.sidebarSubtitle = document.querySelector("#sidebarSubtitle");
+  dom.toggleSatelliteLayersBtn = document.querySelector("#toggleSatelliteLayersBtn");
   dom.tabButtons = Array.from(document.querySelectorAll(".tab-button"));
   dom.tabImageryBtn = document.querySelector("#tabImageryBtn");
   dom.tabModulesBtn = document.querySelector("#tabModulesBtn");
@@ -4749,6 +4754,17 @@ function bindUI() {
 
   dom.baseButtons.forEach((button) => {
     button.addEventListener("click", () => setBaseLayer(button.dataset.base));
+  });
+
+  dom.toggleSatelliteLayersBtn?.addEventListener("click", () => {
+    state.satelliteLayersEnabled = !state.satelliteLayersEnabled;
+    syncSatelliteLayerToggle();
+    renderSceneControls();
+    renderSentinelOverlay();
+    updateMapSummary();
+    setStatus(state.satelliteLayersEnabled
+      ? "Capas satelitales activadas. Vuelvo a mostrar la escena, huella e indice disponibles."
+      : "Capas satelitales desactivadas. El mapa queda solo con la base y capas vectoriales.");
   });
 
   dom.openPlanning3dBtn?.addEventListener("click", () => {
@@ -5484,6 +5500,28 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
       card.classList.toggle("hidden", isTerritorial);
     });
   }
+  syncSatelliteLayerToggle();
+}
+
+function syncSatelliteLayerToggle() {
+  if (!dom.toggleSatelliteLayersBtn) {
+    return;
+  }
+  const enabled = Boolean(state.satelliteLayersEnabled);
+  const disabled = isTerritorialRoute();
+  dom.toggleSatelliteLayersBtn.classList.toggle("active", enabled && !disabled);
+  dom.toggleSatelliteLayersBtn.disabled = disabled;
+  dom.toggleSatelliteLayersBtn.setAttribute("aria-pressed", String(enabled && !disabled));
+  dom.toggleSatelliteLayersBtn.textContent = disabled
+    ? "Capas sat: N/A"
+    : enabled
+      ? "Capas sat: ON"
+      : "Capas sat: OFF";
+  dom.toggleSatelliteLayersBtn.title = disabled
+    ? "Las capas satelitales de agricultura no se muestran en rutas territoriales."
+    : enabled
+      ? "Ocultar escena, huella e indice satelital del mapa."
+      : "Mostrar escena, huella e indice satelital del mapa.";
 }
 
 function ensureLeafletPane(name, zIndex, pointerEvents = "none") {
@@ -6235,10 +6273,12 @@ function applySelectedScene() {
 }
 
 function renderSceneControls() {
+  syncSatelliteLayerToggle();
   const sensor = getActiveSensor();
   const selectedImage = getSelectedImage();
   const compareImage = getCompareImage();
-  const hasScenePreview = canRenderSceneLayer(selectedImage);
+  const satelliteLayersEnabled = Boolean(state.satelliteLayersEnabled);
+  const hasScenePreview = satelliteLayersEnabled && canRenderSceneLayer(selectedImage);
   const primaryOptions = state.filteredImages.length
     ? state.filteredImages.map((image) => `
         <option value="${image.id}" ${image.id === state.selectedImageId ? "selected" : ""}>
@@ -6266,15 +6306,21 @@ function renderSceneControls() {
   setDisabledIfChanged(dom.compareSceneSelect, state.filteredImages.length < 2);
   setDisabledIfChanged(dom.clearCompareBtn, !compareImage);
   setDisabledIfChanged(dom.toggleSurfaceModeBtn, !compareImage);
-  setDisabledIfChanged(dom.toggleAnalysisOverlayBtn, !selectedImage);
+  setDisabledIfChanged(dom.toggleAnalysisOverlayBtn, !selectedImage || !satelliteLayersEnabled);
   setTextIfChanged(dom.toggleSurfaceModeBtn, state.surfaceMode === "change" ? "Ver escena activa" : "Ver cambio temporal");
-  setTextIfChanged(dom.toggleAnalysisOverlayBtn, state.showAnalysisOverlay ? "Ver solo escena" : "Ver escena + analisis");
+  setTextIfChanged(dom.toggleAnalysisOverlayBtn, !satelliteLayersEnabled
+    ? "Capas satelitales apagadas"
+    : state.showAnalysisOverlay
+      ? "Ver solo escena"
+      : "Ver escena + analisis");
   setValueIfChanged(dom.scenePreviewOpacity, Math.round(state.scenePreviewOpacity * 100));
   setTextIfChanged(dom.scenePreviewOpacityValue, `${Math.round(state.scenePreviewOpacity * 100)}%`);
   setDisabledIfChanged(dom.scenePreviewOpacity, !hasScenePreview);
   setDisabledIfChanged(dom.toggleScenePreviewBtn, !hasScenePreview);
   const sceneLayerLabel = selectedImage ? getSceneLayerStatusLabel(selectedImage, state.sceneLayerKind) : "escena en mapa";
-  setTextIfChanged(dom.toggleScenePreviewBtn, !hasScenePreview
+  setTextIfChanged(dom.toggleScenePreviewBtn, !satelliteLayersEnabled
+    ? "Capas satelitales apagadas"
+    : !hasScenePreview
     ? "Escena no disponible en mapa"
     : state.showScenePreview
       ? `Ocultar ${sceneLayerLabel}`
@@ -7194,6 +7240,13 @@ function renderSentinelOverlay() {
   if (mapState.sentinelLayer) {
     mapState.map.removeLayer(mapState.sentinelLayer);
     mapState.sentinelLayer = null;
+  }
+
+  if (!state.satelliteLayersEnabled) {
+    state.sceneLayerKind = "off";
+    mapState.sceneFootprintFocusId = null;
+    updateMapSummary();
+    return;
   }
 
   const image = getSelectedImage();
@@ -21661,6 +21714,12 @@ function updateMapSummary(force = false) {
 
   renderMapBadges(image, compareImage, previewLabel);
 
+  if (!state.satelliteLayersEnabled) {
+    setTextIfChanged(dom.mapTitle, "Capas satelitales desactivadas");
+    setTextIfChanged(dom.mapSubtitle, "El mapa queda solo con la base activa y las capas vectoriales. Pulsa Capas sat: OFF para volver a mostrar escena, huella e indice.");
+    return;
+  }
+
   if (analysis) {
     if (state.surfaceMode === "change" && changeAnalysis && compareImage) {
       const delta = changeAnalysis.summary[state.selectedIndex];
@@ -21950,12 +22009,16 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
       label: getSceneMetaLabel(image),
     },
     {
-      tone: rasterTone,
-      label: state.showScenePreview ? previewLabel : "capa oculta",
+      tone: state.satelliteLayersEnabled ? rasterTone : "muted",
+      label: state.satelliteLayersEnabled
+        ? (state.showScenePreview ? previewLabel : "capa oculta")
+        : "capas apagadas",
     },
     {
-      tone: state.showAnalysisOverlay ? "analysis" : "muted",
-      label: state.showAnalysisOverlay ? "analisis visible" : "solo escena",
+      tone: state.satelliteLayersEnabled && state.showAnalysisOverlay ? "analysis" : "muted",
+      label: state.satelliteLayersEnabled
+        ? (state.showAnalysisOverlay ? "analisis visible" : "solo escena")
+        : "analisis apagado",
     },
   ];
 
@@ -22050,7 +22113,7 @@ function setBaseLayer(baseId, initial = false, options = {}) {
     }
     const baseLabel = resolvedBaseId === "satellite" ? "Satelite" : "Calles";
     const zoomNote = resolvedBaseId === "satellite"
-      ? ` Zoom maximo seguro ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} para evitar teselas no disponibles.`
+      ? ` Zoom profundo ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} con sobrezoom de imagen Esri.`
       : "";
     setStatus(`Mapa base cambiado a ${baseLabel}.${zoomNote}`);
   }
