@@ -2741,13 +2741,14 @@ button {
 
 .map-canvas .leaflet-tile {
   image-rendering: auto;
+  image-rendering: high-quality;
   backface-visibility: hidden;
   transform: translateZ(0);
-  transition: opacity 120ms linear;
+  transition: opacity 90ms linear;
 }
 
 .map-canvas .basemap-tile.esri-tile {
-  filter: contrast(1.08) saturate(1.09) brightness(1.015);
+  filter: contrast(1.12) saturate(1.12) brightness(1.018);
 }
 
 .map-canvas .basemap-tile.osm-tile {
@@ -2756,6 +2757,7 @@ button {
 
 .map-canvas .esri-smart-tile {
   background: #dfe8e2;
+  contain: strict;
 }
 
 .map-canvas .scene-preview-overlay {
@@ -2770,8 +2772,9 @@ button {
 }
 
 .map-stage.superresolution-active .leaflet-tile-pane .leaflet-tile {
-  filter: contrast(1.14) saturate(1.12) brightness(1.025);
+  filter: contrast(1.19) saturate(1.16) brightness(1.03);
   image-rendering: auto;
+  image-rendering: high-quality;
   transform: translateZ(0);
   transform-origin: center;
   will-change: auto;

@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-19",
+  bridgeVersion: "20260422-20",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -288,8 +288,8 @@ const agronomyMapZoomLimits = {
 
 const esriSatelliteNativeZoomLevels = {
   stable: 16,
-  // Esri HR asks for z19 where Esri has it, then falls back per tile to stable parents.
-  high: 19,
+  // Esri HR asks for z20 where Esri has it, then falls back per tile to stable parents.
+  high: 20,
 };
 
 const esriImageryService = {
@@ -5687,10 +5687,18 @@ function getEsriParentTileCrop(origin, candidateZoom, image) {
 
 function drawEsriCandidateTile(context, image, origin, candidateZoom, tileSize) {
   const crop = getEsriParentTileCrop(origin, candidateZoom, image);
-  context.clearRect(0, 0, tileSize.x, tileSize.y);
+  const scale = Number(context.canvas?.dataset?.renderScale) || 1;
+  const targetWidth = tileSize.x * scale;
+  const targetHeight = tileSize.y * scale;
+  context.clearRect(0, 0, targetWidth, targetHeight);
   context.imageSmoothingEnabled = true;
   context.imageSmoothingQuality = "high";
-  context.drawImage(image, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, tileSize.x, tileSize.y);
+  context.drawImage(image, crop.sx, crop.sy, crop.sw, crop.sh, 0, 0, targetWidth, targetHeight);
+}
+
+function getEsriTileRenderScale() {
+  const ratio = Number(window.devicePixelRatio) || 1;
+  return Math.min(Math.max(ratio, 1), 2);
 }
 
 function createEsriHighResolutionTileLayer() {
@@ -5701,9 +5709,13 @@ function createEsriHighResolutionTileLayer() {
   const EsriSmartTileLayer = L.TileLayer.extend({
     createTile(coords, done) {
       const tileSize = this.getTileSize();
+      const renderScale = getEsriTileRenderScale();
       const canvas = document.createElement("canvas");
-      canvas.width = tileSize.x;
-      canvas.height = tileSize.y;
+      canvas.width = Math.round(tileSize.x * renderScale);
+      canvas.height = Math.round(tileSize.y * renderScale);
+      canvas.style.width = `${tileSize.x}px`;
+      canvas.style.height = `${tileSize.y}px`;
+      canvas.dataset.renderScale = String(renderScale);
       canvas.className = "leaflet-tile basemap-tile esri-tile esri-smart-tile";
 
       const context = canvas.getContext("2d", { alpha: false });
@@ -5727,7 +5739,7 @@ function createEsriHighResolutionTileLayer() {
       const minZoom = esriSatelliteNativeZoomLevels.stable;
       if (![origin.x, origin.y, origin.z].every(Number.isFinite)) {
         context.fillStyle = "#dfe8e2";
-        context.fillRect(0, 0, tileSize.x, tileSize.y);
+        context.fillRect(0, 0, canvas.width, canvas.height);
         done(null, canvas);
         return canvas;
       }
@@ -5758,7 +5770,7 @@ function createEsriHighResolutionTileLayer() {
             return;
           }
           context.fillStyle = "#dfe8e2";
-          context.fillRect(0, 0, tileSize.x, tileSize.y);
+          context.fillRect(0, 0, canvas.width, canvas.height);
           done(null, canvas);
         };
 
@@ -5798,7 +5810,7 @@ function setEsriResolutionMode(mode = "high", options = {}) {
   applyEsriSatelliteResolution(true);
   syncEsriResolutionButtons();
   if (!options.silent) {
-    setStatus("Esri HR seleccionado: se intenta z19 y cada tesela cae automaticamente a z18-z16 si Esri no tiene datos.");
+    setStatus("Esri HR seleccionado: se intenta z20 y cada tesela cae automaticamente a z19-z16 si Esri no tiene datos.");
   }
 }
 
@@ -5817,7 +5829,7 @@ function syncEsriResolutionButtons() {
     button.title = !available
       ? "Los modos Esri se muestran en el modulo agricola."
       : isHighButton
-        ? "Usar Esri HR con teselas z19 y respaldo automatico por tesela."
+        ? "Usar Esri HR con teselas z20 y respaldo automatico por tesela."
         : "Modo Esri estable heredado.";
   });
 }
@@ -22497,7 +22509,7 @@ function setBaseLayer(baseId, initial = false, options = {}) {
     }
     const baseLabel = resolvedBaseId === "satellite" ? "Esri HR" : "Calles";
     const zoomNote = resolvedBaseId === "satellite"
-      ? ` Zoom profundo ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} con Esri z19 y respaldo automatico por tesela.`
+      ? ` Zoom profundo ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} con Esri z20 y respaldo automatico por tesela.`
       : "";
     setStatus(`Mapa base cambiado a ${baseLabel}.${zoomNote}`);
   }
