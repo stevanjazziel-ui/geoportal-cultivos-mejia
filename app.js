@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-2",
+  bridgeVersion: "20260422-3",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -282,7 +282,7 @@ const gpsRelayService = {
 const gpsRelaySessionStorageKey = "geoportal.gpsRelay.sessionId";
 
 const agronomyMapZoomLimits = {
-  satellite: 17,
+  satellite: 16,
   streets: 19,
 };
 
