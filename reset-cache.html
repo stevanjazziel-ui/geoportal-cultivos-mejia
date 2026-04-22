@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-store">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>Actualizando geoportal</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Sora", "IBM Plex Sans", system-ui, sans-serif;
+      background: #eef3ec;
+      color: #1e2d24;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 20% 18%, rgba(89, 137, 96, 0.22), transparent 32%),
+        linear-gradient(135deg, #f7f4ec, #e4ece1);
+    }
+
+    main {
+      width: min(520px, 100%);
+      padding: 28px;
+      border-radius: 28px;
+      background: rgba(255, 252, 248, 0.88);
+      box-shadow: 0 28px 70px rgba(31, 42, 34, 0.18);
+      border: 1px solid rgba(47, 61, 50, 0.1);
+    }
+
+    p {
+      color: #617068;
+      line-height: 1.55;
+    }
+
+    .bar {
+      height: 10px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(47, 61, 50, 0.12);
+    }
+
+    .bar span {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, #2f7f5f, #e0b84c);
+      transform-origin: left;
+      animation: loading 1.2s ease-in-out infinite alternate;
+    }
+
+    @keyframes loading {
+      from { transform: scaleX(0.18); }
+      to { transform: scaleX(1); }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p><strong>Actualizando geoportal</strong></p>
+    <h1>Limpiando cache local</h1>
+    <p id="status">Eliminando service workers y archivos cacheados para abrir la version nueva.</p>
+    <div class="bar" aria-hidden="true"><span></span></div>
+  </main>
+
+  <script>
+    const targetVersion = "20260422-8";
+    const statusEl = document.querySelector("#status");
+
+    async function clearCacheAndRedirect() {
+      try {
+        if ("serviceWorker" in navigator) {
+          const registrations = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(registrations.map((registration) => registration.unregister()));
+        }
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((key) => caches.delete(key)));
+        }
+        statusEl.textContent = "Cache limpia. Abriendo el geoportal actualizado...";
+      } catch (error) {
+        statusEl.textContent = "No se pudo limpiar todo automaticamente, pero abrire la version nueva.";
+      } finally {
+        const url = new URL("./", window.location.href);
+        url.searchParams.set("v", targetVersion);
+        url.searchParams.set("cache", "clean");
+        url.searchParams.set("ts", String(Date.now()));
+        setTimeout(() => window.location.replace(url.toString()), 700);
+      }
+    }
+
+    window.addEventListener("load", clearCacheAndRedirect);
+  </script>
+</body>
+</html>

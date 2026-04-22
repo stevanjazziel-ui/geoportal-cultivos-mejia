@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-7",
+  bridgeVersion: "20260422-8",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -4154,9 +4154,42 @@ function getSceneLayerStatusLabel(imageOrSensor = null, layerKind = state.sceneL
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  releaseGeoportalFromGpsBridgeServiceWorker();
   cacheDom();
   bootstrapApp();
 });
+
+function releaseGeoportalFromGpsBridgeServiceWorker() {
+  if (!("serviceWorker" in navigator) || /gps-bridge\.html$/i.test(window.location.pathname || "")) {
+    return;
+  }
+  const getRegistrations = navigator.serviceWorker.getRegistrations?.bind(navigator.serviceWorker);
+  if (getRegistrations) {
+    getRegistrations().then((registrations) => {
+      registrations.forEach((registration) => {
+        const scriptUrl = registration.active?.scriptURL || registration.waiting?.scriptURL || registration.installing?.scriptURL || "";
+        if (scriptUrl.includes("gps-bridge-sw.js")) {
+          registration.unregister().catch(() => {
+            // El geoportal principal no necesita el service worker del emisor GPS.
+          });
+        }
+      });
+    }).catch(() => {
+      // No bloquea la carga si el navegador no permite consultar registros.
+    });
+  }
+  if ("caches" in window) {
+    const getCacheKeys = caches.keys?.bind(caches);
+    if (!getCacheKeys) {
+      return;
+    }
+    getCacheKeys().then((keys) => {
+      keys
+        .filter((key) => key.startsWith("geoportal-gps-bridge"))
+        .forEach((key) => caches.delete(key).catch(() => {}));
+    }).catch(() => {});
+  }
+}
 
 function cacheDom() {
   dom.loginOverlay = document.querySelector("#loginOverlay");

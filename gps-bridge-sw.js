@@ -1,9 +1,17 @@
-const CACHE_NAME = "geoportal-gps-bridge-v6";
+const CACHE_NAME = "geoportal-gps-bridge-v8";
 const CACHE_ASSETS = [
   "./gps-bridge.html",
   "./gps-bridge.webmanifest",
   "./gps-bridge-icon.svg",
 ];
+
+function isBridgeAsset(requestUrl) {
+  return [
+    "/gps-bridge.html",
+    "/gps-bridge.webmanifest",
+    "/gps-bridge-icon.svg",
+  ].some((path) => requestUrl.pathname.endsWith(path));
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -29,19 +37,20 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  if (event.request.method !== "GET" || requestUrl.origin !== self.location.origin || !isBridgeAsset(requestUrl)) {
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) {
-        return cached;
-      }
-      return fetch(event.request).then((response) => {
-        if (!response || response.status !== 200 || event.request.method !== "GET") {
+    fetch(event.request)
+      .then((response) => {
+        if (!response || response.status !== 200) {
           return response;
         }
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
         return response;
-      });
-    })
+      })
+      .catch(() => caches.match(event.request))
   );
 });
