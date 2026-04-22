@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-9",
+  bridgeVersion: "20260422-10",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -287,7 +287,9 @@ const agronomyMapZoomLimits = {
 };
 
 const agronomyMapNativeZoomLimits = {
-  satellite: 18,
+  // Esri returns "Map data not available yet" in parts of Machachi at z18+.
+  // Keep deep navigation, but overzoom the last stable satellite tile.
+  satellite: 17,
   streets: 19,
 };
 
@@ -5623,7 +5625,7 @@ function initializeMap() {
       maxZoom: agronomyMapZoomLimits.satellite,
       tileSize: 256,
       crossOrigin: true,
-      detectRetina: true,
+      detectRetina: false,
       updateWhenZooming: false,
       keepBuffer: 3,
     }
