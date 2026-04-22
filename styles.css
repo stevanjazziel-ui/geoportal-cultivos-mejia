@@ -392,6 +392,38 @@ button {
   cursor: not-allowed;
 }
 
+.map-satellite-toggle {
+  position: absolute;
+  left: 18px;
+  bottom: 82px;
+  z-index: 560;
+  border: 1px solid rgba(31, 93, 71, 0.18);
+  border-radius: 999px;
+  padding: 12px 16px;
+  background: rgba(255, 252, 248, 0.86);
+  color: var(--muted);
+  font-weight: 900;
+  box-shadow: 0 18px 38px rgba(24, 40, 30, 0.18);
+  backdrop-filter: blur(14px);
+  transition: background 180ms ease, color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.map-satellite-toggle.active {
+  color: #f9f6f1;
+  background: linear-gradient(135deg, #2f7f5f, #1f5d47);
+  box-shadow: 0 18px 38px rgba(47, 127, 95, 0.28);
+}
+
+.map-satellite-toggle:hover:not(:disabled),
+.scene-layer-toggle:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.map-satellite-toggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .base-button,
 .tab-button,
 .index-button,
@@ -3824,6 +3856,11 @@ button {
 
   .overlay-right {
     display: none;
+  }
+
+  .map-satellite-toggle {
+    left: 14px;
+    bottom: 96px;
   }
 
   .map-footer {

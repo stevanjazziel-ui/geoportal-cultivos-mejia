@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-5",
+  bridgeVersion: "20260422-6",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -4171,6 +4171,7 @@ function cacheDom() {
   dom.sidebarTitle = document.querySelector("#sidebarTitle");
   dom.sidebarSubtitle = document.querySelector("#sidebarSubtitle");
   dom.toggleSatelliteLayersBtn = document.querySelector("#toggleSatelliteLayersBtn");
+  dom.satelliteLayerToggleButtons = Array.from(document.querySelectorAll("[data-satellite-layer-toggle]"));
   dom.tabButtons = Array.from(document.querySelectorAll(".tab-button"));
   dom.tabImageryBtn = document.querySelector("#tabImageryBtn");
   dom.tabModulesBtn = document.querySelector("#tabModulesBtn");
@@ -4756,15 +4757,8 @@ function bindUI() {
     button.addEventListener("click", () => setBaseLayer(button.dataset.base));
   });
 
-  dom.toggleSatelliteLayersBtn?.addEventListener("click", () => {
-    state.satelliteLayersEnabled = !state.satelliteLayersEnabled;
-    syncSatelliteLayerToggle();
-    renderSceneControls();
-    renderSentinelOverlay();
-    updateMapSummary();
-    setStatus(state.satelliteLayersEnabled
-      ? "Capas satelitales activadas. Vuelvo a mostrar la escena, huella e indice disponibles."
-      : "Capas satelitales desactivadas. El mapa queda solo con la base y capas vectoriales.");
+  dom.satelliteLayerToggleButtons?.forEach((button) => {
+    button.addEventListener("click", toggleSatelliteLayers);
   });
 
   dom.openPlanning3dBtn?.addEventListener("click", () => {
@@ -5503,25 +5497,46 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   syncSatelliteLayerToggle();
 }
 
+function getSatelliteLayerToggleButtons() {
+  if (Array.isArray(dom.satelliteLayerToggleButtons) && dom.satelliteLayerToggleButtons.length) {
+    return dom.satelliteLayerToggleButtons;
+  }
+  return dom.toggleSatelliteLayersBtn ? [dom.toggleSatelliteLayersBtn] : [];
+}
+
+function toggleSatelliteLayers() {
+  state.satelliteLayersEnabled = !state.satelliteLayersEnabled;
+  syncSatelliteLayerToggle();
+  renderSceneControls();
+  renderSentinelOverlay();
+  updateMapSummary();
+  setStatus(state.satelliteLayersEnabled
+    ? "Capas satelitales activadas. Vuelvo a mostrar la escena, huella e indice disponibles."
+    : "Capas satelitales desactivadas. El mapa queda solo con la base y capas vectoriales.");
+}
+
 function syncSatelliteLayerToggle() {
-  if (!dom.toggleSatelliteLayersBtn) {
+  const buttons = getSatelliteLayerToggleButtons();
+  if (!buttons.length) {
     return;
   }
   const enabled = Boolean(state.satelliteLayersEnabled);
   const disabled = isTerritorialRoute();
-  dom.toggleSatelliteLayersBtn.classList.toggle("active", enabled && !disabled);
-  dom.toggleSatelliteLayersBtn.disabled = disabled;
-  dom.toggleSatelliteLayersBtn.setAttribute("aria-pressed", String(enabled && !disabled));
-  dom.toggleSatelliteLayersBtn.textContent = disabled
-    ? "Capas sat: N/A"
-    : enabled
-      ? "Capas sat: ON"
-      : "Capas sat: OFF";
-  dom.toggleSatelliteLayersBtn.title = disabled
-    ? "Las capas satelitales de agricultura no se muestran en rutas territoriales."
-    : enabled
-      ? "Ocultar escena, huella e indice satelital del mapa."
-      : "Mostrar escena, huella e indice satelital del mapa.";
+  buttons.forEach((button) => {
+    button.classList.toggle("active", enabled && !disabled);
+    button.disabled = disabled;
+    button.setAttribute("aria-pressed", String(enabled && !disabled));
+    button.textContent = disabled
+      ? "Capas sat: N/A"
+      : enabled
+        ? "Capas sat: ON"
+        : "Capas sat: OFF";
+    button.title = disabled
+      ? "Las capas satelitales de agricultura no se muestran en rutas territoriales."
+      : enabled
+        ? "Ocultar escena, huella e indice satelital del mapa."
+        : "Mostrar escena, huella e indice satelital del mapa.";
+  });
 }
 
 function ensureLeafletPane(name, zIndex, pointerEvents = "none") {
