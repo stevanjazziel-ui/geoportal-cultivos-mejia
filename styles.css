@@ -2747,7 +2747,7 @@ button {
 }
 
 .map-canvas img.basemap-tile.esri-tile {
-  filter: contrast(1.04) saturate(1.06) brightness(1.01);
+  filter: contrast(1.075) saturate(1.085) brightness(1.012);
 }
 
 .map-canvas img.basemap-tile.osm-tile {
@@ -2766,7 +2766,7 @@ button {
 }
 
 .map-stage.superresolution-active .leaflet-tile-pane img.leaflet-tile {
-  filter: contrast(1.1) saturate(1.1) brightness(1.02);
+  filter: url("#satelliteSuperResolutionFilter") contrast(1.095) saturate(1.105) brightness(1.018);
   image-rendering: auto;
   transform: translateZ(0);
   transform-origin: center;
