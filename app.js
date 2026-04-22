@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-12",
+  bridgeVersion: "20260422-13",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -2484,6 +2484,7 @@ const state = {
   selectedIndex: "NDVI",
   surfaceMode: "primary",
   satelliteLayersEnabled: true,
+  satelliteSuperResolutionEnabled: true,
   showScenePreview: true,
   showAnalysisOverlay: true,
   scenePreviewOpacity: 0.45,
@@ -4206,6 +4207,7 @@ function cacheDom() {
   dom.sidebarTitle = document.querySelector("#sidebarTitle");
   dom.sidebarSubtitle = document.querySelector("#sidebarSubtitle");
   dom.toggleSatelliteLayersBtn = document.querySelector("#toggleSatelliteLayersBtn");
+  dom.toggleSatelliteSuperResolutionBtn = document.querySelector("#toggleSatelliteSuperResolutionBtn");
   dom.satelliteLayerToggleButtons = Array.from(document.querySelectorAll("[data-satellite-layer-toggle]"));
   dom.tabButtons = Array.from(document.querySelectorAll(".tab-button"));
   dom.tabImageryBtn = document.querySelector("#tabImageryBtn");
@@ -4795,6 +4797,7 @@ function bindUI() {
   dom.satelliteLayerToggleButtons?.forEach((button) => {
     button.addEventListener("click", toggleSatelliteLayers);
   });
+  dom.toggleSatelliteSuperResolutionBtn?.addEventListener("click", toggleSatelliteSuperResolution);
 
   dom.openPlanning3dBtn?.addEventListener("click", () => {
     openPlanning3dViewer();
@@ -5530,6 +5533,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
     });
   }
   syncSatelliteLayerToggle();
+  syncSatelliteSuperResolution();
 }
 
 function getSatelliteLayerToggleButtons() {
@@ -5548,6 +5552,39 @@ function toggleSatelliteLayers() {
   setStatus(state.satelliteLayersEnabled
     ? "Capas satelitales activadas. Vuelvo a mostrar la escena, huella e indice disponibles."
     : "Capas satelitales desactivadas. El mapa queda solo con la base y capas vectoriales.");
+}
+
+function toggleSatelliteSuperResolution() {
+  if (state.baseLayer !== "satellite" || isTerritorialRoute()) {
+    return;
+  }
+  state.satelliteSuperResolutionEnabled = !state.satelliteSuperResolutionEnabled;
+  syncSatelliteSuperResolution();
+  setStatus(state.satelliteSuperResolutionEnabled
+    ? "Superresolucion IA visual activada sobre Esri: realce de nitidez, contraste y color en todas las zonas."
+    : "Superresolucion IA visual desactivada. La base Esri queda sin realce adicional.");
+}
+
+function syncSatelliteSuperResolution() {
+  const enabled = Boolean(state.satelliteSuperResolutionEnabled);
+  const available = state.baseLayer === "satellite" && !isTerritorialRoute();
+  dom.mapStage?.classList.toggle("superresolution-active", enabled && available);
+  if (!dom.toggleSatelliteSuperResolutionBtn) {
+    return;
+  }
+  dom.toggleSatelliteSuperResolutionBtn.disabled = !available;
+  dom.toggleSatelliteSuperResolutionBtn.classList.toggle("active", enabled && available);
+  dom.toggleSatelliteSuperResolutionBtn.setAttribute("aria-pressed", String(enabled && available));
+  dom.toggleSatelliteSuperResolutionBtn.textContent = !available
+    ? "IA detalle N/A"
+    : enabled
+      ? "IA detalle ON"
+      : "IA detalle OFF";
+  dom.toggleSatelliteSuperResolutionBtn.title = !available
+    ? "El realce IA visual se aplica solo sobre la base satelital Esri."
+    : enabled
+      ? "Desactivar realce visual de nitidez y contraste sobre Esri."
+      : "Activar realce visual de nitidez y contraste sobre Esri.";
 }
 
 function syncSatelliteLayerToggle() {
@@ -22162,6 +22199,7 @@ function setBaseLayer(baseId, initial = false, options = {}) {
   mapState.activeBaseLayer.addTo(mapState.map);
   clampAgronomyMapZoomForBase(resolvedBaseId);
   syncAgronomyBaseLayerOpacity();
+  syncSatelliteSuperResolution();
   if (gpsBaseLocked) {
     clearGpsBlockingImageryLayers();
   }

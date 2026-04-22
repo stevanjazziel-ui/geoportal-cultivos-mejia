@@ -31,11 +31,25 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260422-12">
+  <link rel="stylesheet" href="./styles.css?v=20260422-13">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
   <div class="ambient ambient-bottom"></div>
+  <svg class="svg-filter-defs" width="0" height="0" aria-hidden="true" focusable="false">
+    <filter id="satelliteSuperResolutionFilter" color-interpolation-filters="sRGB">
+      <feComponentTransfer>
+        <feFuncR type="linear" slope="1.04" intercept="-0.012"></feFuncR>
+        <feFuncG type="linear" slope="1.04" intercept="-0.012"></feFuncG>
+        <feFuncB type="linear" slope="1.04" intercept="-0.012"></feFuncB>
+      </feComponentTransfer>
+      <feConvolveMatrix
+        order="3"
+        kernelMatrix="0 -0.10 0 -0.10 1.40 -0.10 0 -0.10 0"
+        preserveAlpha="true"
+      ></feConvolveMatrix>
+    </filter>
+  </svg>
 
   <div id="loginOverlay" class="login-overlay">
     <section class="login-card">
@@ -118,10 +132,18 @@
           >
             Sentinel ON
           </button>
+          <button
+            id="toggleSatelliteSuperResolutionBtn"
+            class="base-button satellite-superres-toggle active"
+            type="button"
+            aria-pressed="true"
+          >
+            IA detalle ON
+          </button>
         </div>
         <div class="user-pill">
           <span class="status-dot"></span>
-          Usuario publico - v20260422-12
+          Usuario publico - v20260422-13
         </div>
       </div>
     </header>
@@ -1070,6 +1092,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260422-12" defer></script>
+  <script src="./app.js?v=20260422-13" defer></script>
 </body>
 </html>
