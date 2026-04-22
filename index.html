@@ -31,7 +31,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260422-13">
+  <link rel="stylesheet" href="./styles.css?v=20260422-14">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -133,6 +133,14 @@
             Sentinel ON
           </button>
           <button
+            id="toggleEsriHighResolutionBtn"
+            class="base-button esri-highres-toggle active"
+            type="button"
+            aria-pressed="true"
+          >
+            Esri HR ON
+          </button>
+          <button
             id="toggleSatelliteSuperResolutionBtn"
             class="base-button satellite-superres-toggle active"
             type="button"
@@ -143,7 +151,7 @@
         </div>
         <div class="user-pill">
           <span class="status-dot"></span>
-          Usuario publico - v20260422-13
+          Usuario publico - v20260422-14
         </div>
       </div>
     </header>
@@ -1092,6 +1100,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260422-13" defer></script>
+  <script src="./app.js?v=20260422-14" defer></script>
 </body>
 </html>

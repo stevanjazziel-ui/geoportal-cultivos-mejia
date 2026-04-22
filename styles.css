@@ -416,6 +416,22 @@ button {
   cursor: not-allowed;
 }
 
+.esri-highres-toggle {
+  box-shadow: inset 0 0 0 1px rgba(105, 65, 47, 0.16);
+  white-space: nowrap;
+}
+
+.esri-highres-toggle.active {
+  color: #f9f6f1;
+  background: linear-gradient(135deg, #8c5b42, #cb9440);
+  box-shadow: 0 12px 24px rgba(105, 65, 47, 0.24);
+}
+
+.esri-highres-toggle:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .satellite-superres-toggle {
   box-shadow: inset 0 0 0 1px rgba(48, 106, 113, 0.14);
   white-space: nowrap;

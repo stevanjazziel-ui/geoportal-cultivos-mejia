@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-13",
+  bridgeVersion: "20260422-14",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -286,10 +286,15 @@ const agronomyMapZoomLimits = {
   streets: 22,
 };
 
+const esriSatelliteNativeZoomLevels = {
+  stable: 16,
+  high: 18,
+};
+
 const agronomyMapNativeZoomLimits = {
   // Esri can return "Map data not available yet" at z18+ in several areas.
   // Keep deep navigation everywhere, but overzoom a conservative stable tile for every agronomy area.
-  satellite: 16,
+  satellite: esriSatelliteNativeZoomLevels.stable,
   streets: 19,
 };
 
@@ -2484,6 +2489,7 @@ const state = {
   selectedIndex: "NDVI",
   surfaceMode: "primary",
   satelliteLayersEnabled: true,
+  satelliteHighResolutionEnabled: true,
   satelliteSuperResolutionEnabled: true,
   showScenePreview: true,
   showAnalysisOverlay: true,
@@ -4207,6 +4213,7 @@ function cacheDom() {
   dom.sidebarTitle = document.querySelector("#sidebarTitle");
   dom.sidebarSubtitle = document.querySelector("#sidebarSubtitle");
   dom.toggleSatelliteLayersBtn = document.querySelector("#toggleSatelliteLayersBtn");
+  dom.toggleEsriHighResolutionBtn = document.querySelector("#toggleEsriHighResolutionBtn");
   dom.toggleSatelliteSuperResolutionBtn = document.querySelector("#toggleSatelliteSuperResolutionBtn");
   dom.satelliteLayerToggleButtons = Array.from(document.querySelectorAll("[data-satellite-layer-toggle]"));
   dom.tabButtons = Array.from(document.querySelectorAll(".tab-button"));
@@ -4797,6 +4804,7 @@ function bindUI() {
   dom.satelliteLayerToggleButtons?.forEach((button) => {
     button.addEventListener("click", toggleSatelliteLayers);
   });
+  dom.toggleEsriHighResolutionBtn?.addEventListener("click", toggleEsriHighResolution);
   dom.toggleSatelliteSuperResolutionBtn?.addEventListener("click", toggleSatelliteSuperResolution);
 
   dom.openPlanning3dBtn?.addEventListener("click", () => {
@@ -5533,6 +5541,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
     });
   }
   syncSatelliteLayerToggle();
+  syncEsriHighResolution();
   syncSatelliteSuperResolution();
 }
 
@@ -5552,6 +5561,56 @@ function toggleSatelliteLayers() {
   setStatus(state.satelliteLayersEnabled
     ? "Capas satelitales activadas. Vuelvo a mostrar la escena, huella e indice disponibles."
     : "Capas satelitales desactivadas. El mapa queda solo con la base y capas vectoriales.");
+}
+
+function getEsriSatelliteNativeZoom() {
+  return state.satelliteHighResolutionEnabled
+    ? esriSatelliteNativeZoomLevels.high
+    : esriSatelliteNativeZoomLevels.stable;
+}
+
+function applyEsriSatelliteResolution(redraw = false) {
+  const satelliteLayer = mapState.baseLayers?.satellite;
+  if (!satelliteLayer?.options) {
+    return;
+  }
+  satelliteLayer.options.maxNativeZoom = getEsriSatelliteNativeZoom();
+  if (redraw && typeof satelliteLayer.redraw === "function") {
+    satelliteLayer.redraw();
+  }
+}
+
+function toggleEsriHighResolution() {
+  if (state.baseLayer !== "satellite" || isTerritorialRoute()) {
+    return;
+  }
+  state.satelliteHighResolutionEnabled = !state.satelliteHighResolutionEnabled;
+  applyEsriSatelliteResolution(true);
+  syncEsriHighResolution();
+  setStatus(state.satelliteHighResolutionEnabled
+    ? "Esri HR activado: se usan teselas nativas mas detalladas. Si alguna zona muestra aviso de datos no disponibles, pulsa Esri HR OFF."
+    : "Esri HR desactivado: se usa el modo estable con sobrezoom para evitar avisos de datos no disponibles.");
+}
+
+function syncEsriHighResolution() {
+  const enabled = Boolean(state.satelliteHighResolutionEnabled);
+  const available = state.baseLayer === "satellite" && !isTerritorialRoute();
+  if (!dom.toggleEsriHighResolutionBtn) {
+    return;
+  }
+  dom.toggleEsriHighResolutionBtn.disabled = !available;
+  dom.toggleEsriHighResolutionBtn.classList.toggle("active", enabled && available);
+  dom.toggleEsriHighResolutionBtn.setAttribute("aria-pressed", String(enabled && available));
+  dom.toggleEsriHighResolutionBtn.textContent = !available
+    ? "Esri HR N/A"
+    : enabled
+      ? "Esri HR ON"
+      : "Esri HR OFF";
+  dom.toggleEsriHighResolutionBtn.title = !available
+    ? "La alta resolucion Esri se aplica solo sobre la base satelital."
+    : enabled
+      ? "Usar modo estable si aparece Map data not available yet."
+      : "Usar teselas Esri nativas mas detalladas.";
 }
 
 function toggleSatelliteSuperResolution() {
@@ -5658,7 +5717,7 @@ function initializeMap() {
     {
       attribution: "Esri World Imagery",
       // Allows deep navigation while overzooming the last detailed Esri tiles.
-      maxNativeZoom: agronomyMapNativeZoomLimits.satellite,
+      maxNativeZoom: getEsriSatelliteNativeZoom(),
       maxZoom: agronomyMapZoomLimits.satellite,
       tileSize: 256,
       crossOrigin: true,
@@ -22198,7 +22257,9 @@ function setBaseLayer(baseId, initial = false, options = {}) {
   mapState.activeBaseLayer = nextLayer;
   mapState.activeBaseLayer.addTo(mapState.map);
   clampAgronomyMapZoomForBase(resolvedBaseId);
+  applyEsriSatelliteResolution(false);
   syncAgronomyBaseLayerOpacity();
+  syncEsriHighResolution();
   syncSatelliteSuperResolution();
   if (gpsBaseLocked) {
     clearGpsBlockingImageryLayers();
@@ -22215,7 +22276,9 @@ function setBaseLayer(baseId, initial = false, options = {}) {
     }
     const baseLabel = resolvedBaseId === "satellite" ? "Satelite" : "Calles";
     const zoomNote = resolvedBaseId === "satellite"
-      ? ` Zoom profundo ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} con sobrezoom Esri estable para todas las zonas.`
+      ? state.satelliteHighResolutionEnabled
+        ? ` Zoom profundo ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} con Esri HR nativo.`
+        : ` Zoom profundo ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} con sobrezoom Esri estable para todas las zonas.`
       : "";
     setStatus(`Mapa base cambiado a ${baseLabel}.${zoomNote}`);
   }
