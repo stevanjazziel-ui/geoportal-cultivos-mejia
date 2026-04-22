@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-14",
+  bridgeVersion: "20260422-15",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -4213,7 +4213,7 @@ function cacheDom() {
   dom.sidebarTitle = document.querySelector("#sidebarTitle");
   dom.sidebarSubtitle = document.querySelector("#sidebarSubtitle");
   dom.toggleSatelliteLayersBtn = document.querySelector("#toggleSatelliteLayersBtn");
-  dom.toggleEsriHighResolutionBtn = document.querySelector("#toggleEsriHighResolutionBtn");
+  dom.esriResolutionButtons = Array.from(document.querySelectorAll("[data-esri-resolution]"));
   dom.toggleSatelliteSuperResolutionBtn = document.querySelector("#toggleSatelliteSuperResolutionBtn");
   dom.satelliteLayerToggleButtons = Array.from(document.querySelectorAll("[data-satellite-layer-toggle]"));
   dom.tabButtons = Array.from(document.querySelectorAll(".tab-button"));
@@ -4804,7 +4804,9 @@ function bindUI() {
   dom.satelliteLayerToggleButtons?.forEach((button) => {
     button.addEventListener("click", toggleSatelliteLayers);
   });
-  dom.toggleEsriHighResolutionBtn?.addEventListener("click", toggleEsriHighResolution);
+  dom.esriResolutionButtons?.forEach((button) => {
+    button.addEventListener("click", () => setEsriResolutionMode(button.dataset.esriResolution || "high"));
+  });
   dom.toggleSatelliteSuperResolutionBtn?.addEventListener("click", toggleSatelliteSuperResolution);
 
   dom.openPlanning3dBtn?.addEventListener("click", () => {
@@ -5541,7 +5543,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
     });
   }
   syncSatelliteLayerToggle();
-  syncEsriHighResolution();
+  syncEsriResolutionButtons();
   syncSatelliteSuperResolution();
 }
 
@@ -5580,37 +5582,45 @@ function applyEsriSatelliteResolution(redraw = false) {
   }
 }
 
-function toggleEsriHighResolution() {
-  if (state.baseLayer !== "satellite" || isTerritorialRoute()) {
+function setEsriResolutionMode(mode = "high", options = {}) {
+  if (isTerritorialRoute()) {
     return;
   }
-  state.satelliteHighResolutionEnabled = !state.satelliteHighResolutionEnabled;
+  const highResolution = mode === "high";
+  state.satelliteHighResolutionEnabled = highResolution;
+  if (state.baseLayer !== "satellite") {
+    setBaseLayer("satellite", false, {
+      silent: true,
+      skipSceneRender: options.skipSceneRender,
+    });
+  }
   applyEsriSatelliteResolution(true);
-  syncEsriHighResolution();
-  setStatus(state.satelliteHighResolutionEnabled
-    ? "Esri HR activado: se usan teselas nativas mas detalladas. Si alguna zona muestra aviso de datos no disponibles, pulsa Esri HR OFF."
-    : "Esri HR desactivado: se usa el modo estable con sobrezoom para evitar avisos de datos no disponibles.");
+  syncEsriResolutionButtons();
+  if (!options.silent) {
+    setStatus(highResolution
+      ? "Modo Esri HR seleccionado: se usan teselas nativas mas detalladas. Si alguna zona muestra aviso de datos no disponibles, cambia a Esri normal."
+      : "Modo Esri normal seleccionado: base estable con sobrezoom para evitar avisos de datos no disponibles.");
+  }
 }
 
-function syncEsriHighResolution() {
+function syncEsriResolutionButtons() {
   const enabled = Boolean(state.satelliteHighResolutionEnabled);
-  const available = state.baseLayer === "satellite" && !isTerritorialRoute();
-  if (!dom.toggleEsriHighResolutionBtn) {
+  const available = !isTerritorialRoute();
+  if (!Array.isArray(dom.esriResolutionButtons)) {
     return;
   }
-  dom.toggleEsriHighResolutionBtn.disabled = !available;
-  dom.toggleEsriHighResolutionBtn.classList.toggle("active", enabled && available);
-  dom.toggleEsriHighResolutionBtn.setAttribute("aria-pressed", String(enabled && available));
-  dom.toggleEsriHighResolutionBtn.textContent = !available
-    ? "Esri HR N/A"
-    : enabled
-      ? "Esri HR ON"
-      : "Esri HR OFF";
-  dom.toggleEsriHighResolutionBtn.title = !available
-    ? "La alta resolucion Esri se aplica solo sobre la base satelital."
-    : enabled
-      ? "Usar modo estable si aparece Map data not available yet."
-      : "Usar teselas Esri nativas mas detalladas.";
+  dom.esriResolutionButtons.forEach((button) => {
+    const isHighButton = button.dataset.esriResolution === "high";
+    const active = available && state.baseLayer === "satellite" && (isHighButton ? enabled : !enabled);
+    button.disabled = !available;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+    button.title = !available
+      ? "Los modos Esri se muestran en el modulo agricola."
+      : isHighButton
+        ? "Usar teselas Esri nativas mas detalladas."
+        : "Usar base Esri estable con sobrezoom.";
+  });
 }
 
 function toggleSatelliteSuperResolution() {
@@ -22259,7 +22269,7 @@ function setBaseLayer(baseId, initial = false, options = {}) {
   clampAgronomyMapZoomForBase(resolvedBaseId);
   applyEsriSatelliteResolution(false);
   syncAgronomyBaseLayerOpacity();
-  syncEsriHighResolution();
+  syncEsriResolutionButtons();
   syncSatelliteSuperResolution();
   if (gpsBaseLocked) {
     clearGpsBlockingImageryLayers();
