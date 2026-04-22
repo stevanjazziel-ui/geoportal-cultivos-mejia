@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-10",
+  bridgeVersion: "20260422-11",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -287,8 +287,8 @@ const agronomyMapZoomLimits = {
 };
 
 const agronomyMapNativeZoomLimits = {
-  // Esri returns "Map data not available yet" in parts of Machachi at z18+.
-  // Keep deep navigation, but overzoom the last stable satellite tile.
+  // Esri can return "Map data not available yet" at z18+ in several areas.
+  // Keep deep navigation everywhere, but overzoom the last stable satellite tile.
   satellite: 17,
   streets: 19,
 };
@@ -22177,7 +22177,7 @@ function setBaseLayer(baseId, initial = false, options = {}) {
     }
     const baseLabel = resolvedBaseId === "satellite" ? "Satelite" : "Calles";
     const zoomNote = resolvedBaseId === "satellite"
-      ? ` Zoom profundo ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} con sobrezoom de imagen Esri.`
+      ? ` Zoom profundo ${getAgronomyMapMaxZoomForBase(resolvedBaseId)} con sobrezoom Esri estable para todos los ambitos.`
       : "";
     setStatus(`Mapa base cambiado a ${baseLabel}.${zoomNote}`);
   }
