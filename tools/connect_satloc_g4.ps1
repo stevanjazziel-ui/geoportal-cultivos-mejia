@@ -7,6 +7,7 @@ param(
   [string]$PortName = "",
   [int[]]$BaudRates = @(4800, 9600, 19200, 38400),
   [int]$SendEveryMs = 2000,
+  [int]$RescanEverySeconds = 8,
   [switch]$ListPorts
 )
 
@@ -114,39 +115,49 @@ function Get-SerialPortHints() {
   )
 }
 
-function Select-SerialPort([string]$RequestedPort) {
+function Get-CandidateSerialPorts([string]$RequestedPort) {
   $ports = Get-SerialPortHints
-  if (-not $ports.Count) {
-    throw "No se detectaron puertos serie. Conecta el adaptador COM/USB del Satloc G4 e intenta de nuevo."
-  }
-
   if ($RequestedPort) {
     $match = $ports | Where-Object { $_.PortName -ieq $RequestedPort } | Select-Object -First 1
     if (-not $match) {
       throw "El puerto $RequestedPort no esta disponible. Puertos detectados: $((@($ports.PortName) -join ', '))."
     }
-    return $match.PortName
+    return @($match.PortName)
   }
 
-  if ($ports.Count -eq 1) {
-    return $ports[0].PortName
+  if (-not $ports.Count) {
+    return @()
   }
 
-  $preferred = $ports | Sort-Object {
+  $ordered = @(
+    $ports | Sort-Object {
     $description = [string]$_.Description
     if ($description -match "satloc|gnss|gps|usb serial|ftdi|prolific") { 0 } else { 1 }
   }, PortName | Select-Object -First 1
+  )
+
+  $preferred = $ordered | Select-Object -First 1
 
   if ($preferred) {
     Write-Host "Puertos serie detectados:" -ForegroundColor Cyan
     foreach ($entry in $ports) {
       Write-Host (" - {0}: {1}" -f $entry.PortName, $entry.Description)
     }
-    Write-Host ("Usare {0}. Si quieres otro, vuelve a ejecutar con -PortName COMx." -f $preferred.PortName) -ForegroundColor DarkYellow
-    return $preferred.PortName
+    Write-Host ("Intentare primero {0}. Si quieres fijar otro, vuelve a ejecutar con -PortName COMx." -f $preferred.PortName) -ForegroundColor DarkYellow
   }
 
-  return $ports[0].PortName
+  $preferredPortName = if ($preferred) { $preferred.PortName } else { $null }
+  $orderedPorts = [System.Collections.Generic.List[string]]::new()
+  if ($preferredPortName) {
+    $orderedPorts.Add($preferredPortName)
+  }
+  foreach ($entry in $ports) {
+    if ($entry.PortName -and -not $orderedPorts.Contains($entry.PortName)) {
+      $orderedPorts.Add($entry.PortName)
+    }
+  }
+
+  return @($orderedPorts)
 }
 
 function Test-NmeaSentence([string]$Line) {
@@ -185,46 +196,49 @@ function Open-SerialPort([string]$SelectedPort, [int]$BaudRate) {
   return $serialPort
 }
 
-function Find-SatlocSerialStream([string]$SelectedPort, [int[]]$Candidates) {
+function Find-SatlocSerialStream([string[]]$SelectedPorts, [int[]]$Candidates) {
   $candidateList = @($Candidates | Where-Object { $_ -gt 0 } | Select-Object -Unique)
   if (-not $candidateList.Count) {
     $candidateList = @(4800, 9600, 19200)
   }
 
-  foreach ($baudRate in $candidateList) {
-    $serialPort = $null
-    try {
-      Write-Host ("Probando {0} a {1} bps..." -f $SelectedPort, $baudRate) -ForegroundColor Cyan
-      $serialPort = Open-SerialPort $SelectedPort $baudRate
-      $deadline = (Get-Date).AddSeconds(8)
-      while ((Get-Date) -lt $deadline) {
-        try {
-          $line = $serialPort.ReadLine()
-        } catch [System.TimeoutException] {
-          continue
-        }
+  foreach ($selectedPort in @($SelectedPorts)) {
+    foreach ($baudRate in $candidateList) {
+      $serialPort = $null
+      try {
+        Write-Host ("Probando {0} a {1} bps..." -f $selectedPort, $baudRate) -ForegroundColor Cyan
+        $serialPort = Open-SerialPort $selectedPort $baudRate
+        $deadline = (Get-Date).AddSeconds(8)
+        while ((Get-Date) -lt $deadline) {
+          try {
+            $line = $serialPort.ReadLine()
+          } catch [System.TimeoutException] {
+            continue
+          }
 
-        if (Test-NmeaSentence $line) {
-          return [pscustomobject]@{
-            SerialPort = $serialPort
-            BaudRate = $baudRate
-            FirstLine = $line
+          if (Test-NmeaSentence $line) {
+            return [pscustomobject]@{
+              SerialPort = $serialPort
+              PortName = $selectedPort
+              BaudRate = $baudRate
+              FirstLine = $line
+            }
           }
         }
+      } catch {
+        Write-Host ("No fue posible leer {0} a {1} bps: {2}" -f $selectedPort, $baudRate, $_.Exception.Message) -ForegroundColor DarkYellow
       }
-    } catch {
-      Write-Host ("No fue posible leer {0} a {1} bps: {2}" -f $SelectedPort, $baudRate, $_.Exception.Message) -ForegroundColor DarkYellow
-    }
 
-    if ($serialPort) {
-      if ($serialPort.IsOpen) {
-        $serialPort.Close()
+      if ($serialPort) {
+        if ($serialPort.IsOpen) {
+          $serialPort.Close()
+        }
+        $serialPort.Dispose()
       }
-      $serialPort.Dispose()
     }
   }
 
-  throw "No se detecto una salida NMEA valida en $SelectedPort. Revisa el cableado del Satloc G4 y la configuracion del puerto COM."
+  return $null
 }
 
 function Convert-NmeaCoordinate([string]$Value, [string]$Hemisphere) {
@@ -439,6 +453,24 @@ function Publish-Telemetry([uri]$ServerUri, [hashtable]$Telemetry, [string]$Sele
   return $response
 }
 
+function New-TelemetryState() {
+  return @{
+    lat = $null
+    lon = $null
+    speedKmh = 0.0
+    headingDeg = 0.0
+    altitudeM = $null
+    accuracyM = $null
+    satellites = $null
+    timestamp = [DateTime]::UtcNow.ToString("o")
+    homeLat = $null
+    homeLon = $null
+    fixQuality = 0
+    lastSentence = ""
+    lastDateUtc = [DateTime]::UtcNow
+  }
+}
+
 $ServerUrl = Normalize-ServerUrl $ServerUrl
 $ServerUri = [uri]$ServerUrl
 Ensure-GeoportalBackend $ServerUri
@@ -457,68 +489,82 @@ if ($ListPorts) {
   exit 0
 }
 
-$ResolvedPort = Select-SerialPort $PortName
-$stream = Find-SatlocSerialStream $ResolvedPort $BaudRates
-$SerialPort = $stream.SerialPort
-$SelectedBaudRate = $stream.BaudRate
-$Telemetry = @{
-  lat = $null
-  lon = $null
-  speedKmh = 0.0
-  headingDeg = 0.0
-  altitudeM = $null
-  accuracyM = $null
-  satellites = $null
-  timestamp = [DateTime]::UtcNow.ToString("o")
-  homeLat = $null
-  homeLon = $null
-  fixQuality = 0
-  lastSentence = ""
-  lastDateUtc = [DateTime]::UtcNow
-}
-$lastPublishAt = [DateTime]::MinValue
 $publishEvery = [TimeSpan]::FromMilliseconds([Math]::Max($SendEveryMs, 1200))
+$rescanDelay = [TimeSpan]::FromSeconds([Math]::Max($RescanEverySeconds, 3))
 $targetAreaId = if ([string]::IsNullOrWhiteSpace($AreaId)) { "machachi" } else { $AreaId.Trim().ToLowerInvariant() }
 $targetDeviceId = if ([string]::IsNullOrWhiteSpace($DeviceId)) { "satloc-g4-aeronave" } else { $DeviceId.Trim() }
 $targetLabel = if ([string]::IsNullOrWhiteSpace($DeviceLabel)) { "Aeronave Satloc G4" } else { $DeviceLabel.Trim() }
 $targetType = if ([string]::IsNullOrWhiteSpace($DeviceType)) { "Avioneta" } else { $DeviceType.Trim() }
 
-Write-Host ("Satloc G4 enlazado por {0} a {1} bps." -f $ResolvedPort, $SelectedBaudRate) -ForegroundColor Green
+Write-Host ("Puente automatico Satloc G4 listo para {0}." -f $targetLabel) -ForegroundColor Green
 Write-Host ("Publicando telemetria a {0}/api/agronomy/gps/ingest para el ambito {1}." -f $ServerUri.AbsoluteUri.TrimEnd("/"), $targetAreaId) -ForegroundColor Cyan
+Write-Host ("El puente escaneara puertos COM cada {0} segundos hasta detectar NMEA y seguira reconectando si la aeronave se apaga o se desconecta." -f [int]$rescanDelay.TotalSeconds) -ForegroundColor DarkYellow
 Write-Host "Pulsa Ctrl+C para detener el puente." -ForegroundColor DarkYellow
 
-try {
-  if ($stream.FirstLine) {
-    [void](Update-TelemetryFromNmea $stream.FirstLine $Telemetry)
+while ($true) {
+  $candidatePorts = Get-CandidateSerialPorts $PortName
+  if (-not @($candidatePorts).Count) {
+    Write-Host "No hay puertos COM disponibles todavia. Reintentando..." -ForegroundColor DarkYellow
+    Start-Sleep -Seconds $rescanDelay.TotalSeconds
+    continue
   }
 
-  while ($true) {
-    try {
-      $line = $SerialPort.ReadLine()
-    } catch [System.TimeoutException] {
-      continue
-    }
-
-    $updated = Update-TelemetryFromNmea $line $Telemetry
-    if (-not $updated -or $null -eq $Telemetry.lat -or $null -eq $Telemetry.lon) {
-      continue
-    }
-
-    if (((Get-Date) - $lastPublishAt) -lt $publishEvery) {
-      continue
-    }
-
-    $result = Publish-Telemetry $ServerUri $Telemetry $ResolvedPort $SelectedBaudRate $targetAreaId $targetDeviceId $targetLabel $targetType
-    $lastPublishAt = Get-Date
-    $speedText = "{0:N1}" -f $(if ($null -ne $Telemetry.speedKmh) { [double]$Telemetry.speedKmh } else { 0.0 })
-    $altitudeText = if ($null -ne $Telemetry.altitudeM) { "{0:N1} m" -f [double]$Telemetry.altitudeM } else { "sin altura" }
-    Write-Host ("[{0}] {1}: {2}, {3} km/h, {4}." -f (Get-Date -Format "HH:mm:ss"), $result.message, $targetLabel, $speedText, $altitudeText) -ForegroundColor Green
+  $stream = Find-SatlocSerialStream $candidatePorts $BaudRates
+  if (-not $stream) {
+    Write-Host "Aun no aparece una salida NMEA valida del Satloc G4. Reintentando..." -ForegroundColor DarkYellow
+    Start-Sleep -Seconds $rescanDelay.TotalSeconds
+    continue
   }
-} finally {
-  if ($SerialPort) {
-    if ($SerialPort.IsOpen) {
-      $SerialPort.Close()
+
+  $SerialPort = $stream.SerialPort
+  $ResolvedPort = $stream.PortName
+  $SelectedBaudRate = $stream.BaudRate
+  $Telemetry = New-TelemetryState
+  $lastPublishAt = [DateTime]::MinValue
+  $lastSignalAt = Get-Date
+
+  Write-Host ("Satloc G4 enlazado por {0} a {1} bps." -f $ResolvedPort, $SelectedBaudRate) -ForegroundColor Green
+
+  try {
+    if ($stream.FirstLine) {
+      [void](Update-TelemetryFromNmea $stream.FirstLine $Telemetry)
     }
-    $SerialPort.Dispose()
+
+    while ($true) {
+      try {
+        $line = $SerialPort.ReadLine()
+        $lastSignalAt = Get-Date
+      } catch [System.TimeoutException] {
+        if (((Get-Date) - $lastSignalAt).TotalSeconds -ge ([Math]::Max([int]$rescanDelay.TotalSeconds * 2, 18))) {
+          throw "El puerto $ResolvedPort dejo de entregar sentencias NMEA."
+        }
+        continue
+      }
+
+      $updated = Update-TelemetryFromNmea $line $Telemetry
+      if (-not $updated -or $null -eq $Telemetry.lat -or $null -eq $Telemetry.lon) {
+        continue
+      }
+
+      if (((Get-Date) - $lastPublishAt) -lt $publishEvery) {
+        continue
+      }
+
+      $result = Publish-Telemetry $ServerUri $Telemetry $ResolvedPort $SelectedBaudRate $targetAreaId $targetDeviceId $targetLabel $targetType
+      $lastPublishAt = Get-Date
+      $speedText = "{0:N1}" -f $(if ($null -ne $Telemetry.speedKmh) { [double]$Telemetry.speedKmh } else { 0.0 })
+      $altitudeText = if ($null -ne $Telemetry.altitudeM) { "{0:N1} m" -f [double]$Telemetry.altitudeM } else { "sin altura" }
+      Write-Host ("[{0}] {1}: {2}, {3} km/h, {4}." -f (Get-Date -Format "HH:mm:ss"), $result.message, $targetLabel, $speedText, $altitudeText) -ForegroundColor Green
+    }
+  } catch {
+    Write-Host ("Se perdio el enlace Satloc en {0}: {1}" -f $ResolvedPort, $_.Exception.Message) -ForegroundColor DarkYellow
+    Start-Sleep -Milliseconds 1200
+  } finally {
+    if ($SerialPort) {
+      if ($SerialPort.IsOpen) {
+        $SerialPort.Close()
+      }
+      $SerialPort.Dispose()
+    }
   }
 }

@@ -42,6 +42,7 @@ Geoportal navegable orientado al canton Mejia con rutas de agronomia y planifica
 - `app.js`: logica del visor, capas, escenas, modulos y rutas de trabajo.
 - `server.ps1`: backend local sin dependencias para proxy, cache y resumen analitico.
 - `tools/connect_satloc_g4.ps1`: puente local para leer telemetria NMEA de una aeronave Satloc G4 por puerto serie y publicarla en el geoportal.
+- `tools/install_satloc_g4_autostart.ps1`: registra el puente Satloc G4 en inicio automatico de Windows.
 - `construcciones 31/`: shape de construcciones usado por el visor 3D.
 - `CATASTRO 2026/`: shape catastral usado como referencia parcelaria en el visor 3D.
 
@@ -66,10 +67,17 @@ Modo recomendado:
 
 1. Conecta el Satloc G4 al computador por su salida serie o adaptador USB-serial.
 2. Ejecuta `Abrir Puente Satloc G4.bat`.
-3. El puente detecta el puerto COM, prueba baudios comunes y publica la telemetria al endpoint local `POST /api/agronomy/gps/ingest`.
+3. El puente queda escuchando puertos COM, detecta el puerto del G4, prueba baudios comunes y publica la telemetria al endpoint local `POST /api/agronomy/gps/ingest`.
 4. En el geoportal abre `Agronomia > Seguimiento GPS y telemetria en tiempo real` para ver la aeronave en el mapa.
 
 El puente esta pensado para salida NMEA 0183 con sentencias `GGA`, `RMC` o `VTG`.
+
+### Enlace automatico al iniciar vuelo
+
+1. Ejecuta `Instalar Inicio Automatico Satloc G4.bat` una sola vez.
+2. Al iniciar sesion en Windows, el puente Satloc arrancara oculto y quedara escuchando COM.
+3. Cuando el Satloc G4 encienda y empiece a emitir NMEA, el geoportal recibira la aeronave automaticamente.
+4. Si alguna vez quieres quitarlo del arranque, usa `Quitar Inicio Automatico Satloc G4.bat`.
 
 ## Sensores: fase actual
 

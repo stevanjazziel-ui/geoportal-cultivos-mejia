@@ -31,7 +31,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260423-2">
+  <link rel="stylesheet" href="./styles.css?v=20260423-3">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -145,7 +145,7 @@
         </div>
         <div class="user-pill">
           <span class="status-dot"></span>
-          Usuario publico - v20260423-2
+          Usuario publico - v20260423-3
         </div>
       </div>
     </header>
@@ -1077,18 +1077,21 @@
           </section>
           <section id="gpsSenderSatlocCard" class="gps-sender-card satloc-bridge-card">
             <p class="section-kicker">Aeronave Satloc G4</p>
-            <h3>Puente serie listo</h3>
+            <h3>Puente serie automatico</h3>
             <p class="section-copy">
-              Si el G4 entrega <strong>NMEA 0183</strong> por COM o USB, ejecuta <code>Abrir Puente Satloc G4.bat</code> en esta misma PC. El script detecta el puerto, prueba baudios comunes y manda la telemetria de la aeronave al geoportal.
+              Si el G4 entrega <strong>NMEA 0183</strong> por COM o USB, ejecuta <code>Abrir Puente Satloc G4.bat</code> en esta misma PC. El script queda escuchando COM de forma permanente, detecta el puerto, prueba baudios comunes y manda la telemetria de la aeronave al geoportal apenas aparece la senal.
             </p>
             <div class="gps-sender-link-url">
               <strong>Accion:</strong> <code>Abrir Puente Satloc G4.bat</code>
             </div>
             <div class="gps-sender-link-url">
+              <strong>Automatico:</strong> <code>Instalar Inicio Automatico Satloc G4.bat</code>
+            </div>
+            <div class="gps-sender-link-url">
               <strong>Endpoint:</strong> <code>/api/agronomy/gps/ingest</code>
             </div>
             <p class="service-note">
-              El puente convierte GGA, RMC y VTG a <code>lat</code>, <code>lon</code>, <code>speedKmh</code>, <code>headingDeg</code>, <code>altitudeM</code> y publica la aeronave como <strong>Avioneta / Aereo</strong> dentro del modulo agricola.
+              El puente convierte GGA, RMC y VTG a <code>lat</code>, <code>lon</code>, <code>speedKmh</code>, <code>headingDeg</code>, <code>altitudeM</code> y publica la aeronave como <strong>Avioneta / Aereo</strong> dentro del modulo agricola. Si instalas el inicio automatico, al prender el equipo de cabina y empezar el vuelo, el geoportal lo toma sin abrir nada manualmente.
             </p>
           </section>
           <section class="gps-sender-card">
@@ -1114,6 +1117,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260423-2" defer></script>
+  <script src="./app.js?v=20260423-3" defer></script>
 </body>
 </html>
