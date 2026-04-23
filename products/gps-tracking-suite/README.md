@@ -11,6 +11,7 @@ Producto standalone de seguimiento GPS y telemetria en tiempo real, separado del
 - Puente Satloc G4 por NMEA 0183 para avioneta, dron o equipo aeronautico compatible.
 - Autoarranque del gateway Satloc para despliegues operativos.
 - Empaquetador zip para entregar una version instalable al cliente.
+- Plantillas de publicacion por Caddy e IIS.
 
 ## Estructura
 
@@ -23,8 +24,11 @@ Producto standalone de seguimiento GPS y telemetria en tiempo real, separado del
 - `tools/install_satloc_g4_autostart.ps1`: instala autoarranque.
 - `tools/export_activation_request.ps1`: genera la solicitud de activacion de la PC cliente.
 - `tools/install_activation_license.ps1`: instala la licencia emitida.
+- `tools/install_tracking_server_autostart.ps1`: instala el servidor como host persistente.
+- `tools/remove_tracking_server_autostart.ps1`: retira el autoarranque del servidor.
 - `tools/build_deploy_package.ps1`: genera zip de entrega.
 - `vendor/generate_activation_license.ps1`: genera la licencia local del cliente desde el lado proveedor.
+- `deploy/`: plantillas de publicacion por Caddy e IIS.
 
 ## Instalacion rapida
 
@@ -34,8 +38,9 @@ Producto standalone de seguimiento GPS y telemetria en tiempo real, separado del
 4. Genera la solicitud con `Generar Solicitud de Activacion.bat`.
 5. Emite la licencia desde el lado proveedor.
 6. Instala la licencia con `Instalar Licencia de Activacion.bat`.
-7. Ejecuta `Abrir Seguimiento GPS.bat`.
-8. Abre `http://127.0.0.1:8877/`.
+7. Si sera un servidor formal, instala `Instalar Inicio Automatico GeoTrack RT.bat`.
+8. Ejecuta `Abrir Seguimiento GPS.bat`.
+9. Abre `http://127.0.0.1:8877/`.
 
 ## Produccion
 
@@ -44,8 +49,10 @@ Producto standalone de seguimiento GPS y telemetria en tiempo real, separado del
 1. Copia esta carpeta completa al equipo final.
 2. Si se conectaran celulares o equipos externos, publica el puerto HTTP detras de HTTPS con el dominio de la empresa o con un proxy inverso.
 3. Ajusta `publicOrigin` con la URL publica real, por ejemplo `https://tracking.cliente.com`.
-4. Si usaras Satloc G4, conecta el equipo por USB/COM a la PC receptora.
-5. Instala el autoarranque con `Instalar Inicio Automatico Satloc G4.bat`.
+4. Instala `Instalar Inicio Automatico GeoTrack RT.bat` para dejar el servidor persistente.
+5. Si usaras Satloc G4, conecta el equipo por USB/COM a la PC receptora o al servidor.
+6. Instala el autoarranque con `Instalar Inicio Automatico Satloc G4.bat`.
+7. Sigue `MANUAL-DESPLIEGUE-SERVIDOR.md` para Caddy o IIS.
 
 ### Recomendacion de seguridad
 
@@ -62,6 +69,7 @@ El producto queda amarrado a una o varias computadoras administradas por la empr
 1. En la PC cliente se ejecuta `Generar Solicitud de Activacion.bat`.
 2. Eso crea un JSON con `machineId` y `computerName`.
 3. El proveedor genera la licencia local usando `vendor/generate_activation_license.ps1`.
+   Tambien puedes usar `vendor/Emitir Licencia.bat`.
 4. La empresa cliente instala la licencia con `Instalar Licencia de Activacion.bat`.
 5. El servidor standalone solo habilita `config`, `network`, `live` e `ingest` cuando la licencia local es valida.
 

@@ -1,0 +1,30 @@
+{
+  "productName": "GeoTrack RT",
+  "companyName": "Empresa Cliente",
+  "bindAddress": "127.0.0.1",
+  "port": 8877,
+  "publicOrigin": "https://tracking.empresa.com",
+  "ingestToken": "CAMBIAR-POR-TOKEN-PRIVADO",
+  "shareIngestTokenInSenderLinks": false,
+  "defaultAreaId": "machachi",
+  "pollIntervalMs": 3000,
+  "activation": {
+    "required": true,
+    "productCode": "GEOTRACK-RT",
+    "licenseRelativePath": "license/license.json"
+  },
+  "map": {
+    "center": [
+      -0.49,
+      -78.57
+    ],
+    "zoom": 10
+  },
+  "areas": [
+    { "id": "all", "label": "Todos" },
+    { "id": "mejia", "label": "Mejia" },
+    { "id": "machachi", "label": "Machachi" },
+    { "id": "cutuglagua", "label": "Cutuglagua" },
+    { "id": "quevedo", "label": "Quevedo" }
+  ]
+}
