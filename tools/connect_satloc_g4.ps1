@@ -502,17 +502,18 @@ Write-Host ("El puente escaneara puertos COM cada {0} segundos hasta detectar NM
 Write-Host "Pulsa Ctrl+C para detener el puente." -ForegroundColor DarkYellow
 
 while ($true) {
+  Ensure-GeoportalBackend $ServerUri
   $candidatePorts = Get-CandidateSerialPorts $PortName
   if (-not @($candidatePorts).Count) {
     Write-Host "No hay puertos COM disponibles todavia. Reintentando..." -ForegroundColor DarkYellow
-    Start-Sleep -Seconds $rescanDelay.TotalSeconds
+    Start-Sleep -Seconds ([int][Math]::Max([double]$rescanDelay.TotalSeconds, 3))
     continue
   }
 
   $stream = Find-SatlocSerialStream $candidatePorts $BaudRates
   if (-not $stream) {
     Write-Host "Aun no aparece una salida NMEA valida del Satloc G4. Reintentando..." -ForegroundColor DarkYellow
-    Start-Sleep -Seconds $rescanDelay.TotalSeconds
+    Start-Sleep -Seconds ([int][Math]::Max([double]$rescanDelay.TotalSeconds, 3))
     continue
   }
 

@@ -10,3 +10,4 @@ tmp/
 tmptiles/
 data/gps_live_feed.json
 data/inamhi_live_feed.json
+data/logs/

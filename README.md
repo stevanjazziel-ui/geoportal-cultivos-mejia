@@ -42,6 +42,7 @@ Geoportal navegable orientado al canton Mejia con rutas de agronomia y planifica
 - `app.js`: logica del visor, capas, escenas, modulos y rutas de trabajo.
 - `server.ps1`: backend local sin dependencias para proxy, cache y resumen analitico.
 - `tools/connect_satloc_g4.ps1`: puente local para leer telemetria NMEA de una aeronave Satloc G4 por puerto serie y publicarla en el geoportal.
+- `tools/run_satloc_g4_gateway.ps1`: supervisor industrial que mantiene vivo el puente Satloc G4, reinicia si cae y deja logs locales.
 - `tools/install_satloc_g4_autostart.ps1`: registra el puente Satloc G4 en inicio automatico de Windows.
 - `construcciones 31/`: shape de construcciones usado por el visor 3D.
 - `CATASTRO 2026/`: shape catastral usado como referencia parcelaria en el visor 3D.
@@ -75,9 +76,11 @@ El puente esta pensado para salida NMEA 0183 con sentencias `GGA`, `RMC` o `VTG`
 ### Enlace automatico al iniciar vuelo
 
 1. Ejecuta `Instalar Inicio Automatico Satloc G4.bat` una sola vez.
-2. Al iniciar sesion en Windows, el puente Satloc arrancara oculto y quedara escuchando COM.
-3. Cuando el Satloc G4 encienda y empiece a emitir NMEA, el geoportal recibira la aeronave automaticamente.
-4. Si alguna vez quieres quitarlo del arranque, usa `Quitar Inicio Automatico Satloc G4.bat`.
+2. Si Windows permite permisos de administrador, el gateway queda registrado para arrancar con el inicio del sistema bajo `SYSTEM`, sin depender de abrir sesion.
+3. Si no hay permisos de administrador, el instalador deja un autoarranque en la carpeta Inicio del usuario para que el gateway arranque al iniciar sesion.
+4. El supervisor arranca el backend local si hace falta, mantiene el puente vivo, deja logs en `data/logs/satloc_g4_gateway.log` y reinicia si algo se cae.
+5. Cuando el Satloc G4 o el dron enciendan y empiecen a emitir NMEA, el geoportal recibira la aeronave automaticamente.
+6. Si alguna vez quieres quitarlo del arranque, usa `Quitar Inicio Automatico Satloc G4.bat`.
 
 ## Sensores: fase actual
 
