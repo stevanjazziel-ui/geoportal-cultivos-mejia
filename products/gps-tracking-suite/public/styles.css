@@ -248,7 +248,8 @@ strong {
 
 .link-stack,
 .event-feed,
-.device-list {
+.device-list,
+.activation-panel {
   flex-direction: column;
   gap: 12px;
 }
@@ -293,6 +294,22 @@ strong {
   background: rgba(15, 74, 68, 0.06);
   font-size: 0.85rem;
   overflow-wrap: anywhere;
+}
+
+.activation-panel {
+  display: flex;
+}
+
+.activation-copy {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.activation-copy code {
+  padding: 2px 6px;
+  border-radius: 8px;
+  background: rgba(15, 74, 68, 0.08);
 }
 
 .metrics-grid {

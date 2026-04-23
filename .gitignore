@@ -15,3 +15,6 @@ products/gps-tracking-suite/data/
 products/gps-tracking-suite/dist/
 products/gps-tracking-suite/server_stdout.log
 products/gps-tracking-suite/server_stderr.log
+products/gps-tracking-suite/license/license.json
+products/gps-tracking-suite/activation-request-*.json
+products/gps-tracking-suite/vendor/license-*.json

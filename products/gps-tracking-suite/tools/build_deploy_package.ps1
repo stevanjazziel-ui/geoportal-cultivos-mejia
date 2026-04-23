@@ -20,10 +20,13 @@ if (Test-Path -LiteralPath $zipPath) {
 $items = @(
   (Join-Path $Root "public")
   (Join-Path $Root "tools")
+  (Join-Path $Root "license")
   (Join-Path $Root "README.md")
   (Join-Path $Root "server.ps1")
   (Join-Path $Root "tracking.config.json")
   (Join-Path $Root "Abrir Seguimiento GPS.bat")
+  (Join-Path $Root "Generar Solicitud de Activacion.bat")
+  (Join-Path $Root "Instalar Licencia de Activacion.bat")
   (Join-Path $Root "Instalar Inicio Automatico Satloc G4.bat")
   (Join-Path $Root "Quitar Inicio Automatico Satloc G4.bat")
 )

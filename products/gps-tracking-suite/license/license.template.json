@@ -1,0 +1,12 @@
+{
+  "productCode": "GEOTRACK-RT",
+  "companyName": "Empresa cliente",
+  "licenseCode": "GT-LOCAL-DEMO",
+  "issuedAt": "2026-04-23T00:00:00Z",
+  "expiresAt": "",
+  "machineIds": [
+    "GT-REEMPLAZAR-POR-MAQUINA"
+  ],
+  "hostNames": [],
+  "notes": "Plantilla de licencia. Sustituir por la licencia emitida para el cliente."
+}

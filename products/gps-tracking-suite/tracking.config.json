@@ -8,6 +8,11 @@
   "shareIngestTokenInSenderLinks": false,
   "defaultAreaId": "mejia",
   "pollIntervalMs": 4000,
+  "activation": {
+    "required": true,
+    "productCode": "GEOTRACK-RT",
+    "licenseRelativePath": "license/license.json"
+  },
   "map": {
     "center": [
       -0.49,

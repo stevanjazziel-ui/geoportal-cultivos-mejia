@@ -1,6 +1,7 @@
 const state = {
   config: null,
   network: null,
+  activation: null,
   map: null,
   baseLayers: {},
   activeBase: "satellite",
@@ -20,6 +21,7 @@ const dom = {
   fitAllBtn: document.querySelector("#fitAllBtn"),
   statusBanner: document.querySelector("#statusBanner"),
   senderLinks: document.querySelector("#senderLinks"),
+  activationPanel: document.querySelector("#activationPanel"),
   metricsGrid: document.querySelector("#metricsGrid"),
   eventFeed: document.querySelector("#eventFeed"),
   deviceList: document.querySelector("#deviceList"),
@@ -124,6 +126,18 @@ async function fetchJson(path, payload = null) {
   return json;
 }
 
+async function fetchJsonAllowFailure(path, payload = null) {
+  const response = await fetch(path, {
+    method: payload ? "POST" : "GET",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: payload ? JSON.stringify(payload) : undefined
+  });
+  const json = await response.json();
+  return { ok: response.ok && json.ok, status: response.status, body: json };
+}
+
 function populateAreas() {
   const areas = Array.isArray(state.config?.areas) ? state.config.areas : [];
   dom.areaSelect.innerHTML = areas.map((area) => `<option value="${area.id}">${area.label}</option>`).join("");
@@ -141,6 +155,12 @@ function buildSenderUrl(origin, areaId) {
 }
 
 function renderSenderLinks() {
+  if (state.activation && !state.activation.activated) {
+    dom.senderLinks.className = "link-stack empty-state";
+    dom.senderLinks.textContent = "El emisor quedara habilitado cuando esta instalacion tenga una licencia local valida.";
+    return;
+  }
+
   const addresses = Array.isArray(state.network?.addresses) ? state.network.addresses : [];
   if (!addresses.length) {
     dom.senderLinks.className = "link-stack empty-state";
@@ -165,6 +185,63 @@ function renderSenderLinks() {
       </article>
     `;
   }).join("");
+}
+
+function renderActivationPanel() {
+  const activation = state.activation;
+  if (!activation) {
+    dom.activationPanel.className = "empty-state";
+    dom.activationPanel.textContent = "Leyendo activacion del modulo...";
+    return;
+  }
+
+  if (activation.activated) {
+    dom.activationPanel.className = "metrics-grid";
+    dom.activationPanel.innerHTML = `
+      <article class="mini-stat">
+        <span>Estado</span>
+        <strong>Activo</strong>
+      </article>
+      <article class="mini-stat">
+        <span>Empresa</span>
+        <strong>${activation.companyName || "Cliente"}</strong>
+      </article>
+      <article class="mini-stat">
+        <span>Maquina</span>
+        <strong>${activation.machineId}</strong>
+      </article>
+      <article class="mini-stat">
+        <span>Vence</span>
+        <strong>${activation.expiresAt ? new Date(activation.expiresAt).toLocaleDateString("es-EC") : "Sin vencimiento"}</strong>
+      </article>
+    `;
+    return;
+  }
+
+  dom.activationPanel.className = "activation-panel";
+  dom.activationPanel.innerHTML = `
+    <div class="status-banner warning">
+      <strong>Modulo no activado</strong>
+      <span>${activation.message || "Esta instalacion necesita licencia local."}</span>
+    </div>
+    <article class="mini-stat">
+      <span>ID de maquina</span>
+      <strong>${activation.machineId || "sin ID"}</strong>
+    </article>
+    <article class="mini-stat">
+      <span>Computadora</span>
+      <strong>${activation.computerName || "sin nombre"}</strong>
+    </article>
+    <article class="mini-stat">
+      <span>Ruta licencia</span>
+      <strong>${activation.licensePath || "license/license.json"}</strong>
+    </article>
+    <article class="mini-stat">
+      <span>Producto</span>
+      <strong>${activation.productCode || "GEOTRACK-RT"}</strong>
+    </article>
+    <p class="activation-copy">Ejecuta <code>tools/export_activation_request.ps1</code>, envianos el JSON y luego instala la licencia local con <code>tools/install_activation_license.ps1</code>.</p>
+  `;
 }
 
 function renderMetrics(payload) {
@@ -316,6 +393,11 @@ function updateMap(payload) {
 }
 
 async function refreshTracking() {
+  if (state.activation && !state.activation.activated) {
+    setStatus("warning", "Modulo pendiente de activacion local.");
+    return;
+  }
+
   try {
     const payload = await fetchJson("./api/tracking/live", {
       areaId: dom.areaSelect.value || "all"
@@ -341,6 +423,17 @@ function restartPolling() {
 
 async function initialize() {
   try {
+    const activation = await fetchJson("./api/tracking/activation-info");
+    state.activation = activation;
+    renderActivationPanel();
+
+    if (!activation.activated) {
+      initializeMap([-0.49, -78.57], 10);
+      setStatus("warning", activation.message || "Esta instalacion necesita licencia local.");
+      renderSenderLinks();
+      return;
+    }
+
     const [config, network] = await Promise.all([
       fetchJson("./api/tracking/config"),
       fetchJson("./api/tracking/network")
@@ -353,6 +446,7 @@ async function initialize() {
     populateAreas();
     initializeMap(config.map.center, config.map.zoom);
     renderSenderLinks();
+    renderActivationPanel();
     dom.openSenderBtn.href = buildSenderUrl(network.publicOrigin || window.location.origin, config.defaultAreaId);
     restartPolling();
     await refreshTracking();

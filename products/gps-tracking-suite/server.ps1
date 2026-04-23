@@ -140,6 +140,11 @@ function Get-TrackingConfig() {
     shareIngestTokenInSenderLinks = [bool]$config.shareIngestTokenInSenderLinks
     defaultAreaId = Normalize-AreaId ([string]$config.defaultAreaId) "mejia"
     pollIntervalMs = [int](Convert-ToInvariantDouble $config.pollIntervalMs 4000)
+    activation = [pscustomobject]@{
+      required = if ($config.activation -and $config.activation.PSObject.Properties.Name -contains "required") { [bool]$config.activation.required } else { $true }
+      productCode = if ($config.activation -and $config.activation.productCode) { [string]$config.activation.productCode } else { "GEOTRACK-RT" }
+      licenseRelativePath = if ($config.activation -and $config.activation.licenseRelativePath) { [string]$config.activation.licenseRelativePath } else { "license/license.json" }
+    }
     map = [pscustomobject]@{
       center = @([double]$center[0], [double]$center[1])
       zoom = [Math]::Round([double]$zoom, 0)
@@ -149,6 +154,7 @@ function Get-TrackingConfig() {
 }
 
 $TrackingConfig = Get-TrackingConfig
+$ActivationLicensePath = Join-Path $RootPath ($TrackingConfig.activation.licenseRelativePath -replace "/", "\")
 if (-not $PSBoundParameters.ContainsKey("Port") -or $Port -le 0) {
   $Port = $TrackingConfig.port
 }
@@ -303,10 +309,182 @@ function Get-PublicTrackingConfig() {
     shareIngestTokenInSenderLinks = $TrackingConfig.shareIngestTokenInSenderLinks
     hasIngestToken = -not [string]::IsNullOrWhiteSpace($TrackingConfig.ingestToken)
     senderToken = if ($TrackingConfig.shareIngestTokenInSenderLinks) { $TrackingConfig.ingestToken } else { "" }
+    activation = @{
+      required = [bool]$TrackingConfig.activation.required
+      productCode = [string]$TrackingConfig.activation.productCode
+    }
     areas = $TrackingConfig.areas
     map = $TrackingConfig.map
     startedAt = $StartedAt
   }
+}
+
+function Get-TrackingMachineFingerprint() {
+  $machineGuid = ""
+  try {
+    $machineGuid = [string](Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Cryptography" -Name "MachineGuid" -ErrorAction Stop).MachineGuid
+  } catch {
+    $machineGuid = ""
+  }
+
+  $computerName = [System.Environment]::MachineName
+  $seed = "{0}|{1}|{2}" -f $TrackingConfig.activation.productCode, $computerName, $machineGuid
+  $sha = [System.Security.Cryptography.SHA256]::Create()
+  try {
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($seed)
+    $hashBytes = $sha.ComputeHash($bytes)
+    $hash = ([System.BitConverter]::ToString($hashBytes)).Replace("-", "")
+  } finally {
+    $sha.Dispose()
+  }
+
+  return [pscustomobject]@{
+    machineId = ("GT-" + $hash.Substring(0, 24))
+    computerName = $computerName
+    machineGuid = $machineGuid
+    seed = $seed
+  }
+}
+
+function Get-TrackingActivationState() {
+  $fingerprint = Get-TrackingMachineFingerprint
+
+  if (-not $TrackingConfig.activation.required) {
+    return [pscustomobject]@{
+      ok = $true
+      activated = $true
+      message = "Activacion local deshabilitada en la configuracion."
+      machineId = $fingerprint.machineId
+      computerName = $fingerprint.computerName
+      productCode = $TrackingConfig.activation.productCode
+      licensePath = $ActivationLicensePath
+      companyName = $TrackingConfig.companyName
+      expiresAt = $null
+    }
+  }
+
+  if (-not (Test-Path -LiteralPath $ActivationLicensePath)) {
+    return [pscustomobject]@{
+      ok = $true
+      activated = $false
+      message = "No existe licencia local instalada."
+      machineId = $fingerprint.machineId
+      computerName = $fingerprint.computerName
+      productCode = $TrackingConfig.activation.productCode
+      licensePath = $ActivationLicensePath
+      companyName = ""
+      expiresAt = $null
+    }
+  }
+
+  $license = Read-JsonFile $ActivationLicensePath
+  if (-not $license) {
+    return [pscustomobject]@{
+      ok = $true
+      activated = $false
+      message = "La licencia local no pudo leerse."
+      machineId = $fingerprint.machineId
+      computerName = $fingerprint.computerName
+      productCode = $TrackingConfig.activation.productCode
+      licensePath = $ActivationLicensePath
+      companyName = ""
+      expiresAt = $null
+    }
+  }
+
+  $productCode = if ($license.productCode) { [string]$license.productCode } else { "" }
+  if ($productCode -ne $TrackingConfig.activation.productCode) {
+    return [pscustomobject]@{
+      ok = $true
+      activated = $false
+      message = "La licencia no corresponde a este producto."
+      machineId = $fingerprint.machineId
+      computerName = $fingerprint.computerName
+      productCode = $TrackingConfig.activation.productCode
+      licensePath = $ActivationLicensePath
+      companyName = if ($license.companyName) { [string]$license.companyName } else { "" }
+      expiresAt = if ($license.expiresAt) { [string]$license.expiresAt } else { $null }
+    }
+  }
+
+  $licensedMachines = @()
+  if ($license.machineIds) {
+    $licensedMachines = @($license.machineIds | ForEach-Object { [string]$_ })
+  }
+  $licensedHosts = @()
+  if ($license.hostNames) {
+    $licensedHosts = @($license.hostNames | ForEach-Object { [string]$_ })
+  }
+
+  $machineAuthorized = $licensedMachines -contains "*" -or $licensedMachines -contains $fingerprint.machineId
+  $hostAuthorized = $licensedHosts -contains "*" -or $licensedHosts -contains $fingerprint.computerName
+  if (-not $machineAuthorized -and -not $hostAuthorized) {
+    return [pscustomobject]@{
+      ok = $true
+      activated = $false
+      message = "Esta computadora no esta incluida en la licencia."
+      machineId = $fingerprint.machineId
+      computerName = $fingerprint.computerName
+      productCode = $TrackingConfig.activation.productCode
+      licensePath = $ActivationLicensePath
+      companyName = if ($license.companyName) { [string]$license.companyName } else { "" }
+      expiresAt = if ($license.expiresAt) { [string]$license.expiresAt } else { $null }
+    }
+  }
+
+  $expiresAt = if ($license.expiresAt) { Convert-ToIsoTimestamp ([string]$license.expiresAt) } else { $null }
+  if ($expiresAt) {
+    try {
+      $expiryDate = [datetime]::Parse($expiresAt, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AdjustToUniversal)
+      if ($expiryDate -lt (Get-Date).ToUniversalTime()) {
+        return [pscustomobject]@{
+          ok = $true
+          activated = $false
+          message = "La licencia ya expiro."
+          machineId = $fingerprint.machineId
+          computerName = $fingerprint.computerName
+          productCode = $TrackingConfig.activation.productCode
+          licensePath = $ActivationLicensePath
+          companyName = if ($license.companyName) { [string]$license.companyName } else { "" }
+          expiresAt = $expiresAt
+        }
+      }
+    } catch {
+    }
+  }
+
+  return [pscustomobject]@{
+    ok = $true
+    activated = $true
+    message = "Licencia local valida."
+    machineId = $fingerprint.machineId
+    computerName = $fingerprint.computerName
+    productCode = $TrackingConfig.activation.productCode
+    licensePath = $ActivationLicensePath
+    companyName = if ($license.companyName) { [string]$license.companyName } else { $TrackingConfig.companyName }
+    expiresAt = $expiresAt
+    issuedAt = if ($license.issuedAt) { Convert-ToIsoTimestamp ([string]$license.issuedAt) } else { $null }
+    licenseCode = if ($license.licenseCode) { [string]$license.licenseCode } else { "" }
+  }
+}
+
+function Assert-TrackingActivated($Stream) {
+  $activation = Get-TrackingActivationState
+  if ($activation.activated) {
+    return $true
+  }
+
+  Write-Json $Stream 403 @{
+    ok = $false
+    error = "Modulo no activado en esta computadora."
+    activation = $activation
+    instructions = @(
+      "Ejecuta tools/export_activation_request.ps1 en esta computadora.",
+      "Entrega el JSON al proveedor para generar la licencia local.",
+      "Instala la licencia en la ruta indicada o usa tools/install_activation_license.ps1."
+    )
+  }
+  return $false
 }
 
 function Resolve-IngestToken($Body, $Headers) {
@@ -653,12 +831,19 @@ try {
         continue
       }
 
+      if ($request.Path -eq "/api/tracking/activation-info") {
+        Write-Json $stream 200 (Get-TrackingActivationState)
+        continue
+      }
+
       if ($request.Path -eq "/api/tracking/config") {
+        if (-not (Assert-TrackingActivated $stream)) { continue }
         Write-Json $stream 200 (Get-PublicTrackingConfig)
         continue
       }
 
       if ($request.Path -eq "/api/tracking/network") {
+        if (-not (Assert-TrackingActivated $stream)) { continue }
         Write-Json $stream 200 @{
           ok = $true
           bindAddress = $BindAddress
@@ -673,12 +858,14 @@ try {
       }
 
       if ($request.Path -eq "/api/tracking/live" -and $request.Method -eq "POST") {
+        if (-not (Assert-TrackingActivated $stream)) { continue }
         $body = if ([string]::IsNullOrWhiteSpace($request.Body)) { @{} } else { $request.Body | ConvertFrom-Json }
         Write-Json $stream 200 (Get-LiveTrackingPayload $body)
         continue
       }
 
       if ($request.Path -eq "/api/tracking/ingest" -and $request.Method -eq "POST") {
+        if (-not (Assert-TrackingActivated $stream)) { continue }
         $body = if ([string]::IsNullOrWhiteSpace($request.Body)) { @{} } else { $request.Body | ConvertFrom-Json }
         $result = Save-TrackingFeed $body $request.Headers
         if ($result.ok) {
