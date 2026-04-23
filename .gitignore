@@ -11,3 +11,7 @@ tmptiles/
 data/gps_live_feed.json
 data/inamhi_live_feed.json
 data/logs/
+products/gps-tracking-suite/data/
+products/gps-tracking-suite/dist/
+products/gps-tracking-suite/server_stdout.log
+products/gps-tracking-suite/server_stderr.log

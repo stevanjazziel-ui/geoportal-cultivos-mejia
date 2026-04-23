@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emisor GPS | GeoTrack RT</title>
+  <meta name="theme-color" content="#0f4a44">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Emisor GPS">
+  <link rel="manifest" href="./sender.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="sender-shell">
+  <main class="sender-card">
+    <div>
+      <p class="eyebrow">GPS en vivo</p>
+      <h1>Emisor GPS para celular o laptop</h1>
+      <p class="lead">Este equipo solo envia ubicacion al visor GeoTrack RT. No necesita abrir el modulo completo.</p>
+    </div>
+
+    <div class="field-grid two-cols">
+      <label class="field">
+        <span>Servidor</span>
+        <input id="serverUrl" type="url" placeholder="https://tracking.cliente.com">
+      </label>
+      <label class="field">
+        <span>Area</span>
+        <input id="areaId" type="text" placeholder="machachi">
+      </label>
+      <label class="field">
+        <span>Identificador</span>
+        <input id="deviceId" type="text" placeholder="dron-01">
+      </label>
+      <label class="field">
+        <span>Etiqueta visible</span>
+        <input id="deviceLabel" type="text" placeholder="Dron de seguimiento">
+      </label>
+      <label class="field">
+        <span>Tipo</span>
+        <select id="deviceType">
+          <option value="Tracker">Tracker GPS</option>
+          <option value="Dron">Dron</option>
+          <option value="Vehiculo">Vehiculo</option>
+          <option value="Brigada">Brigada</option>
+          <option value="Avioneta">Avioneta</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Modo</span>
+        <select id="mobilityMode">
+          <option value="ground">Terrestre</option>
+          <option value="air">Aereo</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Intervalo</span>
+        <select id="sendEveryMs">
+          <option value="1000">1 s</option>
+          <option value="2000" selected>2 s</option>
+          <option value="3000">3 s</option>
+          <option value="5000">5 s</option>
+        </select>
+      </label>
+      <label class="field">
+        <span>Token</span>
+        <input id="ingestToken" type="text" placeholder="Opcional">
+      </label>
+    </div>
+
+    <div class="sender-toolbar">
+      <button id="startBtn" class="secondary-button" type="button">Iniciar envio</button>
+      <button id="stopBtn" class="ghost-button" type="button" disabled>Detener</button>
+      <button id="installBtn" class="ghost-button hidden" type="button">Instalar app emisora</button>
+    </div>
+
+    <div id="senderStatus" class="status-banner loading">Configura el destino y pulsa Iniciar envio.</div>
+    <div id="senderReadout" class="sender-readout empty-state">Aun no se ha enviado ninguna lectura.</div>
+
+    <div class="glass-card sender-note">
+      <p class="section-kicker">Nota tecnica</p>
+      <p>Si el visor esta publicado por HTTPS, este emisor puede mandar la senal desde cualquier red movil o Wi-Fi. Si se usa token de ingesta, debes colocarlo aqui o compartir un link con el token ya embebido.</p>
+    </div>
+  </main>
+
+  <script>
+    (() => {
+      const dom = {
+        serverUrl: document.querySelector("#serverUrl"),
+        areaId: document.querySelector("#areaId"),
+        deviceId: document.querySelector("#deviceId"),
+        deviceLabel: document.querySelector("#deviceLabel"),
+        deviceType: document.querySelector("#deviceType"),
+        mobilityMode: document.querySelector("#mobilityMode"),
+        sendEveryMs: document.querySelector("#sendEveryMs"),
+        ingestToken: document.querySelector("#ingestToken"),
+        startBtn: document.querySelector("#startBtn"),
+        stopBtn: document.querySelector("#stopBtn"),
+        installBtn: document.querySelector("#installBtn"),
+        senderStatus: document.querySelector("#senderStatus"),
+        senderReadout: document.querySelector("#senderReadout")
+      };
+
+      const state = {
+        watchId: null,
+        lastSentAt: 0,
+        deferredPrompt: null
+      };
+
+      const params = new URLSearchParams(window.location.search);
+      const fallbackServer = window.location.origin && !/^file/i.test(window.location.origin)
+        ? window.location.origin
+        : "http://127.0.0.1:8877";
+
+      dom.serverUrl.value = params.get("server") || fallbackServer;
+      dom.areaId.value = params.get("areaId") || "machachi";
+      dom.deviceId.value = params.get("deviceId") || `gps-${Math.random().toString(36).slice(2, 8)}`;
+      dom.deviceLabel.value = params.get("label") || "Dispositivo GPS";
+      dom.deviceType.value = params.get("type") || "Tracker";
+      dom.mobilityMode.value = params.get("mode") || "ground";
+      dom.ingestToken.value = params.get("token") || "";
+
+      function setStatus(tone, title, copy) {
+        dom.senderStatus.className = `status-banner ${tone || ""}`.trim();
+        dom.senderStatus.innerHTML = `<strong>${title}</strong><span>${copy}</span>`;
+      }
+
+      function renderReadout(payload) {
+        dom.senderReadout.classList.remove("empty-state");
+        dom.senderReadout.innerHTML = `
+          <article class="mini-stat">
+            <span>Posicion</span>
+            <strong>${payload.lat.toFixed(6)}, ${payload.lon.toFixed(6)}</strong>
+          </article>
+          <article class="mini-stat">
+            <span>Precision</span>
+            <strong>${Math.round(payload.accuracyM || 0)} m</strong>
+          </article>
+          <article class="mini-stat">
+            <span>Velocidad</span>
+            <strong>${payload.speedKmh.toFixed(1)} km/h</strong>
+          </article>
+          <article class="mini-stat">
+            <span>Ultimo envio</span>
+            <strong>${new Date(payload.timestamp).toLocaleTimeString("es-EC")}</strong>
+          </article>
+        `;
+      }
+
+      async function sendPayload(position) {
+        const server = (dom.serverUrl.value || fallbackServer).replace(/\/+$/, "");
+        const now = Date.now();
+        const intervalMs = Number(dom.sendEveryMs.value || 2000);
+        if (now - state.lastSentAt < intervalMs) {
+          return;
+        }
+
+        const coords = position.coords;
+        const payload = {
+          id: dom.deviceId.value.trim() || `gps-${Math.random().toString(36).slice(2, 8)}`,
+          label: dom.deviceLabel.value.trim() || "Dispositivo GPS",
+          deviceType: dom.deviceType.value,
+          mobilityMode: dom.mobilityMode.value,
+          areaId: dom.areaId.value.trim() || "machachi",
+          lat: Number(coords.latitude),
+          lon: Number(coords.longitude),
+          speedKmh: Number.isFinite(coords.speed) ? Number(coords.speed) * 3.6 : 0,
+          headingDeg: Number.isFinite(coords.heading) ? Number(coords.heading) : 0,
+          accuracyM: Number.isFinite(coords.accuracy) ? Number(coords.accuracy) : 0,
+          altitudeM: Number.isFinite(coords.altitude) ? Number(coords.altitude) : null,
+          timestamp: new Date(position.timestamp).toISOString(),
+          statusLabel: dom.mobilityMode.value === "air" ? "En vuelo" : "En movimiento",
+          source: "browser-gps"
+        };
+        if (dom.ingestToken.value.trim()) {
+          payload.token = dom.ingestToken.value.trim();
+        }
+
+        const response = await fetch(`${server}/api/tracking/ingest`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        });
+        const json = await response.json();
+        if (!response.ok || !json.ok) {
+          throw new Error(json.error || "No se pudo enviar la lectura.");
+        }
+
+        state.lastSentAt = now;
+        renderReadout(payload);
+        setStatus("", "GPS enviado", `La lectura de ${payload.label} llego al servidor correctamente.`);
+      }
+
+      function stopTracking() {
+        if (state.watchId !== null) {
+          navigator.geolocation.clearWatch(state.watchId);
+          state.watchId = null;
+        }
+        dom.startBtn.disabled = false;
+        dom.stopBtn.disabled = true;
+        setStatus("loading", "Envio detenido", "El emisor ya no esta leyendo ubicacion.");
+      }
+
+      async function startTracking() {
+        if (!("geolocation" in navigator)) {
+          setStatus("danger", "GPS no disponible", "Este navegador no expone geolocalizacion.");
+          return;
+        }
+
+        stopTracking();
+        dom.startBtn.disabled = true;
+        dom.stopBtn.disabled = false;
+        setStatus("loading", "Escuchando GPS", "Esperando la primera posicion del dispositivo...");
+
+        state.watchId = navigator.geolocation.watchPosition(
+          (position) => {
+            sendPayload(position).catch((error) => {
+              setStatus("danger", "Error de envio", error.message || "No se pudo enviar la lectura.");
+            });
+          },
+          (error) => {
+            const message = error && error.message ? error.message : "No se pudo acceder al GPS.";
+            setStatus("danger", "GPS sin permiso", message);
+            stopTracking();
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 12000
+          }
+        );
+      }
+
+      window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        state.deferredPrompt = event;
+        dom.installBtn.classList.remove("hidden");
+      });
+
+      dom.installBtn.addEventListener("click", async () => {
+        if (!state.deferredPrompt) {
+          return;
+        }
+        await state.deferredPrompt.prompt();
+        state.deferredPrompt = null;
+        dom.installBtn.classList.add("hidden");
+      });
+
+      dom.startBtn.addEventListener("click", startTracking);
+      dom.stopBtn.addEventListener("click", stopTracking);
+
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.register("./sender-sw.js").catch(() => {});
+      }
+    })();
+  </script>
+</body>
+</html>

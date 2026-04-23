@@ -1,0 +1,40 @@
+{
+  "productName": "GeoTrack RT",
+  "companyName": "Tu empresa",
+  "bindAddress": "0.0.0.0",
+  "port": 8877,
+  "publicOrigin": "",
+  "ingestToken": "",
+  "shareIngestTokenInSenderLinks": false,
+  "defaultAreaId": "mejia",
+  "pollIntervalMs": 4000,
+  "map": {
+    "center": [
+      -0.49,
+      -78.57
+    ],
+    "zoom": 10
+  },
+  "areas": [
+    {
+      "id": "all",
+      "label": "Todos"
+    },
+    {
+      "id": "mejia",
+      "label": "Mejia"
+    },
+    {
+      "id": "machachi",
+      "label": "Machachi"
+    },
+    {
+      "id": "cutuglagua",
+      "label": "Cutuglagua"
+    },
+    {
+      "id": "quevedo",
+      "label": "Quevedo"
+    }
+  ]
+}

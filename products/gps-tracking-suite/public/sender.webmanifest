@@ -1,0 +1,15 @@
+{
+  "name": "Emisor GPS GeoTrack RT",
+  "short_name": "Emisor GPS",
+  "start_url": "./sender.html",
+  "display": "standalone",
+  "background_color": "#edf3ef",
+  "theme_color": "#0f4a44",
+  "icons": [
+    {
+      "src": "./icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

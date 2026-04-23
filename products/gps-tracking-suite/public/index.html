@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GeoTrack RT</title>
+  <meta name="description" content="Visor standalone de seguimiento GPS y telemetria en tiempo real.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Sora:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="tracking-shell">
+  <header class="tracking-topbar">
+    <div>
+      <p class="eyebrow">Modulo standalone</p>
+      <h1 id="productTitle">GeoTrack RT</h1>
+      <p id="productSubtitle" class="lead">Seguimiento GPS, telemetria y visualizacion en tiempo real.</p>
+    </div>
+    <div class="topbar-actions">
+      <div class="base-switch">
+        <button id="satelliteBaseBtn" class="base-button active" type="button">Satelite</button>
+        <button id="streetsBaseBtn" class="base-button" type="button">Calles</button>
+      </div>
+      <a id="openSenderBtn" class="secondary-button" href="./sender.html">Abrir emisor</a>
+    </div>
+  </header>
+
+  <main class="tracking-workspace">
+    <aside class="tracking-sidebar">
+      <section class="glass-card">
+        <p class="section-kicker">Control operativo</p>
+        <h2>Seguimiento en vivo</h2>
+        <div class="field-grid">
+          <label class="field">
+            <span>Area</span>
+            <select id="areaSelect"></select>
+          </label>
+          <label class="field">
+            <span>Actualizacion</span>
+            <select id="refreshSelect">
+              <option value="2000">2 s</option>
+              <option value="4000" selected>4 s</option>
+              <option value="6000">6 s</option>
+              <option value="10000">10 s</option>
+            </select>
+          </label>
+        </div>
+        <div class="action-row">
+          <button id="refreshNowBtn" class="secondary-button" type="button">Actualizar ahora</button>
+          <button id="fitAllBtn" class="ghost-button" type="button">Centrar todo</button>
+        </div>
+        <div id="statusBanner" class="status-banner loading">Preparando configuracion del modulo...</div>
+      </section>
+
+      <section class="glass-card">
+        <p class="section-kicker">Link compartible</p>
+        <h2>Emisor GPS</h2>
+        <div id="senderLinks" class="link-stack empty-state">Detectando direcciones del servidor...</div>
+      </section>
+
+      <section class="glass-card">
+        <p class="section-kicker">Resumen</p>
+        <h2>Estado de flota</h2>
+        <div id="metricsGrid" class="metrics-grid empty-state">Aun no hay telemetria cargada.</div>
+      </section>
+
+      <section class="glass-card">
+        <p class="section-kicker">Eventos recientes</p>
+        <h2>Actividad</h2>
+        <div id="eventFeed" class="event-feed empty-state">Todavia no hay eventos registrados.</div>
+      </section>
+    </aside>
+
+    <section class="tracking-stage">
+      <div id="map" class="tracking-map" aria-label="Mapa de seguimiento GPS"></div>
+      <div class="map-panel">
+        <div class="glass-card">
+          <p class="section-kicker">Dispositivos</p>
+          <h2>Vista operativa</h2>
+          <div id="deviceList" class="device-list empty-state">Esperando la primera senal GPS.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="./app.js" defer></script>
+</body>
+</html>
