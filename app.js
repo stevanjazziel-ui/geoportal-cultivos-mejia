@@ -265,7 +265,7 @@ const backendService = {
 
 const gpsRelayService = {
   publicSenderUrl: "https://stevanjazziel-ui.github.io/geoportal-cultivos-mejia/gps-bridge.html",
-  bridgeVersion: "20260422-23",
+  bridgeVersion: "20260423-2",
   topicPrefix: "geoportal-cultivos-mejia/gps",
   brokerUrls: [
     "wss://broker.hivemq.com:8884/mqtt",
@@ -4265,6 +4265,7 @@ function cacheDom() {
   dom.startGpsBrowserBtn = document.querySelector("#startGpsBrowserBtn");
   dom.startGpsFeedBtn = document.querySelector("#startGpsFeedBtn");
   dom.openGpsBridgeBtn = document.querySelector("#openGpsBridgeBtn");
+  dom.openSatlocBridgeBtn = document.querySelector("#openSatlocBridgeBtn");
   dom.startGpsDemoBtn = document.querySelector("#startGpsDemoBtn");
   dom.stopGpsTrackingBtn = document.querySelector("#stopGpsTrackingBtn");
   dom.gpsSenderModal = document.querySelector("#gpsSenderModal");
@@ -4275,6 +4276,7 @@ function cacheDom() {
   dom.gpsSenderAreaTitle = document.querySelector("#gpsSenderAreaTitle");
   dom.gpsSenderAreaCopy = document.querySelector("#gpsSenderAreaCopy");
   dom.gpsSenderOpenLocalBtn = document.querySelector("#gpsSenderOpenLocalBtn");
+  dom.gpsSenderSatlocCard = document.querySelector("#gpsSenderSatlocCard");
   dom.runPlanningBtn = document.querySelector("#runPlanningBtn");
   dom.focusPlanningBtn = document.querySelector("#focusPlanningBtn");
   dom.clearPlanningBtn = document.querySelector("#clearPlanningBtn");
@@ -4622,6 +4624,7 @@ function bindUI() {
     return runModuleAction(dom.startGpsFeedBtn, "Leyendo feed...", () => startGpsFeedTracking());
   });
   dom.openGpsBridgeBtn?.addEventListener("click", () => openGpsBridgePage());
+  dom.openSatlocBridgeBtn?.addEventListener("click", () => openSatlocBridgePage());
   dom.gpsSenderCloseBtn?.addEventListener("click", closeGpsSenderModal);
   dom.gpsSenderBackdrop?.addEventListener("click", closeGpsSenderModal);
   dom.gpsSenderRefreshBtn?.addEventListener("click", () => refreshGpsSenderLinks(true));
@@ -11000,7 +11003,25 @@ function openGpsBridgePage() {
   return true;
 }
 
-function openGpsSenderModal() {
+function openSatlocBridgePage() {
+  prepareGpsTrackingMapContext({ silent: true });
+  openGpsSenderModal("satloc");
+  setStatus("Puente Satloc G4 listo. Ejecuta Abrir Puente Satloc G4.bat en esta PC para recibir la telemetria serie de la aeronave.");
+  return true;
+}
+
+function focusGpsSenderModalSection(section = "") {
+  if (section === "satloc" && dom.gpsSenderSatlocCard) {
+    window.requestAnimationFrame(() => {
+      dom.gpsSenderSatlocCard.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+  }
+}
+
+function openGpsSenderModal(section = "") {
   if (!dom.gpsSenderModal) {
     const fallbackUrl = buildGpsSenderUrl(window.location.origin, getGpsSenderPreset());
     window.open(fallbackUrl, "_blank", "noopener");
@@ -11012,6 +11033,7 @@ function openGpsSenderModal() {
   dom.gpsSenderModal.setAttribute("aria-hidden", "false");
   renderGpsSenderContext();
   refreshGpsSenderLinks(false);
+  focusGpsSenderModalSection(section);
   setStatus("Preparando link del emisor GPS. El otro dispositivo solo mandara senal y este geoportal la visualizara.");
   return true;
 }

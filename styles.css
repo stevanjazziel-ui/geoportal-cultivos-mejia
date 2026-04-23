@@ -3874,6 +3874,12 @@ button {
   padding: 18px;
 }
 
+.satloc-bridge-card {
+  border-color: rgba(133, 91, 43, 0.18);
+  background:
+    linear-gradient(160deg, rgba(255, 255, 255, 0.88), rgba(250, 244, 236, 0.94));
+}
+
 .gps-sender-link-card {
   padding: 18px 18px 16px;
 }

@@ -31,7 +31,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260422-23">
+  <link rel="stylesheet" href="./styles.css?v=20260423-2">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -145,7 +145,7 @@
         </div>
         <div class="user-pill">
           <span class="status-dot"></span>
-          Usuario publico - v20260422-23
+          Usuario publico - v20260423-2
         </div>
       </div>
     </header>
@@ -457,6 +457,7 @@
                 <button id="startGpsBrowserBtn" class="secondary-button" type="button">Seguir mi GPS</button>
                 <button id="startGpsFeedBtn" class="ghost-button" type="button">Leer feed</button>
                 <button id="openGpsBridgeBtn" class="ghost-button" type="button">Conectar emisor GPS</button>
+                <button id="openSatlocBridgeBtn" class="ghost-button" type="button">Satloc G4</button>
                 <button id="startGpsDemoBtn" class="ghost-button" type="button">Demo GPS / aereo</button>
                 <button id="stopGpsTrackingBtn" class="ghost-button" type="button">Detener</button>
               </div>
@@ -468,6 +469,9 @@
               </div>
               <p class="service-note">
                 Este modulo admite geolocalizacion del navegador, relay publico por internet, feed local desde <code>server.ps1</code> o una simulacion de recorrido. El feed puede venir de un celular, una laptop, un dron o una avioneta si entregan <code>lat</code>, <code>lon</code>, <code>timestamp</code> y, opcionalmente, <code>altitudeM</code>, <code>speedKmh</code>, <code>headingDeg</code> y <code>batteryPct</code>. El link <strong>Internet</strong> no requiere estar en la misma Wi-Fi.
+              </p>
+              <p class="service-note">
+                Si la aeronave usa <strong>Satloc G4</strong>, ya queda lista una via local por <strong>NMEA 0183 -> puerto COM -> geoportal</strong> con el acceso <code>Abrir Puente Satloc G4.bat</code>.
               </p>
             </article>
 
@@ -1071,6 +1075,22 @@
               El mismo link abre el emisor y, desde el celular, puedes usar <strong>Instalar app emisora</strong> para dejarlo como acceso directo.
             </p>
           </section>
+          <section id="gpsSenderSatlocCard" class="gps-sender-card satloc-bridge-card">
+            <p class="section-kicker">Aeronave Satloc G4</p>
+            <h3>Puente serie listo</h3>
+            <p class="section-copy">
+              Si el G4 entrega <strong>NMEA 0183</strong> por COM o USB, ejecuta <code>Abrir Puente Satloc G4.bat</code> en esta misma PC. El script detecta el puerto, prueba baudios comunes y manda la telemetria de la aeronave al geoportal.
+            </p>
+            <div class="gps-sender-link-url">
+              <strong>Accion:</strong> <code>Abrir Puente Satloc G4.bat</code>
+            </div>
+            <div class="gps-sender-link-url">
+              <strong>Endpoint:</strong> <code>/api/agronomy/gps/ingest</code>
+            </div>
+            <p class="service-note">
+              El puente convierte GGA, RMC y VTG a <code>lat</code>, <code>lon</code>, <code>speedKmh</code>, <code>headingDeg</code>, <code>altitudeM</code> y publica la aeronave como <strong>Avioneta / Aereo</strong> dentro del modulo agricola.
+            </p>
+          </section>
           <section class="gps-sender-card">
             <p class="section-kicker">Nota importante</p>
             <p class="service-note">
@@ -1094,6 +1114,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260422-23" defer></script>
+  <script src="./app.js?v=20260423-2" defer></script>
 </body>
 </html>

@@ -41,6 +41,7 @@ Geoportal navegable orientado al canton Mejia con rutas de agronomia y planifica
 - `styles.css`: identidad visual y comportamiento responsive.
 - `app.js`: logica del visor, capas, escenas, modulos y rutas de trabajo.
 - `server.ps1`: backend local sin dependencias para proxy, cache y resumen analitico.
+- `tools/connect_satloc_g4.ps1`: puente local para leer telemetria NMEA de una aeronave Satloc G4 por puerto serie y publicarla en el geoportal.
 - `construcciones 31/`: shape de construcciones usado por el visor 3D.
 - `CATASTRO 2026/`: shape catastral usado como referencia parcelaria en el visor 3D.
 
@@ -60,6 +61,15 @@ Modo recomendado:
 4. Filtra escenas, selecciona un lote o dibuja un AOI y reprocesa si hace falta.
 5. En `Planificacion territorial`, abre el `Visualizador 3D urbano` para cargar construcciones y catastro.
 6. Si tienes fotos en una carpeta local externa, `server.ps1` puede indexarlas para mostrar fachadas cercanas dentro del panel 3D.
+
+## Conexion Satloc G4
+
+1. Conecta el Satloc G4 al computador por su salida serie o adaptador USB-serial.
+2. Ejecuta `Abrir Puente Satloc G4.bat`.
+3. El puente detecta el puerto COM, prueba baudios comunes y publica la telemetria al endpoint local `POST /api/agronomy/gps/ingest`.
+4. En el geoportal abre `Agronomia > Seguimiento GPS y telemetria en tiempo real` para ver la aeronave en el mapa.
+
+El puente esta pensado para salida NMEA 0183 con sentencias `GGA`, `RMC` o `VTG`.
 
 ## Sensores: fase actual
 

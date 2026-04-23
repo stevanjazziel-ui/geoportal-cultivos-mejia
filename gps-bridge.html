@@ -327,6 +327,7 @@
               <option value="Vehiculo">Vehiculo</option>
               <option value="Dron">Dron</option>
               <option value="Avioneta">Avioneta</option>
+              <option value="Avioneta Satloc G4">Avioneta Satloc G4</option>
             </select>
           </div>
           <div class="field">
@@ -413,6 +414,15 @@
             En algunos celulares, la geolocalizacion del navegador solo funciona en <strong>HTTPS</strong> o
             <strong>localhost</strong>. Si tu navegador bloquea el GPS al usar una IP local, este mismo flujo puede
             reemplazarse por una app externa que envie el JSON al endpoint del geoportal.
+          </p>
+        </section>
+
+        <section class="note-card">
+          <p class="kicker" style="margin-bottom: 10px;">Satloc G4</p>
+          <p>
+            Si la aeronave entrega <strong>NMEA 0183</strong> por puerto COM o USB, esta pagina no es la ruta principal.
+            En la PC del geoportal ejecuta <code>Abrir Puente Satloc G4.bat</code> para leer la telemetria serie y
+            publicarla en <code>/api/agronomy/gps/ingest</code>.
           </p>
         </section>
       </aside>
