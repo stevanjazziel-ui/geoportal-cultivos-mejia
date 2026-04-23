@@ -27,6 +27,7 @@ Producto standalone de seguimiento GPS y telemetria en tiempo real, separado del
 - `tools/install_tracking_server_autostart.ps1`: instala el servidor como host persistente.
 - `tools/remove_tracking_server_autostart.ps1`: retira el autoarranque del servidor.
 - `tools/build_deploy_package.ps1`: genera zip de entrega.
+- `Empaquetar Carpeta de Entrega.bat`: genera una carpeta unica lista para copiar y tambien su zip.
 - `vendor/generate_activation_license.ps1`: genera la licencia local del cliente desde el lado proveedor.
 - `deploy/`: plantillas de publicacion por Caddy e IIS.
 
@@ -110,4 +111,7 @@ Ejecuta:
 powershell -ExecutionPolicy Bypass -File .\tools\build_deploy_package.ps1
 ```
 
-El zip saldra en `dist/`.
+La salida deja:
+
+- una carpeta unica lista para copiar en `dist/`
+- un zip de esa misma entrega en `dist/`

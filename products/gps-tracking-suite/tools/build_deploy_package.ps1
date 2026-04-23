@@ -8,6 +8,8 @@ $DistDirectory = Join-Path $Root "dist"
 $timestamp = Get-Date -Format "yyyyMMdd-HHmm"
 $safeName = if ([string]::IsNullOrWhiteSpace($OutputName)) { "geotrack-rt-$timestamp.zip" } else { $OutputName }
 $zipPath = Join-Path $DistDirectory $safeName
+$folderName = [System.IO.Path]::GetFileNameWithoutExtension($safeName)
+$folderPath = Join-Path $DistDirectory $folderName
 
 if (-not (Test-Path -LiteralPath $DistDirectory)) {
   New-Item -ItemType Directory -Path $DistDirectory -Force | Out-Null
@@ -16,6 +18,12 @@ if (-not (Test-Path -LiteralPath $DistDirectory)) {
 if (Test-Path -LiteralPath $zipPath) {
   Remove-Item -LiteralPath $zipPath -Force
 }
+
+if (Test-Path -LiteralPath $folderPath) {
+  Remove-Item -LiteralPath $folderPath -Recurse -Force
+}
+
+New-Item -ItemType Directory -Path $folderPath -Force | Out-Null
 
 $items = @(
   (Join-Path $Root "public")
@@ -36,5 +44,26 @@ $items = @(
   (Join-Path $Root "Quitar Inicio Automatico Satloc G4.bat")
 )
 
-Compress-Archive -Path $items -DestinationPath $zipPath -CompressionLevel Optimal
+$emptyDirectories = @(
+  (Join-Path $folderPath "data")
+  (Join-Path $folderPath "data\logs")
+)
+
+foreach ($directory in $emptyDirectories) {
+  if (-not (Test-Path -LiteralPath $directory)) {
+    New-Item -ItemType Directory -Path $directory -Force | Out-Null
+  }
+}
+
+foreach ($item in $items) {
+  if (-not (Test-Path -LiteralPath $item)) {
+    continue
+  }
+
+  $destination = Join-Path $folderPath (Split-Path -Leaf $item)
+  Copy-Item -LiteralPath $item -Destination $destination -Recurse -Force
+}
+
+Compress-Archive -Path (Join-Path $folderPath "*") -DestinationPath $zipPath -CompressionLevel Optimal
+Write-Host ("Carpeta de entrega generada en {0}" -f $folderPath) -ForegroundColor Green
 Write-Host ("Paquete generado en {0}" -f $zipPath) -ForegroundColor Green
