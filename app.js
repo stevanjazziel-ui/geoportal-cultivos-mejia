@@ -2527,6 +2527,8 @@ const state = {
   planningGrowthScenarioId: "balanceado",
   planningData: null,
   planningHighlightId: null,
+  fodaCameData: null,
+  fodaCameHighlightId: null,
   landChangePeriodId: "2010_2022",
   landChangeScenarioId: "tendencial",
   landChangeLensId: "mixto",
@@ -2601,6 +2603,8 @@ const mapState = {
   planningServiceGapLayer: null,
   planningFacilityLayer: null,
   planningSolarLayer: null,
+  fodaCameZoneLayer: null,
+  fodaCamePriorityLayer: null,
   landChangeLayer: null,
   landChangePressureLayer: null,
   landChangeHotspotLayer: null,
@@ -3057,6 +3061,7 @@ function setPlanning3dArea(areaId = planning3dState.areaId, options = {}) {
 function setTerritorialArea(areaId = state.territorialAreaId, options = {}) {
   const nextAreaId = territorialAreaCatalog[areaId] ? areaId : "mejia";
   const changed = state.territorialAreaId !== nextAreaId;
+  const preserveFodaFocus = state.territorialFocus === "fodaCame";
   state.territorialAreaId = nextAreaId;
 
   const areaProfile = getTerritorialAreaProfile(nextAreaId);
@@ -3084,6 +3089,12 @@ function setTerritorialArea(areaId = state.territorialAreaId, options = {}) {
     }
     if (state.fieldEvidenceData) {
       runFieldEvidenceAnalysis(true);
+    }
+    if (state.fodaCameData) {
+      runFodaCameAnalysis(true, {
+        setFocus: preserveFodaFocus,
+        applyOverlay: preserveFodaFocus,
+      });
     }
   }
 
@@ -4280,6 +4291,9 @@ function cacheDom() {
   dom.runPlanningBtn = document.querySelector("#runPlanningBtn");
   dom.focusPlanningBtn = document.querySelector("#focusPlanningBtn");
   dom.clearPlanningBtn = document.querySelector("#clearPlanningBtn");
+  dom.runFodaCameBtn = document.querySelector("#runFodaCameBtn");
+  dom.focusFodaCameBtn = document.querySelector("#focusFodaCameBtn");
+  dom.clearFodaCameBtn = document.querySelector("#clearFodaCameBtn");
   dom.planningImagerySelect = document.querySelector("#planningImagerySelect");
   dom.planningUseSelect = document.querySelector("#planningUseSelect");
   dom.planningHorizonSelect = document.querySelector("#planningHorizonSelect");
@@ -4319,6 +4333,10 @@ function cacheDom() {
   dom.planningCandidates = document.querySelector("#planningCandidates");
   dom.planningSourceNote = document.querySelector("#planningSourceNote");
   dom.planningVariableMatrix = document.querySelector("#planningVariableMatrix");
+  dom.fodaCameResults = document.querySelector("#fodaCameResults");
+  dom.fodaCameSwot = document.querySelector("#fodaCameSwot");
+  dom.fodaCameStrategies = document.querySelector("#fodaCameStrategies");
+  dom.fodaCameLayout = document.querySelector("#fodaCameLayout");
   dom.territorialScenarioCompare = document.querySelector("#territorialScenarioCompare");
   dom.territorialReadout = document.querySelector("#territorialReadout");
   dom.territorialDecisionBoard = document.querySelector("#territorialDecisionBoard");
@@ -4345,6 +4363,7 @@ function cacheDom() {
   dom.fieldEvidenceSensitive = document.querySelector("#fieldEvidenceSensitive");
   dom.fieldEvidenceHistory = document.querySelector("#fieldEvidenceHistory");
   dom.planningCard = document.querySelector("#planningCard");
+  dom.fodaCameCard = document.querySelector("#fodaCameCard");
   dom.landChangeCard = document.querySelector("#landChangeCard");
   dom.hydrologyCard = document.querySelector("#hydrologyCard");
   dom.fieldEvidenceCard = document.querySelector("#fieldEvidenceCard");
@@ -4424,6 +4443,8 @@ function bindUI() {
   dom.sentinelResults?.addEventListener("click", handleSentinelResultsInteraction);
   dom.indexButtons?.addEventListener("click", handleIndexButtonInteraction);
   dom.planningCandidates?.addEventListener("click", handlePlanningCandidatesInteraction);
+  dom.fodaCameSwot?.addEventListener("click", handleFodaCameInteraction);
+  dom.fodaCameStrategies?.addEventListener("click", handleFodaCameInteraction);
   dom.landChangeSectors?.addEventListener("click", handleLandChangeSectorsInteraction);
   dom.hydrologySectors?.addEventListener("click", handleHydrologySectorsInteraction);
   dom.fieldEvidenceSectors?.addEventListener("click", handleFieldEvidenceInteraction);
@@ -4656,6 +4677,19 @@ function bindUI() {
   });
   dom.focusPlanningBtn.addEventListener("click", focusPlanningCandidates);
   dom.clearPlanningBtn.addEventListener("click", clearPlanningAnalysis);
+  dom.runFodaCameBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.fodaCameResults, "Traduciendo aptitud, huella, riesgo y servicios a un diagnostico FODA + CAME...", [
+      { target: dom.fodaCameSwot, message: "Clasificando fortalezas, oportunidades, debilidades y amenazas por zona..." },
+      { target: dom.fodaCameStrategies, message: "Asignando estrategias de corregir, afrontar, mantener y explotar..." },
+      { target: dom.fodaCameLayout, message: "Preparando interpretacion, conclusion, recomendacion y layout de exportacion..." },
+      { target: dom.territorialDecisionBoard, message: "Sumando la capa estrategica FODA + CAME al tablero territorial..." },
+      { target: dom.territorialSectorSheets, message: "Anexando fichas de intervencion prioritaria al consolidado territorial..." },
+      { target: dom.territorialExportPanel, message: "Incorporando zonas estrategicas a los exportables tecnicos..." },
+    ]);
+    return runModuleAction(dom.runFodaCameBtn, "Construyendo estrategia...", () => runFodaCameAnalysis());
+  });
+  dom.focusFodaCameBtn?.addEventListener("click", focusFodaCameStudy);
+  dom.clearFodaCameBtn?.addEventListener("click", clearFodaCameAnalysis);
   dom.runHydrologyBtn?.addEventListener("click", () => {
     setModulePendingState(dom.hydrologyResults, "Simulando oferta, demanda y balance hidrico territorial...", [
       { target: dom.hydrologyDrivers, message: "Cargando pilares metodologicos del estudio hidrico..." },
@@ -5029,7 +5063,7 @@ function handleFieldEvidenceInteraction(event) {
 }
 
 function handleTerritorialSectorSheetsInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id]");
+  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id]");
   if (!button || !dom.territorialSectorSheets?.contains(button)) {
     return;
   }
@@ -5060,11 +5094,15 @@ function handleTerritorialSectorSheetsInteraction(event) {
   }
   if (button.dataset.fieldHistoryId) {
     focusFieldEvidenceItem("history", button.dataset.fieldHistoryId);
+    return;
+  }
+  if (button.dataset.fodaZoneId) {
+    focusFodaCameZone(button.dataset.fodaZoneId);
   }
 }
 
 function handleTerritorialAlertInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id]");
+  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id]");
   if (!button || !dom.territorialAlertsPanel?.contains(button)) {
     return;
   }
@@ -5095,7 +5133,19 @@ function handleTerritorialAlertInteraction(event) {
   }
   if (button.dataset.fieldHistoryId) {
     focusFieldEvidenceItem("history", button.dataset.fieldHistoryId);
+    return;
   }
+  if (button.dataset.fodaZoneId) {
+    focusFodaCameZone(button.dataset.fodaZoneId);
+  }
+}
+
+function handleFodaCameInteraction(event) {
+  const button = event.target.closest("[data-foda-zone-id]");
+  if (!button) {
+    return;
+  }
+  focusFodaCameZone(button.dataset.fodaZoneId);
 }
 
 function handleTerritorialExportInteraction(event) {
@@ -5321,6 +5371,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     if (state.hydrologyData) {
       renderHydrologyOverlay(state.hydrologyData);
     }
+    clearFodaCameOverlay();
     clearFieldEvidenceOverlay();
     setActiveTab("modulos");
     hydratePlanning3dManifest();
@@ -5350,6 +5401,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
       mapState.studyAreaLayer = null;
     }
     clearPlanningOverlay();
+    clearFodaCameOverlay();
     clearLandChangeOverlay();
     clearHydrologyOverlay();
     if (state.fieldEvidenceData) {
@@ -5385,6 +5437,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   setActiveTab("modulos");
   closePlanning3dViewer(true);
   clearPlanningOverlay();
+  clearFodaCameOverlay();
   clearLandChangeOverlay();
   clearHydrologyOverlay();
   clearFieldEvidenceOverlay();
@@ -14694,6 +14747,7 @@ function renderPlanningModule() {
   const imageryProfile = getPlanningImageryProfile();
   const areaProfile = getTerritorialAreaProfile();
   renderPlanningVariableMatrix();
+  renderFodaCameModule();
   renderLandChangeModule();
   renderHydrologyModule();
   renderFieldEvidenceModule();
@@ -14725,6 +14779,12 @@ function renderPlanningModule() {
   }
   if (dom.clearPlanningBtn) {
     dom.clearPlanningBtn.disabled = !state.planningData;
+  }
+  if (dom.focusFodaCameBtn) {
+    dom.focusFodaCameBtn.disabled = !(state.fodaCameData?.priorityZones?.length);
+  }
+  if (dom.clearFodaCameBtn) {
+    dom.clearFodaCameBtn.disabled = !state.fodaCameData;
   }
   if (dom.landChangePeriodSelect) {
     dom.landChangePeriodSelect.value = state.landChangePeriodId;
@@ -14807,6 +14867,38 @@ function renderPlanningModule() {
     dom.planningCandidates.classList.remove("has-data");
     setTextIfChanged(dom.planningCandidates, `Aqui apareceran los sectores recomendados para implantacion territorial en ${areaProfile.scopeLabel}.`);
   }
+}
+
+function renderFodaCameModule() {
+  if (!dom.fodaCameResults) {
+    return;
+  }
+
+  const analysis = state.fodaCameData;
+  const areaProfile = getTerritorialAreaProfile();
+  if (!analysis) {
+    resetMetricGrid(dom.fodaCameResults, `Ejecuta el modulo para construir el diagnostico FODA + CAME sobre ${areaProfile.scopeLabel}.`);
+    dom.fodaCameSwot?.classList.add("empty-state");
+    dom.fodaCameSwot?.classList.remove("has-data");
+    if (dom.fodaCameSwot) {
+      setTextIfChanged(dom.fodaCameSwot, "Aqui apareceran fortalezas, oportunidades, debilidades y amenazas sintetizadas por zona.");
+    }
+    dom.fodaCameStrategies?.classList.add("empty-state");
+    dom.fodaCameStrategies?.classList.remove("has-data");
+    if (dom.fodaCameStrategies) {
+      setTextIfChanged(dom.fodaCameStrategies, "Aqui apareceran las estrategias CAME y las acciones territoriales por categoria.");
+    }
+    dom.fodaCameLayout?.classList.add("empty-state");
+    dom.fodaCameLayout?.classList.remove("has-data");
+    if (dom.fodaCameLayout) {
+      setTextIfChanged(dom.fodaCameLayout, "Aqui apareceran la interpretacion, conclusion, recomendacion y el layout sugerido para exportar en PNG o PDF.");
+    }
+    return;
+  }
+
+  renderFodaCameSwot(analysis);
+  renderFodaCameStrategies(analysis);
+  renderFodaCameLayout(analysis);
 }
 
 function renderPlanningVariableMatrix() {
@@ -14931,6 +15023,7 @@ function renderLandChangeDoctrine(analysis = null) {
 
 async function runLandChangeAnalysis(silent = false) {
   try {
+    const preserveFodaFocus = state.territorialFocus === "fodaCame";
     await ensureFieldEvidencePrecisionData();
     const analysis = buildLandChangeAnalysis();
     state.landChangeData = analysis;
@@ -14988,6 +15081,12 @@ async function runLandChangeAnalysis(silent = false) {
     renderLandChangeOverlay(analysis);
     renderPlanningModule();
     updateMapSummary();
+    if (state.fodaCameData) {
+      await runFodaCameAnalysis(true, {
+        setFocus: preserveFodaFocus,
+        applyOverlay: preserveFodaFocus,
+      });
+    }
 
     if (!silent) {
       setStatus(
@@ -15016,6 +15115,9 @@ async function runLandChangeAnalysis(silent = false) {
 }
 
 function clearLandChangeAnalysis() {
+  if (state.fodaCameData) {
+    clearFodaCameAnalysis({ quiet: true, preserveBaseFocus: true });
+  }
   state.landChangeData = null;
   state.landChangeHighlightId = null;
   clearLandChangeOverlay();
@@ -15732,6 +15834,7 @@ function renderHydrologyModule() {
 
 async function runHydrologyAnalysis(silent = false) {
   try {
+    const preserveFodaFocus = state.territorialFocus === "fodaCame";
     await ensureFieldEvidencePrecisionData();
     const hydrology = buildHydrologyAnalysis();
     state.hydrologyData = hydrology;
@@ -15789,6 +15892,12 @@ async function runHydrologyAnalysis(silent = false) {
     renderHydrologyOverlay(hydrology);
     renderPlanningModule();
     updateMapSummary();
+    if (state.fodaCameData) {
+      await runFodaCameAnalysis(true, {
+        setFocus: preserveFodaFocus,
+        applyOverlay: preserveFodaFocus,
+      });
+    }
 
     if (!silent) {
       setStatus(
@@ -15816,6 +15925,9 @@ async function runHydrologyAnalysis(silent = false) {
 }
 
 function clearHydrologyAnalysis() {
+  if (state.fodaCameData) {
+    clearFodaCameAnalysis({ quiet: true, preserveBaseFocus: true });
+  }
   state.hydrologyData = null;
   state.hydrologyHighlightId = null;
   clearHydrologyOverlay();
@@ -16779,6 +16891,7 @@ function renderFieldEvidenceModule() {
 
 async function runFieldEvidenceAnalysis(silent = false) {
   try {
+    const preserveFodaFocus = state.territorialFocus === "fodaCame";
     const catalog = await loadFieldEvidenceCatalog();
     const analysis = buildFieldEvidenceAnalysis(catalog);
     state.fieldEvidenceData = analysis;
@@ -16799,6 +16912,12 @@ async function runFieldEvidenceAnalysis(silent = false) {
     renderFieldEvidenceOverlay(analysis);
     renderTerritorialDecisionSupport();
     updateMapSummary();
+    if (state.fodaCameData) {
+      await runFodaCameAnalysis(true, {
+        setFocus: preserveFodaFocus,
+        applyOverlay: preserveFodaFocus,
+      });
+    }
     if (!silent) {
       setStatus(`Evidencia de campo integrada para ${analysis.context.scopeLabel}: ${analysis.summary.sectorCount} sectores, ${analysis.summary.stationCount} estaciones, ${analysis.summary.sensitiveThemeCount} temas sensibles y ${analysis.summary.historyCount} fuentes historicas visibles en mapa.`);
     }
@@ -16850,6 +16969,9 @@ async function ensureFieldEvidencePrecisionData(force = false) {
 }
 
 function clearFieldEvidenceAnalysis() {
+  if (state.fodaCameData) {
+    clearFodaCameAnalysis({ quiet: true, preserveBaseFocus: true });
+  }
   state.fieldEvidenceData = null;
   state.fieldEvidenceHighlightId = null;
   state.fieldEvidenceHighlightType = "sector";
@@ -16950,6 +17072,7 @@ function focusFieldEvidenceStudy() {
 
 async function runPlanningAnalysis(silent = false) {
   try {
+    const preserveFodaFocus = state.territorialFocus === "fodaCame";
     await ensureFieldEvidencePrecisionData();
     const planning = buildPlanningAnalysis();
     state.planningData = planning;
@@ -17011,6 +17134,12 @@ async function runPlanningAnalysis(silent = false) {
     updatePlanning3dCandidateSource();
     renderPlanningModule();
     updateMapSummary();
+    if (state.fodaCameData) {
+      await runFodaCameAnalysis(true, {
+        setFocus: preserveFodaFocus,
+        applyOverlay: preserveFodaFocus,
+      });
+    }
 
     if (!silent) {
       setStatus(
@@ -17042,6 +17171,9 @@ async function runPlanningAnalysis(silent = false) {
 }
 
 function clearPlanningAnalysis() {
+  if (state.fodaCameData) {
+    clearFodaCameAnalysis({ quiet: true, preserveBaseFocus: true });
+  }
   state.planningData = null;
   state.planningHighlightId = null;
   clearPlanningOverlay();
@@ -18168,6 +18300,732 @@ function getTerritorialSignalState(score) {
   };
 }
 
+async function runFodaCameAnalysis(silent = false, options = {}) {
+  try {
+    await ensureFieldEvidencePrecisionData();
+    if (!state.planningData) {
+      state.planningData = buildPlanningAnalysis();
+      state.planningHighlightId = state.planningData.candidates[0]?.id || null;
+    }
+    if (!state.landChangeData) {
+      state.landChangeData = buildLandChangeAnalysis();
+      state.landChangeHighlightId = state.landChangeData.prioritySectors[0]?.id || state.landChangeData.sectors[0]?.id || null;
+    }
+    if (!state.hydrologyData) {
+      state.hydrologyData = buildHydrologyAnalysis();
+      state.hydrologyHighlightId = state.hydrologyData.prioritySectors[0]?.id || state.hydrologyData.sectors[0]?.id || null;
+    }
+    if (!state.fieldEvidenceData) {
+      const catalog = await loadFieldEvidenceCatalog();
+      state.fieldEvidenceData = buildFieldEvidenceAnalysis(catalog);
+    }
+
+    const analysis = buildFodaCameAnalysis({
+      planning: state.planningData,
+      landChange: state.landChangeData,
+      hydrology: state.hydrologyData,
+      fieldEvidence: state.fieldEvidenceData,
+    });
+
+    state.fodaCameData = analysis;
+    state.fodaCameHighlightId = analysis.priorityZones[0]?.id || null;
+    if (options.setFocus !== false) {
+      state.territorialFocus = "fodaCame";
+    }
+
+    const cards = [
+      {
+        label: "Zonas estrategicas",
+        value: `${analysis.priorityZones.length}`,
+        copy: `${formatLandChangeHa(analysis.summary.priorityAreaHa)} ha priorizadas para intervencion territorial en ${analysis.context.scopeLabel}.`,
+        highlight: true,
+      },
+      {
+        label: "Diagnostico dominante",
+        value: analysis.summary.dominantSwotLabel,
+        copy: `${analysis.summary.dominantSwotCopy} ${analysis.summary.dominantSwotAreaLabel}.`,
+      },
+      {
+        label: "Accion CAME dominante",
+        value: analysis.summary.dominantActionLabel,
+        copy: analysis.summary.dominantActionCopy,
+      },
+      {
+        label: "Fortalezas",
+        value: `${analysis.summary.swotCounts.fortaleza} zonas`,
+        copy: `${formatLandChangeHa(analysis.summary.swotAreas.fortaleza)} ha con conectividad, servicios y resiliencia comparativamente favorables.`,
+      },
+      {
+        label: "Amenazas",
+        value: `${analysis.summary.swotCounts.amenaza} zonas`,
+        copy: `${formatLandChangeHa(analysis.summary.swotAreas.amenaza)} ha bajo presion por riesgo, tension hidrica o saturacion territorial.`,
+      },
+      {
+        label: "Capa final",
+        value: analysis.summary.finalLayerLabel,
+        copy: "Cruce sintetico tipo interseccion/union/clip entre aptitud, riesgo, cobertura y crecimiento urbano.",
+      },
+      {
+        label: "Exportable",
+        value: "PNG / PDF 300 dpi",
+        copy: `Titulo sugerido: ${analysis.layout.title}. Incluye leyenda, escala, logo y recomendaciones de interpretacion.`,
+      },
+      {
+        label: "Soporte",
+        value: analysis.summary.evidenceLabel,
+        copy: analysis.summary.evidenceCopy,
+      },
+    ];
+
+    paintMetricGrid(dom.fodaCameResults, cards);
+    renderFodaCameSwot(analysis);
+    renderFodaCameStrategies(analysis);
+    renderFodaCameLayout(analysis);
+    if (options.applyOverlay !== false) {
+      renderFodaCameOverlay(analysis);
+    }
+    renderPlanningModule();
+    renderTerritorialDecisionSupport();
+    updateMapSummary();
+
+    if (!silent) {
+      setStatus(`Analisis FODA + CAME listo para ${analysis.context.scopeLabel}: ${analysis.summary.dominantActionLabel.toLowerCase()} como estrategia dominante y ${analysis.priorityZones.length} zonas de intervencion visibles en mapa.`);
+    }
+
+    return analysis;
+  } catch (error) {
+    console.warn("Fallo el modulo FODA + CAME.", error);
+    state.fodaCameData = null;
+    state.fodaCameHighlightId = null;
+    clearFodaCameOverlay();
+    resetTerritorialModuleState(dom.fodaCameResults, "No se pudo construir el diagnostico FODA + CAME territorial.", [
+      { target: dom.fodaCameSwot, message: "No fue posible clasificar fortalezas, oportunidades, debilidades y amenazas." },
+      { target: dom.fodaCameStrategies, message: "No fue posible construir las estrategias CAME por zona." },
+      { target: dom.fodaCameLayout, message: "No fue posible preparar interpretacion, conclusion y layout de salida." },
+    ]);
+    renderPlanningModule();
+    renderTerritorialDecisionSupport();
+    updateMapSummary();
+    if (!silent) {
+      setStatus(`FODA + CAME: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    return null;
+  }
+}
+
+function clearFodaCameAnalysis(options = {}) {
+  state.fodaCameData = null;
+  state.fodaCameHighlightId = null;
+  clearFodaCameOverlay();
+  if (!options.preserveBaseFocus) {
+    state.territorialFocus = state.hydrologyData
+      ? "hydrology"
+      : state.landChangeData
+        ? "landChange"
+        : "planning";
+  }
+  renderPlanningModule();
+  renderTerritorialDecisionSupport();
+  updateMapSummary();
+  if (!options.quiet) {
+    setStatus(`Analisis FODA + CAME limpiado. Puedes construir una nueva estrategia para ${getTerritorialAreaProfile().scopeLabel}.`);
+  }
+}
+
+function buildFodaCameAnalysis({
+  planning = state.planningData,
+  landChange = state.landChangeData,
+  hydrology = state.hydrologyData,
+  fieldEvidence = state.fieldEvidenceData,
+} = {}) {
+  if (!planning?.surface?.features?.length) {
+    throw new Error("no hay superficie territorial para el cruce estrategico");
+  }
+
+  const zones = planning.surface.features.map((feature, index) => buildFodaCameZone({
+    feature,
+    index,
+    planning,
+    landChange,
+    hydrology,
+  }));
+  const priorityZones = selectFodaCamePriorityZones(zones, planning.context.scopeType);
+  const summary = summarizeFodaCameAnalysis({
+    zones,
+    priorityZones,
+    planning,
+    landChange,
+    hydrology,
+    fieldEvidence,
+  });
+  const swotCards = buildFodaCameSwotCards(zones, priorityZones);
+  const strategies = buildFodaCameStrategies(zones, priorityZones);
+  const layout = buildFodaCameLayoutGuide({
+    summary,
+    strategies,
+    fieldEvidence,
+    context: planning.context,
+  });
+
+  return {
+    context: planning.context,
+    planning,
+    landChange,
+    hydrology,
+    fieldEvidence,
+    zoneSurface: {
+      type: "FeatureCollection",
+      features: zones.map((zone) => cloneFeature(zone.feature)),
+    },
+    zones,
+    priorityZones,
+    summary,
+    swotCards,
+    strategies,
+    layout,
+  };
+}
+
+function buildFodaCameZone({ feature, index, planning, landChange, hydrology }) {
+  const props = feature.properties || {};
+  const centroid = turf.centroid(feature);
+  const centroidCoords = centroid.geometry.coordinates;
+  const landHotspot = landChange?.prioritySectors?.find((sector) => safeBooleanIntersects(feature, sector.feature)) || null;
+  const hydrologySector = hydrology?.prioritySectors?.find((sector) => safeBooleanIntersects(feature, sector.feature)) || null;
+  const accessScore = Number(props.accessScore) || 0;
+  const serviceScore = Number(props.serviceScore) || 0;
+  const resilienceScore = Number(props.resilienceScore) || 0;
+  const growthScore = Number(props.growthScore) || 0;
+  const landScore = Number(props.landScore) || 0;
+  const urbanSignal = Number(props.urbanSignal) || 0;
+  const sensitivePenaltyScore = Number(props.sensitivePenaltyScore) || 0;
+  const landRiskBase = landHotspot
+    ? Math.max(Number(landHotspot.score) || 0, Number(landHotspot.riskPressure) || 0)
+    : 0;
+  const hydrologyRiskBase = hydrologySector
+    ? Math.max(
+      Number(hydrologySector.stressScore) || 0,
+      Number(hydrologySector.droughtRisk) || 0,
+      Number(hydrologySector.floodRisk) || 0
+    )
+    : 0;
+  const landRiskBoost = clamp(landRiskBase * 0.22, 0, 24);
+  const hydrologyBoost = clamp(hydrologyRiskBase * 0.18, 0, 22);
+  const strengthScore = Math.round(clamp(
+    accessScore * 0.28
+    + serviceScore * 0.24
+    + resilienceScore * 0.26
+    + landScore * 0.22
+    - sensitivePenaltyScore * 0.15
+    - landRiskBoost * 0.12
+    - hydrologyBoost * 0.08,
+    0,
+    100
+  ));
+  const opportunityScore = Math.round(clamp(
+    growthScore * 0.36
+    + landScore * 0.24
+    + urbanSignal * 0.18
+    + accessScore * 0.1
+    + Math.max(0, 100 - (landRiskBoost + hydrologyBoost + sensitivePenaltyScore * 0.3)) * 0.12,
+    0,
+    100
+  ));
+  const weaknessScore = Math.round(clamp(
+    (100 - accessScore) * 0.34
+    + (100 - serviceScore) * 0.32
+    + sensitivePenaltyScore * 0.22
+    + Math.max(0, 60 - landScore) * 0.12,
+    0,
+    100
+  ));
+  const threatScore = Math.round(clamp(
+    (100 - resilienceScore) * 0.32
+    + sensitivePenaltyScore * 0.26
+    + landRiskBoost
+    + hydrologyBoost
+    + Math.max(0, 58 - landScore) * 0.12,
+    0,
+    100
+  ));
+
+  const swotEntries = [
+    { id: "fortaleza", label: "Fortaleza", score: strengthScore },
+    { id: "oportunidad", label: "Oportunidad", score: opportunityScore },
+    { id: "debilidad", label: "Debilidad", score: weaknessScore },
+    { id: "amenaza", label: "Amenaza", score: threatScore },
+  ].sort((left, right) => right.score - left.score);
+  const dominantSwot = swotEntries[0];
+  const secondarySwot = swotEntries[1];
+  const came = deriveFodaCameAction({
+    dominantSwot,
+    secondarySwot,
+    strengthScore,
+    opportunityScore,
+    weaknessScore,
+    threatScore,
+    growthScore,
+    accessScore,
+    serviceScore,
+  });
+  const zoneId = `foda-zone-${index + 1}`;
+  const direction = getRelativeDirectionLabel(props.anchorCoords, centroidCoords);
+  const areaHa = turf.area(feature) / 10000;
+  const zoneTitle = `${props.anchorName || "Nodo urbano"} ${direction}`;
+  const clone = cloneFeature(feature);
+  clone.properties = {
+    ...(clone.properties || {}),
+    zoneId,
+    zoneTitle,
+    swotId: dominantSwot.id,
+    swotLabel: dominantSwot.label,
+    swotScore: dominantSwot.score,
+    swotSecondaryLabel: secondarySwot?.label || null,
+    swotSecondaryScore: secondarySwot?.score || 0,
+    cameId: came.id,
+    cameLabel: came.label,
+    cameScore: came.score,
+    areaHa: Number(areaHa.toFixed(1)),
+    strengthScore,
+    opportunityScore,
+    weaknessScore,
+    threatScore,
+    accessScore,
+    serviceScore,
+    resilienceScore,
+    growthScore,
+    landScore,
+    sensitivePenaltyScore,
+    summary: buildFodaCameZoneSummary({
+      zoneTitle,
+      dominantSwot,
+      came,
+      props,
+      landHotspot,
+      hydrologySector,
+    }),
+  };
+
+  return {
+    id: zoneId,
+    title: zoneTitle,
+    centroid: centroidCoords,
+    areaHa: Number(areaHa.toFixed(1)),
+    feature: clone,
+    dominantSwot,
+    secondarySwot,
+    came,
+    scores: {
+      strengthScore,
+      opportunityScore,
+      weaknessScore,
+      threatScore,
+      accessScore,
+      serviceScore,
+      resilienceScore,
+      growthScore,
+      landScore,
+      sensitivePenaltyScore,
+    },
+    landHotspot,
+    hydrologySector,
+    summary: clone.properties.summary,
+  };
+}
+
+function deriveFodaCameAction({
+  dominantSwot,
+  secondarySwot,
+  strengthScore,
+  opportunityScore,
+  weaknessScore,
+  threatScore,
+  growthScore,
+  accessScore,
+  serviceScore,
+}) {
+  if (threatScore >= Math.max(64, strengthScore, opportunityScore, weaknessScore)) {
+    return {
+      id: "afrontar",
+      label: "Afrontar",
+      tone: "low",
+      score: threatScore,
+      copy: "Mitigar riesgo, contener ocupacion y activar medidas de proteccion antes de habilitar nuevas cargas urbanas.",
+    };
+  }
+  if (weaknessScore >= Math.max(58, strengthScore * 0.92, serviceScore >= 60 ? 62 : 0)) {
+    return {
+      id: "corregir",
+      label: "Corregir",
+      tone: "mid",
+      score: weaknessScore,
+      copy: "Cerrar brechas de accesibilidad, transporte y equipamiento para convertir sectores fragiles en suelo operativo.",
+    };
+  }
+  if (opportunityScore >= Math.max(66, strengthScore - 4, growthScore)) {
+    return {
+      id: "explotar",
+      label: "Explotar",
+      tone: "mid",
+      score: opportunityScore,
+      copy: "Aprovechar frentes con potencial de crecimiento, conectividad y reserva urbana para implantar proyectos catalizadores.",
+    };
+  }
+  return {
+    id: "mantener",
+    label: "Mantener",
+    tone: "high",
+    score: Math.max(strengthScore, dominantSwot.score, secondarySwot?.score || 0),
+    copy: accessScore >= 68 && serviceScore >= 68
+      ? "Conservar la buena conectividad y la cobertura funcional de sectores consolidados con seguimiento y mantenimiento."
+      : "Mantener los sectores estables mientras se consolidan servicios y se controla la ocupacion.",
+  };
+}
+
+function buildFodaCameZoneSummary({ zoneTitle, dominantSwot, came, props, landHotspot, hydrologySector }) {
+  const sensitiveCopy = props.sensitiveConstraintCopy ? ` ${props.sensitiveConstraintCopy}` : "";
+  const landCopy = landHotspot ? ` Hotspot de huella vinculado: ${landHotspot.name}.` : "";
+  const hydroCopy = hydrologySector ? ` Vigilancia hidrica asociada: ${hydrologySector.name}.` : "";
+  return `${zoneTitle} queda clasificado como ${dominantSwot.label.toLowerCase()} y accion ${came.label.toLowerCase()}. Acceso ${props.accessScore || 0}%, servicio ${props.serviceScore || 0}%, resiliencia ${props.resilienceScore || 0}% y crecimiento ${props.growthScore || 0}%.${sensitiveCopy}${landCopy}${hydroCopy}`;
+}
+
+function selectFodaCamePriorityZones(zones, scopeType = "area") {
+  const selected = [];
+  const minimumDistanceKm = scopeType === "plot" ? 0.4 : 1.15;
+  ["mantener", "explotar", "corregir", "afrontar"].forEach((actionId) => {
+    const best = zones
+      .filter((zone) => zone.came.id === actionId)
+      .sort((left, right) => right.came.score - left.came.score)[0];
+    if (best && isFodaZoneFarEnough(best, selected, minimumDistanceKm)) {
+      selected.push(best);
+    }
+  });
+
+  zones
+    .slice()
+    .sort((left, right) => right.came.score - left.came.score)
+    .forEach((zone) => {
+      if (selected.length >= 8 || zone.came.score < 58) {
+        return;
+      }
+      if (selected.some((candidate) => candidate.id === zone.id)) {
+        return;
+      }
+      if (!isFodaZoneFarEnough(zone, selected, minimumDistanceKm)) {
+        return;
+      }
+      selected.push(zone);
+    });
+
+  return selected;
+}
+
+function isFodaZoneFarEnough(zone, selected, minimumDistanceKm) {
+  if (!selected.length) {
+    return true;
+  }
+  const point = turf.point(zone.centroid);
+  return selected.every((candidate) => turf.distance(point, turf.point(candidate.centroid), { units: "kilometers" }) >= minimumDistanceKm);
+}
+
+function summarizeFodaCameAnalysis({ zones, priorityZones, planning, landChange, hydrology, fieldEvidence }) {
+  const swotCounts = { fortaleza: 0, oportunidad: 0, debilidad: 0, amenaza: 0 };
+  const swotAreas = { fortaleza: 0, oportunidad: 0, debilidad: 0, amenaza: 0 };
+  const actionCounts = { corregir: 0, afrontar: 0, mantener: 0, explotar: 0 };
+  zones.forEach((zone) => {
+    swotCounts[zone.dominantSwot.id] += 1;
+    swotAreas[zone.dominantSwot.id] += zone.areaHa;
+    actionCounts[zone.came.id] += 1;
+  });
+
+  const dominantSwotId = Object.entries(swotCounts).sort((left, right) => right[1] - left[1])[0]?.[0] || "fortaleza";
+  const dominantActionId = Object.entries(actionCounts).sort((left, right) => right[1] - left[1])[0]?.[0] || "mantener";
+  const dominantThreat = zones
+    .slice()
+    .sort((left, right) => right.scores.threatScore - left.scores.threatScore)[0] || null;
+  const topOpportunity = zones
+    .slice()
+    .sort((left, right) => right.scores.opportunityScore - left.scores.opportunityScore)[0] || null;
+  const priorityAreaHa = priorityZones.reduce((sum, zone) => sum + zone.areaHa, 0);
+  const overallScore = Math.round(priorityZones.length
+    ? priorityZones.reduce((sum, zone) => sum + zone.came.score, 0) / priorityZones.length
+    : zones.reduce((sum, zone) => sum + zone.came.score, 0) / Math.max(zones.length, 1));
+  const evidenceScore = Number(fieldEvidence?.summary?.supportScore) || 0;
+  const evidenceLabel = fieldEvidence?.summary?.supportLabel || "Base territorial";
+  const evidenceCopy = fieldEvidence?.summary
+    ? `${fieldEvidence.summary.sectorCount} sectores de campo, ${fieldEvidence.summary.stationCount} estaciones y ${fieldEvidence.summary.sensitiveThemeCount} temas sensibles reforzando la lectura estrategica.`
+    : "Cruce basado en aptitud urbana, huella transformada, seguridad hidrica y cobertura de servicios.";
+
+  return {
+    overallScore,
+    priorityAreaHa: Number(priorityAreaHa.toFixed(1)),
+    swotCounts,
+    swotAreas: Object.fromEntries(Object.entries(swotAreas).map(([key, value]) => [key, Number(value.toFixed(1))])),
+    actionCounts,
+    dominantSwotId,
+    dominantSwotLabel: getFodaSwotLabel(dominantSwotId),
+    dominantSwotCopy: dominantSwotId === "fortaleza"
+      ? "La estructura urbana consolidada empuja la lectura"
+      : dominantSwotId === "oportunidad"
+        ? "Los bordes con potencial de crecimiento lideran la estrategia"
+        : dominantSwotId === "debilidad"
+          ? "Las brechas de accesibilidad y equipamiento pesan mas en la corrida"
+          : "Los riesgos y saturaciones exigen contencion prioritaria",
+    dominantSwotAreaLabel: `${formatLandChangeHa(swotAreas[dominantSwotId] || 0)} ha bajo esta condicion`,
+    dominantActionId,
+    dominantActionLabel: getFodaCameActionLabel(dominantActionId),
+    dominantActionCopy: dominantActionId === "mantener"
+      ? "Predominan zonas consolidadas que deben sostener cobertura, calidad urbana y control de ocupacion."
+      : dominantActionId === "explotar"
+        ? "La prioridad se mueve hacia aprovechar frentes con potencial, conectividad y reserva funcional."
+        : dominantActionId === "corregir"
+          ? "La estrategia dominante exige cerrar brechas de transporte, servicios y soporte urbano."
+          : "La estrategia dominante exige afrontar riesgo, restriccion y saturacion antes de crecer.",
+    finalLayerLabel: "Zonas estrategicas de intervencion",
+    criticalLabel: dominantThreat?.title || "Sin amenaza dominante",
+    growthLabel: topOpportunity?.title || "Sin oportunidad dominante",
+    evidenceLabel,
+    evidenceCopy,
+    evidenceScore,
+    hydrologyLabel: hydrology?.summary?.balanceLabel || "Balance territorial",
+    landChangeLabel: landChange?.summary?.riskLabel || "Presion territorial",
+    planningLabel: planning?.summary?.landLabel || "Compatibilidad territorial",
+  };
+}
+
+function buildFodaCameSwotCards(zones, priorityZones) {
+  return ["fortaleza", "oportunidad", "debilidad", "amenaza"].map((swotId) => {
+    const zoneList = zones
+      .filter((zone) => zone.dominantSwot.id === swotId)
+      .sort((left, right) => right.dominantSwot.score - left.dominantSwot.score);
+    const leadZone = priorityZones.find((zone) => zone.dominantSwot.id === swotId) || zoneList[0] || null;
+    const areaHa = zoneList.reduce((sum, zone) => sum + zone.areaHa, 0);
+    return {
+      id: swotId,
+      label: getFodaSwotLabel(swotId),
+      tone: getFodaSwotTone(swotId),
+      zoneCount: zoneList.length,
+      areaHa: Number(areaHa.toFixed(1)),
+      leadZone,
+      copy: swotId === "fortaleza"
+        ? "Sectores con conectividad, servicios y resiliencia comparativamente mas robustos."
+        : swotId === "oportunidad"
+          ? "Frentes con reserva urbana, crecimiento cercano y margen para activar proyectos."
+          : swotId === "debilidad"
+            ? "Sectores donde faltan transporte, equipamiento o soporte funcional para consolidar ocupacion."
+            : "Sectores donde el riesgo natural, la tension hidrica o la saturacion urbana piden contencion.",
+    };
+  });
+}
+
+function buildFodaCameStrategies(zones, priorityZones) {
+  return ["corregir", "afrontar", "mantener", "explotar"].map((actionId) => {
+    const zoneList = zones
+      .filter((zone) => zone.came.id === actionId)
+      .sort((left, right) => right.came.score - left.came.score);
+    const leadZone = priorityZones.find((zone) => zone.came.id === actionId) || zoneList[0] || null;
+    return {
+      id: actionId,
+      label: getFodaCameActionLabel(actionId),
+      tone: getFodaCameActionTone(actionId),
+      zoneCount: zoneList.length,
+      leadZone,
+      copy: actionId === "corregir"
+        ? "Reforzar movilidad, cobertura de servicios y soporte barrial donde la aptitud existe pero la infraestructura aun no acompana."
+        : actionId === "afrontar"
+          ? "Contener ocupacion, mitigar riesgo y proteger drenajes, laderas o sectores con tension hidrica y normativa."
+          : actionId === "mantener"
+            ? "Conservar sectores bien consolidados, mantener calidad urbana y evitar deterioro o saturacion funcional."
+            : "Aprovechar potencial de crecimiento con proyectos catalizadores, equipamientos y densificacion ordenada.",
+      actionLine: actionId === "corregir"
+        ? "Cerrar brecha antes de habilitar"
+        : actionId === "afrontar"
+          ? "Mitigar y proteger antes de ocupar"
+          : actionId === "mantener"
+            ? "Sostener calidad y cobertura"
+            : "Activar crecimiento con control",
+    };
+  });
+}
+
+function buildFodaCameLayoutGuide({ summary, strategies, fieldEvidence, context }) {
+  const topAction = strategies.find((item) => item.id === summary.dominantActionId) || strategies[0];
+  return {
+    title: `Analisis FODA + CAME | ${context.scopeLabel}`,
+    legendItems: [
+      "Fortalezas / Mantener",
+      "Oportunidades / Explotar",
+      "Debilidades / Corregir",
+      "Amenazas / Afrontar",
+    ],
+    exportLabel: "PNG o PDF | 300 dpi",
+    interpretation: `La corrida sintetica muestra un predominio de ${summary.dominantSwotLabel.toLowerCase()} y una estrategia principal de ${summary.dominantActionLabel.toLowerCase()}, apoyada por ${summary.priorityAreaHa.toFixed(1)} ha de zonas estrategicas visibles en mapa.`,
+    conclusion: summary.dominantActionId === "afrontar"
+      ? `La lectura territorial para ${context.scopeLabel} sugiere contencion preventiva y mitigacion previa en las zonas mas expuestas antes de habilitar nuevos desarrollos.`
+      : summary.dominantActionId === "corregir"
+        ? `La prioridad para ${context.scopeLabel} es cerrar brechas de accesibilidad, transporte y equipamiento antes de escalar ocupacion o nueva vivienda.`
+        : summary.dominantActionId === "mantener"
+          ? `El territorio presenta sectores consolidados que deben proteger su desempeno y recibir mantenimiento funcional antes de abrir nuevas expansiones.`
+          : `El territorio ofrece ventanas claras para proyectos catalizadores, densificacion ordenada y equipamientos en zonas con potencial de crecimiento.`,
+    recommendation: topAction?.leadZone
+      ? `Empezar por ${topAction.leadZone.title} como zona piloto de ${topAction.label.toLowerCase()}, manteniendo visible la capa de soporte ${summary.evidenceLabel.toLowerCase()} y una salida grafica con leyenda, escala y logo institucional.`
+      : `Mantener la lectura espacial con leyenda clara, escala, logo, interpretacion, conclusion y recomendacion antes de exportar a PNG o PDF.`,
+    evidenceLine: fieldEvidence?.summary
+      ? `${fieldEvidence.summary.supportLabel} con ${fieldEvidence.summary.stationCount} estaciones y ${fieldEvidence.summary.sensitiveThemeCount} temas sensibles integrados al soporte de decision.`
+      : "Cruce sin evidencia adicional de campo visible en esta corrida.",
+  };
+}
+
+function renderFodaCameSwot(analysis) {
+  if (!dom.fodaCameSwot) {
+    return;
+  }
+  dom.fodaCameSwot.classList.remove("empty-state");
+  dom.fodaCameSwot.classList.add("has-data");
+  setHtmlIfChanged(dom.fodaCameSwot, analysis.swotCards.map((card) => `
+    <article class="territorial-sector-sheet tone-${card.tone}">
+      <div class="territorial-sector-head">
+        <div>
+          <p class="candidate-rank">FODA</p>
+          <h4>${card.label}</h4>
+        </div>
+        <span class="planning-pill emphasis">${card.zoneCount} zonas</span>
+      </div>
+      <p class="territorial-readout-copy">${card.copy}</p>
+      <div class="territorial-sector-grid">
+        <article class="territorial-sector-metric">
+          <span>Area</span>
+          <strong>${formatLandChangeHa(card.areaHa)} ha</strong>
+        </article>
+        <article class="territorial-sector-metric">
+          <span>Lider</span>
+          <strong>${card.leadZone?.title || "Sin zona guia"}</strong>
+        </article>
+        <article class="territorial-sector-metric">
+          <span>Accion</span>
+          <strong>${card.leadZone?.came?.label || "Pendiente"}</strong>
+        </article>
+      </div>
+      <p class="territorial-decision-note">${card.leadZone?.summary || "Aun no existe una zona priorizada para esta categoria."}</p>
+      ${card.leadZone ? `<button class="ghost-button" type="button" data-foda-zone-id="${card.leadZone.id}">Ver en mapa</button>` : ""}
+    </article>
+  `).join(""));
+}
+
+function renderFodaCameStrategies(analysis) {
+  if (!dom.fodaCameStrategies) {
+    return;
+  }
+  dom.fodaCameStrategies.classList.remove("empty-state");
+  dom.fodaCameStrategies.classList.add("has-data");
+  setHtmlIfChanged(dom.fodaCameStrategies, analysis.strategies.map((strategy) => `
+    <article class="territorial-alert-card tone-${strategy.tone}">
+      <div class="territorial-sector-head">
+        <div>
+          <p class="candidate-rank">CAME</p>
+          <h4>${strategy.label}</h4>
+        </div>
+        <span class="planning-pill emphasis">${strategy.zoneCount} zonas</span>
+      </div>
+      <p class="territorial-readout-copy">${strategy.copy}</p>
+      <p class="territorial-decision-note">${strategy.actionLine}${strategy.leadZone ? ` | Zona guia: ${strategy.leadZone.title}.` : "."}</p>
+      ${strategy.leadZone ? `<button class="ghost-button" type="button" data-foda-zone-id="${strategy.leadZone.id}">Ver zona</button>` : ""}
+    </article>
+  `).join(""));
+}
+
+function renderFodaCameLayout(analysis) {
+  if (!dom.fodaCameLayout) {
+    return;
+  }
+  dom.fodaCameLayout.classList.remove("empty-state");
+  dom.fodaCameLayout.classList.add("has-data");
+  setHtmlIfChanged(dom.fodaCameLayout, `
+    <article class="territorial-export-card">
+      <div class="territorial-export-head">
+        <div>
+          <p class="section-kicker">Layout profesional</p>
+          <h4>${analysis.layout.title}</h4>
+        </div>
+        <span class="planning-pill emphasis">${analysis.layout.exportLabel}</span>
+      </div>
+      <p class="territorial-readout-copy">${analysis.layout.evidenceLine}</p>
+      <div class="territorial-export-pills">
+        ${analysis.layout.legendItems.map((item) => `<span class="planning-pill emphasis">${item}</span>`).join("")}
+      </div>
+      <div class="territorial-decision-grid">
+        <article class="territorial-decision-card tone-watch">
+          <div class="territorial-decision-card-head">
+            <div>
+              <p class="candidate-rank">Interpretacion</p>
+              <h5>Lectura territorial</h5>
+            </div>
+          </div>
+          <p class="territorial-readout-copy">${analysis.layout.interpretation}</p>
+        </article>
+        <article class="territorial-decision-card tone-${getFodaCameActionTone(analysis.summary.dominantActionId)}">
+          <div class="territorial-decision-card-head">
+            <div>
+              <p class="candidate-rank">Conclusion</p>
+              <h5>Diagnostico final</h5>
+            </div>
+          </div>
+          <p class="territorial-readout-copy">${analysis.layout.conclusion}</p>
+        </article>
+        <article class="territorial-decision-card tone-high">
+          <div class="territorial-decision-card-head">
+            <div>
+              <p class="candidate-rank">Recomendacion</p>
+              <h5>Siguiente accion</h5>
+            </div>
+          </div>
+          <p class="territorial-readout-copy">${analysis.layout.recommendation}</p>
+        </article>
+      </div>
+    </article>
+  `);
+}
+
+function getFodaSwotLabel(swotId) {
+  const labels = {
+    fortaleza: "Fortaleza",
+    oportunidad: "Oportunidad",
+    debilidad: "Debilidad",
+    amenaza: "Amenaza",
+  };
+  return labels[swotId] || "Lectura";
+}
+
+function getFodaSwotTone(swotId) {
+  const tones = {
+    fortaleza: "high",
+    oportunidad: "mid",
+    debilidad: "base",
+    amenaza: "low",
+  };
+  return tones[swotId] || "base";
+}
+
+function getFodaCameActionLabel(actionId) {
+  const labels = {
+    corregir: "Corregir",
+    afrontar: "Afrontar",
+    mantener: "Mantener",
+    explotar: "Explotar",
+  };
+  return labels[actionId] || "Accion";
+}
+
+function getFodaCameActionTone(actionId) {
+  const tones = {
+    corregir: "watch",
+    afrontar: "critical",
+    mantener: "good",
+    explotar: "watch",
+  };
+  return tones[actionId] || "pending";
+}
+
 function buildTerritorialDecisionSnapshot() {
   const items = [];
   const breakdown = {
@@ -18267,6 +19125,21 @@ function buildTerritorialDecisionSnapshot() {
     });
   }
 
+  if (state.fodaCameData) {
+    const fodaCame = state.fodaCameData;
+    const score = clamp(fodaCame.summary.overallScore, 0, 100);
+    const signal = getTerritorialSignalState(score);
+    items.push({
+      id: "fodaCame",
+      score,
+      signal,
+      title: "Estrategia FODA + CAME",
+      metric: `${fodaCame.priorityZones.length} zonas`,
+      copy: `${fodaCame.summary.dominantActionLabel} domina la corrida con ${formatLandChangeHa(fodaCame.summary.priorityAreaHa)} ha priorizadas y lectura ${fodaCame.summary.dominantSwotLabel.toLowerCase()}.`,
+      note: `${fodaCame.summary.evidenceLabel} | ${fodaCame.layout.exportLabel} | ${fodaCame.layout.title}.`,
+    });
+  }
+
   if (!items.length) {
     return null;
   }
@@ -18363,6 +19236,35 @@ function buildTerritorialSectorSheets() {
     });
   }
 
+  if (state.fodaCameData?.priorityZones?.length) {
+    state.fodaCameData.priorityZones.slice(0, 3).forEach((zone, index) => {
+      sheets.push({
+        id: zone.id,
+        module: "FODA + CAME",
+        title: zone.title,
+        tone: zone.came.id === "mantener"
+          ? "high"
+          : zone.came.id === "afrontar"
+            ? "low"
+            : zone.came.id === "corregir"
+              ? "mid"
+              : "base",
+        kicker: `${zone.dominantSwot.label} / ${zone.came.label}`,
+        summary: zone.summary,
+        note: zone.came.copy,
+        metrics: [
+          { label: "Prioridad", value: `${index + 1}` },
+          { label: "Accion", value: zone.came.label },
+          { label: "Area", value: `${formatLandChangeHa(zone.areaHa)} ha` },
+          { label: "Acceso", value: `${zone.scores.accessScore}%` },
+          { label: "Servicio", value: `${zone.scores.serviceScore}%` },
+          { label: "Riesgo", value: `${zone.scores.threatScore}%` },
+        ],
+        actionAttr: `data-foda-zone-id="${zone.id}"`,
+      });
+    });
+  }
+
   return sheets.slice(0, 10);
 }
 
@@ -18430,6 +19332,30 @@ function buildTerritorialAlerts() {
           title: `${sector.name}: tension hidrica`,
           copy: `${sector.balanceLabel} con estiaje ${sector.droughtRisk}% y crecida ${sector.floodRisk}%. Requiere seguimiento preferente.`,
           actionAttr: `data-hydrology-sector-id="${sector.id}"`,
+        });
+      }
+    });
+  }
+
+  if (state.fodaCameData?.priorityZones?.length) {
+    state.fodaCameData.priorityZones.slice(0, 3).forEach((zone) => {
+      if (zone.came.id === "afrontar" || zone.scores.threatScore >= 70) {
+        alerts.push({
+          id: `alert-foda-${zone.id}`,
+          tone: "critical",
+          module: "FODA + CAME",
+          title: `${zone.title}: afrontamiento prioritario`,
+          copy: `La zona combina ${zone.dominantSwot.label.toLowerCase()} con accion ${zone.came.label.toLowerCase()} y requiere contencion o mitigacion antes de habilitar nueva ocupacion.`,
+          actionAttr: `data-foda-zone-id="${zone.id}"`,
+        });
+      } else if (zone.came.id === "corregir" || zone.scores.weaknessScore >= 66) {
+        alerts.push({
+          id: `alert-foda-correct-${zone.id}`,
+          tone: "watch",
+          module: "FODA + CAME",
+          title: `${zone.title}: correccion territorial`,
+          copy: `La zona requiere cerrar brechas de accesibilidad o servicios antes de pasar a una fase de consolidacion o crecimiento.`,
+          actionAttr: `data-foda-zone-id="${zone.id}"`,
         });
       }
     });
@@ -18530,6 +19456,18 @@ function buildTerritorialCsvExport() {
       `${sector.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(sector.balanceHm3)} hm3`,
       `${sector.resilience}/100`,
       sector.summary,
+    ]);
+  });
+
+  (state.fodaCameData?.priorityZones || []).forEach((zone) => {
+    rows.push([
+      "foda_came",
+      zone.id,
+      zone.title,
+      `${zone.dominantSwot.label} / ${zone.came.label}`,
+      `${formatLandChangeHa(zone.areaHa)} ha`,
+      `Acc ${zone.scores.accessScore}% | Serv ${zone.scores.serviceScore}% | Rg ${zone.scores.threatScore}%`,
+      zone.summary,
     ]);
   });
 
@@ -18659,6 +19597,23 @@ function buildTerritorialGeoJsonExport() {
     pushFeatures(state.fieldEvidenceData.historyCollection, "evidencia_campo", "memoria_historica");
   }
 
+  if (state.fodaCameData) {
+    pushFeatures(state.fodaCameData.zoneSurface, "foda_came", "zonas_estrategicas");
+    state.fodaCameData.priorityZones.forEach((zone) => {
+      const clone = cloneFeature(zone.feature);
+      clone.properties = {
+        ...(clone.properties || {}),
+        exportModule: "foda_came",
+        exportLayer: "prioridades",
+        zoneId: zone.id,
+        zoneTitle: zone.title,
+        swot: zone.dominantSwot.label,
+        came: zone.came.label,
+      };
+      features.push(clone);
+    });
+  }
+
   return {
     type: "FeatureCollection",
     features,
@@ -18695,6 +19650,12 @@ function buildTerritorialJsonExport() {
       demand: state.hydrologyData.demand,
       summary: state.hydrologyData.summary,
       prioritySectors: state.hydrologyData.prioritySectors,
+    } : null,
+    fodaCame: state.fodaCameData ? {
+      summary: state.fodaCameData.summary,
+      priorityZones: state.fodaCameData.priorityZones,
+      strategies: state.fodaCameData.strategies,
+      layout: state.fodaCameData.layout,
     } : null,
     evidenciaCampo: state.fieldEvidenceData ? {
       summary: state.fieldEvidenceData.summary,
@@ -18761,6 +19722,25 @@ function buildTerritorialReportHtml() {
               </article>
             `).join("")}
           </div>
+        </section>
+      ` : ""}
+      ${state.fodaCameData ? `
+        <section>
+          <p class="kicker">FODA + CAME</p>
+          <h2>${escapeHtmlContent(state.fodaCameData.layout.title)}</h2>
+          <p>${escapeHtmlContent(state.fodaCameData.layout.interpretation)}</p>
+          <div class="grid">
+            ${state.fodaCameData.strategies.map((strategy) => `
+              <article class="card tone-${strategy.tone}">
+                <p class="kicker">${escapeHtmlContent(strategy.label)}</p>
+                <div class="metric">${escapeHtmlContent(String(strategy.zoneCount))} zonas</div>
+                <p>${escapeHtmlContent(strategy.copy)}</p>
+                <p>${escapeHtmlContent(strategy.leadZone ? `Zona guia: ${strategy.leadZone.title}.` : strategy.actionLine)}</p>
+              </article>
+            `).join("")}
+          </div>
+          <p><strong>Conclusion:</strong> ${escapeHtmlContent(state.fodaCameData.layout.conclusion)}</p>
+          <p><strong>Recomendacion:</strong> ${escapeHtmlContent(state.fodaCameData.layout.recommendation)}</p>
         </section>
       ` : ""}
       ${state.planningData ? `
@@ -19666,6 +20646,7 @@ function renderTerritorialExportPanel() {
     planning: state.planningData?.candidates?.length || 0,
     land: state.landChangeData?.prioritySectors?.length || 0,
     hydrology: state.hydrologyData?.prioritySectors?.length || 0,
+    fodaCame: state.fodaCameData?.priorityZones?.length || 0,
     fieldEvidence: 0,
   };
   dom.territorialExportPanel.classList.remove("empty-state");
@@ -19677,16 +20658,17 @@ function renderTerritorialExportPanel() {
           <p class="section-kicker">Salida tecnica</p>
           <h4>Exportables territoriales de ${areaProfile.scopeLabel}</h4>
         </div>
-        <span class="planning-pill emphasis">${exportCounts.planning + exportCounts.land + exportCounts.hydrology} fichas activas</span>
+        <span class="planning-pill emphasis">${exportCounts.planning + exportCounts.land + exportCounts.hydrology + exportCounts.fodaCame} fichas activas</span>
       </div>
       <p class="territorial-readout-copy">
         Descarga un consolidado tabular, una capa GeoJSON combinada, un resumen JSON o abre un informe ejecutivo con semaforo,
-        fichas, alertas y resumen territorial del escenario vigente sobre ${areaProfile.scopeLabel}.
+        fichas, alertas, zonas FODA + CAME y resumen territorial del escenario vigente sobre ${areaProfile.scopeLabel}.
       </p>
       <div class="territorial-export-pills">
         <span class="planning-pill emphasis">${exportCounts.planning} candidatos</span>
         <span class="planning-pill emphasis">${exportCounts.land} hotspots</span>
         <span class="planning-pill emphasis">${exportCounts.hydrology} sectores hidricos</span>
+        <span class="planning-pill emphasis">${exportCounts.fodaCame} zonas estrategicas</span>
       </div>
       <div class="action-row analysis-actions">
         <button class="secondary-button" type="button" data-export-format="report">Abrir informe</button>
@@ -19885,6 +20867,83 @@ function buildHydrologyBufferFeatures(hydrology) {
     type: "FeatureCollection",
     features,
   };
+}
+
+function renderFodaCameOverlay(analysis) {
+  clearFodaCameOverlay();
+  if (!mapState.map) {
+    return;
+  }
+
+  mapState.fodaCameZoneLayer = L.geoJSON(analysis.zoneSurface, {
+    style: (feature) => {
+      const actionId = feature.properties?.cameId || "mantener";
+      const active = feature.properties?.zoneId === state.fodaCameHighlightId;
+      const palette = getFodaCameOverlayPalette(actionId);
+      return {
+        color: active ? "#fff6ea" : palette.stroke,
+        weight: active ? 2.2 : 1.15,
+        fillColor: palette.fill,
+        fillOpacity: active ? 0.32 : 0.18,
+        dashArray: active ? null : palette.dashArray,
+      };
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(
+        `<h3 class="popup-title">${feature.properties?.zoneTitle || "Zona estrategica"}</h3><p class="popup-copy">${feature.properties?.summary || ""} FODA: ${feature.properties?.swotLabel || "sin lectura"} | CAME: ${feature.properties?.cameLabel || "sin accion"}.</p>`
+      );
+    },
+  }).addTo(mapState.map);
+
+  mapState.fodaCamePriorityLayer = L.geoJSON({
+    type: "FeatureCollection",
+    features: analysis.priorityZones.map((zone) => cloneFeature(zone.feature)),
+  }, {
+    style: (feature) => ({
+      color: feature.properties?.zoneId === state.fodaCameHighlightId ? "#fff7ef" : "#f5efe4",
+      weight: feature.properties?.zoneId === state.fodaCameHighlightId ? 2.8 : 2,
+      fillColor: "transparent",
+      fillOpacity: 0,
+      dashArray: "5 6",
+    }),
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(
+        `<h3 class="popup-title">${feature.properties?.zoneTitle || "Zona prioritaria"}</h3><p class="popup-copy">${feature.properties?.summary || ""}</p>`
+      );
+    },
+  }).addTo(mapState.map);
+
+  mapState.fodaCameZoneLayer?.bringToBack?.();
+  mapState.fodaCamePriorityLayer?.bringToFront?.();
+  if (mapState.currentPlotLayer) {
+    mapState.currentPlotLayer.bringToFront();
+  }
+}
+
+function getFodaCameOverlayPalette(actionId = "mantener") {
+  const palettes = {
+    mantener: {
+      stroke: "#397f5f",
+      fill: "#78be96",
+      dashArray: null,
+    },
+    explotar: {
+      stroke: "#c28a34",
+      fill: "#f2cf77",
+      dashArray: "8 6",
+    },
+    corregir: {
+      stroke: "#bf6d35",
+      fill: "#e3a16b",
+      dashArray: "6 6",
+    },
+    afrontar: {
+      stroke: "#a5544b",
+      fill: "#d98f83",
+      dashArray: "4 6",
+    },
+  };
+  return palettes[actionId] || palettes.mantener;
 }
 
 function renderPlanningOverlay(planning) {
@@ -20631,6 +21690,17 @@ function clearPlanningOverlay() {
   }
 }
 
+function clearFodaCameOverlay() {
+  if (mapState.fodaCameZoneLayer) {
+    mapState.map.removeLayer(mapState.fodaCameZoneLayer);
+    mapState.fodaCameZoneLayer = null;
+  }
+  if (mapState.fodaCamePriorityLayer) {
+    mapState.map.removeLayer(mapState.fodaCamePriorityLayer);
+    mapState.fodaCamePriorityLayer = null;
+  }
+}
+
 function clearLandChangeOverlay() {
   if (mapState.landChangeLayer) {
     mapState.map.removeLayer(mapState.landChangeLayer);
@@ -20738,6 +21808,29 @@ function focusPlanningCandidates() {
   openPlanningCandidatePopup(state.planningHighlightId);
 }
 
+function focusFodaCameStudy() {
+  if (!mapState.map || !state.fodaCameData) {
+    return;
+  }
+
+  state.territorialFocus = "fodaCame";
+  state.fodaCameHighlightId = state.fodaCameHighlightId || state.fodaCameData.priorityZones[0]?.id || null;
+  renderFodaCameModule();
+  renderFodaCameOverlay(state.fodaCameData);
+  updateMapSummary();
+  const bounds = buildBoundsFromFeatures(
+    state.fodaCameData.priorityZones.length
+      ? state.fodaCameData.priorityZones.map((zone) => zone.feature)
+      : state.fodaCameData.zoneSurface.features
+  );
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, {
+      padding: [52, 52],
+      maxZoom: 13,
+    });
+  }
+}
+
 function focusLandChangeStudy() {
   if (!mapState.map || (!mapState.landChangeLayer && !mapState.landChangeHotspotLayer && !mapState.landChangeHeatLayer)) {
     return;
@@ -20835,6 +21928,31 @@ function focusHydrologySector(sectorId) {
   if (mapState.hydrologyLayer) {
     mapState.hydrologyLayer.eachLayer((layer) => {
       if (layer.feature?.properties?.sectorId === sectorId) {
+        layer.openPopup();
+      }
+    });
+  }
+}
+
+function focusFodaCameZone(zoneId) {
+  const zone = state.fodaCameData?.zones?.find((item) => item.id === zoneId);
+  if (!zone || !mapState.map) {
+    return;
+  }
+
+  state.fodaCameHighlightId = zoneId;
+  state.territorialFocus = "fodaCame";
+  renderFodaCameModule();
+  renderFodaCameOverlay(state.fodaCameData);
+  updateMapSummary();
+  const bounds = L.geoJSON(zone.feature).getBounds();
+  mapState.map.fitBounds(bounds, {
+    padding: [52, 52],
+    maxZoom: 14,
+  });
+  if (mapState.fodaCamePriorityLayer) {
+    mapState.fodaCamePriorityLayer.eachLayer((layer) => {
+      if (layer.feature?.properties?.zoneId === zoneId) {
         layer.openPopup();
       }
     });
@@ -21815,6 +22933,7 @@ function updateMapSummary(force = false) {
 
   if (isTerritorialRoute()) {
     const planning = state.planningData;
+    const fodaCame = state.fodaCameData;
     const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
     const fieldEvidence = state.fieldEvidenceData;
@@ -21827,6 +22946,7 @@ function updateMapSummary(force = false) {
     const hydrologyHorizon = hydrology?.horizon || getHydrologyHorizonProfile();
     const hydrologyDemand = hydrology?.demand || getHydrologyDemandProfile();
     const showFieldEvidence = (evidenceRouteActive || state.territorialFocus === "fieldEvidence") && fieldEvidence;
+    const showFodaCame = state.territorialFocus === "fodaCame" && fodaCame;
     const showLandChange = state.territorialFocus === "landChange" && landChange;
     const showHydrology = state.territorialFocus === "hydrology" && hydrology;
     setTextIfChanged(dom.overlayIndex, evidenceRouteActive ? "Campo" : planning ? "Aptitud" : imageryProfile.shortLabel);
@@ -21837,6 +22957,13 @@ function updateMapSummary(force = false) {
       setTextIfChanged(
         dom.mapSubtitle,
         `${fieldEvidence.summary.sectorCount} sectores de campo, ${fieldEvidence.summary.stationCount} estaciones FONAG, ${fieldEvidence.summary.sensitiveThemeCount} temas sensibles, ${fieldEvidence.summary.historyCount} coberturas historicas y ${fieldEvidence.summary.climateSeriesCount} series climaticas listas para soporte tecnico sobre ${fieldEvidence.context.scopeLabel}.`
+      );
+    } else if (showFodaCame) {
+      setTextIfChanged(dom.overlayIndex, "FODA");
+      setTextIfChanged(dom.mapTitle, `Analisis FODA + CAME sobre ${fodaCame.context.scopeLabel}`);
+      setTextIfChanged(
+        dom.mapSubtitle,
+        `${fodaCame.summary.dominantActionLabel} domina la corrida. ${fodaCame.priorityZones.length} zonas estrategicas y ${formatLandChangeHa(fodaCame.summary.priorityAreaHa)} ha listos para lectura de intervencion con interpretacion, conclusion y recomendacion tecnica.`
       );
     } else if (showLandChange) {
       setTextIfChanged(dom.overlayIndex, "Huella");
@@ -21858,6 +22985,10 @@ function updateMapSummary(force = false) {
         dom.mapSubtitle,
         `Fuente ${planning.imageryProfile.shortLabel}, horizonte ${planning.horizon.label}, escenario ${planning.scenario.label}, ${planning.candidates.length} candidatos priorizados, condicionantes visibles por ${formatLandChangeHa(planning.restrictions.uniqueRestrictedAreaHa)} ha, cobertura ${planning.serviceCoverage.overallCoverage}% y lectura solar ${planning.solarReadout.sunPosition.elevation}° sobre el horizonte.`
       );
+    } else if (fodaCame) {
+      setTextIfChanged(dom.overlayIndex, "FODA");
+      setTextIfChanged(dom.mapTitle, "Estrategia territorial lista");
+      setTextIfChanged(dom.mapSubtitle, `${fodaCame.summary.dominantSwotLabel} y ${fodaCame.summary.dominantActionLabel.toLowerCase()} como lectura dominante para ${fodaCame.context.scopeLabel}, con ${fodaCame.priorityZones.length} zonas estrategicas visibles en el geoportal.`);
     } else if (hydrology) {
       setTextIfChanged(dom.overlayIndex, "Balance");
       setTextIfChanged(dom.mapTitle, "Estudio hidrico de Mejia listo");
@@ -21962,6 +23093,7 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
 
   if (isTerritorialRoute()) {
     const planning = state.planningData;
+    const fodaCame = state.fodaCameData;
     const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
     const fieldEvidence = state.fieldEvidenceData;
@@ -22000,6 +23132,33 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
           {
             tone: "neutral",
             label: fieldEvidence.summary.dominantSensitiveGroup,
+          },
+        ]
+      : state.territorialFocus === "fodaCame" && fodaCame
+      ? [
+          {
+            tone: "analysis",
+            label: "FODA+CAME",
+          },
+          {
+            tone: "neutral",
+            label: fodaCame.summary.dominantSwotLabel,
+          },
+          {
+            tone: "neutral",
+            label: fodaCame.summary.dominantActionLabel,
+          },
+          {
+            tone: fodaCame.summary.overallScore >= 72
+              ? "exact"
+              : fodaCame.summary.overallScore >= 58
+                ? "preview"
+                : "compare",
+            label: `${fodaCame.priorityZones.length} zonas`,
+          },
+          {
+            tone: "neutral",
+            label: `${formatLandChangeHa(fodaCame.summary.priorityAreaHa)} ha`,
           },
         ]
       : state.territorialFocus === "landChange" && landChange

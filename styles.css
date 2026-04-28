@@ -2063,6 +2063,10 @@ button {
   border-color: rgba(153, 79, 79, 0.24);
 }
 
+.territorial-alert-card.tone-good {
+  border-color: rgba(47, 127, 95, 0.2);
+}
+
 .territorial-alert-card.tone-watch {
   border-color: rgba(203, 148, 64, 0.22);
 }
