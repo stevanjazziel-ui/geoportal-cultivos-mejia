@@ -64,6 +64,18 @@ Modo recomendado:
 5. En `Planificacion territorial`, abre el `Visualizador 3D urbano` para cargar construcciones y catastro.
 6. Si tienes fotos en una carpeta local externa, `server.ps1` puede indexarlas para mostrar fachadas cercanas dentro del panel 3D.
 
+## Validacion automatica
+
+- Para correr una prueba de humo completa del geoportal, incluyendo `agronomia`, `planificacion`, `evidencia territorial` y un caso dedicado del `visor 3D`, ejecuta:
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File .\tools\run_geoportal_smoke_suite.ps1
+  ```
+- Si quieres lanzarla con un acceso rapido, usa:
+  ```powershell
+  .\Probar Geoportal Completo.bat
+  ```
+- La suite deja capturas PNG y un resumen JSON en `tmp\smoke\`.
+
 ## Conexion Satloc G4
 
 1. Conecta el Satloc G4 al computador por su salida serie o adaptador USB-serial.

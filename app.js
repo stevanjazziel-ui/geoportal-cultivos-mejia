@@ -11615,13 +11615,13 @@ function setPlanning3dStatus(message, tone = "loading") {
   planning3dState.statusMessage = message;
   planning3dState.statusTone = tone;
   if (!dom.planning3dStatus) {
-    renderPlanning3dProgress();
+    renderPlanning3dProgress(true);
     return;
   }
 
   dom.planning3dStatus.className = `service-banner ${tone}`;
   dom.planning3dStatus.textContent = message;
-  renderPlanning3dProgress();
+  renderPlanning3dProgress(true);
 }
 
 function renderPlanning3dPanel() {
@@ -11909,20 +11909,6 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
         },
       },
     ],
-    sky: {
-      "sky-type": "gradient",
-      "sky-gradient": [
-        "interpolate",
-        ["linear"],
-        ["sky-radial-progress"],
-        0,
-        "#dceaf2",
-        1,
-        "#f5f0e6",
-      ],
-      "sky-gradient-center": [0, 0],
-      "sky-gradient-radius": 90,
-    },
     light: {
       anchor: "viewport",
       color: "#f6e6c8",
@@ -12051,6 +12037,14 @@ function computePlanning3dSunPosition(date, lat = planning3dPublishedView.center
 
 function applyPlanning3dLightFromSun(sunPosition = planning3dState.sunPosition) {
   if (!planning3dState.map?.setLight || !sunPosition) {
+    return;
+  }
+
+  const styleReady = Boolean(
+    planning3dState.map?.isStyleLoaded?.()
+    || planning3dState.map?.loaded?.()
+  );
+  if (!styleReady) {
     return;
   }
 
@@ -12543,7 +12537,12 @@ async function initializePlanning3dMap() {
   planning3dState.map.on("zoom", queuePlanning3dDomMarkerPositionSync);
   planning3dState.map.on("resize", queuePlanning3dDomMarkerPositionSync);
   planning3dState.map.on("styledata", hydratePlanning3dRuntimeLayers);
+  planning3dState.map.on("style.load", () => {
+    hydratePlanning3dRuntimeLayers();
+    applyPlanning3dLightFromSun();
+  });
   planning3dState.map.on("load", hydratePlanning3dRuntimeLayers);
+  planning3dState.map.on("load", applyPlanning3dLightFromSun);
 
   planning3dState.readyPromise = new Promise((resolve) => {
     let settled = false;
@@ -13281,6 +13280,11 @@ function syncPlanning3dSource(datasetKey) {
     queuePlanning3dShadowSync();
     queuePlanning3dSvgSceneSync();
     renderPlanning3dDomMarkers();
+  }
+  if (planning3dState.modalOpen) {
+    renderPlanning3dSummary(true);
+    renderPlanning3dSelection(true);
+    renderPlanning3dProgress(true);
   }
 }
 
@@ -14668,6 +14672,10 @@ async function openPlanning3dViewer() {
     renderPlanning3dDomMarkers();
     setPlanning3dViewMode(planning3dState.viewMode, { recenter: false, duration: 0 });
     stabilizePlanning3dViewport({ focus: true });
+    renderPlanning3dPanel();
+    renderPlanning3dSummary(true);
+    renderPlanning3dSelection(true);
+    renderPlanning3dProgress(true);
   } catch (error) {
     renderPlanning3dSvgScene();
     renderPlanning3dDomMarkers();
