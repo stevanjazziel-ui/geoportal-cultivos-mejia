@@ -14,6 +14,16 @@ let ws;
 const pending = new Map();
 const consoleMessages = [];
 
+function formatRuntimeException(details = {}) {
+  const rawText = details.text || details.exception?.description || details.exception?.value || "Runtime exception";
+  const line = Number.isFinite(details.lineNumber) ? details.lineNumber + 1 : null;
+  const column = Number.isFinite(details.columnNumber) ? details.columnNumber + 1 : null;
+  const source = [details.url || details.scriptId || null, line != null ? `L${line}` : null, column != null ? `C${column}` : null]
+    .filter(Boolean)
+    .join(":");
+  return source ? `${rawText} @ ${source}` : rawText;
+}
+
 function parseArgs(argv = []) {
   const parsed = {};
   for (let index = 0; index < argv.length; index += 1) {
@@ -190,6 +200,85 @@ async function runAgronomyScenario(sessionId) {
   };
 }
 
+async function runAiGeoScenario(sessionId) {
+  await navigate(`${baseUrl}/?route=agronomia`, sessionId);
+  await waitForRoute("agronomia", sessionId);
+  await click("#runAiGeoBtn", sessionId);
+  const agronomyAi = await waitFor(async () => {
+    const results = await readNodeInfo("#aiGeoResults", sessionId);
+    const signals = await readNodeInfo("#aiGeoSignals", sessionId);
+    const interpretation = await readNodeInfo("#aiGeoInterpretation", sessionId);
+    if (
+      results?.text
+      && signals?.text
+      && interpretation?.text
+      && /Clasificacion dominante|Confianza IA|Hotspots de cambio/i.test(results.text)
+      && /Hallazgo IA|Alerta|Cambio/i.test(signals.text)
+      && /Interpretacion:|Conclusion:|Recomendacion:/i.test(interpretation.text)
+    ) {
+      return { results, signals, interpretation };
+    }
+    return null;
+  }, { timeoutMs: 180000, label: "IA agronomica" });
+  await click("#focusAiGeoBtn", sessionId);
+  await delay(900);
+  const agronomyOverlay = {
+    index: await readText("#overlayIndex", sessionId),
+    title: await readText("#mapTitle", sessionId),
+  };
+  const agronomyScreenshotPath = await captureScreenshot("smoke-ai-geo-agronomia", sessionId);
+
+  await navigate(`${baseUrl}/?route=planificacion`, sessionId);
+  await waitForRoute("planificacion", sessionId);
+  await ensurePlanningResults(sessionId);
+  await click("#runAiGeoBtn", sessionId);
+  const territorialAi = await waitFor(async () => {
+    const results = await readNodeInfo("#aiGeoResults", sessionId);
+    const signals = await readNodeInfo("#aiGeoSignals", sessionId);
+    const interpretation = await readNodeInfo("#aiGeoInterpretation", sessionId);
+    const statusBar = await readText("#statusBar", sessionId);
+    if (
+      results?.text
+      && signals?.text
+      && interpretation?.text
+      && /Clase dominante IA|Confianza IA|Verificacion 3D/i.test(results.text)
+      && /3D|Cambio|Alerta/i.test(signals.text)
+      && /Interpretacion:|Conclusion:|Recomendacion:/i.test(interpretation.text)
+      && /IA territorial lista|IA territorial/i.test(statusBar || "")
+    ) {
+      return { results, signals, interpretation, statusBar };
+    }
+    return null;
+  }, { timeoutMs: 180000, label: "IA territorial" });
+  await click("#focusAiGeoBtn", sessionId);
+  await delay(1100);
+  const territorialOverlay = {
+    index: await readText("#overlayIndex", sessionId),
+    title: await readText("#mapTitle", sessionId),
+  };
+  const territorialScreenshotPath = await captureScreenshot("smoke-ai-geo-territorial", sessionId);
+
+  return {
+    scenario: "inteligencia-geo",
+    ok: true,
+    agronomy: {
+      overlayIndex: agronomyOverlay.index,
+      mapTitle: agronomyOverlay.title,
+      resultsSample: agronomyAi.results.text.slice(0, 320),
+      signalsSample: agronomyAi.signals.text.slice(0, 320),
+      screenshotPath: agronomyScreenshotPath,
+    },
+    territorial: {
+      overlayIndex: territorialOverlay.index,
+      mapTitle: territorialOverlay.title,
+      statusBar: territorialAi.statusBar,
+      resultsSample: territorialAi.results.text.slice(0, 320),
+      signalsSample: territorialAi.signals.text.slice(0, 320),
+      screenshotPath: territorialScreenshotPath,
+    },
+  };
+}
+
 async function ensurePlanningResults(sessionId) {
   await click("#runPlanningBtn", sessionId);
   return waitFor(async () => {
@@ -324,6 +413,37 @@ async function runPlanning3dScenario(sessionId) {
       : null;
   }, { label: "controles del visor 3D" });
 
+  const visuals = await waitFor(async () => {
+    const snapshot = await evaluate(`
+      (() => {
+        const mapRoot = document.querySelector("#planning3dMap");
+        const canvas = mapRoot?.querySelector(".maplibregl-canvas");
+        const summaryText = (document.querySelector("#planning3dSummary")?.textContent || "").trim();
+        const svgCount = mapRoot?.querySelectorAll(".planning-3d-svg-building")?.length || 0;
+        const markerCount = Array.from(mapRoot?.querySelectorAll(".planning-3d-block-marker") || [])
+          .filter((node) => getComputedStyle(node).display !== "none").length;
+        return {
+          canvasWidth: canvas?.width || canvas?.clientWidth || 0,
+          canvasHeight: canvas?.height || canvas?.clientHeight || 0,
+          svgCount,
+          markerCount,
+          renderVisible: /Render\\s*Visible/i.test(summaryText),
+        };
+      })()
+    `, sessionId).catch(() => null);
+    if (
+      snapshot
+      && snapshot.canvasWidth > 0
+      && snapshot.canvasHeight > 0
+      && (snapshot.svgCount > 0 || snapshot.markerCount > 0 || snapshot.renderVisible)
+    ) {
+      return snapshot;
+    }
+    return null;
+  }, { timeoutMs: 180000, label: "escena 3D visible" });
+
+  await delay(900);
+
   const newConsoleMessages = consoleMessages
     .slice(consoleStartIndex)
     .filter((entry) => /sky-type|sky-gradient|actualizar la luz solar del visor 3D/i.test(entry.text || ""));
@@ -346,6 +466,7 @@ async function runPlanning3dScenario(sessionId) {
       parcels: toggles.parcels.checked,
       shadows: toggles.shadows.checked,
     },
+    visuals,
     screenshotPath,
   };
 }
@@ -392,7 +513,7 @@ async function connectSession() {
     if (data.method === "Runtime.exceptionThrown") {
       consoleMessages.push({
         level: "exception",
-        text: data.params?.exceptionDetails?.text || data.params?.exceptionDetails?.exception?.description || "Runtime exception",
+        text: formatRuntimeException(data.params?.exceptionDetails),
       });
     }
   });
@@ -411,7 +532,7 @@ async function connectSession() {
 
 function getScenarioList() {
   if (scenarioArg === "all") {
-    return ["agronomia", "planificacion-foda", "evidencia-territorial", "planificacion-3d"];
+    return ["agronomia", "inteligencia-geo", "planificacion-foda", "planificacion-3d"];
   }
   return scenarioArg.split(",").map((item) => item.trim()).filter(Boolean);
 }
@@ -425,6 +546,10 @@ async function main() {
   for (const scenario of selectedScenarios) {
     if (scenario === "agronomia") {
       results.push(await runAgronomyScenario(sessionId));
+      continue;
+    }
+    if (scenario === "inteligencia-geo") {
+      results.push(await runAiGeoScenario(sessionId));
       continue;
     }
     if (scenario === "planificacion-foda") {

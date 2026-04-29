@@ -2381,15 +2381,21 @@ function setPlanning3dViewMode(mode = "perspective", options = {}) {
     zoom: planning3dState.map.getZoom(),
   };
 
+  const duration = options.duration ?? 620;
   planning3dState.map.easeTo({
     ...targetCamera,
-    duration: options.duration ?? 620,
+    duration,
     essential: true,
   });
   if (options.recenter) {
     stabilizePlanning3dViewport({ focus: true });
   } else {
     stabilizePlanning3dViewport({ focus: false });
+  }
+  if (typeof window !== "undefined") {
+    window.setTimeout(() => {
+      refreshPlanning3dVisualState({ allowRecovery: true, updateSummary: true });
+    }, duration + 160);
   }
 }
 
@@ -2529,6 +2535,8 @@ const state = {
   planningHighlightId: null,
   fodaCameData: null,
   fodaCameHighlightId: null,
+  aiGeoData: null,
+  aiGeoHighlightId: null,
   landChangePeriodId: "2010_2022",
   landChangeScenarioId: "tendencial",
   landChangeLensId: "mixto",
@@ -2605,6 +2613,9 @@ const mapState = {
   planningSolarLayer: null,
   fodaCameZoneLayer: null,
   fodaCamePriorityLayer: null,
+  aiGeoClassificationLayer: null,
+  aiGeoChangeLayer: null,
+  aiGeoAlertLayer: null,
   landChangeLayer: null,
   landChangePressureLayer: null,
   landChangeHotspotLayer: null,
@@ -2697,6 +2708,11 @@ const planning3dState = {
     candidates: null,
     shadows: null,
   },
+  forceVisualFallback: false,
+  visualReady: false,
+  visualSnapshot: null,
+  visualRecoveryTimers: [],
+  resizeObserver: null,
 };
 
 const planning3dFallbackTextureCatalog = {
@@ -3088,7 +3104,7 @@ function setTerritorialArea(areaId = state.territorialAreaId, options = {}) {
       runHydrologyAnalysis(true);
     }
     if (state.fieldEvidenceData) {
-      runFieldEvidenceAnalysis(true);
+      ensureFieldEvidencePrecisionData(true);
     }
     if (state.fodaCameData) {
       runFodaCameAnalysis(true, {
@@ -4032,6 +4048,11 @@ function getPlanning3dProgressState() {
     tone = "demo";
   }
 
+  if ((buildingStatus?.phase === "ready" || buildingStatus?.phase === "demo") && !planning3dState.visualReady) {
+    tone = "loading";
+    copy = "La geometria ya esta lista; afinando la representacion visible del visor con respaldo vectorial automatico.";
+  }
+
   return {
     percent: combinedPercent,
     tone,
@@ -4294,6 +4315,9 @@ function cacheDom() {
   dom.runFodaCameBtn = document.querySelector("#runFodaCameBtn");
   dom.focusFodaCameBtn = document.querySelector("#focusFodaCameBtn");
   dom.clearFodaCameBtn = document.querySelector("#clearFodaCameBtn");
+  dom.runAiGeoBtn = document.querySelector("#runAiGeoBtn");
+  dom.focusAiGeoBtn = document.querySelector("#focusAiGeoBtn");
+  dom.clearAiGeoBtn = document.querySelector("#clearAiGeoBtn");
   dom.planningImagerySelect = document.querySelector("#planningImagerySelect");
   dom.planningUseSelect = document.querySelector("#planningUseSelect");
   dom.planningHorizonSelect = document.querySelector("#planningHorizonSelect");
@@ -4337,6 +4361,10 @@ function cacheDom() {
   dom.fodaCameSwot = document.querySelector("#fodaCameSwot");
   dom.fodaCameStrategies = document.querySelector("#fodaCameStrategies");
   dom.fodaCameLayout = document.querySelector("#fodaCameLayout");
+  dom.aiGeoResults = document.querySelector("#aiGeoResults");
+  dom.aiGeoLayers = document.querySelector("#aiGeoLayers");
+  dom.aiGeoSignals = document.querySelector("#aiGeoSignals");
+  dom.aiGeoInterpretation = document.querySelector("#aiGeoInterpretation");
   dom.territorialScenarioCompare = document.querySelector("#territorialScenarioCompare");
   dom.territorialReadout = document.querySelector("#territorialReadout");
   dom.territorialDecisionBoard = document.querySelector("#territorialDecisionBoard");
@@ -4364,6 +4392,7 @@ function cacheDom() {
   dom.fieldEvidenceHistory = document.querySelector("#fieldEvidenceHistory");
   dom.planningCard = document.querySelector("#planningCard");
   dom.fodaCameCard = document.querySelector("#fodaCameCard");
+  dom.aiGeoCard = document.querySelector("#aiGeoCard");
   dom.landChangeCard = document.querySelector("#landChangeCard");
   dom.hydrologyCard = document.querySelector("#hydrologyCard");
   dom.fieldEvidenceCard = document.querySelector("#fieldEvidenceCard");
@@ -4690,6 +4719,21 @@ function bindUI() {
   });
   dom.focusFodaCameBtn?.addEventListener("click", focusFodaCameStudy);
   dom.clearFodaCameBtn?.addEventListener("click", clearFodaCameAnalysis);
+  dom.runAiGeoBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.aiGeoResults, "Clasificando patrones, detectando cambios y priorizando alertas inteligentes...", [
+      { target: dom.aiGeoLayers, message: "Preparando las capas y variables que la IA usara en la corrida activa..." },
+      { target: dom.aiGeoSignals, message: "Buscando hotspots, cambios y alertas para revisar en el mapa..." },
+      { target: dom.aiGeoInterpretation, message: "Redactando interpretacion, conclusion y recomendacion operativa..." },
+      { target: dom.territorialDecisionBoard, message: "Sumando la lectura IA al tablero territorial integrado..." },
+      { target: dom.territorialSectorSheets, message: "Preparando fichas de apoyo derivadas del analisis inteligente..." },
+      { target: dom.territorialExportPanel, message: "Actualizando exportables con clasificacion, cambios y alertas IA..." },
+      { target: dom.territorialAlertsPanel, message: "Encendiendo alertas territoriales y agronomicas derivadas del motor IA..." },
+    ]);
+    return runModuleAction(dom.runAiGeoBtn, "Ejecutando IA...", () => runAiGeoAnalysis());
+  });
+  dom.focusAiGeoBtn?.addEventListener("click", focusAiGeoStudy);
+  dom.clearAiGeoBtn?.addEventListener("click", clearAiGeoAnalysis);
+  dom.aiGeoSignals?.addEventListener("click", handleAiGeoSignalAction);
   dom.runHydrologyBtn?.addEventListener("click", () => {
     setModulePendingState(dom.hydrologyResults, "Simulando oferta, demanda y balance hidrico territorial...", [
       { target: dom.hydrologyDrivers, message: "Cargando pilares metodologicos del estudio hidrico..." },
@@ -4871,6 +4915,7 @@ function bindUI() {
   dom.planning3dBuildingsToggle?.addEventListener("change", () => {
     planning3dState.buildingsVisible = !!dom.planning3dBuildingsToggle.checked;
     syncPlanning3dLayerVisibility();
+    refreshPlanning3dVisualState({ allowRecovery: true, updateSummary: true });
   });
   dom.planning3dParcelsToggle?.addEventListener("change", async () => {
     planning3dState.parcelsVisible = !!dom.planning3dParcelsToggle.checked;
@@ -4878,6 +4923,7 @@ function bindUI() {
       await ensurePlanning3dDataset("parcels");
     }
     syncPlanning3dLayerVisibility();
+    refreshPlanning3dVisualState({ allowRecovery: true, updateSummary: true });
   });
   dom.planning3dShadowsToggle?.addEventListener("change", () => {
     planning3dState.shadowsVisible = !!dom.planning3dShadowsToggle.checked;
@@ -5063,7 +5109,7 @@ function handleFieldEvidenceInteraction(event) {
 }
 
 function handleTerritorialSectorSheetsInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id]");
+  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
   if (!button || !dom.territorialSectorSheets?.contains(button)) {
     return;
   }
@@ -5098,11 +5144,15 @@ function handleTerritorialSectorSheetsInteraction(event) {
   }
   if (button.dataset.fodaZoneId) {
     focusFodaCameZone(button.dataset.fodaZoneId);
+    return;
+  }
+  if (button.dataset.aiGeoFocusId) {
+    focusAiGeoFeature(button.dataset.aiGeoFocusId);
   }
 }
 
 function handleTerritorialAlertInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id]");
+  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
   if (!button || !dom.territorialAlertsPanel?.contains(button)) {
     return;
   }
@@ -5137,6 +5187,10 @@ function handleTerritorialAlertInteraction(event) {
   }
   if (button.dataset.fodaZoneId) {
     focusFodaCameZone(button.dataset.fodaZoneId);
+    return;
+  }
+  if (button.dataset.aiGeoFocusId) {
+    focusAiGeoFeature(button.dataset.aiGeoFocusId);
   }
 }
 
@@ -5299,11 +5353,11 @@ function isPlanningRoute(route = state.entryRoute || "agronomia") {
 }
 
 function isEvidenceRoute(route = state.entryRoute || "agronomia") {
-  return route === "evidencia";
+  return false;
 }
 
 function isTerritorialRoute(route = state.entryRoute || "agronomia") {
-  return isPlanningRoute(route) || isEvidenceRoute(route);
+  return isPlanningRoute(route);
 }
 
 function enterPublicView(route = state.entryRoute || "agronomia") {
@@ -5327,7 +5381,7 @@ function applyRouteFromUrl() {
   const route = routeParam === "planificacion"
     ? "planificacion"
     : routeParam === "evidencia"
-      ? "evidencia"
+      ? "planificacion"
       : routeParam === "agronomia"
         ? "agronomia"
         : null;
@@ -5373,6 +5427,11 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     }
     clearFodaCameOverlay();
     clearFieldEvidenceOverlay();
+    if (state.aiGeoData?.mode === "territorial") {
+      renderAiGeoOverlay(state.aiGeoData);
+    } else {
+      clearAiGeoOverlay();
+    }
     setActiveTab("modulos");
     hydratePlanning3dManifest();
     if (dom.sidebarTitle) {
@@ -5391,49 +5450,6 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     return;
   }
 
-  if (isEvidenceRoute(route)) {
-    state.territorialFocus = "fieldEvidence";
-    setActiveTab("modulos");
-    closePlanning3dViewer(true);
-    clearAgronomyMapContext();
-    if (mapState.studyAreaLayer) {
-      mapState.map.removeLayer(mapState.studyAreaLayer);
-      mapState.studyAreaLayer = null;
-    }
-    clearPlanningOverlay();
-    clearFodaCameOverlay();
-    clearLandChangeOverlay();
-    clearHydrologyOverlay();
-    if (state.fieldEvidenceData) {
-      renderFieldEvidenceOverlay(state.fieldEvidenceData);
-    } else {
-      setModulePendingState(dom.fieldEvidenceResults, "Reuniendo evidencia de campo, estaciones y memoria territorial...", [
-        { target: dom.fieldEvidenceInventory, message: "Resumiendo catalogo maestro, fuentes y objetos geograficos disponibles..." },
-        { target: dom.fieldEvidenceSectors, message: "Organizando quebradas, rios y sectores levantados en campo..." },
-        { target: dom.fieldEvidenceStations, message: "Ubicando estaciones FONAG e indicadores hidrometeorologicos..." },
-        { target: dom.fieldEvidenceSensitive, message: "Integrando areas sensibles, proteccion minima, riberas y quebradas del procedimiento tecnico..." },
-        { target: dom.fieldEvidenceHistory, message: "Levantando cartas IGM, MDT historico y series climaticas INHAMI..." },
-      ]);
-      clearFieldEvidenceOverlay();
-      runFieldEvidenceAnalysis(true);
-    }
-    if (dom.sidebarTitle) {
-      dom.sidebarTitle.textContent = "Centro de evidencia territorial";
-    }
-    if (dom.sidebarSubtitle) {
-      dom.sidebarSubtitle.textContent = "Quebradas, estaciones, areas sensibles, memoria historica e insumos tecnicos de campo para soporte territorial en Mejia.";
-    }
-    if (dom.overlayMode) {
-      dom.overlayMode.textContent = "Campo";
-    }
-    clearPlanningModuleFocus();
-    updateMapSummary();
-    window.setTimeout(() => {
-      focusFieldEvidenceModuleCard();
-    }, 120);
-    return;
-  }
-
   setActiveTab("modulos");
   closePlanning3dViewer(true);
   clearPlanningOverlay();
@@ -5441,6 +5457,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   clearLandChangeOverlay();
   clearHydrologyOverlay();
   clearFieldEvidenceOverlay();
+  clearAiGeoOverlay();
   renderStudyAreaLayer();
   refreshVisibleGeoLayers(["parroquias", "vias", "canales", "lotes", "estaciones"]);
   if (state.currentPlot) {
@@ -5456,6 +5473,9 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   }
   if (state.agronomyOutputs.gps) {
     renderGpsTrackingOverlay(state.agronomyOutputs.gps);
+  }
+  if (state.aiGeoData?.mode === "agronomia") {
+    renderAiGeoOverlay(state.aiGeoData);
   }
   if (dom.sidebarTitle) {
     dom.sidebarTitle.textContent = "Centro de trabajo agronomico";
@@ -5530,12 +5550,19 @@ function focusFieldEvidenceModuleCard() {
   focusModuleCard(dom.fieldEvidenceCard);
 }
 
+function focusAiGeoModuleCard() {
+  focusModuleCard(dom.aiGeoCard);
+}
+
 function clearPlanningModuleFocus() {
   if (dom.planningCard) {
     dom.planningCard.classList.remove("entry-focus");
   }
   if (dom.fieldEvidenceCard) {
     dom.fieldEvidenceCard.classList.remove("entry-focus");
+  }
+  if (dom.aiGeoCard) {
+    dom.aiGeoCard.classList.remove("entry-focus");
   }
 }
 
@@ -6752,6 +6779,7 @@ async function refreshActiveAnalysis({ silent = false } = {}) {
     renderCompareSummary();
     renderLegend();
     renderSentinelOverlay();
+    renderAiGeoModule();
     updateMapSummary();
     renderWizardAssistantState();
     return null;
@@ -6820,6 +6848,10 @@ async function refreshActiveAnalysis({ silent = false } = {}) {
       renderCompareSummary();
       renderLegend();
       renderSentinelOverlay();
+      renderAiGeoModule();
+      if (state.aiGeoData?.mode === "agronomia" && !isTerritorialRoute()) {
+        renderAiGeoOverlay(state.aiGeoData);
+      }
       updateMapSummary();
       syncAnalysisDrivenModules();
       renderWizardAssistantState();
@@ -7539,6 +7571,13 @@ function renderSentinelOverlay() {
   if (mapState.managementLayer) {
     mapState.managementLayer.bringToFront();
   }
+  if (state.aiGeoData?.mode === "agronomia") {
+    if (mapState.aiGeoClassificationLayer || mapState.aiGeoChangeLayer || mapState.aiGeoAlertLayer) {
+      bringAiGeoOverlayToFront();
+    } else {
+      renderAiGeoOverlay(state.aiGeoData);
+    }
+  }
 
   if (!state.analysisBusy) {
     if (state.surfaceMode === "change" && changeAnalysis && getCompareImage()) {
@@ -7592,6 +7631,9 @@ function renderRealSceneFootprint(image, fitBounds = false) {
   }
   if (mapState.managementLayer) {
     mapState.managementLayer.bringToFront();
+  }
+  if (state.aiGeoData?.mode === "agronomia") {
+    bringAiGeoOverlayToFront();
   }
 
   const footprintFocusId = `${state.agronomyAreaId}:${image.id}`;
@@ -12537,12 +12579,25 @@ async function initializePlanning3dMap() {
   planning3dState.map.on("zoom", queuePlanning3dDomMarkerPositionSync);
   planning3dState.map.on("resize", queuePlanning3dDomMarkerPositionSync);
   planning3dState.map.on("styledata", hydratePlanning3dRuntimeLayers);
+  planning3dState.map.on("idle", () => {
+    refreshPlanning3dVisualState({ allowRecovery: true, updateSummary: true });
+  });
   planning3dState.map.on("style.load", () => {
     hydratePlanning3dRuntimeLayers();
     applyPlanning3dLightFromSun();
   });
   planning3dState.map.on("load", hydratePlanning3dRuntimeLayers);
   planning3dState.map.on("load", applyPlanning3dLightFromSun);
+
+  if (!planning3dState.resizeObserver && typeof ResizeObserver !== "undefined" && dom.planning3dMap) {
+    planning3dState.resizeObserver = new ResizeObserver(() => {
+      if (!planning3dState.modalOpen) {
+        return;
+      }
+      stabilizePlanning3dViewport({ focus: false });
+    });
+    planning3dState.resizeObserver.observe(dom.planning3dMap);
+  }
 
   planning3dState.readyPromise = new Promise((resolve) => {
     let settled = false;
@@ -13286,6 +13341,7 @@ function syncPlanning3dSource(datasetKey) {
     renderPlanning3dSelection(true);
     renderPlanning3dProgress(true);
   }
+  refreshPlanning3dVisualState({ allowRecovery: datasetKey === "buildings", updateSummary: planning3dState.modalOpen });
 }
 
 function clearPlanning3dDomMarkers() {
@@ -13366,12 +13422,13 @@ function ensurePlanning3dDomOverlay() {
 function shouldRenderPlanning3dDomMarkers() {
   const buildingCount = planning3dState.sourceData.buildings?.features?.length || 0;
   const zoom = planning3dState.map?.getZoom?.() || 0;
+  const minZoom = planning3dState.forceVisualFallback ? 12.3 : 13.2;
   if (
     !dom.planning3dMap
     || !planning3dState.modalOpen
     || !planning3dState.buildingsVisible
     || !buildingCount
-    || zoom < 13.2
+    || zoom < minZoom
   ) {
     return false;
   }
@@ -13571,14 +13628,18 @@ function shouldRenderPlanning3dSvgScene() {
   const buildingCount = planning3dState.sourceData.buildings?.features?.length || 0;
   const zoom = planning3dState.map?.getZoom?.() || 0;
   const orthographic = isPlanning3dOrthographicView();
+  const minimumZoom = planning3dState.forceVisualFallback
+    ? (orthographic ? 11.8 : 12.4)
+    : (orthographic ? 12.9 : 13.9);
   return Boolean(
     dom.planning3dMap
     && planning3dState.modalOpen
     && planning3dState.buildingsVisible
     && buildingCount
-    && zoom >= (orthographic ? 12.9 : 13.9)
+    && zoom >= minimumZoom
     && (
       orthographic
+      || planning3dState.forceVisualFallback
       || planning3dState.backendMode === "public"
       || buildingCount <= 12000
       || planning3dState.selectedFeatureId != null
@@ -13877,6 +13938,8 @@ function renderPlanning3dSvgScene() {
 
     overlay.appendChild(group);
   });
+
+  refreshPlanning3dVisualState({ allowRecovery: false });
 }
 
 function syncPlanning3dSvgSceneSelection() {
@@ -13978,6 +14041,7 @@ function syncPlanning3dDomMarkerSelection() {
 function renderPlanning3dDomMarkers() {
   clearPlanning3dDomMarkers();
   if (!shouldRenderPlanning3dDomMarkers()) {
+    refreshPlanning3dVisualState({ allowRecovery: false });
     return;
   }
 
@@ -14001,12 +14065,13 @@ function renderPlanning3dDomMarkers() {
   });
   syncPlanning3dDomMarkerSelection();
   queuePlanning3dDomMarkerPositionSync();
+  refreshPlanning3dVisualState({ allowRecovery: false });
 }
 
 function syncPlanning3dLayerVisibility() {
   const showBuildings = planning3dState.buildingsVisible;
   const orthographic = isPlanning3dOrthographicView();
-  const showFootprints = showBuildings && orthographic;
+  const showFootprints = showBuildings && (orthographic || planning3dState.forceVisualFallback);
   const showExtrusions = showBuildings && !orthographic;
   const showOutlines = showBuildings && !orthographic;
 
@@ -14097,6 +14162,7 @@ function renderPlanning3dSummary(force = false) {
   const textureCatalog = planning3dState.textureCatalog || getPlanning3dFallbackTextureCatalog();
   const sunPosition = planning3dState.sunPosition;
   const shadowCount = planning3dState.sourceData.shadows?.features?.length || 0;
+  const visualSnapshot = planning3dState.visualSnapshot || getPlanning3dVisualStateSnapshot();
   const solarStamp = `${planning3dState.sunDate || formatDateInput(getPlanning3dSunDateTime())} ${planning3dState.sunTime || "09:00"}`;
   const solarBadgeLabel = sunPosition
     ? sunPosition.daylight
@@ -14177,6 +14243,10 @@ function renderPlanning3dSummary(force = false) {
         <span>Carga</span>
         <strong>${getPlanning3dLoadLabel(buildingStatus)}</strong>
       </article>
+      <article class="planning-3d-chip">
+        <span>Render</span>
+        <strong>${planning3dState.visualReady ? "Visible" : "Afinando"}</strong>
+      </article>
     </div>
     <p class="planning-3d-copy-small">
       ${manifest.viaBackend
@@ -14195,6 +14265,9 @@ function renderPlanning3dSummary(force = false) {
       ${planning3dState.viewMode === "orthographic"
         ? " La vista actual esta ortogonal para cotejar huellas y trazado urbano; cambia a Vista 3D cuando quieras leer volumenes y perfil de calle."
         : " La vista actual esta en perspectiva 3D para navegar volumenes, alturas y calles con mas claridad; puedes pasar a Vista ortogonal para cotejar huellas."}
+      ${planning3dState.visualReady
+        ? ` El lienzo visible ya esta activo con ${formatPlanning3dCount(visualSnapshot.visibleSceneCount, "0")} elementos de apoyo entre huellas, volumenes o marcadores.`
+        : " Si la escena tarda en dibujarse completa, el visor activa una recuperacion visual automatica con respaldo vectorial sin quitarte el control de la vista, sombras ni catastro."}
       ${photoStatus
         ? (photoStatus.indexing
           ? ` ${photoStatus.message || "Las fotos se estan indexando en segundo plano para habilitar la galeria local."}`
@@ -14525,24 +14598,15 @@ function focusPlanning3dDataset() {
 
   const manifest = getPlanning3dManifest();
   if (!manifest.viaBackend && planning3dState.backendMode === "public") {
-    const publicFocusFeature = planning3dState.sourceData.buildings?.features?.length
-      ? planning3dState.sourceData.buildings
-      : (planning3dState.sourceData.parcels?.features?.length ? planning3dState.sourceData.parcels : null);
-    const hasDesktopOverlay = typeof window !== "undefined" && window.innerWidth > 900;
-    const focusBounds = publicFocusFeature ? turf.bbox(publicFocusFeature) : planning3dPublishedBounds;
-    planning3dState.map.fitBounds([
-      [focusBounds[0], focusBounds[1]],
-      [focusBounds[2], focusBounds[3]],
-    ], {
-      padding: hasDesktopOverlay
-        ? { top: 72, right: 380, bottom: 72, left: 72 }
-        : 48,
-      duration: 720,
+    const areaView = planning3dPublishedView;
+    planning3dState.map.easeTo({
+      center: areaView.center,
+      zoom: planning3dState.viewMode === "orthographic"
+        ? Math.max(areaView.zoom - 0.15, 16.3)
+        : Math.max(areaView.zoom, 16.6),
       pitch: camera.pitch,
       bearing: camera.bearing,
-      maxZoom: publicFocusFeature
-        ? (planning3dState.viewMode === "orthographic" ? Math.max(camera.zoom, 16.2) : 16.9)
-        : camera.zoom,
+      duration: 720,
       essential: true,
     });
     return;
@@ -14597,12 +14661,15 @@ function stabilizePlanning3dViewport({ focus = false } = {}) {
     queuePlanning3dSvgSceneSync();
     queuePlanning3dDomMarkerPositionSync();
     renderPlanning3dDomMarkers();
+    refreshPlanning3dVisualState({ allowRecovery: true, updateSummary: true });
   };
 
   run();
   if (typeof window !== "undefined") {
     window.setTimeout(run, 160);
     window.setTimeout(run, 420);
+    window.setTimeout(run, 760);
+    window.setTimeout(run, 1180);
   }
 }
 
@@ -14628,6 +14695,10 @@ async function openPlanning3dViewer() {
     });
   }
   planning3dState.modalOpen = true;
+  planning3dState.forceVisualFallback = false;
+  planning3dState.visualReady = false;
+  planning3dState.visualSnapshot = null;
+  clearPlanning3dVisualRecoveryTimers();
   dom.planning3dModal?.classList.remove("hidden");
   if (dom.planning3dModal) {
     dom.planning3dModal.setAttribute("aria-hidden", "false");
@@ -14676,6 +14747,7 @@ async function openPlanning3dViewer() {
     renderPlanning3dSummary(true);
     renderPlanning3dSelection(true);
     renderPlanning3dProgress(true);
+    refreshPlanning3dVisualState({ allowRecovery: true, updateSummary: true });
   } catch (error) {
     renderPlanning3dSvgScene();
     renderPlanning3dDomMarkers();
@@ -14685,6 +14757,10 @@ async function openPlanning3dViewer() {
 
 function closePlanning3dViewer(silent = false) {
   planning3dState.modalOpen = false;
+  planning3dState.forceVisualFallback = false;
+  planning3dState.visualReady = false;
+  planning3dState.visualSnapshot = null;
+  clearPlanning3dVisualRecoveryTimers();
   clearPlanning3dPublicUpgradeTimer("buildings");
   clearPlanning3dPublicUpgradeTimer("parcels");
   dom.planning3dModal?.classList.add("hidden");
@@ -14751,9 +14827,105 @@ async function reloadPlanning3dData() {
   }
 }
 
+function clearPlanning3dVisualRecoveryTimers() {
+  if (!Array.isArray(planning3dState.visualRecoveryTimers) || !planning3dState.visualRecoveryTimers.length) {
+    planning3dState.visualRecoveryTimers = [];
+    return;
+  }
+  planning3dState.visualRecoveryTimers.forEach((timerId) => window.clearTimeout(timerId));
+  planning3dState.visualRecoveryTimers = [];
+}
+
+function getPlanning3dVisibleDomMarkerCount() {
+  if (!Array.isArray(planning3dState.domMarkers) || !planning3dState.domMarkers.length) {
+    return 0;
+  }
+  return planning3dState.domMarkers.reduce((count, entry) => (
+    entry?.element && entry.element.style.display !== "none" ? count + 1 : count
+  ), 0);
+}
+
+function getPlanning3dVisibleFootprintCount(limit = 120) {
+  if (!planning3dState.map?.queryRenderedFeatures || !planning3dState.map?.getLayer?.("planning3d-buildings-footprint")) {
+    return 0;
+  }
+  try {
+    const rendered = planning3dState.map.queryRenderedFeatures(undefined, {
+      layers: ["planning3d-buildings-footprint"],
+    });
+    return Math.min(rendered.length, limit);
+  } catch (error) {
+    return 0;
+  }
+}
+
+function getPlanning3dVisualStateSnapshot() {
+  const canvas = dom.planning3dMap?.querySelector(".maplibregl-canvas");
+  const canvasWidth = canvas?.width || canvas?.clientWidth || 0;
+  const canvasHeight = canvas?.height || canvas?.clientHeight || 0;
+  const svgCount = planning3dState.svgOverlay?.querySelectorAll?.(".planning-3d-svg-building")?.length || 0;
+  const domMarkerCount = getPlanning3dVisibleDomMarkerCount();
+  const footprintCount = getPlanning3dVisibleFootprintCount();
+  const visibleSceneCount = Math.max(svgCount, domMarkerCount, footprintCount);
+  return {
+    canvasReady: canvasWidth > 0 && canvasHeight > 0,
+    canvasWidth,
+    canvasHeight,
+    svgCount,
+    domMarkerCount,
+    footprintCount,
+    visibleSceneCount,
+  };
+}
+
+function schedulePlanning3dVisualRecovery() {
+  if (!planning3dState.modalOpen || planning3dState.visualReady) {
+    clearPlanning3dVisualRecoveryTimers();
+    return;
+  }
+  if (planning3dState.visualRecoveryTimers.length) {
+    return;
+  }
+
+  planning3dState.visualRecoveryTimers = [260, 920, 1680].map((delay) => window.setTimeout(() => {
+    if (!planning3dState.modalOpen || planning3dState.visualReady) {
+      return;
+    }
+    planning3dState.forceVisualFallback = true;
+    syncPlanning3dLayerVisibility();
+    renderPlanning3dSvgScene();
+    renderPlanning3dDomMarkers();
+    stabilizePlanning3dViewport({ focus: delay >= 920 });
+    refreshPlanning3dVisualState({ allowRecovery: false, updateSummary: true });
+  }, delay));
+}
+
+function refreshPlanning3dVisualState({ allowRecovery = true, updateSummary = false } = {}) {
+  const buildingCount = planning3dState.sourceData.buildings?.features?.length || 0;
+  const snapshot = getPlanning3dVisualStateSnapshot();
+  const visualReady = !buildingCount || (snapshot.canvasReady && snapshot.visibleSceneCount > 0);
+
+  planning3dState.visualSnapshot = snapshot;
+  planning3dState.visualReady = visualReady;
+
+  if (visualReady) {
+    clearPlanning3dVisualRecoveryTimers();
+  } else if (allowRecovery && buildingCount && planning3dState.modalOpen) {
+    planning3dState.forceVisualFallback = true;
+    schedulePlanning3dVisualRecovery();
+  }
+
+  if (updateSummary) {
+    renderPlanning3dSummary();
+  }
+
+  return snapshot;
+}
+
 function renderPlanningModule() {
   const imageryProfile = getPlanningImageryProfile();
   const areaProfile = getTerritorialAreaProfile();
+  renderAiGeoModule();
   renderPlanningVariableMatrix();
   renderFodaCameModule();
   renderLandChangeModule();
@@ -14841,6 +15013,12 @@ function renderPlanningModule() {
   if (dom.clearFieldEvidenceBtn) {
     dom.clearFieldEvidenceBtn.disabled = !state.fieldEvidenceData;
   }
+  if (dom.focusAiGeoBtn) {
+    dom.focusAiGeoBtn.disabled = !getAiGeoRenderableFocusFeatures().length;
+  }
+  if (dom.clearAiGeoBtn) {
+    dom.clearAiGeoBtn.disabled = !state.aiGeoData;
+  }
   if (dom.planningSourceNote) {
     setTextIfChanged(dom.planningSourceNote, `${imageryProfile.label}: ${imageryProfile.useCopy} Resolucion ${imageryProfile.spatialLabel} y frecuencia ${imageryProfile.temporalLabel}. La corrida actual esta enfocada en ${areaProfile.scopeLabel} y el visor 3D puede saltar a este mismo nucleo para leer volumenes, calles y sombras con mas limpieza.`);
   }
@@ -14907,6 +15085,1062 @@ function renderFodaCameModule() {
   renderFodaCameSwot(analysis);
   renderFodaCameStrategies(analysis);
   renderFodaCameLayout(analysis);
+}
+
+function getAiGeoCurrentMode() {
+  return isTerritorialRoute() ? "territorial" : "agronomia";
+}
+
+function isAiGeoModeCompatible(analysis = state.aiGeoData, mode = getAiGeoCurrentMode()) {
+  return !!analysis && analysis.mode === mode;
+}
+
+function getAiGeoRenderableFocusFeatures(analysis = state.aiGeoData) {
+  if (!isAiGeoModeCompatible(analysis)) {
+    return [];
+  }
+  return Array.isArray(analysis.focusTargets)
+    ? analysis.focusTargets.filter((item) => item?.feature?.geometry)
+    : [];
+}
+
+async function runAiGeoAnalysis(silent = false) {
+  try {
+    const analysis = await buildAiGeoAnalysis({ silent });
+    state.aiGeoData = analysis;
+    state.aiGeoHighlightId = analysis.focusTargets[0]?.id || null;
+    if (analysis.mode === "territorial") {
+      state.territorialFocus = "aiGeo";
+    }
+    renderAiGeoModule();
+    renderAiGeoOverlay(analysis);
+    renderTerritorialDecisionSupport();
+    updateMapSummary();
+    if (!silent) {
+      setStatus(
+        analysis.mode === "territorial"
+          ? `IA territorial lista para ${analysis.context.scopeLabel}: ${analysis.summary.dominantClassLabel.toLowerCase()} como lectura dominante, ${analysis.summary.changeHotspotCount} hotspots y ${analysis.summary.alertCount} alertas visibles en mapa.`
+          : `IA agronomica lista para ${analysis.context.scopeLabel}: ${analysis.summary.dominantClassLabel.toLowerCase()} como patron dominante, ${analysis.summary.changeHotspotCount} cambios y ${analysis.summary.alertCount} alertas operativas visibles.`
+      );
+    }
+    return analysis;
+  } catch (error) {
+    console.warn("Fallo el modulo IA del geoportal.", error);
+    state.aiGeoData = null;
+    state.aiGeoHighlightId = null;
+    clearAiGeoOverlay();
+    renderAiGeoModule();
+    renderTerritorialDecisionSupport();
+    updateMapSummary();
+    if (!silent) {
+      setStatus(`Modulo IA: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    return null;
+  }
+}
+
+async function buildAiGeoAnalysis({ silent = false } = {}) {
+  return isTerritorialRoute()
+    ? buildTerritorialAiGeoAnalysis({ silent })
+    : buildAgronomyAiGeoAnalysis({ silent });
+}
+
+async function buildAgronomyAiGeoAnalysis({ silent = false } = {}) {
+  const image = ensureModuleSceneContext("IA Geo", true);
+  if (!image) {
+    throw new Error("no hay escena disponible para construir la clasificacion IA");
+  }
+
+  if (!getRenderableAnalysis(image)) {
+    await refreshActiveAnalysis({ silent: true });
+  }
+
+  const analysis = getRenderableAnalysis(image) || buildLocalAnalysis(image, buildAnalysisContext(image));
+  const compareImage = getCompareImage();
+  const changeAnalysis = getRenderableChangeAnalysis(image, compareImage);
+  const focusIndex = getFocusIndexKey(image);
+  const moistureIndex = getMoistureIndexKey(image) || focusIndex;
+  const focusConfig = indexConfig[focusIndex];
+  const moistureConfig = indexConfig[moistureIndex] || focusConfig;
+  const supportedIndices = getSupportedIndexKeys(image);
+  const classificationFeatures = [];
+  const changeFeatures = [];
+  const alertFeatures = [];
+  const classStats = new Map();
+  const focusTargets = [];
+
+  (analysis.surface?.features || []).forEach((feature, index) => {
+    const props = feature.properties || {};
+    const focusValue = Number(props[focusIndex]);
+    const moistureValue = Number(props[moistureIndex]);
+    const focusScore = normalizeMetricValue(Number.isFinite(focusValue) ? focusValue : analysis.summary[focusIndex]?.mean || 0, focusConfig);
+    const moistureScore = normalizeMetricValue(Number.isFinite(moistureValue) ? moistureValue : analysis.summary[moistureIndex]?.mean || 0, moistureConfig);
+    const changeFeature = changeAnalysis?.surface?.features?.[index] || null;
+    const changeValue = Number(changeFeature?.properties?.[focusIndex] || 0);
+    const hasStrongChange = Math.abs(changeValue) >= Math.max((focusConfig.max - focusConfig.min) * 0.08, 0.03);
+    const changeDirection = changeFeature?.properties?.zone || (hasStrongChange ? (changeValue >= 0 ? "improve" : "decline") : "stable");
+    const meanSupport = supportedIndices.reduce((sum, indexKey) => {
+      const metric = Number(props[indexKey]);
+      const config = indexConfig[indexKey];
+      return sum + normalizeMetricValue(Number.isFinite(metric) ? metric : analysis.summary[indexKey]?.mean || 0, config);
+    }, 0) / Math.max(supportedIndices.length, 1);
+
+    let classId = "manejo_variable";
+    let label = "Manejo variable";
+    let tone = "watch";
+    let summary = "El pixel requiere manejo diferenciado y seguimiento de apoyo.";
+    let severity = 48;
+
+    if ((changeDirection === "decline" && focusScore < 0.54) || (focusScore < 0.36 && moistureScore < 0.4)) {
+      classId = "estres_hidrico";
+      label = "Estres hidrico";
+      tone = "critical";
+      summary = "Caida de vigor y humedad compatible con estres hidrico o presion fisiologica.";
+      severity = 86;
+    } else if (changeDirection === "improve" && focusScore >= 0.54) {
+      classId = "recuperacion_activa";
+      label = "Recuperacion activa";
+      tone = "good";
+      summary = "La serie muestra recuperacion reciente del dosel o mejora de la condicion del lote.";
+      severity = 63;
+    } else if (focusScore >= 0.72 && moistureScore >= 0.52) {
+      classId = "vigor_alto";
+      label = "Vigor alto";
+      tone = "good";
+      summary = "Respuesta espectral estable con vigor y soporte hidrico favorables.";
+      severity = 28;
+    } else if (focusScore < 0.5 || meanSupport < 0.46) {
+      classId = "seguimiento_focal";
+      label = "Seguimiento focal";
+      tone = "watch";
+      summary = "El lote pide recorrido puntual para confirmar limitantes locales o heterogeneidad interna.";
+      severity = 58;
+    }
+
+    const featureClone = cloneFeature(feature);
+    const areaHa = turf.area(featureClone) / 10000;
+    const focusId = `ai-agro-${index + 1}`;
+    featureClone.properties = {
+      ...(featureClone.properties || {}),
+      aiGeoMode: "agronomia",
+      aiGeoClassId: classId,
+      aiGeoClassLabel: label,
+      aiGeoSeverity: severity,
+      aiGeoTone: tone,
+      aiGeoSummary: summary,
+      aiGeoFocusId: focusId,
+      aiGeoIndexLabel: focusConfig.label,
+      aiGeoFocusValue: Number.isFinite(focusValue) ? focusValue : analysis.summary[focusIndex]?.mean || 0,
+      aiGeoMoistureValue: Number.isFinite(moistureValue) ? moistureValue : analysis.summary[moistureIndex]?.mean || 0,
+      aiGeoAreaHa: Number(areaHa.toFixed(2)),
+      aiGeoChangeDirection: changeDirection,
+      aiGeoChangeValue: Number(changeValue.toFixed(3)),
+    };
+    classificationFeatures.push(featureClone);
+
+    const current = classStats.get(classId) || {
+      id: classId,
+      label,
+      tone,
+      count: 0,
+      areaHa: 0,
+      maxSeverity: 0,
+    };
+    current.count += 1;
+    current.areaHa += areaHa;
+    current.maxSeverity = Math.max(current.maxSeverity, severity);
+    classStats.set(classId, current);
+
+    if (hasStrongChange || classId === "estres_hidrico" || classId === "recuperacion_activa") {
+      const changeClone = cloneFeature(changeFeature?.geometry ? changeFeature : featureClone);
+      changeClone.properties = {
+        ...(changeClone.properties || {}),
+        aiGeoMode: "agronomia",
+        aiGeoChangeKind: changeDirection === "improve"
+          ? "mejora"
+          : changeDirection === "decline"
+            ? "descenso"
+            : classId === "estres_hidrico"
+              ? "anomalia"
+              : "variacion",
+        aiGeoChangeLabel: changeDirection === "improve"
+          ? "Mejora reciente"
+          : changeDirection === "decline"
+            ? "Descenso reciente"
+            : classId === "estres_hidrico"
+              ? "Anomalia persistente"
+              : "Variacion focal",
+        aiGeoSummary: summary,
+        aiGeoTone: changeDirection === "decline" || classId === "estres_hidrico" ? "critical" : "watch",
+        aiGeoFocusId: `${focusId}-change`,
+        aiGeoSeverity: clamp(severity + (hasStrongChange ? 8 : 0), 0, 100),
+      };
+      changeFeatures.push(changeClone);
+    }
+
+    if (tone !== "good" || hasStrongChange) {
+      const centroid = turf.centroid(featureClone).geometry.coordinates;
+      const alertFeature = pointFeature(label, centroid, {
+        aiGeoMode: "agronomia",
+        aiGeoAlertKind: tone === "critical" ? "critica" : "seguimiento",
+        aiGeoAlertLabel: tone === "critical" ? "Alerta critica" : "Alerta de seguimiento",
+        aiGeoSummary: summary,
+        aiGeoTone: tone === "critical" ? "critical" : "watch",
+        aiGeoFocusId: `${focusId}-alert`,
+        aiGeoSeverity: clamp(severity + (hasStrongChange ? 10 : 0), 0, 100),
+        aiGeoSourceClassLabel: label,
+        aiGeoMetric: `${focusConfig.label} ${formatValue(featureClone.properties.aiGeoFocusValue, focusConfig)}`,
+      });
+      alertFeatures.push(alertFeature);
+    }
+  });
+
+  const sortedClasses = [...classStats.values()].sort((left, right) => right.areaHa - left.areaHa);
+  const dominantClass = sortedClasses[0] || {
+    id: "manejo_variable",
+    label: "Manejo variable",
+    tone: "watch",
+    count: 0,
+    areaHa: 0,
+  };
+  const topChanges = changeFeatures
+    .slice()
+    .sort((left, right) => (Number(right.properties?.aiGeoSeverity || 0) - Number(left.properties?.aiGeoSeverity || 0)))
+    .slice(0, 6);
+  const topAlerts = alertFeatures
+    .slice()
+    .sort((left, right) => (Number(right.properties?.aiGeoSeverity || 0) - Number(left.properties?.aiGeoSeverity || 0)))
+    .slice(0, 6);
+
+  topChanges.forEach((feature, index) => {
+    focusTargets.push({
+      id: feature.properties?.aiGeoFocusId || `ai-agro-change-${index + 1}`,
+      title: feature.properties?.aiGeoChangeLabel || "Cambio IA",
+      module: "Cambio",
+      tone: feature.properties?.aiGeoTone || "watch",
+      copy: feature.properties?.aiGeoSummary || "Cambio detectado por la IA sobre la escena agronomica activa.",
+      metric: feature.properties?.aiGeoChangeKind || "variacion",
+      feature,
+    });
+  });
+  topAlerts.forEach((feature, index) => {
+    focusTargets.push({
+      id: feature.properties?.aiGeoFocusId || `ai-agro-alert-${index + 1}`,
+      title: feature.properties?.aiGeoAlertLabel || "Alerta IA",
+      module: "Alerta",
+      tone: feature.properties?.aiGeoTone || "watch",
+      copy: feature.properties?.aiGeoSummary || "Alerta derivada de la escena agronomica activa.",
+      metric: feature.properties?.aiGeoMetric || focusConfig.label,
+      feature,
+    });
+  });
+
+  const confidenceScore = clamp(
+    Math.round(
+      (analysis.quality?.confidenceScore || 66) * 0.74
+      + (compareImage && changeAnalysis ? 12 : 0)
+      + (sortedClasses.length >= 3 ? 6 : 0)
+      + (analysis.quality?.coveragePct || 70) * 0.08
+    ),
+    42,
+    99
+  );
+  const stableAreaHa = sortedClasses
+    .filter((item) => item.id === "vigor_alto" || item.id === "recuperacion_activa")
+    .reduce((sum, item) => sum + item.areaHa, 0);
+  const riskAreaHa = sortedClasses
+    .filter((item) => item.id === "estres_hidrico" || item.id === "seguimiento_focal")
+    .reduce((sum, item) => sum + item.areaHa, 0);
+  const summary = {
+    dominantClassId: dominantClass.id,
+    dominantClassLabel: dominantClass.label,
+    dominantTone: dominantClass.tone,
+    confidenceScore,
+    classifiedZoneCount: classificationFeatures.length,
+    changeHotspotCount: topChanges.length,
+    alertCount: topAlerts.length,
+    stableAreaHa: Number(stableAreaHa.toFixed(1)),
+    riskAreaHa: Number(riskAreaHa.toFixed(1)),
+    supportLabel: compareImage && changeAnalysis ? "Comparativa temporal" : "Lectura monocorte",
+    automationLabel: silent ? "Autoasistido" : "Guiado por usuario",
+  };
+  const layers = [
+    { label: `${getSensorForImage(image).label} activo`, tone: "analysis" },
+    { label: focusConfig.label, tone: "neutral" },
+    { label: moistureConfig.label, tone: "neutral" },
+    { label: summary.supportLabel, tone: "neutral" },
+    { label: `${analysis.quality?.coveragePct || 0}% cobertura`, tone: "neutral" },
+    { label: summary.automationLabel, tone: "neutral" },
+  ];
+  const metrics = [
+    {
+      label: "Clasificacion dominante",
+      value: dominantClass.label,
+      copy: `${dominantClass.count} celdas y ${dominantClass.areaHa.toFixed(1)} ha bajo este patron dominante.`,
+      highlight: true,
+    },
+    {
+      label: "Confianza IA",
+      value: `${confidenceScore}/100`,
+      copy: `${analysis.quality?.coveragePct || 0}% de cobertura util con ${summary.supportLabel.toLowerCase()}.`,
+    },
+    {
+      label: "Hotspots de cambio",
+      value: `${summary.changeHotspotCount}`,
+      copy: compareImage && changeAnalysis
+        ? `Comparacion temporal entre ${image.date} y ${compareImage.date}.`
+        : "La IA levanta anomalias internas aun sin una segunda escena activa.",
+    },
+    {
+      label: "Alertas inteligentes",
+      value: `${summary.alertCount}`,
+      copy: `${summary.riskAreaHa.toFixed(1)} ha bajo seguimiento o alerta critica.`,
+    },
+    {
+      label: "Area estable",
+      value: `${summary.stableAreaHa.toFixed(1)} ha`,
+      copy: "Superficie que se comporta con vigor favorable o recuperacion activa.",
+    },
+    {
+      label: "Siguiente paso",
+      value: dominantClass.id === "estres_hidrico" ? "Ir a clima + relieve" : "Validar en lote",
+      copy: dominantClass.id === "estres_hidrico"
+        ? "La IA recomienda revisar humedad, lluvia reciente y drenaje sobre los hotspots marcados."
+        : "La IA recomienda contrastar las zonas marcadas con recorrido de campo o fotografia puntual.",
+    },
+  ];
+  const signals = focusTargets.slice(0, 6);
+  const interpretation = {
+    title: `Asistente IA sobre ${analysis.context.scopeLabel}`,
+    interpretation: dominantClass.id === "vigor_alto"
+      ? "La lectura dominante apunta a un lote con respuesta espectral favorable y sectores recuperados que merecen continuidad de manejo."
+      : dominantClass.id === "estres_hidrico"
+        ? "La lectura dominante muestra presion sobre vigor y humedad. La IA detecta sectores que conviene revisar antes de tomar decisiones de riego o cosecha."
+        : "La lectura dominante muestra heterogeneidad interna. Conviene separar zonas estables de zonas con seguimiento focal para no sobrerreaccionar en todo el lote.",
+    conclusion: `La corrida IA consolida ${summary.classifiedZoneCount} celdas operativas, ${summary.changeHotspotCount} cambios relevantes y ${summary.alertCount} alertas sobre ${analysis.context.scopeLabel}.`,
+    recommendation: summary.alertCount >= 4
+      ? "Prioriza visita de campo sobre los puntos criticos, compara con la escena temporal y confirma drenaje, vigor o compactacion antes de intervenir todo el lote."
+      : "Usa esta clasificacion como guia de microzonas: valida los puntos marcados y luego afina labores de riego, nutricion o seguimiento sanitario.",
+    nextStep: compareImage && changeAnalysis
+      ? "Puedes alternar a modo cambio, abrir el asistente agricola y cruzar el hallazgo con clima e INAMHI."
+      : "Activa una segunda escena para reforzar la deteccion de cambios o abre el asistente agricola para continuar la secuencia.",
+    exportLabel: "Resumen IA + mapa operativo",
+    automation: [
+      "Si no habia escena activa, la IA tomo una escena disponible del catalogo sin bloquear al usuario.",
+      "Si faltaba analisis base, se recalculo en segundo plano antes de clasificar.",
+      compareImage && changeAnalysis
+        ? "La comparacion temporal se incorporo automaticamente a los hotspots."
+        : "La lectura funciona aun con una sola escena activa y luego puede enriquecerse con comparativa temporal.",
+    ],
+  };
+
+  return {
+    id: `ai-geo-agro-${image.id}`,
+    mode: "agronomia",
+    route: state.entryRoute,
+    context: analysis.context,
+    image,
+    compareImage,
+    focusIndex,
+    moistureIndex,
+    summary,
+    metrics,
+    layers,
+    signals,
+    interpretation,
+    focusTargets,
+    classificationCollection: {
+      type: "FeatureCollection",
+      features: classificationFeatures,
+    },
+    changeCollection: {
+      type: "FeatureCollection",
+      features: topChanges,
+    },
+    alertCollection: {
+      type: "FeatureCollection",
+      features: topAlerts,
+    },
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+async function buildTerritorialAiGeoAnalysis({ silent = false } = {}) {
+  if (!state.planningData) {
+    await runPlanningAnalysis(true);
+  }
+  if (!state.landChangeData) {
+    await runLandChangeAnalysis(true);
+  }
+  if (!state.hydrologyData) {
+    await runHydrologyAnalysis(true);
+  }
+  if (!state.fieldEvidenceData) {
+    await runFieldEvidenceAnalysis(true);
+  }
+
+  const planning = state.planningData;
+  const landChange = state.landChangeData;
+  const hydrology = state.hydrologyData;
+  const fieldEvidence = state.fieldEvidenceData;
+  if (!planning?.surface?.features?.length) {
+    throw new Error("no hay superficie territorial disponible para construir el analisis IA");
+  }
+
+  const planning3dProfile = getPlanning3dAreaProfile(getTerritorialAreaProfile().planning3dAreaId || planning3dState.areaId);
+  const evidenceProfiles = getTerritorialEvidenceProfiles(planning.context.feature);
+  const classificationFeatures = [];
+  const changeFeatures = [];
+  const alertFeatures = [];
+  const classStats = new Map();
+  const focusTargets = [];
+
+  planning.surface.features.forEach((feature, index) => {
+    const props = feature.properties || {};
+    const landHotspot = landChange?.prioritySectors?.find((sector) => safeBooleanIntersects(feature, sector.feature)) || null;
+    const hydrologySector = hydrology?.prioritySectors?.find((sector) => safeBooleanIntersects(feature, sector.feature)) || null;
+    const evidenceImpact = computeTerritorialEvidenceImpact(feature, evidenceProfiles, {
+      stationDistanceKm: 3.8,
+      historyDistanceKm: 3.4,
+    });
+    const accessScore = Number(props.accessScore || 0);
+    const serviceScore = Number(props.serviceScore || 0);
+    const resilienceScore = Number(props.resilienceScore || 0);
+    const growthScore = Number(props.growthScore || 0);
+    const landScore = Number(props.landScore || 0);
+    const sensitiveScore = Number(props.sensitivePenaltyScore || 0);
+    const threatScore = clamp(
+      Math.max(
+        100 - resilienceScore,
+        landHotspot?.score || 0,
+        hydrologySector?.stressScore || 0,
+        sensitiveScore * 4.2,
+        evidenceImpact.riskBoost * 100
+      ),
+      0,
+      100
+    );
+    const socialGapScore = clamp(
+      ((100 - accessScore) * 0.46)
+      + ((100 - serviceScore) * 0.34)
+      + (sensitiveScore * 1.3)
+      + (evidenceImpact.stationSupport < 0.12 ? 8 : 0),
+      0,
+      100
+    );
+    const growthOpportunityScore = clamp(
+      growthScore * 0.42
+      + landScore * 0.22
+      + accessScore * 0.16
+      + serviceScore * 0.08
+      + evidenceImpact.supportScore * 0.12
+      - threatScore * 0.14,
+      0,
+      100
+    );
+    const consolidationScore = clamp(
+      accessScore * 0.28
+      + serviceScore * 0.24
+      + resilienceScore * 0.22
+      + landScore * 0.12
+      + evidenceImpact.supportScore * 0.14,
+      0,
+      100
+    );
+
+    let classId = "monitoreo_activo";
+    let label = "Monitoreo activo";
+    let tone = "watch";
+    let summary = "La celda necesita lectura de seguimiento antes de consolidar una accion mayor.";
+    let severity = 56;
+
+    if (threatScore >= 70 || sensitiveScore >= 18 || evidenceImpact.sensitiveCount >= 1) {
+      classId = "proteccion_preventiva";
+      label = "Proteccion preventiva";
+      tone = "critical";
+      summary = "La IA recomienda contencion, resguardo o proteccion previa por riesgo, sensibilidad o tension hidrica.";
+      severity = 92;
+    } else if (socialGapScore >= 62) {
+      classId = "intervencion_social";
+      label = "Intervencion social";
+      tone = "watch";
+      summary = "La IA detecta brecha de acceso o servicios; conviene implantar equipamiento o corregir conectividad antes de densificar.";
+      severity = 74;
+    } else if (growthOpportunityScore >= 60 && landScore >= 52) {
+      classId = "expansion_vigilada";
+      label = "Expansion vigilada";
+      tone = "good";
+      summary = "La celda muestra potencial de crecimiento, pero con vigilancia para no adelantar presiones o deficit futuros.";
+      severity = 46;
+    } else if (consolidationScore >= 62) {
+      classId = "consolidacion_inteligente";
+      label = "Consolidacion inteligente";
+      tone = "good";
+      summary = "La IA sugiere consolidar tejido urbano y servicios donde ya existe soporte funcional y resiliencia.";
+      severity = 24;
+    }
+
+    const featureClone = cloneFeature(feature);
+    const areaHa = turf.area(featureClone) / 10000;
+    const focusId = `ai-territory-${index + 1}`;
+    featureClone.properties = {
+      ...(featureClone.properties || {}),
+      aiGeoMode: "territorial",
+      aiGeoClassId: classId,
+      aiGeoClassLabel: label,
+      aiGeoTone: tone,
+      aiGeoSeverity: severity,
+      aiGeoSummary: summary,
+      aiGeoFocusId: focusId,
+      aiGeoAreaHa: Number(areaHa.toFixed(2)),
+      aiGeoThreatScore: Math.round(threatScore),
+      aiGeoSocialGapScore: Math.round(socialGapScore),
+      aiGeoGrowthOpportunity: Math.round(growthOpportunityScore),
+      aiGeoConsolidationScore: Math.round(consolidationScore),
+      aiGeoEvidenceSupport: Math.round(evidenceImpact.supportScore),
+    };
+    classificationFeatures.push(featureClone);
+
+    const current = classStats.get(classId) || {
+      id: classId,
+      label,
+      tone,
+      count: 0,
+      areaHa: 0,
+      maxSeverity: 0,
+    };
+    current.count += 1;
+    current.areaHa += areaHa;
+    current.maxSeverity = Math.max(current.maxSeverity, severity);
+    classStats.set(classId, current);
+  });
+
+  (landChange?.prioritySectors || []).slice(0, 6).forEach((sector, index) => {
+    const feature = cloneFeature(sector.feature);
+    feature.properties = {
+      ...(feature.properties || {}),
+      aiGeoMode: "territorial",
+      aiGeoChangeKind: "huella_urbana",
+      aiGeoChangeLabel: sector.pressureLabel,
+      aiGeoTone: sector.score >= 74 ? "critical" : "watch",
+      aiGeoSeverity: sector.score,
+      aiGeoSummary: sector.summary,
+      aiGeoFocusId: `ai-territory-change-${index + 1}`,
+    };
+    changeFeatures.push(feature);
+    focusTargets.push({
+      id: feature.properties.aiGeoFocusId,
+      title: `${sector.name}: ${sector.pressureLabel}`,
+      module: "Cambio",
+      tone: feature.properties.aiGeoTone,
+      copy: sector.summary,
+      metric: `${formatLandChangeHa(sector.transformedHa)} ha`,
+      feature,
+    });
+  });
+
+  (hydrology?.prioritySectors || []).slice(0, 4).forEach((sector, index) => {
+    const feature = pointFeature(sector.name, sector.centroid, {
+      aiGeoMode: "territorial",
+      aiGeoAlertKind: sector.balanceHm3 < 0 ? "critica" : "seguimiento",
+      aiGeoAlertLabel: sector.balanceHm3 < 0 ? "Alerta hidrica critica" : "Alerta hidrica de seguimiento",
+      aiGeoTone: sector.balanceHm3 < 0 ? "critical" : "watch",
+      aiGeoSeverity: Math.max(sector.droughtRisk || 0, sector.floodRisk || 0, sector.stressScore || 0),
+      aiGeoSummary: sector.summary,
+      aiGeoFocusId: `ai-territory-alert-${index + 1}`,
+      aiGeoMetric: `${sector.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(sector.balanceHm3)} hm3`,
+    });
+    alertFeatures.push(feature);
+    focusTargets.push({
+      id: feature.properties.aiGeoFocusId,
+      title: `${sector.name}: ${feature.properties.aiGeoAlertLabel}`,
+      module: "Alerta",
+      tone: feature.properties.aiGeoTone,
+      copy: sector.summary,
+      metric: feature.properties.aiGeoMetric,
+      feature,
+    });
+  });
+
+  if (planning.candidates?.length) {
+    const candidate = planning.candidates[0];
+    focusTargets.push({
+      id: "ai-territory-3d-ready",
+      title: "Verificacion 3D lista",
+      module: "3D",
+      tone: "good",
+      copy: `El visor 3D puede validar volumen, asoleamiento y catastro sobre ${candidate.title} con base en ${planning3dProfile.label}.`,
+      metric: `${formatPlanning3dCount(planning3dProfile.buildingsCount)} constr.`,
+      feature: cloneFeature(candidate.feature),
+    });
+  }
+
+  const sortedClasses = [...classStats.values()].sort((left, right) => right.areaHa - left.areaHa);
+  const dominantClass = sortedClasses[0] || {
+    id: "monitoreo_activo",
+    label: "Monitoreo activo",
+    tone: "watch",
+    count: 0,
+    areaHa: 0,
+  };
+  const supportRatio = [
+    Boolean(planning?.surface?.features?.length),
+    Boolean(landChange?.prioritySectors?.length),
+    Boolean(hydrology?.prioritySectors?.length),
+    Boolean(fieldEvidence?.summary),
+  ].filter(Boolean).length / 4;
+  const confidenceScore = clamp(
+    Math.round(
+      58
+      + supportRatio * 24
+      + Math.min(fieldEvidence?.summary?.supportScore || 0, 88) * 0.12
+      + Math.min(planning3dProfile.buildingsCount / 300, 10)
+    ),
+    52,
+    98
+  );
+  const protectedAreaHa = sortedClasses
+    .filter((item) => item.id === "proteccion_preventiva")
+    .reduce((sum, item) => sum + item.areaHa, 0);
+  const interventionAreaHa = sortedClasses
+    .filter((item) => item.id === "intervencion_social" || item.id === "expansion_vigilada")
+    .reduce((sum, item) => sum + item.areaHa, 0);
+  const summary = {
+    dominantClassId: dominantClass.id,
+    dominantClassLabel: dominantClass.label,
+    dominantTone: dominantClass.tone,
+    confidenceScore,
+    classifiedZoneCount: classificationFeatures.length,
+    changeHotspotCount: changeFeatures.length,
+    alertCount: alertFeatures.length,
+    protectedAreaHa: Number(protectedAreaHa.toFixed(1)),
+    interventionAreaHa: Number(interventionAreaHa.toFixed(1)),
+    buildings3dCount: planning3dProfile.buildingsCount,
+    parcels3dCount: planning3dProfile.parcelsCount,
+    supportLabel: `${fieldEvidence?.summary?.supportLabel || "Soporte territorial"} + 3D`,
+    automationLabel: silent ? "Autoasistido" : "Secuencia guiada",
+  };
+  const layers = [
+    { label: planning.imageryProfile.shortLabel, tone: "analysis" },
+    { label: landChange.period.shortLabel, tone: "neutral" },
+    { label: hydrology.climate.shortLabel, tone: "neutral" },
+    { label: `${fieldEvidence.summary.stationCount} estaciones`, tone: "neutral" },
+    { label: `${formatPlanning3dCount(planning3dProfile.buildingsCount)} constr. 3D`, tone: "neutral" },
+    { label: summary.automationLabel, tone: "neutral" },
+  ];
+  const metrics = [
+    {
+      label: "Clase dominante IA",
+      value: dominantClass.label,
+      copy: `${dominantClass.count} zonas y ${dominantClass.areaHa.toFixed(1)} ha bajo esta lectura prioritaria.`,
+      highlight: true,
+    },
+    {
+      label: "Confianza IA",
+      value: `${confidenceScore}/100`,
+      copy: `${summary.supportLabel} con cruce de aptitud, huella, hidrologia, campo y respaldo 3D.`,
+    },
+    {
+      label: "Hotspots de cambio",
+      value: `${summary.changeHotspotCount}`,
+      copy: "La IA reusa la lectura de huella urbana y sectores en tension para marcar frentes de vigilancia.",
+    },
+    {
+      label: "Alertas inteligentes",
+      value: `${summary.alertCount}`,
+      copy: `${summary.protectedAreaHa.toFixed(1)} ha con proteccion preventiva o tension hidrica elevada.`,
+    },
+    {
+      label: "Verificacion 3D",
+      value: `${formatPlanning3dCount(summary.buildings3dCount)}`,
+      copy: `${formatPlanning3dCount(summary.parcels3dCount)} predios listos para contraste visual en ${planning3dProfile.label}.`,
+    },
+    {
+      label: "Siguiente paso",
+      value: dominantClass.id === "proteccion_preventiva" ? "Contener y verificar" : "Consolidar y afinar",
+      copy: dominantClass.id === "proteccion_preventiva"
+        ? "La IA recomienda abrir visor 3D, revisar sombras y contrastar con seguridad hidrica antes de habilitar ocupacion."
+        : "La IA recomienda revisar candidatos, cobertura y luego validar la morfologia urbana en el visor 3D.",
+    },
+  ];
+  const signals = focusTargets.slice(0, 7);
+  const interpretation = {
+    title: `Asistente IA territorial sobre ${planning.context.scopeLabel}`,
+    interpretation: dominantClass.id === "proteccion_preventiva"
+      ? "La IA detecta un territorio donde la proteccion y el control deben anteceder al crecimiento. Riesgo, sensibilidad y tension hidrica pesan mas que la oportunidad inmediata."
+      : dominantClass.id === "consolidacion_inteligente"
+        ? "La IA encuentra una base territorial consolidable: acceso, servicios y resiliencia permiten pensar en densificacion o equipamiento con menor friccion."
+        : "La IA encuentra un territorio mixto: hay oportunidades, pero requieren secuencia de implantacion, cierre de brechas y lectura fina antes de habilitar nuevo suelo.",
+    conclusion: `La corrida IA consolida ${summary.classifiedZoneCount} zonas, ${summary.changeHotspotCount} hotspots de cambio y ${summary.alertCount} alertas sobre ${planning.context.scopeLabel}.`,
+    recommendation: dominantClass.id === "proteccion_preventiva"
+      ? "Prioriza proteccion preventiva, control de franjas sensibles y verificacion 3D puntual antes de promover nueva ocupacion o consolidar suelo."
+      : "Usa esta salida para ordenar la siguiente decision: consolidar, expandir con vigilancia o corregir acceso/servicios antes de pasar a obra o licencia.",
+    nextStep: "Puedes centrar los hallazgos, abrir el visor 3D, exportar el resumen territorial o ejecutar FODA + CAME para traducir esta lectura a estrategia.",
+    exportLabel: "Mapa IA + tablero territorial",
+    automation: [
+      "Si faltaba aptitud territorial, la IA disparo la corrida en segundo plano antes de clasificar.",
+      "Si faltaban huella urbana, hidrologia o evidencia de campo, el sistema completo esos insumos automaticamente.",
+      `La verificacion 3D queda enlazada con ${planning3dProfile.label} para revisar ${formatPlanning3dCount(planning3dProfile.buildingsCount)} construcciones reales.`,
+    ],
+  };
+
+  return {
+    id: `ai-geo-territory-${planning.context.targetKey}`,
+    mode: "territorial",
+    route: state.entryRoute,
+    context: planning.context,
+    summary,
+    metrics,
+    layers,
+    signals,
+    interpretation,
+    focusTargets,
+    classificationCollection: {
+      type: "FeatureCollection",
+      features: classificationFeatures,
+    },
+    changeCollection: {
+      type: "FeatureCollection",
+      features: changeFeatures,
+    },
+    alertCollection: {
+      type: "FeatureCollection",
+      features: alertFeatures,
+    },
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+function renderAiGeoModule() {
+  if (!dom.aiGeoResults) {
+    return;
+  }
+
+  const mode = getAiGeoCurrentMode();
+  const scopeLabel = mode === "territorial"
+    ? getTerritorialAreaProfile().scopeLabel
+    : getCurrentAgronomyScopeLabel();
+  const analysis = state.aiGeoData;
+  setDisabledIfChanged(dom.focusAiGeoBtn, !getAiGeoRenderableFocusFeatures(analysis).length);
+  setDisabledIfChanged(dom.clearAiGeoBtn, !analysis);
+
+  if (!analysis) {
+    resetMetricGrid(dom.aiGeoResults, `Ejecuta el modulo IA para construir clasificacion, cambios y alertas sobre ${scopeLabel}.`);
+    dom.aiGeoLayers?.classList.add("empty-state");
+    dom.aiGeoLayers?.classList.remove("has-data");
+    if (dom.aiGeoLayers) {
+      setTextIfChanged(dom.aiGeoLayers, mode === "territorial"
+        ? "Aqui apareceran aptitud, huella urbana, balance hidrico, evidencia de campo y soporte 3D usados por la IA."
+        : "Aqui apareceran sensor, indices activos, comparativa temporal y la automatizacion usada por la IA.");
+    }
+    dom.aiGeoSignals?.classList.add("empty-state");
+    dom.aiGeoSignals?.classList.remove("has-data");
+    if (dom.aiGeoSignals) {
+      setTextIfChanged(dom.aiGeoSignals, "Aqui apareceran hotspots, alertas y hallazgos que podras centrar directamente en el mapa.");
+    }
+    dom.aiGeoInterpretation?.classList.add("empty-state");
+    dom.aiGeoInterpretation?.classList.remove("has-data");
+    if (dom.aiGeoInterpretation) {
+      setTextIfChanged(dom.aiGeoInterpretation, "Aqui apareceran la interpretacion, conclusion, recomendacion y la automatizacion sugerida para la corrida IA.");
+    }
+    return;
+  }
+
+  if (!isAiGeoModeCompatible(analysis, mode)) {
+    resetMetricGrid(dom.aiGeoResults, `La ultima corrida IA fue ${analysis.mode === "territorial" ? "territorial" : "agronomica"}. Ejecuta de nuevo para construir la lectura IA sobre ${scopeLabel}.`);
+    dom.aiGeoLayers?.classList.add("empty-state");
+    dom.aiGeoLayers?.classList.remove("has-data");
+    if (dom.aiGeoLayers) {
+      setTextIfChanged(dom.aiGeoLayers, `Corrida previa guardada para ${analysis.context.scopeLabel}. El modulo queda listo para recalcular sobre la ruta actual sin perder el control del usuario.`);
+    }
+    dom.aiGeoSignals?.classList.add("empty-state");
+    dom.aiGeoSignals?.classList.remove("has-data");
+    if (dom.aiGeoSignals) {
+      setTextIfChanged(dom.aiGeoSignals, "Vuelve a ejecutar el modulo IA para activar hotspots y alertas compatibles con la ruta actual.");
+    }
+    dom.aiGeoInterpretation?.classList.add("empty-state");
+    dom.aiGeoInterpretation?.classList.remove("has-data");
+    if (dom.aiGeoInterpretation) {
+      setTextIfChanged(dom.aiGeoInterpretation, `La corrida previa sigue disponible para ${analysis.context.scopeLabel}, pero la vista actual necesita una nueva interpretacion IA.`);
+    }
+    return;
+  }
+
+  paintMetricGrid(dom.aiGeoResults, analysis.metrics || []);
+
+  if (dom.aiGeoLayers) {
+    dom.aiGeoLayers.classList.remove("empty-state");
+    dom.aiGeoLayers.classList.add("has-data");
+    setHtmlIfChanged(dom.aiGeoLayers, (analysis.layers || []).map((layer) => `
+      <span class="planning-pill emphasis" title="${escapeHtmlContent(layer.copy || layer.label)}">${escapeHtmlContent(layer.label)}</span>
+    `).join(""));
+  }
+
+  if (dom.aiGeoSignals) {
+    dom.aiGeoSignals.classList.remove("empty-state");
+    dom.aiGeoSignals.classList.add("has-data");
+    setHtmlIfChanged(dom.aiGeoSignals, (analysis.signals || []).map((signal) => `
+      <article class="territorial-alert-card tone-${signal.tone || "watch"}">
+        <div class="territorial-sector-head">
+          <div>
+            <p class="candidate-rank">${escapeHtmlContent(signal.module || "IA")}</p>
+            <h4>${escapeHtmlContent(signal.title || "Hallazgo IA")}</h4>
+          </div>
+          <span class="planning-pill emphasis">${escapeHtmlContent(signal.metric || "En lectura")}</span>
+        </div>
+        <p class="territorial-readout-copy">${escapeHtmlContent(signal.copy || "")}</p>
+        <button class="ghost-button" type="button" data-ai-geo-focus-id="${escapeHtmlContent(signal.id || "")}">Ver en mapa</button>
+      </article>
+    `).join(""));
+  }
+
+  if (dom.aiGeoInterpretation) {
+    dom.aiGeoInterpretation.classList.remove("empty-state");
+    dom.aiGeoInterpretation.classList.add("has-data");
+    setHtmlIfChanged(dom.aiGeoInterpretation, `
+      <article class="territorial-export-card">
+        <div class="territorial-export-head">
+          <div>
+            <p class="section-kicker">Asistente IA</p>
+            <h4>${escapeHtmlContent(analysis.interpretation.title)}</h4>
+          </div>
+          <span class="planning-pill emphasis">${escapeHtmlContent(analysis.interpretation.exportLabel || "Resumen IA")}</span>
+        </div>
+        <p class="territorial-readout-copy"><strong>Interpretacion:</strong> ${escapeHtmlContent(analysis.interpretation.interpretation)}</p>
+        <p class="territorial-readout-copy"><strong>Conclusion:</strong> ${escapeHtmlContent(analysis.interpretation.conclusion)}</p>
+        <p class="territorial-readout-copy"><strong>Recomendacion:</strong> ${escapeHtmlContent(analysis.interpretation.recommendation)}</p>
+        <p class="territorial-readout-copy"><strong>Siguiente paso:</strong> ${escapeHtmlContent(analysis.interpretation.nextStep)}</p>
+        <div class="territorial-export-pills">
+          ${(analysis.interpretation.automation || []).map((step) => `<span class="planning-pill emphasis">${escapeHtmlContent(step)}</span>`).join("")}
+        </div>
+      </article>
+    `);
+  }
+}
+
+function getAiGeoClassPalette(mode = "territorial", classId = "monitoreo_activo") {
+  const agronomyPalettes = {
+    vigor_alto: { stroke: "#2f7f5f", fill: "#79c596", dashArray: null },
+    recuperacion_activa: { stroke: "#b68f2f", fill: "#efd06c", dashArray: "8 6" },
+    manejo_variable: { stroke: "#4c8eab", fill: "#8fd9e0", dashArray: null },
+    seguimiento_focal: { stroke: "#bf6d35", fill: "#e4a36d", dashArray: "6 6" },
+    estres_hidrico: { stroke: "#a5544b", fill: "#d98f83", dashArray: "4 6" },
+  };
+  const territorialPalettes = {
+    consolidacion_inteligente: { stroke: "#2f7f5f", fill: "#7fc7a1", dashArray: null },
+    expansion_vigilada: { stroke: "#cb9440", fill: "#efc36b", dashArray: "8 6" },
+    intervencion_social: { stroke: "#bf6d35", fill: "#e4a36d", dashArray: "6 6" },
+    proteccion_preventiva: { stroke: "#a5544b", fill: "#d98f83", dashArray: "4 6" },
+    monitoreo_activo: { stroke: "#4c8eab", fill: "#8fd9e0", dashArray: "10 8" },
+  };
+  const catalog = mode === "agronomia" ? agronomyPalettes : territorialPalettes;
+  return catalog[classId] || catalog[Object.keys(catalog)[0]];
+}
+
+function clearAiGeoOverlay() {
+  if (!mapState.map) {
+    return;
+  }
+  if (mapState.aiGeoClassificationLayer) {
+    mapState.map.removeLayer(mapState.aiGeoClassificationLayer);
+    mapState.aiGeoClassificationLayer = null;
+  }
+  if (mapState.aiGeoChangeLayer) {
+    mapState.map.removeLayer(mapState.aiGeoChangeLayer);
+    mapState.aiGeoChangeLayer = null;
+  }
+  if (mapState.aiGeoAlertLayer) {
+    mapState.map.removeLayer(mapState.aiGeoAlertLayer);
+    mapState.aiGeoAlertLayer = null;
+  }
+}
+
+function bringAiGeoOverlayToFront() {
+  mapState.aiGeoClassificationLayer?.bringToFront?.();
+  mapState.aiGeoChangeLayer?.bringToFront?.();
+  mapState.aiGeoAlertLayer?.bringToFront?.();
+}
+
+function renderAiGeoOverlay(analysis = state.aiGeoData) {
+  clearAiGeoOverlay();
+  if (!mapState.map || !isAiGeoModeCompatible(analysis)) {
+    return;
+  }
+
+  if (analysis.classificationCollection?.features?.length) {
+    mapState.aiGeoClassificationLayer = L.geoJSON(analysis.classificationCollection, {
+      style: (feature) => {
+        const palette = getAiGeoClassPalette(analysis.mode, feature.properties?.aiGeoClassId);
+        const active = feature.properties?.aiGeoFocusId === state.aiGeoHighlightId;
+        return {
+          color: active ? "#fff8ef" : palette.stroke,
+          weight: active ? 2.2 : 1.1,
+          fillColor: palette.fill,
+          fillOpacity: active ? 0.28 : 0.16,
+          dashArray: active ? null : palette.dashArray,
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          `<h3 class="popup-title">${feature.properties?.aiGeoClassLabel || "Clase IA"}</h3><p class="popup-copy">${feature.properties?.aiGeoSummary || ""}</p>`
+        );
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (analysis.changeCollection?.features?.length) {
+    mapState.aiGeoChangeLayer = L.geoJSON(analysis.changeCollection, {
+      style: (feature) => {
+        const tone = feature.properties?.aiGeoTone || "watch";
+        const active = feature.properties?.aiGeoFocusId === state.aiGeoHighlightId;
+        const palette = tone === "critical"
+          ? { stroke: "#b35a47", fill: "#e0a08e" }
+          : tone === "good"
+            ? { stroke: "#b68f2f", fill: "#efd06c" }
+            : { stroke: "#4c8eab", fill: "#8fd9e0" };
+        return {
+          color: active ? "#fff8ef" : palette.stroke,
+          weight: active ? 2.5 : 1.5,
+          fillColor: palette.fill,
+          fillOpacity: active ? 0.14 : 0.08,
+          dashArray: "8 8",
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          `<h3 class="popup-title">${feature.properties?.aiGeoChangeLabel || "Cambio IA"}</h3><p class="popup-copy">${feature.properties?.aiGeoSummary || ""}</p>`
+        );
+      },
+      pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+        radius: feature.properties?.aiGeoFocusId === state.aiGeoHighlightId ? 8.8 : 6.8,
+        weight: 2.2,
+        color: "#fff8ef",
+        fillColor: feature.properties?.aiGeoTone === "critical" ? "#b35a47" : "#cb9440",
+        fillOpacity: 0.95,
+      }),
+    }).addTo(mapState.map);
+  }
+
+  if (analysis.alertCollection?.features?.length) {
+    mapState.aiGeoAlertLayer = L.geoJSON(analysis.alertCollection, {
+      pointToLayer: (feature, latlng) => {
+        const active = feature.properties?.aiGeoFocusId === state.aiGeoHighlightId;
+        const tone = feature.properties?.aiGeoTone || "watch";
+        return L.circleMarker(latlng, {
+          radius: active ? 9.2 : 7.2,
+          weight: 2.5,
+          color: "#fff8ef",
+          fillColor: tone === "critical" ? "#a5544b" : tone === "good" ? "#2f7f5f" : "#cb9440",
+          fillOpacity: 0.98,
+        });
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          `<h3 class="popup-title">${feature.properties?.aiGeoAlertLabel || "Alerta IA"}</h3><p class="popup-copy">${feature.properties?.aiGeoSummary || ""}</p>`
+        );
+      },
+    }).addTo(mapState.map);
+  }
+
+  bringAiGeoOverlayToFront();
+}
+
+function openAiGeoPopup(focusId = state.aiGeoHighlightId) {
+  [
+    mapState.aiGeoClassificationLayer,
+    mapState.aiGeoChangeLayer,
+    mapState.aiGeoAlertLayer,
+  ].forEach((layerGroup) => {
+    layerGroup?.eachLayer?.((layer) => {
+      if (layer.feature?.properties?.aiGeoFocusId === focusId) {
+        layer.openPopup?.();
+      }
+    });
+  });
+}
+
+function focusAiGeoStudy() {
+  const focusFeatures = getAiGeoRenderableFocusFeatures();
+  if (!mapState.map || !focusFeatures.length) {
+    return;
+  }
+
+  if (state.aiGeoData?.mode === "territorial") {
+    state.territorialFocus = "aiGeo";
+  }
+  state.aiGeoHighlightId = state.aiGeoHighlightId || focusFeatures[0]?.id || null;
+  renderAiGeoModule();
+  renderAiGeoOverlay(state.aiGeoData);
+  updateMapSummary();
+  const bounds = buildBoundsFromFeatures(focusFeatures.map((item) => item.feature));
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, {
+      padding: [52, 52],
+      maxZoom: state.aiGeoData?.mode === "agronomia" ? 16 : 13,
+    });
+  }
+  if (state.aiGeoHighlightId) {
+    openAiGeoPopup(state.aiGeoHighlightId);
+  }
+  focusAiGeoModuleCard();
+}
+
+function focusAiGeoFeature(focusId) {
+  const target = getAiGeoRenderableFocusFeatures().find((item) => item.id === focusId);
+  if (!target || !mapState.map) {
+    return;
+  }
+
+  state.aiGeoHighlightId = focusId;
+  if (state.aiGeoData?.mode === "territorial") {
+    state.territorialFocus = "aiGeo";
+  }
+  renderAiGeoModule();
+  renderAiGeoOverlay(state.aiGeoData);
+  updateMapSummary();
+  const feature = target.feature;
+  const bounds = buildBoundsFromFeatures([feature]);
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, {
+      padding: [48, 48],
+      maxZoom: state.aiGeoData?.mode === "agronomia" ? 16 : 14,
+    });
+  } else if (feature.geometry?.type === "Point") {
+    const [lon, lat] = feature.geometry.coordinates;
+    mapState.map.setView([lat, lon], state.aiGeoData?.mode === "agronomia" ? 16 : 14, {
+      animate: true,
+    });
+  }
+  openAiGeoPopup(focusId);
+}
+
+function handleAiGeoSignalAction(event) {
+  const button = event.target.closest("[data-ai-geo-focus-id]");
+  if (!button || !dom.aiGeoSignals?.contains(button)) {
+    return;
+  }
+  focusAiGeoFeature(button.dataset.aiGeoFocusId);
+}
+
+function clearAiGeoAnalysis(options = {}) {
+  state.aiGeoData = null;
+  state.aiGeoHighlightId = null;
+  clearAiGeoOverlay();
+  if (state.territorialFocus === "aiGeo") {
+    state.territorialFocus = state.fodaCameData
+      ? "fodaCame"
+      : state.hydrologyData
+        ? "hydrology"
+        : state.landChangeData
+          ? "landChange"
+          : "planning";
+  }
+  renderAiGeoModule();
+  renderTerritorialDecisionSupport();
+  updateMapSummary();
+  if (!options.quiet) {
+    setStatus("Modulo IA limpiado. Puedes lanzar una nueva corrida inteligente sobre la ruta actual.");
+  }
 }
 
 function renderPlanningVariableMatrix() {
@@ -15087,6 +16321,9 @@ async function runLandChangeAnalysis(silent = false) {
     renderLandChangeTimeline(analysis);
     renderLandChangeSectors(analysis);
     renderLandChangeOverlay(analysis);
+    if (state.aiGeoData?.mode === "territorial") {
+      renderAiGeoOverlay(state.aiGeoData);
+    }
     renderPlanningModule();
     updateMapSummary();
     if (state.fodaCameData) {
@@ -15898,6 +17135,9 @@ async function runHydrologyAnalysis(silent = false) {
     renderHydrologyTimeline(hydrology);
     renderHydrologySectors(hydrology);
     renderHydrologyOverlay(hydrology);
+    if (state.aiGeoData?.mode === "territorial") {
+      renderAiGeoOverlay(state.aiGeoData);
+    }
     renderPlanningModule();
     updateMapSummary();
     if (state.fodaCameData) {
@@ -16680,6 +17920,10 @@ function buildFieldEvidenceAnalysis(catalog = state.fieldEvidenceCatalog) {
 }
 
 function renderFieldEvidenceModule() {
+  if (!dom.fieldEvidenceResults) {
+    return;
+  }
+
   if (!state.fieldEvidenceData) {
     resetMetricGrid(dom.fieldEvidenceResults, `Integra la evidencia de campo para ver quebradas, estaciones, cartas historicas y MDT disponibles sobre ${getTerritorialAreaProfile().scopeLabel}.`);
     if (dom.fieldEvidenceInventory) {
@@ -16897,9 +18141,11 @@ function renderFieldEvidenceModule() {
   }
 }
 
-async function runFieldEvidenceAnalysis(silent = false) {
+async function runFieldEvidenceAnalysis(silent = false, options = {}) {
   try {
     const preserveFodaFocus = state.territorialFocus === "fodaCame";
+    const presentOnMap = options.presentOnMap === true;
+    const focusEvidence = options.focus === true;
     const catalog = await loadFieldEvidenceCatalog();
     const analysis = buildFieldEvidenceAnalysis(catalog);
     state.fieldEvidenceData = analysis;
@@ -16915,9 +18161,20 @@ async function runFieldEvidenceAnalysis(silent = false) {
       || analysis.topSensitiveThemes[0]?.id
       || analysis.topHistory[0]?.id
       || null;
-    state.territorialFocus = "fieldEvidence";
+    if (focusEvidence) {
+      state.territorialFocus = "fieldEvidence";
+    } else if (state.territorialFocus === "fieldEvidence") {
+      state.territorialFocus = "planning";
+    }
     renderFieldEvidenceModule();
-    renderFieldEvidenceOverlay(analysis);
+    if (presentOnMap) {
+      renderFieldEvidenceOverlay(analysis);
+    } else {
+      clearFieldEvidenceOverlay();
+    }
+    if (state.aiGeoData?.mode === "territorial") {
+      renderAiGeoOverlay(state.aiGeoData);
+    }
     renderTerritorialDecisionSupport();
     updateMapSummary();
     if (state.fodaCameData) {
@@ -16927,7 +18184,9 @@ async function runFieldEvidenceAnalysis(silent = false) {
       });
     }
     if (!silent) {
-      setStatus(`Evidencia de campo integrada para ${analysis.context.scopeLabel}: ${analysis.summary.sectorCount} sectores, ${analysis.summary.stationCount} estaciones, ${analysis.summary.sensitiveThemeCount} temas sensibles y ${analysis.summary.historyCount} fuentes historicas visibles en mapa.`);
+      setStatus(presentOnMap
+        ? `Evidencia de campo integrada para ${analysis.context.scopeLabel}: ${analysis.summary.sectorCount} sectores, ${analysis.summary.stationCount} estaciones, ${analysis.summary.sensitiveThemeCount} temas sensibles y ${analysis.summary.historyCount} fuentes historicas visibles en mapa.`
+        : `La evidencia territorial de ${analysis.context.scopeLabel} quedo integrada como soporte interno para los demas estudios.`);
     }
     return analysis;
   } catch (error) {
@@ -17139,6 +18398,9 @@ async function runPlanningAnalysis(silent = false) {
     renderPlanningWeights(planning);
     renderPlanningCandidates(planning);
     renderPlanningOverlay(planning);
+    if (state.aiGeoData?.mode === "territorial") {
+      renderAiGeoOverlay(state.aiGeoData);
+    }
     updatePlanning3dCandidateSource();
     renderPlanningModule();
     updateMapSummary();
@@ -18392,6 +19654,9 @@ async function runFodaCameAnalysis(silent = false, options = {}) {
     if (options.applyOverlay !== false) {
       renderFodaCameOverlay(analysis);
     }
+    if (state.aiGeoData?.mode === "territorial") {
+      renderAiGeoOverlay(state.aiGeoData);
+    }
     renderPlanningModule();
     renderTerritorialDecisionSupport();
     updateMapSummary();
@@ -19148,6 +20413,20 @@ function buildTerritorialDecisionSnapshot() {
     });
   }
 
+  if (state.aiGeoData?.mode === "territorial") {
+    const aiGeo = state.aiGeoData;
+    const score = clamp(aiGeo.summary.confidenceScore - Math.max(0, aiGeo.summary.alertCount - 2) * 4, 0, 100);
+    items.push({
+      id: "aiGeo",
+      score,
+      signal: getTerritorialSignalState(score),
+      title: "Lectura IA integrada",
+      metric: `${aiGeo.summary.confidenceScore}/100`,
+      copy: `${aiGeo.summary.dominantClassLabel} domina la lectura con ${aiGeo.summary.changeHotspotCount} hotspots, ${aiGeo.summary.alertCount} alertas y respaldo 3D sobre ${formatPlanning3dCount(aiGeo.summary.buildings3dCount)} construcciones.`,
+      note: `${aiGeo.interpretation.exportLabel} | ${aiGeo.summary.supportLabel} | ${aiGeo.interpretation.title}.`,
+    });
+  }
+
   if (!items.length) {
     return null;
   }
@@ -19273,6 +20552,33 @@ function buildTerritorialSectorSheets() {
     });
   }
 
+  if (state.aiGeoData?.mode === "territorial" && state.aiGeoData.signals?.length) {
+    state.aiGeoData.signals.slice(0, 3).forEach((signal, index) => {
+      sheets.push({
+        id: signal.id,
+        module: "IA territorial",
+        title: signal.title,
+        tone: signal.tone === "critical"
+          ? "low"
+          : signal.tone === "good"
+            ? "high"
+            : "mid",
+        kicker: signal.module,
+        summary: signal.copy,
+        note: state.aiGeoData.interpretation.recommendation,
+        metrics: [
+          { label: "Prioridad", value: `${index + 1}` },
+          { label: "Lectura", value: state.aiGeoData.summary.dominantClassLabel },
+          { label: "Confianza", value: `${state.aiGeoData.summary.confidenceScore}/100` },
+          { label: "Hotspots", value: `${state.aiGeoData.summary.changeHotspotCount}` },
+          { label: "Alertas", value: `${state.aiGeoData.summary.alertCount}` },
+          { label: "3D", value: `${formatPlanning3dCount(state.aiGeoData.summary.buildings3dCount)}` },
+        ],
+        actionAttr: `data-ai-geo-focus-id="${signal.id}"`,
+      });
+    });
+  }
+
   return sheets.slice(0, 10);
 }
 
@@ -19366,6 +20672,19 @@ function buildTerritorialAlerts() {
           actionAttr: `data-foda-zone-id="${zone.id}"`,
         });
       }
+    });
+  }
+
+  if (state.aiGeoData?.mode === "territorial") {
+    (state.aiGeoData.signals || []).slice(0, 4).forEach((signal) => {
+      alerts.push({
+        id: `alert-ai-${signal.id}`,
+        tone: signal.tone === "good" ? "watch" : signal.tone || "watch",
+        module: "IA territorial",
+        title: signal.title,
+        copy: signal.copy,
+        actionAttr: `data-ai-geo-focus-id="${signal.id}"`,
+      });
     });
   }
 
@@ -19476,6 +20795,18 @@ function buildTerritorialCsvExport() {
       `${formatLandChangeHa(zone.areaHa)} ha`,
       `Acc ${zone.scores.accessScore}% | Serv ${zone.scores.serviceScore}% | Rg ${zone.scores.threatScore}%`,
       zone.summary,
+    ]);
+  });
+
+  (state.aiGeoData?.mode === "territorial" ? state.aiGeoData.signals : []).forEach((signal) => {
+    rows.push([
+      "ia_territorial",
+      signal.id,
+      signal.title,
+      signal.tone,
+      state.aiGeoData.summary.dominantClassLabel,
+      signal.metric || "",
+      signal.copy,
     ]);
   });
 
@@ -19622,6 +20953,12 @@ function buildTerritorialGeoJsonExport() {
     });
   }
 
+  if (state.aiGeoData?.mode === "territorial") {
+    pushFeatures(state.aiGeoData.classificationCollection, "ia_territorial", "clasificacion");
+    pushFeatures(state.aiGeoData.changeCollection, "ia_territorial", "cambios");
+    pushFeatures(state.aiGeoData.alertCollection, "ia_territorial", "alertas");
+  }
+
   return {
     type: "FeatureCollection",
     features,
@@ -19664,6 +21001,14 @@ function buildTerritorialJsonExport() {
       priorityZones: state.fodaCameData.priorityZones,
       strategies: state.fodaCameData.strategies,
       layout: state.fodaCameData.layout,
+    } : null,
+    inteligenciaArtificial: state.aiGeoData?.mode === "territorial" ? {
+      mode: state.aiGeoData.mode,
+      summary: state.aiGeoData.summary,
+      metrics: state.aiGeoData.metrics,
+      layers: state.aiGeoData.layers,
+      signals: state.aiGeoData.signals,
+      interpretation: state.aiGeoData.interpretation,
     } : null,
     evidenciaCampo: state.fieldEvidenceData ? {
       summary: state.fieldEvidenceData.summary,
@@ -20655,6 +22000,7 @@ function renderTerritorialExportPanel() {
     land: state.landChangeData?.prioritySectors?.length || 0,
     hydrology: state.hydrologyData?.prioritySectors?.length || 0,
     fodaCame: state.fodaCameData?.priorityZones?.length || 0,
+    aiGeo: state.aiGeoData?.mode === "territorial" ? (state.aiGeoData.signals?.length || 0) : 0,
     fieldEvidence: 0,
   };
   dom.territorialExportPanel.classList.remove("empty-state");
@@ -20666,17 +22012,18 @@ function renderTerritorialExportPanel() {
           <p class="section-kicker">Salida tecnica</p>
           <h4>Exportables territoriales de ${areaProfile.scopeLabel}</h4>
         </div>
-        <span class="planning-pill emphasis">${exportCounts.planning + exportCounts.land + exportCounts.hydrology + exportCounts.fodaCame} fichas activas</span>
+        <span class="planning-pill emphasis">${exportCounts.planning + exportCounts.land + exportCounts.hydrology + exportCounts.fodaCame + exportCounts.aiGeo} fichas activas</span>
       </div>
       <p class="territorial-readout-copy">
         Descarga un consolidado tabular, una capa GeoJSON combinada, un resumen JSON o abre un informe ejecutivo con semaforo,
-        fichas, alertas, zonas FODA + CAME y resumen territorial del escenario vigente sobre ${areaProfile.scopeLabel}.
+        fichas, alertas, zonas FODA + CAME, lectura IA y resumen territorial del escenario vigente sobre ${areaProfile.scopeLabel}.
       </p>
       <div class="territorial-export-pills">
         <span class="planning-pill emphasis">${exportCounts.planning} candidatos</span>
         <span class="planning-pill emphasis">${exportCounts.land} hotspots</span>
         <span class="planning-pill emphasis">${exportCounts.hydrology} sectores hidricos</span>
         <span class="planning-pill emphasis">${exportCounts.fodaCame} zonas estrategicas</span>
+        <span class="planning-pill emphasis">${exportCounts.aiGeo} hallazgos IA</span>
       </div>
       <div class="action-row analysis-actions">
         <button class="secondary-button" type="button" data-export-format="report">Abrir informe</button>
@@ -20926,6 +22273,9 @@ function renderFodaCameOverlay(analysis) {
   if (mapState.currentPlotLayer) {
     mapState.currentPlotLayer.bringToFront();
   }
+  if (state.aiGeoData?.mode === "territorial") {
+    bringAiGeoOverlayToFront();
+  }
 }
 
 function getFodaCameOverlayPalette(actionId = "mantener") {
@@ -21170,6 +22520,9 @@ function renderPlanningOverlay(planning) {
   if (mapState.planningCandidatesLayer?.bringToFront) {
     mapState.planningCandidatesLayer.bringToFront();
   }
+  if (state.aiGeoData?.mode === "territorial") {
+    bringAiGeoOverlayToFront();
+  }
 }
 
 function renderLandChangeOverlay(analysis) {
@@ -21343,6 +22696,9 @@ function renderLandChangeOverlay(analysis) {
   if (mapState.planningCandidatesLayer?.bringToFront) {
     mapState.planningCandidatesLayer.bringToFront();
   }
+  if (state.aiGeoData?.mode === "territorial") {
+    bringAiGeoOverlayToFront();
+  }
 }
 
 function renderHydrologyOverlay(hydrology) {
@@ -21445,6 +22801,9 @@ function renderHydrologyOverlay(hydrology) {
   }
   if (mapState.planningCandidatesLayer?.bringToFront) {
     mapState.planningCandidatesLayer.bringToFront();
+  }
+  if (state.aiGeoData?.mode === "territorial") {
+    bringAiGeoOverlayToFront();
   }
 }
 
@@ -21638,6 +22997,9 @@ function renderFieldEvidenceOverlay(analysis) {
   }
   if (mapState.planningCandidatesLayer?.bringToFront) {
     mapState.planningCandidatesLayer.bringToFront();
+  }
+  if (state.aiGeoData?.mode === "territorial") {
+    bringAiGeoOverlayToFront();
   }
 }
 
@@ -22942,10 +24304,9 @@ function updateMapSummary(force = false) {
   if (isTerritorialRoute()) {
     const planning = state.planningData;
     const fodaCame = state.fodaCameData;
+    const aiGeo = state.aiGeoData;
     const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
-    const fieldEvidence = state.fieldEvidenceData;
-    const evidenceRouteActive = isEvidenceRoute();
     const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
     const landChangePeriod = landChange?.period || getLandChangePeriodProfile();
     const landChangeScenario = landChange?.scenario || getLandChangeScenarioProfile();
@@ -22953,18 +24314,18 @@ function updateMapSummary(force = false) {
     const hydrologyClimate = hydrology?.climate || getHydrologyClimateProfile();
     const hydrologyHorizon = hydrology?.horizon || getHydrologyHorizonProfile();
     const hydrologyDemand = hydrology?.demand || getHydrologyDemandProfile();
-    const showFieldEvidence = (evidenceRouteActive || state.territorialFocus === "fieldEvidence") && fieldEvidence;
     const showFodaCame = state.territorialFocus === "fodaCame" && fodaCame;
+    const showAiGeo = state.territorialFocus === "aiGeo" && aiGeo?.mode === "territorial";
     const showLandChange = state.territorialFocus === "landChange" && landChange;
     const showHydrology = state.territorialFocus === "hydrology" && hydrology;
-    setTextIfChanged(dom.overlayIndex, evidenceRouteActive ? "Campo" : planning ? "Aptitud" : imageryProfile.shortLabel);
+    setTextIfChanged(dom.overlayIndex, planning ? "Aptitud" : imageryProfile.shortLabel);
     renderMapBadges();
-    if (showFieldEvidence) {
-      setTextIfChanged(dom.overlayIndex, "Campo");
-      setTextIfChanged(dom.mapTitle, `Evidencia de campo sobre ${fieldEvidence.context.scopeLabel}`);
+    if (showAiGeo) {
+      setTextIfChanged(dom.overlayIndex, "IA");
+      setTextIfChanged(dom.mapTitle, `IA territorial sobre ${aiGeo.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `${fieldEvidence.summary.sectorCount} sectores de campo, ${fieldEvidence.summary.stationCount} estaciones FONAG, ${fieldEvidence.summary.sensitiveThemeCount} temas sensibles, ${fieldEvidence.summary.historyCount} coberturas historicas y ${fieldEvidence.summary.climateSeriesCount} series climaticas listas para soporte tecnico sobre ${fieldEvidence.context.scopeLabel}.`
+        `${aiGeo.summary.dominantClassLabel} domina la lectura. ${aiGeo.summary.changeHotspotCount} hotspots, ${aiGeo.summary.alertCount} alertas y verificacion 3D lista sobre ${formatPlanning3dCount(aiGeo.summary.buildings3dCount)} construcciones en ${aiGeo.context.scopeLabel}.`
       );
     } else if (showFodaCame) {
       setTextIfChanged(dom.overlayIndex, "FODA");
@@ -22997,22 +24358,18 @@ function updateMapSummary(force = false) {
       setTextIfChanged(dom.overlayIndex, "FODA");
       setTextIfChanged(dom.mapTitle, "Estrategia territorial lista");
       setTextIfChanged(dom.mapSubtitle, `${fodaCame.summary.dominantSwotLabel} y ${fodaCame.summary.dominantActionLabel.toLowerCase()} como lectura dominante para ${fodaCame.context.scopeLabel}, con ${fodaCame.priorityZones.length} zonas estrategicas visibles en el geoportal.`);
+    } else if (aiGeo?.mode === "territorial") {
+      setTextIfChanged(dom.overlayIndex, "IA");
+      setTextIfChanged(dom.mapTitle, "Lectura IA territorial lista");
+      setTextIfChanged(dom.mapSubtitle, `${aiGeo.summary.dominantClassLabel} y ${aiGeo.summary.alertCount} alertas sobre ${aiGeo.context.scopeLabel}, con respaldo de huella urbana, hidrologia, evidencia de campo y verificacion 3D.`);
     } else if (hydrology) {
       setTextIfChanged(dom.overlayIndex, "Balance");
       setTextIfChanged(dom.mapTitle, "Estudio hidrico de Mejia listo");
       setTextIfChanged(dom.mapSubtitle, `${hydrology.climate.shortLabel}, ${hydrology.horizon.label} y ${hydrology.demand.label} con balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio y franjas de proteccion activas.`);
-    } else if (fieldEvidence) {
-      setTextIfChanged(dom.overlayIndex, "Campo");
-      setTextIfChanged(dom.mapTitle, "Evidencia de campo integrada");
-      setTextIfChanged(dom.mapSubtitle, `${fieldEvidence.summary.supportLabel} con ${fieldEvidence.summary.sectorCount} sectores, ${fieldEvidence.summary.stationCount} estaciones, ${fieldEvidence.summary.sensitiveThemeCount} temas sensibles y ${fieldEvidence.summary.historyCount} insumos historicos listos para ${fieldEvidence.context.scopeLabel}.`);
     } else if (landChange) {
       setTextIfChanged(dom.overlayIndex, "Huella");
       setTextIfChanged(dom.mapTitle, "Estudio de transformacion del suelo listo");
       setTextIfChanged(dom.mapSubtitle, `${landChange.period.shortLabel} con ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas, ${landChange.summary.riskLabel.toLowerCase()} y foco ${landChange.summary.hotspotLabel} con halos de presion.`);
-    } else if (evidenceRouteActive) {
-      setTextIfChanged(dom.overlayIndex, "Campo");
-      setTextIfChanged(dom.mapTitle, "Evidencia territorial lista");
-      setTextIfChanged(dom.mapSubtitle, "Integra quebradas, estaciones FONAG, areas sensibles, cartografia historica y soporte tecnico de campo para fortalecer la precision del geoportal en Mejia.");
     } else {
       setTextIfChanged(dom.mapTitle, "Planificacion territorial lista");
       setTextIfChanged(dom.mapSubtitle, `Elige ${imageryProfile.label} para aptitud territorial o ejecuta los estudios de suelo e hidrologia para simular transformacion, oferta, demanda y resiliencia de Mejia.`);
@@ -23029,6 +24386,18 @@ function updateMapSummary(force = false) {
     setTextIfChanged(dom.mapSubtitle, activeDevice
       ? `Base Esri limpia con ultima senal ${formatGpsSignalAge(activeDevice.timestamp)}. Sin escenas Sentinel ni grillas NDVI superpuestas.`
       : "Base Esri limpia preparada para recibir el celular, dron, avioneta o feed GPS externo.");
+    renderMapBadges();
+    return;
+  }
+
+  const aiGeo = state.aiGeoData;
+  if (aiGeo?.mode === "agronomia") {
+    setTextIfChanged(dom.overlayIndex, "IA");
+    setTextIfChanged(dom.mapTitle, `IA agronomica sobre ${aiGeo.context.scopeLabel}`);
+    setTextIfChanged(
+      dom.mapSubtitle,
+      `${aiGeo.summary.dominantClassLabel} domina la lectura. ${aiGeo.summary.changeHotspotCount} cambios y ${aiGeo.summary.alertCount} alertas con confianza ${aiGeo.summary.confidenceScore}/100 sobre ${aiGeo.context.scopeLabel}.`
+    );
     renderMapBadges();
     return;
   }
@@ -23102,44 +24471,43 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
   if (isTerritorialRoute()) {
     const planning = state.planningData;
     const fodaCame = state.fodaCameData;
+    const aiGeo = state.aiGeoData;
     const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
-    const fieldEvidence = state.fieldEvidenceData;
-    const evidenceRouteActive = isEvidenceRoute();
     const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
     const landChangePeriod = landChange?.period || getLandChangePeriodProfile();
     const landChangeScenario = landChange?.scenario || getLandChangeScenarioProfile();
     const climate = hydrology?.climate || getHydrologyClimateProfile();
     const horizon = hydrology?.horizon || getHydrologyHorizonProfile();
-    const badges = ((evidenceRouteActive || state.territorialFocus === "fieldEvidence") && fieldEvidence)
+    const badges = (state.territorialFocus === "aiGeo" && aiGeo?.mode === "territorial")
       ? [
           {
             tone: "analysis",
-            label: "Campo",
+            label: "IA territorial",
           },
           {
             tone: "neutral",
-            label: `${fieldEvidence.summary.sectorCount} sectores`,
+            label: aiGeo.summary.dominantClassLabel,
           },
           {
-            tone: "neutral",
-            label: `${fieldEvidence.summary.stationCount} estaciones`,
-          },
-          {
-            tone: "neutral",
-            label: `${fieldEvidence.summary.sensitiveThemeCount} temas sensibles`,
-          },
-          {
-            tone: fieldEvidence.summary.supportScore >= 80
+            tone: aiGeo.summary.confidenceScore >= 80
               ? "exact"
-              : fieldEvidence.summary.supportScore >= 60
+              : aiGeo.summary.confidenceScore >= 64
                 ? "preview"
                 : "compare",
-            label: fieldEvidence.summary.supportLabel,
+            label: `${aiGeo.summary.confidenceScore}/100`,
           },
           {
             tone: "neutral",
-            label: fieldEvidence.summary.dominantSensitiveGroup,
+            label: `${aiGeo.summary.changeHotspotCount} hotspots`,
+          },
+          {
+            tone: "neutral",
+            label: `${aiGeo.summary.alertCount} alertas`,
+          },
+          {
+            tone: "neutral",
+            label: `${formatPlanning3dCount(aiGeo.summary.buildings3dCount)} 3D`,
           },
         ]
       : state.territorialFocus === "fodaCame" && fodaCame
@@ -23221,25 +24589,6 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
           {
             tone: "neutral",
             label: `${hydrology.prioritySectors.length} prioridades`,
-          },
-        ]
-      : evidenceRouteActive
-      ? [
-          {
-            tone: "analysis",
-            label: "Campo",
-          },
-          {
-            tone: "neutral",
-            label: "Quebradas + estaciones",
-          },
-          {
-            tone: "neutral",
-            label: "Historia + sensibles",
-          },
-          {
-            tone: "muted",
-            label: "Listo para integrar",
           },
         ]
       : [
@@ -23332,6 +24681,44 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
         label: `Precision ${Math.round(Number(activeDevice.accuracyM))} m`,
       });
     }
+    setHtmlIfChanged(dom.mapBadges, badges
+      .map((badge) => `<span class="map-badge ${badge.tone}">${badge.label}</span>`)
+      .join(""));
+    return;
+  }
+
+  if (state.aiGeoData?.mode === "agronomia") {
+    const aiGeo = state.aiGeoData;
+    const badges = [
+      {
+        tone: "analysis",
+        label: "IA agronomica",
+      },
+      {
+        tone: `sensor sensor-${getSensorForImage(aiGeo.image).id}`,
+        label: getSensorForImage(aiGeo.image).label,
+      },
+      {
+        tone: aiGeo.summary.confidenceScore >= 80
+          ? "exact"
+          : aiGeo.summary.confidenceScore >= 64
+            ? "preview"
+            : "compare",
+        label: `${aiGeo.summary.confidenceScore}/100`,
+      },
+      {
+        tone: "neutral",
+        label: aiGeo.summary.dominantClassLabel,
+      },
+      {
+        tone: "neutral",
+        label: `${aiGeo.summary.changeHotspotCount} cambios`,
+      },
+      {
+        tone: "neutral",
+        label: `${aiGeo.summary.alertCount} alertas`,
+      },
+    ];
     setHtmlIfChanged(dom.mapBadges, badges
       .map((badge) => `<span class="map-badge ${badge.tone}">${badge.label}</span>`)
       .join(""));

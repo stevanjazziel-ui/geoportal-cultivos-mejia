@@ -18,7 +18,7 @@
   --radius-lg: 22px;
   --radius-md: 16px;
   --radius-sm: 12px;
-  --sidebar-width: 390px;
+  --sidebar-width: clamp(380px, 30vw, 460px);
   --font-display: "Sora", sans-serif;
   --font-body: "IBM Plex Sans", sans-serif;
 }
@@ -651,9 +651,9 @@ button {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  gap: 16px;
-  padding-right: 8px;
-  padding-bottom: 22px;
+  gap: 14px;
+  padding-right: 4px;
+  padding-bottom: 28px;
   scrollbar-gutter: stable;
 }
 
@@ -1041,13 +1041,14 @@ button {
 }
 
 .module-card {
-  gap: 16px;
-  padding: 20px;
+  gap: 14px;
+  padding: 18px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.84), rgba(248, 244, 237, 0.72)),
     radial-gradient(circle at top right, rgba(203, 148, 64, 0.08), transparent 42%);
-  overflow: hidden;
+  overflow: visible;
   flex-shrink: 0;
+  min-width: 0;
 }
 
 .module-card > * {
@@ -1099,7 +1100,7 @@ button {
 
 .metrics-grid.has-data {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   align-items: stretch;
 }
 
@@ -1534,7 +1535,7 @@ button {
 
 .planning-toolbar {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
 }
 
@@ -3108,7 +3109,7 @@ button {
   z-index: 1200;
   display: grid;
   place-items: center;
-  padding: 6px;
+  padding: 10px;
 }
 
 .planning-3d-backdrop {
@@ -3122,10 +3123,10 @@ button {
   position: relative;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 10px;
-  width: calc(100vw - 12px);
-  height: calc(100vh - 12px);
-  padding: 10px;
+  gap: 6px;
+  width: calc(100vw - 20px);
+  height: calc(100vh - 20px);
+  padding: 10px 12px 12px;
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.28);
   background:
@@ -3136,33 +3137,40 @@ button {
 }
 
 .planning-3d-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) auto;
   align-items: start;
-  justify-content: space-between;
-  gap: 12px;
+  gap: 10px 14px;
   padding: 2px 4px 0;
 }
 
 .planning-3d-header h2 {
-  margin: 2px 0 4px;
+  margin: 0 0 2px;
   font-family: var(--font-display);
-  font-size: clamp(1.28rem, 1.7vw, 1.72rem);
+  font-size: clamp(1.22rem, 1.55vw, 1.64rem);
+  line-height: 1.02;
 }
 
 .planning-3d-subtitle {
   margin: 0;
-  max-width: 780px;
+  max-width: 920px;
   color: var(--muted);
-  line-height: 1.35;
-  font-size: 0.9rem;
+  line-height: 1.28;
+  font-size: 0.84rem;
 }
 
 .planning-3d-header-actions {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(132px, max-content));
   gap: 8px;
-  align-items: center;
-  flex-wrap: wrap;
+  align-items: stretch;
   justify-content: end;
+}
+
+.planning-3d-header-actions .ghost-button,
+.planning-3d-header-actions .secondary-button {
+  min-height: 42px;
+  width: 100%;
 }
 
 .planning-3d-header-actions .ghost-button.active {
@@ -3172,26 +3180,37 @@ button {
 }
 
 .planning-3d-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  align-items: stretch;
+  gap: 8px 10px;
+  padding: 8px 10px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.68);
   border: 1px solid rgba(47, 61, 50, 0.1);
 }
 
+.planning-3d-toolbar > * {
+  min-width: 0;
+}
+
 .planning-3d-switch {
-  display: inline-flex;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
+}
+
+.planning-3d-switch .base-button {
+  width: 100%;
 }
 
 .planning-3d-check {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  padding: 10px 12px;
+  min-height: 44px;
+  width: 100%;
+  padding: 8px 12px;
   border-radius: 999px;
   background: rgba(246, 243, 236, 0.94);
   border: 1px solid rgba(47, 61, 50, 0.09);
@@ -3203,23 +3222,26 @@ button {
 }
 
 .planning-3d-range {
-  min-width: 200px;
-  margin-left: auto;
+  min-width: 0;
+  max-width: 280px;
+  margin-left: 0;
+  justify-self: stretch;
+  grid-column: span 2;
 }
 
 .planning-3d-sun-field {
-  min-width: 152px;
+  min-width: 0;
 }
 
 .planning-3d-sun-field input {
-  min-height: 42px;
+  min-height: 40px;
 }
 
 .planning-3d-layout {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
-  gap: 12px;
+  grid-template-columns: minmax(0, 1.48fr) minmax(280px, 320px);
+  gap: 8px;
   min-height: 0;
   height: 100%;
   align-items: stretch;
@@ -3228,6 +3250,7 @@ button {
 .planning-3d-map {
   position: relative;
   min-height: 0;
+  min-height: 520px;
   height: 100%;
   width: 100%;
   border-radius: 24px;
@@ -3442,11 +3465,12 @@ button {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 1fr);
   align-content: stretch;
-  gap: 10px;
+  gap: 8px;
   min-height: 0;
   height: 100%;
   z-index: 1;
   pointer-events: auto;
+  overflow: hidden;
 }
 
 .planning-3d-summary,
@@ -4053,12 +4077,12 @@ button {
   .planning-3d-shell {
     grid-template-rows: auto auto minmax(0, 1fr);
     height: calc(100vh - 12px);
-    padding: 16px;
+    padding: 12px;
   }
 
   .planning-3d-layout {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(420px, 60vh) auto;
+    grid-template-rows: minmax(480px, 62vh) auto;
     height: 100%;
   }
 
@@ -4183,19 +4207,29 @@ button {
     align-items: stretch;
   }
 
+  .planning-3d-header h2 {
+    margin-bottom: 4px;
+  }
+
+  .planning-3d-subtitle {
+    font-size: 0.82rem;
+  }
+
   .planning-3d-range {
     min-width: 0;
     margin-left: 0;
+    max-width: none;
+    grid-column: auto;
   }
 
   .planning-3d-shell {
     height: calc(100vh - 10px);
-    padding: 14px;
+    padding: 12px;
     border-radius: 22px;
   }
 
   .planning-3d-layout {
-    grid-template-rows: minmax(420px, 58vh) auto;
+    grid-template-rows: minmax(460px, 58vh) auto;
   }
 
   .planning-3d-panel {

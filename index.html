@@ -31,7 +31,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260423-4">
+  <link rel="stylesheet" href="./styles.css?v=20260428-1">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -78,7 +78,6 @@
           <h2>Que quieres abrir primero</h2>
           <p>
             Entra directo al flujo agronomico, al modulo de planificacion territorial
-            o a la ruta de evidencia territorial
             sin pasar por una pantalla intermedia.
           </p>
           <div class="entry-options">
@@ -92,14 +91,9 @@
               <strong>Planificacion territorial</strong>
               <span>Entra al modulo de aptitud para VIS, escuelas, hospitales y equipamientos.</span>
             </button>
-            <button id="openFieldEvidenceBtn" class="entry-option evidence" type="button">
-              <span class="entry-eyebrow">Ruta 3</span>
-              <strong>Evidencia territorial</strong>
-              <span>Abre quebradas, estaciones, areas sensibles, memoria historica e insumos de campo.</span>
-            </button>
           </div>
           <p class="login-note">
-            Los tres accesos entran como usuario publico y puedes cambiar de ruta luego dentro del visor.
+            Ambos accesos entran como usuario publico y puedes cambiar de ruta luego dentro del visor.
           </p>
         </div>
       </div>
@@ -145,7 +139,7 @@
         </div>
         <div class="user-pill">
           <span class="status-dot"></span>
-          Usuario publico - v20260423-4
+            Usuario publico - v20260429-1
         </div>
       </div>
     </header>
@@ -612,42 +606,6 @@
               </div>
             </article>
 
-            <article id="fieldEvidenceCard" class="module-card planning-card hidden" data-module-track="evidencia">
-              <div class="module-head">
-                <div>
-                  <p class="module-kicker">Soporte territorial</p>
-                  <h3>Evidencia de campo e insumos historicos</h3>
-                </div>
-                <button id="runFieldEvidenceBtn" class="secondary-button" type="button">Integrar evidencia</button>
-              </div>
-              <p class="module-copy">
-                Integra quebradas y rios levantados en campo, estaciones FONAG, series INHAMI, cartas historicas IGM,
-                MDT historico, catalogo maestro y la consultoria de areas sensibles para Mejia.
-              </p>
-              <div id="fieldEvidenceResults" class="metrics-grid empty-state">
-                Ejecuta el modulo para reunir sectores de campo, estaciones, memoria historica y soporte tecnico del territorio.
-              </div>
-              <div id="fieldEvidenceInventory" class="planning-pills empty-state">
-                Aqui apareceran las categorias del catalogo maestro, fuentes activas y objetos documentados para Mejia.
-              </div>
-              <div id="fieldEvidenceSectors" class="field-evidence-list empty-state">
-                Aqui apareceran quebradas, rios y sectores levantados en campo con ortomosaico y DTM.
-              </div>
-              <div id="fieldEvidenceStations" class="field-evidence-list empty-state">
-                Aqui apareceran estaciones FONAG y sus indicadores hidrometeorologicos.
-              </div>
-              <div id="fieldEvidenceSensitive" class="field-evidence-list empty-state">
-                Aqui apareceran las areas sensibles, protecciones minimas, quebradas modeladas y coberturas riberenas de la consultoria.
-              </div>
-              <div id="fieldEvidenceHistory" class="field-evidence-list empty-state">
-                Aqui apareceran cartas historicas IGM, MDT historico y series climaticas de soporte.
-              </div>
-              <div class="action-row analysis-actions">
-                <button id="focusFieldEvidenceBtn" class="secondary-button" type="button">Centrar evidencia</button>
-                <button id="clearFieldEvidenceBtn" class="ghost-button" type="button">Limpiar evidencia</button>
-              </div>
-            </article>
-
             <article id="landChangeCard" class="module-card planning-card hidden" data-module-track="planificacion">
               <div class="module-head">
                 <div>
@@ -911,6 +869,37 @@
                 Ejecuta un paso o el plan completo para ver recomendaciones operativas del asistente.
               </div>
             </article>
+
+            <article id="aiGeoCard" class="module-card">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Inteligencia artificial aplicada</p>
+                  <h3>Clasificacion IA y alertas inteligentes</h3>
+                </div>
+                <button id="runAiGeoBtn" class="secondary-button" type="button">Ejecutar IA</button>
+              </div>
+              <p class="module-copy">
+                Convierte las capas activas del geoportal en una lectura asistida por IA: clasificacion operativa,
+                deteccion de cambios, alertas criticas y una interpretacion automatica lista para apoyar decisiones
+                agronomicas, territoriales y verificacion espacial en visor 3D.
+              </p>
+              <div id="aiGeoResults" class="metrics-grid empty-state">
+                Ejecuta el modulo para construir clasificacion IA, cambios detectados y nivel de confianza sobre la ruta activa.
+              </div>
+              <div id="aiGeoLayers" class="planning-pills empty-state">
+                Aqui apareceran las capas, fuentes y variables que la IA esta usando para la lectura actual.
+              </div>
+              <div id="aiGeoSignals" class="territorial-alerts-panel empty-state">
+                Aqui apareceran hotspots, alertas inteligentes y hallazgos priorizados para revisar en mapa.
+              </div>
+              <div id="aiGeoInterpretation" class="territorial-export-panel empty-state">
+                Aqui apareceran la interpretacion, conclusion, recomendacion y siguiente paso sugerido para la corrida IA.
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="focusAiGeoBtn" class="secondary-button" type="button">Centrar hallazgos</button>
+                <button id="clearAiGeoBtn" class="ghost-button" type="button">Limpiar IA</button>
+              </div>
+            </article>
           </section>
         </div>
       </aside>
@@ -1151,6 +1140,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260423-4" defer></script>
+  <script src="./app.js?v=20260428-1" defer></script>
 </body>
 </html>

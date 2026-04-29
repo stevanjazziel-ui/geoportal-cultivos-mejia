@@ -65,6 +65,25 @@ function Resolve-BrowserPath() {
   throw "No encontre Chrome ni Edge para ejecutar la suite de humo."
 }
 
+function Start-DetachedProcess {
+  param(
+    [Parameter(Mandatory = $true)][string]$FilePath,
+    [string[]]$ArgumentList = @(),
+    [string]$WorkingDirectory = ""
+  )
+
+  $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+  $startInfo.FileName = $FilePath
+  $startInfo.Arguments = [string]::Join(" ", ($ArgumentList | Where-Object { $_ -ne $null }))
+  $startInfo.UseShellExecute = $true
+  $startInfo.WindowStyle = [System.Diagnostics.ProcessWindowStyle]::Hidden
+  if (-not [string]::IsNullOrWhiteSpace($WorkingDirectory)) {
+    $startInfo.WorkingDirectory = $WorkingDirectory
+  }
+
+  return [System.Diagnostics.Process]::Start($startInfo)
+}
+
 if (-not (Test-Path $ServerScript)) {
   throw "No se encontro server.ps1 en $Root"
 }
@@ -74,14 +93,17 @@ if (-not (Test-Path $NodeWrapper)) {
 }
 
 if (-not (Test-TcpPort $Port)) {
-  $stdout = Join-Path $Root "server_stdout.log"
-  $stderr = Join-Path $Root "server_stderr.log"
-  Start-Process -FilePath $PowerShellExe `
-    -ArgumentList ('-NoProfile -ExecutionPolicy Bypass -File "{0}" -Port {1}' -f $ServerScript, $Port) `
-    -WorkingDirectory $Root `
-    -WindowStyle Hidden `
-    -RedirectStandardOutput $stdout `
-    -RedirectStandardError $stderr
+  Start-DetachedProcess -FilePath $PowerShellExe `
+    -ArgumentList @(
+      "-NoProfile",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      ('"{0}"' -f $ServerScript),
+      "-Port",
+      "$Port"
+    ) `
+    -WorkingDirectory $Root | Out-Null
 }
 
 if (-not (Wait-HttpReady -Url ("http://127.0.0.1:{0}/" -f $Port))) {
@@ -92,18 +114,21 @@ if (-not (Test-TcpPort $DebugPort)) {
   $browser = Resolve-BrowserPath
   $profileDir = Join-Path $OutputDir "browser-profile"
   New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
-  Start-Process -FilePath $browser `
+  Start-DetachedProcess -FilePath $browser `
     -ArgumentList @(
+      "--headless",
+      "--disable-gpu",
+      "--no-first-run",
+      "--no-default-browser-check",
+      "--disable-extensions",
       "--remote-debugging-address=127.0.0.1",
       "--remote-debugging-port=$DebugPort",
-      "--user-data-dir=$profileDir",
-      "--new-window",
-      "about:blank"
+      ('"--user-data-dir={0}"' -f $profileDir)
     ) `
-    -WindowStyle Hidden
+    -WorkingDirectory $Root | Out-Null
 }
 
-if (-not (Wait-HttpReady -Url ("http://127.0.0.1:{0}/json/version" -f $DebugPort) -Attempts 20 -DelayMs 450)) {
+if (-not (Wait-HttpReady -Url ("http://127.0.0.1:{0}/json/version" -f $DebugPort) -Attempts 30 -DelayMs 450)) {
   throw "No se pudo habilitar la depuracion remota del navegador en 127.0.0.1:$DebugPort."
 }
 
