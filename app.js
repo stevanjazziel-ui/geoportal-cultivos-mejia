@@ -3230,7 +3230,7 @@ function syncAgronomyAreaUi() {
 
   if (state.entryRoute === "agronomia") {
     if (dom.sidebarSubtitle) {
-      dom.sidebarSubtitle.textContent = `Capas de ejemplo, analisis satelital e instrumentos beta para monitoreo de cultivos en ${getAgronomyAreaProfile().scopeLabel}.`;
+      dom.sidebarSubtitle.textContent = `Empieza por la pregunta de campo: escena, diagnostico, clima, estaciones o seguimiento operativo en ${getAgronomyAreaProfile().scopeLabel}.`;
     }
   }
 }
@@ -4234,6 +4234,45 @@ function releaseGeoportalFromGpsBridgeServiceWorker() {
   }
 }
 
+const workflowGuideCatalog = {
+  agronomia: {
+    badge: "Campo guiado",
+    title: "Ruta guiada para decidir en campo",
+    defaultCopy: "Empieza por una pregunta concreta: que lote revisar, que imagen usar, como validar clima y como seguir la operacion en tiempo real.",
+    steps: [
+      { id: "scene", title: "Elegir zona y escena", pending: "Selecciona ambito e imagen satelital." },
+      { id: "diagnosis", title: "Diagnosticar el lote", pending: "Usa lote demo o dibuja un poligono." },
+      { id: "climate", title: "Cruzar clima y estaciones", pending: "Activa clima o INAMHI para contexto." },
+      { id: "operations", title: "Validar operacion", pending: "Activa GPS, dron o feed operativo." },
+    ],
+    actions: [
+      { id: "agronomy-scenes", label: "Abrir imagenes", tone: "secondary" },
+      { id: "agronomy-demo", label: "Usar lote demo", tone: "ghost" },
+      { id: "agronomy-assistant", label: "Abrir asistente", tone: "ghost" },
+      { id: "agronomy-gps", label: "Ver GPS", tone: "ghost" },
+    ],
+  },
+  planificacion: {
+    badge: "Decision guiada",
+    title: "Ruta guiada para decidir donde intervenir",
+    defaultCopy: "Primero entendemos aptitud base, luego presion territorial y seguridad hidrica, despues armamos estrategia y por ultimo validamos el sector en 3D.",
+    steps: [
+      { id: "aptitude", title: "Aptitud base", pending: "Corre la primera lectura multivariable." },
+      { id: "footprint", title: "Huella y expansion", pending: "Mide como cambia el suelo rural." },
+      { id: "water", title: "Seguridad hidrica", pending: "Contrasta oferta, demanda y resiliencia." },
+      { id: "strategy", title: "Estrategia FODA + CAME", pending: "Convierte el diagnostico en acciones." },
+      { id: "viewer3d", title: "Validacion 3D", pending: "Abre el visor para revisar volumen y sombra." },
+    ],
+    actions: [
+      { id: "planning-aptitude", label: "Evaluar aptitud", tone: "secondary" },
+      { id: "planning-footprint", label: "Analizar huella", tone: "ghost" },
+      { id: "planning-water", label: "Simular agua", tone: "ghost" },
+      { id: "planning-strategy", label: "Construir estrategia", tone: "ghost" },
+      { id: "planning-3d", label: "Abrir visor 3D", tone: "ghost" },
+    ],
+  },
+};
+
 function cacheDom() {
   dom.loginOverlay = document.querySelector("#loginOverlay");
   dom.openAgronomyBtn = document.querySelector("#openAgronomyBtn");
@@ -4428,8 +4467,16 @@ function cacheDom() {
   dom.modulesSectionKicker = document.querySelector("#modulesSectionKicker");
   dom.modulesSectionTitle = document.querySelector("#modulesSectionTitle");
   dom.modulesSectionCopy = document.querySelector("#modulesSectionCopy");
+  dom.workflowGuideCard = document.querySelector("#workflowGuideCard");
+  dom.workflowGuideTitle = document.querySelector("#workflowGuideTitle");
+  dom.workflowGuideBadge = document.querySelector("#workflowGuideBadge");
+  dom.workflowGuideCopy = document.querySelector("#workflowGuideCopy");
+  dom.workflowGuideSteps = document.querySelector("#workflowGuideSteps");
+  dom.workflowGuideActions = document.querySelector("#workflowGuideActions");
   dom.modeFooterPill = document.querySelector("#modeFooterPill");
   dom.agronomyModuleCards = Array.from(document.querySelectorAll('[data-module-track="agronomia"]'));
+  dom.gpsCard = document.querySelector("#gpsCard");
+  dom.wizardCard = document.querySelector("#wizardCard");
   dom.wizardModes = document.querySelector("#wizardModes");
   dom.wizardSteps = document.querySelector("#wizardSteps");
   dom.runWizardNextBtn = document.querySelector("#runWizardNextBtn");
@@ -4489,6 +4536,7 @@ function bindUI() {
   dom.territorialAlertsPanel?.addEventListener("click", handleTerritorialAlertInteraction);
   dom.wizardModes?.addEventListener("click", handleWizardModeInteraction);
   dom.wizardSteps?.addEventListener("click", handleWizardStepInteraction);
+  dom.workflowGuideActions?.addEventListener("click", handleWorkflowGuideAction);
 
   if (dom.sensorSelect) {
     dom.sensorSelect.addEventListener("change", () => {
@@ -5455,10 +5503,10 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     setActiveTab("modulos");
     hydratePlanning3dManifest();
     if (dom.sidebarTitle) {
-      dom.sidebarTitle.textContent = "Centro de planificacion territorial";
+      dom.sidebarTitle.textContent = "Centro de decisiones territoriales";
     }
     if (dom.sidebarSubtitle) {
-      dom.sidebarSubtitle.textContent = "Crecimiento urbano, transformacion del suelo rural, deficit de servicios, aptitud territorial y candidatos para equipamientos.";
+      dom.sidebarSubtitle.textContent = "Empieza por la decision y no por la capa: crecimiento urbano, aptitud, agua, estrategia y validacion 3D sobre el territorio.";
     }
     if (dom.overlayMode) {
       dom.overlayMode.textContent = "Territorial";
@@ -5498,10 +5546,10 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     renderAiGeoOverlay(state.aiGeoData);
   }
   if (dom.sidebarTitle) {
-    dom.sidebarTitle.textContent = "Centro de trabajo agronomico";
+    dom.sidebarTitle.textContent = "Centro de decisiones agronomicas";
   }
   if (dom.sidebarSubtitle) {
-    dom.sidebarSubtitle.textContent = `Capas de ejemplo, analisis satelital e instrumentos beta para monitoreo de cultivos en ${getAgronomyAreaProfile().scopeLabel}.`;
+    dom.sidebarSubtitle.textContent = `Empieza por la pregunta de campo: escena, diagnostico, clima, estaciones o seguimiento operativo en ${getAgronomyAreaProfile().scopeLabel}.`;
   }
   if (dom.overlayMode) {
     dom.overlayMode.textContent = state.activeWizard;
@@ -5574,6 +5622,14 @@ function focusAiGeoModuleCard() {
   focusModuleCard(dom.aiGeoCard);
 }
 
+function focusWizardModuleCard() {
+  focusModuleCard(dom.wizardCard);
+}
+
+function focusGpsModuleCard() {
+  focusModuleCard(dom.gpsCard);
+}
+
 function clearPlanningModuleFocus() {
   if (dom.planningCard) {
     dom.planningCard.classList.remove("entry-focus");
@@ -5583,6 +5639,201 @@ function clearPlanningModuleFocus() {
   }
   if (dom.aiGeoCard) {
     dom.aiGeoCard.classList.remove("entry-focus");
+  }
+  if (dom.wizardCard) {
+    dom.wizardCard.classList.remove("entry-focus");
+  }
+  if (dom.gpsCard) {
+    dom.gpsCard.classList.remove("entry-focus");
+  }
+}
+
+function getWorkflowGuideModel(route = state.entryRoute || "agronomia") {
+  const profile = isPlanningRoute(route)
+    ? workflowGuideCatalog.planificacion
+    : workflowGuideCatalog.agronomia;
+
+  if (isPlanningRoute(route)) {
+    const areaProfile = getTerritorialAreaProfile();
+    const planningReady = !!state.planningData;
+    const landReady = !!state.landChangeData;
+    const waterReady = !!state.hydrologyData;
+    const strategyReady = !!state.fodaCameData;
+    const threeDReady = !!planning3dState.manifest || planning3dState.modalOpen;
+    const summaryCopy = strategyReady
+      ? `${state.fodaCameData.summary.dominantActionLabel} domina la lectura actual en ${areaProfile.scopeLabel}. Ya puedes exportar y validar los sectores en 3D.`
+      : planningReady
+        ? `${state.planningData.candidates.length} candidatos priorizados en ${areaProfile.scopeLabel}. Completa huella, agua y estrategia para cerrar la decision.`
+        : `${profile.defaultCopy} El ambito activo es ${areaProfile.scopeLabel}.`;
+    return {
+      ...profile,
+      copy: summaryCopy,
+      steps: [
+        {
+          ...profile.steps[0],
+          tone: planningReady ? "ready" : "pending",
+          stateLabel: planningReady ? `${state.planningData.candidates.length} candidatos listos` : profile.steps[0].pending,
+        },
+        {
+          ...profile.steps[1],
+          tone: landReady ? "ready" : "pending",
+          stateLabel: landReady ? `${formatLandChangeHa(state.landChangeData.summary.transformedHa)} ha evaluadas` : profile.steps[1].pending,
+        },
+        {
+          ...profile.steps[2],
+          tone: waterReady ? "ready" : "pending",
+          stateLabel: waterReady ? state.hydrologyData.summary.balanceLabel : profile.steps[2].pending,
+        },
+        {
+          ...profile.steps[3],
+          tone: strategyReady ? "ready" : "pending",
+          stateLabel: strategyReady ? `${state.fodaCameData.priorityZones.length} zonas estrategicas` : profile.steps[3].pending,
+        },
+        {
+          ...profile.steps[4],
+          tone: threeDReady ? "available" : "pending",
+          stateLabel: threeDReady ? "Visor listo para validar calle, volumen y sombra" : profile.steps[4].pending,
+        },
+      ],
+    };
+  }
+
+  const areaProfile = getAgronomyAreaProfile();
+  const image = getSelectedImage();
+  const hasDiagnosis = !!(state.agronomyOutputs.intralote || state.agronomyOutputs.dem || state.currentPlot);
+  const hasClimate = !!(state.agronomyOutputs.climate || state.agronomyOutputs.inamhi || state.agronomyOutputs.inamhiLive);
+  const hasOperations = isGpsTrackingActive() || !!state.agronomyOutputs.gps;
+  const activeDevice = state.agronomyOutputs.gps?.activeDevice || state.gpsTracking.lastDeviceSnapshot;
+  const summaryCopy = state.aiGeoData?.mode === "agronomia"
+    ? `${state.aiGeoData.summary.dominantClassLabel} domina la lectura actual en ${state.aiGeoData.context.scopeLabel}.`
+    : image
+      ? `${image.title} ya esta lista para lectura operativa en ${areaProfile.scopeLabel}.`
+      : `${profile.defaultCopy} El ambito activo es ${areaProfile.scopeLabel}.`;
+  return {
+    ...profile,
+    copy: summaryCopy,
+    steps: [
+      {
+        ...profile.steps[0],
+        tone: image ? "ready" : "pending",
+        stateLabel: image ? `${getSensorForImage(image).label} | ${image.date}` : profile.steps[0].pending,
+      },
+      {
+        ...profile.steps[1],
+        tone: hasDiagnosis ? "ready" : "pending",
+        stateLabel: hasDiagnosis ? state.currentPlotLabel || "Diagnostico del lote disponible" : profile.steps[1].pending,
+      },
+      {
+        ...profile.steps[2],
+        tone: hasClimate ? "ready" : "pending",
+        stateLabel: hasClimate ? "Clima e INAMHI listos para contexto" : profile.steps[2].pending,
+      },
+      {
+        ...profile.steps[3],
+        tone: hasOperations ? "live" : "pending",
+        stateLabel: hasOperations ? `${activeDevice?.label || "Dispositivo activo"} en seguimiento` : profile.steps[3].pending,
+      },
+    ],
+  };
+}
+
+function renderWorkflowGuide() {
+  if (!dom.workflowGuideCard) {
+    return;
+  }
+
+  const guide = getWorkflowGuideModel();
+  setTextIfChanged(dom.workflowGuideTitle, guide.title);
+  setTextIfChanged(dom.workflowGuideBadge, guide.badge);
+  setTextIfChanged(dom.workflowGuideCopy, guide.copy);
+
+  if (dom.workflowGuideSteps) {
+    dom.workflowGuideSteps.innerHTML = guide.steps.map((step, index) => `
+      <article class="workflow-guide-step tone-${escapeHtmlContent(step.tone || "pending")}">
+        <span class="workflow-guide-step-index">${index + 1}</span>
+        <div class="workflow-guide-step-copy">
+          <strong>${escapeHtmlContent(step.title)}</strong>
+          <p>${escapeHtmlContent(step.stateLabel || step.pending || "")}</p>
+        </div>
+      </article>
+    `).join("");
+  }
+
+  if (dom.workflowGuideActions) {
+    dom.workflowGuideActions.innerHTML = guide.actions.map((action) => `
+      <button
+        class="${action.tone === "secondary" ? "secondary-button" : "ghost-button"}"
+        type="button"
+        data-workflow-action="${escapeHtmlContent(action.id)}"
+      >
+        ${escapeHtmlContent(action.label)}
+      </button>
+    `).join("");
+  }
+}
+
+function handleWorkflowGuideAction(event) {
+  const button = event.target.closest("[data-workflow-action]");
+  if (!button || !dom.workflowGuideActions?.contains(button)) {
+    return;
+  }
+  runWorkflowGuideAction(button.dataset.workflowAction);
+}
+
+function openSidebarWorkingPanel(tabId = "modulos") {
+  setActiveTab(tabId);
+  dom.sidebar?.classList.add("open");
+}
+
+function runWorkflowGuideAction(actionId) {
+  switch (actionId) {
+    case "agronomy-scenes":
+      openSidebarWorkingPanel("sentinel");
+      dom.sentinelForm?.scrollIntoView({ behavior: "smooth", block: "start" });
+      setStatus("Abrimos imagenes satelitales para que empieces por la escena y no por el ruido tecnico.");
+      return;
+    case "agronomy-demo":
+      openSidebarWorkingPanel("modulos");
+      useWizardDemoPlot();
+      focusWizardModuleCard();
+      setStatus("Lote demo cargado. Ya puedes correr diagnostico, clima o el asistente guiado.");
+      return;
+    case "agronomy-assistant":
+      openSidebarWorkingPanel("modulos");
+      focusWizardModuleCard();
+      setStatus("Asistente agricola listo. Puedes ejecutar un paso o el plan completo segun tu necesidad.");
+      return;
+    case "agronomy-gps":
+      openSidebarWorkingPanel("modulos");
+      focusGpsModuleCard();
+      setStatus("Modulo GPS listo para seguimiento de celular, dron, avioneta o feed externo.");
+      return;
+    case "planning-aptitude":
+      openSidebarWorkingPanel("modulos");
+      dom.runPlanningBtn?.click();
+      focusPlanningModuleCard();
+      return;
+    case "planning-footprint":
+      openSidebarWorkingPanel("modulos");
+      dom.runLandChangeBtn?.click();
+      focusModuleCard(dom.landChangeCard);
+      return;
+    case "planning-water":
+      openSidebarWorkingPanel("modulos");
+      dom.runHydrologyBtn?.click();
+      focusModuleCard(dom.hydrologyCard);
+      return;
+    case "planning-strategy":
+      openSidebarWorkingPanel("modulos");
+      dom.runFodaCameBtn?.click();
+      focusModuleCard(dom.fodaCameCard);
+      return;
+    case "planning-3d":
+      openSidebarWorkingPanel("modulos");
+      dom.openPlanning3dBtn?.click();
+      return;
+    default:
+      break;
   }
 }
 
@@ -5605,31 +5856,31 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   }
   if (dom.modulesSectionKicker) {
     dom.modulesSectionKicker.textContent = isPlanning
-      ? "Planeamiento"
+      ? "Decision territorial"
       : isEvidence
         ? "Soporte territorial"
-        : "Herramientas beta";
+        : "Decision agronomica";
   }
   if (dom.modulesSectionTitle) {
     dom.modulesSectionTitle.textContent = isPlanning
-      ? "Planificacion territorial"
+      ? "Ruta territorial guiada"
       : isEvidence
         ? "Evidencia territorial"
-        : "Modulos Agricolas";
+        : "Ruta agricola guiada";
   }
   if (dom.modulesSectionCopy) {
     dom.modulesSectionCopy.textContent = isPlanning
-      ? "Ruta territorial con modulos de aptitud, transformacion del suelo rural, estudio hidrico, priorizacion de candidatos y visor 3D urbano."
+      ? "Empieza por una decision territorial concreta: donde crecer, donde proteger, donde invertir y como validar la propuesta en 3D."
       : isEvidence
         ? "Ruta dedicada a quebradas, estaciones, areas sensibles, memoria historica y soporte tecnico de campo para volver mas precisa la lectura territorial."
-        : `Nucleo del sistema para agricultura de precision, relieve, clima y flujos guiados para monitoreo productivo en ${getAgronomyAreaProfile().scopeLabel}.`;
+        : `Empieza por una tarea de campo concreta: revisar vigor, relieve, clima, estaciones o seguimiento operativo en ${getAgronomyAreaProfile().scopeLabel}.`;
   }
   if (dom.modeFooterPill) {
     dom.modeFooterPill.textContent = isPlanning
-      ? "Territorio inteligente"
+      ? "Decision territorial"
       : isEvidence
         ? "Evidencia territorial"
-        : "Agronomia digital";
+        : "Decision agronomica";
   }
   if (Array.isArray(dom.planningModuleCards)) {
     dom.planningModuleCards.forEach((card) => {
@@ -5646,6 +5897,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
       card.classList.toggle("hidden", isTerritorial);
     });
   }
+  renderWorkflowGuide();
   syncSatelliteLayerToggle();
   syncEsriResolutionButtons();
   syncSatelliteSuperResolution();
@@ -9920,6 +10172,7 @@ function applyGpsTrackingSnapshot(payload, options = {}) {
   renderGpsTrackingResults(result);
   renderGpsTrackingVisual(result);
   renderGpsTrackingOverlay(result);
+  renderWorkflowGuide();
   if (options.fitOnFirst && mapState.map && Number.isFinite(Number(activeDevice.lat)) && Number.isFinite(Number(activeDevice.lon))) {
     const targetZoom = getSafeAgronomyMapZoom(Math.max(mapState.map.getZoom(), getAgronomyAreaMapView().zoom + 1));
     mapState.map.flyTo([Number(activeDevice.lat), Number(activeDevice.lon)], targetZoom, {
@@ -10521,6 +10774,7 @@ function stopGpsTracking(options = {}) {
   if (!settings.silent) {
     setStatus("Seguimiento GPS detenido. Puedes activar otra fuente cuando quieras.");
   }
+  renderWorkflowGuide();
 }
 
 function getBrowserGpsSpeedKmh(nextPoint, timestamp) {
@@ -15111,6 +15365,7 @@ function renderPlanningModule() {
   if (isTerritorialRoute() && !state.planningData) {
     updateMapSummary();
   }
+  renderWorkflowGuide();
 
   if (!state.planningData) {
     resetMetricGrid(dom.planningResults, `Ejecuta el modulo para obtener celdas aptas y candidatos priorizados en ${areaProfile.scopeLabel}.`);
@@ -23845,6 +24100,7 @@ function renderWizardAssistantState(force = false) {
   renderWizardSummary();
   renderWizardAssistantControls();
   renderWizardAssistantStatus();
+  renderWorkflowGuide();
 }
 
 async function executeWizardAction(action, { mode = state.activeWizard } = {}) {
@@ -24346,6 +24602,8 @@ function updateMapSummary(force = false) {
     return;
   }
 
+  renderWorkflowGuide();
+
   if (isTerritorialRoute()) {
     const planning = state.planningData;
     const fodaCame = state.fodaCameData;
@@ -24417,7 +24675,7 @@ function updateMapSummary(force = false) {
       setTextIfChanged(dom.mapSubtitle, `${landChange.period.shortLabel} con ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas, ${landChange.summary.riskLabel.toLowerCase()} y foco ${landChange.summary.hotspotLabel} con halos de presion.`);
     } else {
       setTextIfChanged(dom.mapTitle, "Planificacion territorial lista");
-      setTextIfChanged(dom.mapSubtitle, `Elige ${imageryProfile.label} para aptitud territorial o ejecuta los estudios de suelo e hidrologia para simular transformacion, oferta, demanda y resiliencia de Mejia.`);
+      setTextIfChanged(dom.mapSubtitle, `Empieza por aptitud, huella, agua, estrategia o visor 3D. La fuente activa es ${imageryProfile.label} y la corrida se preparara sobre ${getTerritorialAreaProfile().scopeLabel}.`);
     }
     return;
   }
@@ -24462,7 +24720,7 @@ function updateMapSummary(force = false) {
   if (!image) {
     setTextIfChanged(dom.mapTitle, "No hay escena activa");
     renderMapBadges();
-    setTextIfChanged(dom.mapSubtitle, `Ajusta el filtro de ${sensor.label} para cargar una imagen sobre ${getAgronomyAreaProfile().scopeLabel}.`);
+    setTextIfChanged(dom.mapSubtitle, `Abre Imagenes o usa un lote demo para empezar. El filtro actual de ${sensor.label} trabajara sobre ${getAgronomyAreaProfile().scopeLabel}.`);
     return;
   }
 

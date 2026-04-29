@@ -57,8 +57,9 @@
         <span class="eyebrow">Geoportal Territorial y Agronomico</span>
         <h1>Geoportal de Cultivos y Territorio</h1>
         <p class="lead">
-          Visor web listo para PC y celular que combina imagenes satelitales multifuente,
-          analisis agronomico para Mejia y Quevedo, lectura territorial y modulos beta para manejo de lotes y equipamientos.
+          Plataforma de decisiones espaciales para PC y celular que combina imagenes satelitales
+          multifuente, analisis agronomico, lectura territorial, seguimiento operativo y validacion 3D
+          desde un mismo lugar.
         </p>
         <div class="login-features">
           <article>
@@ -75,10 +76,10 @@
       <div class="login-panel">
         <div class="login-panel-inner">
           <p class="login-kicker">Elegir recorrido</p>
-          <h2>Que quieres abrir primero</h2>
+          <h2>Que quieres resolver primero</h2>
           <p>
-            Entra directo al flujo agronomico, al modulo de planificacion territorial
-            sin pasar por una pantalla intermedia.
+            Entra directo a la ruta de trabajo y luego el sistema te guiara por tareas,
+            no solo por capas y controles tecnicos.
           </p>
           <div class="entry-options">
             <button id="openAgronomyBtn" class="entry-option" type="button">
@@ -93,7 +94,7 @@
             </button>
           </div>
           <p class="login-note">
-            Ambos accesos entran como usuario publico y puedes cambiar de ruta luego dentro del visor.
+            Ambos accesos entran como usuario publico. Puedes cambiar de ruta luego sin salir del visor.
           </p>
         </div>
       </div>
@@ -150,9 +151,9 @@
 
         <section class="sidebar-header">
           <div>
-            <p id="sidebarTitle" class="sidebar-title">Centro de trabajo agronomico</p>
+            <p id="sidebarTitle" class="sidebar-title">Centro de decisiones agronomicas</p>
             <p id="sidebarSubtitle" class="sidebar-subtitle">
-              Capas de ejemplo, analisis satelital e instrumentos beta para monitoreo de cultivos.
+              Empieza por la pregunta de campo: escena, diagnostico, clima, estaciones o seguimiento operativo.
             </p>
           </div>
           <button id="sidebarClose" class="icon-button mobile-only" type="button" aria-label="Cerrar panel">
@@ -339,15 +340,30 @@
             <div class="section-block">
               <div class="section-head">
                 <div>
-                  <p id="modulesSectionKicker" class="section-kicker">Herramientas beta</p>
-                  <h2 id="modulesSectionTitle">Modulos Agricolas</h2>
+                  <p id="modulesSectionKicker" class="section-kicker">Decision agronomica</p>
+                  <h2 id="modulesSectionTitle">Ruta agricola guiada</h2>
                 </div>
                 <span class="beta-badge">Beta temprana</span>
               </div>
               <p id="modulesSectionCopy" class="section-copy">
-                Nucleo del sistema para agricultura de precision, relieve, clima y flujos guiados para monitoreo productivo.
+                Empieza por una tarea de campo concreta: revisar vigor, relieve, clima, estaciones o seguimiento operativo.
               </p>
             </div>
+
+            <article id="workflowGuideCard" class="module-card workflow-guide-card">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Recorrido sugerido</p>
+                  <h3 id="workflowGuideTitle">Empieza por una tarea concreta</h3>
+                </div>
+                <span id="workflowGuideBadge" class="beta-badge">Guiado</span>
+              </div>
+              <p id="workflowGuideCopy" class="module-copy">
+                El sistema te guiara por los pasos clave para convertir datos en una decision util.
+              </p>
+              <div id="workflowGuideSteps" class="workflow-guide-steps"></div>
+              <div id="workflowGuideActions" class="action-row workflow-guide-actions"></div>
+            </article>
 
             <article class="module-card" data-module-track="agronomia">
               <div class="module-head">
@@ -437,7 +453,7 @@
               </p>
             </article>
 
-            <article class="module-card" data-module-track="agronomia">
+            <article id="gpsCard" class="module-card" data-module-track="agronomia">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">Operacion y campo</p>
@@ -844,7 +860,7 @@
               </div>
             </article>
 
-            <article class="module-card wizard-card" data-module-track="agronomia">
+            <article id="wizardCard" class="module-card wizard-card" data-module-track="agronomia">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">Asistente guiado</p>
