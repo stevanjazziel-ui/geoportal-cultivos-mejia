@@ -2658,7 +2658,7 @@ const planning3dState = {
   heightScale: 1,
   shadowsVisible: false,
   viewMode: "perspective",
-  panelCollapsed: false,
+  panelCollapsed: true,
   sunDate: "",
   sunTime: "",
   sunPosition: null,
@@ -14951,12 +14951,15 @@ function focusPlanning3dDataset() {
 
   const bbox = turf.bbox(focusFeature);
   const hasDesktopOverlay = typeof window !== "undefined" && window.innerWidth > 900;
+  const rightPadding = hasDesktopOverlay
+    ? (planning3dState.panelCollapsed ? 92 : 380)
+    : 56;
   planning3dState.map.fitBounds([
     [bbox[0], bbox[1]],
     [bbox[2], bbox[3]],
   ], {
     padding: hasDesktopOverlay
-      ? { top: 72, right: 380, bottom: 72, left: 72 }
+      ? { top: 72, right: rightPadding, bottom: 72, left: 72 }
       : 56,
     duration: 720,
     pitch: camera.pitch,
@@ -15020,7 +15023,8 @@ async function openPlanning3dViewer() {
   planning3dState.visualReady = false;
   planning3dState.visualSnapshot = null;
   clearPlanning3dVisualRecoveryTimers();
-  setPlanning3dPanelCollapsed(planning3dState.panelCollapsed, { skipResize: true });
+  const preferCompactOpening = typeof window !== "undefined" && window.innerWidth >= 1240;
+  setPlanning3dPanelCollapsed(preferCompactOpening, { skipResize: true });
   dom.planning3dModal?.classList.remove("hidden");
   if (dom.planning3dModal) {
     dom.planning3dModal.setAttribute("aria-hidden", "false");

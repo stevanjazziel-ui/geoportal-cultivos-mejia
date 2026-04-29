@@ -3106,7 +3106,7 @@ button {
 }
 
 .app-shell[data-route="planificacion"] .workspace {
-  grid-template-columns: clamp(332px, 24vw, 430px) minmax(0, 1fr);
+  grid-template-columns: clamp(320px, 22vw, 400px) minmax(0, 1fr);
   gap: 14px;
 }
 
@@ -3121,7 +3121,7 @@ button {
 }
 
 .app-shell[data-route="planificacion"] .overlay-left {
-  max-width: min(330px, calc(100% - 196px));
+  max-width: min(290px, calc(100% - 184px));
   background: rgba(248, 245, 238, 0.88);
   border-color: rgba(255, 255, 255, 0.48);
 }
@@ -3287,10 +3287,10 @@ button {
   position: relative;
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 6px;
+  gap: 4px;
   width: calc(100vw - 20px);
   height: calc(100vh - 20px);
-  padding: 10px 12px 12px;
+  padding: 8px 10px 10px;
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.28);
   background:
@@ -3305,7 +3305,7 @@ button {
   grid-template-columns: minmax(0, 1.45fr) auto;
   align-items: start;
   gap: 10px 14px;
-  padding: 2px 4px 0;
+  padding: 2px 4px 2px;
 }
 
 .planning-3d-header h2 {
@@ -3317,7 +3317,7 @@ button {
 
 .planning-3d-subtitle {
   margin: 0;
-  max-width: 920px;
+  max-width: 760px;
   color: var(--muted);
   line-height: 1.28;
   font-size: 0.84rem;
@@ -3348,9 +3348,9 @@ button {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   align-items: stretch;
   gap: 8px 10px;
-  padding: 8px 10px;
+  padding: 7px 9px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.68);
+  background: rgba(255, 255, 255, 0.84);
   border: 1px solid rgba(47, 61, 50, 0.1);
 }
 
@@ -3437,7 +3437,19 @@ button {
 }
 
 .planning-3d-shell[data-panel="collapsed"] .planning-3d-map {
-  min-height: 620px;
+  min-height: 680px;
+}
+
+.planning-3d-shell[data-panel="collapsed"] .planning-3d-header {
+  grid-template-columns: minmax(0, 1.25fr) auto;
+}
+
+.planning-3d-shell[data-panel="collapsed"] .planning-3d-subtitle {
+  max-width: 620px;
+}
+
+.planning-3d-shell[data-panel="collapsed"] .planning-3d-toolbar {
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
 }
 
 .planning-3d-map.satellite-mode {
