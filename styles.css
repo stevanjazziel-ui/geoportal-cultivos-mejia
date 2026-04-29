@@ -2762,6 +2762,7 @@ button {
 .map-canvas .scene-preview-overlay {
   mix-blend-mode: normal;
   image-rendering: auto;
+  will-change: opacity, transform;
 }
 
 .map-canvas .scene-preview-overlay img,
@@ -3006,21 +3007,22 @@ button {
 .scene-footprint-preview-image {
   image-rendering: auto;
   transform: translateZ(0);
+  transform-origin: center;
 }
 
 .scene-preview-sentinel2,
 .scene-preview-sentinel2 image {
-  filter: saturate(1.06) contrast(1.08) brightness(1);
+  filter: saturate(1.08) contrast(1.1) brightness(1.01);
 }
 
 .scene-preview-landsat,
 .scene-preview-landsat image {
-  filter: saturate(1.1) contrast(1.08) brightness(1.02);
+  filter: saturate(1.12) contrast(1.1) brightness(1.02);
 }
 
 .scene-preview-sentinel1,
 .scene-preview-sentinel1 image {
-  filter: grayscale(0.78) contrast(1.28) brightness(1.1);
+  filter: grayscale(0.72) contrast(1.32) brightness(1.08);
 }
 
 .popup-title {
@@ -3161,7 +3163,7 @@ button {
 
 .planning-3d-header-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(132px, max-content));
+  grid-template-columns: repeat(3, minmax(132px, max-content));
   gap: 8px;
   align-items: stretch;
   justify-content: end;
@@ -3262,6 +3264,18 @@ button {
   transform: translateZ(0);
   backface-visibility: hidden;
   contain: layout paint;
+}
+
+.planning-3d-shell[data-panel="collapsed"] .planning-3d-layout {
+  grid-template-columns: 1fr;
+}
+
+.planning-3d-shell[data-panel="collapsed"] .planning-3d-panel {
+  display: none;
+}
+
+.planning-3d-shell[data-panel="collapsed"] .planning-3d-map {
+  min-height: 620px;
 }
 
 .planning-3d-map.satellite-mode {

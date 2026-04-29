@@ -2658,6 +2658,7 @@ const planning3dState = {
   heightScale: 1,
   shadowsVisible: false,
   viewMode: "perspective",
+  panelCollapsed: false,
   sunDate: "",
   sunTime: "",
   sunPosition: null,
@@ -4402,10 +4403,12 @@ function cacheDom() {
   dom.openPlanning3dBtn = document.querySelector("#openPlanning3dBtn");
   dom.reloadPlanning3dBtn = document.querySelector("#reloadPlanning3dBtn");
   dom.planning3dModal = document.querySelector("#planning3dModal");
+  dom.planning3dShell = document.querySelector("#planning3dShell");
   dom.planning3dBackdrop = document.querySelector("#planning3dBackdrop");
   dom.planning3dCloseBtn = document.querySelector("#planning3dCloseBtn");
   dom.planning3dPerspectiveBtn = document.querySelector("#planning3dPerspectiveBtn");
   dom.planning3dOrthographicBtn = document.querySelector("#planning3dOrthographicBtn");
+  dom.planning3dPanelToggleBtn = document.querySelector("#planning3dPanelToggleBtn");
   dom.planning3dResetViewBtn = document.querySelector("#planning3dResetViewBtn");
   dom.planning3dStatus = document.querySelector("#planning3dStatus");
   dom.planning3dProgress = document.querySelector("#planning3dProgress");
@@ -4911,6 +4914,9 @@ function bindUI() {
   dom.planning3dOrthographicBtn?.addEventListener("click", () => {
     setPlanning3dViewMode("orthographic", { recenter: true });
   });
+  dom.planning3dPanelToggleBtn?.addEventListener("click", () => {
+    setPlanning3dPanelCollapsed(!planning3dState.panelCollapsed);
+  });
   dom.planning3dResetViewBtn?.addEventListener("click", focusPlanning3dDataset);
   dom.planning3dBuildingsToggle?.addEventListener("change", () => {
     planning3dState.buildingsVisible = !!dom.planning3dBuildingsToggle.checked;
@@ -5234,6 +5240,20 @@ function handleTerritorialExportInteraction(event) {
       JSON.stringify(buildTerritorialJsonExport(), null, 2),
       "application/json;charset=utf-8"
     );
+    return;
+  }
+
+  if (format === "html") {
+    downloadTerritorialFile(
+      `${areaSlug}_territorial_${formatDateInput(new Date())}.html`,
+      buildTerritorialReportHtml(),
+      "text/html;charset=utf-8"
+    );
+    return;
+  }
+
+  if (format === "print") {
+    openTerritorialReport({ autoPrint: true });
     return;
   }
 
@@ -8121,18 +8141,19 @@ function getExactSceneRenderResolution() {
 function getExactSceneRenderOpacity() {
   const image = getSelectedImage();
   const sensor = getSensorForImage(image);
+  const attenuation = getSceneUrbanVisualAttenuation(image, "exact");
   const requestedOpacity = Number.isFinite(Number(state.scenePreviewOpacity))
-    ? Number(state.scenePreviewOpacity)
+    ? Number(state.scenePreviewOpacity) * attenuation
     : 0.32;
   if (isSatelliteVisualBase()) {
     if (sensor.id === "sentinel2") {
-      return clamp(requestedOpacity, 0.18, state.showAnalysisOverlay ? 0.38 : 0.52);
+      return clamp(requestedOpacity, 0.1, (state.showAnalysisOverlay ? 0.38 : 0.52) * Math.max(attenuation, 0.62));
     }
     if (sensor.id === "landsat") {
-      return clamp(requestedOpacity, 0.2, state.showAnalysisOverlay ? 0.4 : 0.54);
+      return clamp(requestedOpacity, 0.1, (state.showAnalysisOverlay ? 0.4 : 0.54) * Math.max(attenuation, 0.58));
     }
     if (sensor.id === "sentinel1") {
-      return clamp(requestedOpacity, 0.16, state.showAnalysisOverlay ? 0.34 : 0.48);
+      return clamp(requestedOpacity, 0.08, (state.showAnalysisOverlay ? 0.34 : 0.48) * Math.max(attenuation, 0.64));
     }
   }
   return clamp(requestedOpacity, 0.42, 0.82);
@@ -8140,22 +8161,53 @@ function getExactSceneRenderOpacity() {
 
 function getScenePreviewRenderOpacity(image = getSelectedImage()) {
   const sensor = getSensorForImage(image);
+  const attenuation = getSceneUrbanVisualAttenuation(image, "preview");
+  const requestedOpacity = Number(state.scenePreviewOpacity) * attenuation;
   if (isSatelliteVisualBase()) {
     if (sensor.id === "sentinel2") {
-      return clamp(state.scenePreviewOpacity, 0.18, state.showAnalysisOverlay ? 0.4 : 0.54);
+      return clamp(requestedOpacity, 0.08, (state.showAnalysisOverlay ? 0.4 : 0.54) * Math.max(attenuation, 0.42));
     }
     if (sensor.id === "landsat") {
-      return clamp(state.scenePreviewOpacity, 0.2, state.showAnalysisOverlay ? 0.42 : 0.56);
+      return clamp(requestedOpacity, 0.08, (state.showAnalysisOverlay ? 0.42 : 0.56) * Math.max(attenuation, 0.38));
     }
     if (sensor.id === "sentinel1") {
-      return clamp(state.scenePreviewOpacity, 0.16, state.showAnalysisOverlay ? 0.36 : 0.5);
+      return clamp(requestedOpacity, 0.08, (state.showAnalysisOverlay ? 0.36 : 0.5) * Math.max(attenuation, 0.46));
     }
   }
-  return clamp(state.scenePreviewOpacity, 0.42, 0.82);
+  return clamp(requestedOpacity, 0.18, 0.82);
 }
 
 function shouldDeferLowResolutionPreview(image = getSelectedImage()) {
-  return false;
+  if (!image || image.source !== "real" || !isSatelliteVisualBase()) {
+    return false;
+  }
+
+  const attenuation = getSceneUrbanVisualAttenuation(image, "preview");
+  return attenuation <= 0.38 && !canUseExactSceneRaster(image);
+}
+
+function getSceneUrbanVisualAttenuation(image = getSelectedImage(), mode = "preview") {
+  if (!image || image.source !== "real" || !isSatelliteVisualBase() || !mapState.map) {
+    return 1;
+  }
+
+  const sensor = getSensorForImage(image);
+  const zoom = Number(mapState.map.getZoom?.()) || 0;
+  const profile = sensor.id === "sentinel2"
+    ? { start: 14.8, full: 16.6, previewFloor: 0.34, exactFloor: 0.58 }
+    : sensor.id === "landsat"
+      ? { start: 14.2, full: 16, previewFloor: 0.28, exactFloor: 0.52 }
+      : sensor.id === "sentinel1"
+        ? { start: 15, full: 16.8, previewFloor: 0.42, exactFloor: 0.66 }
+        : null;
+
+  if (!profile || zoom <= profile.start) {
+    return 1;
+  }
+
+  const floor = mode === "exact" ? profile.exactFloor : profile.previewFloor;
+  const progress = clamp((zoom - profile.start) / Math.max(profile.full - profile.start, 0.1), 0, 1);
+  return Number((1 - progress * (1 - floor)).toFixed(3));
 }
 
 function syncAgronomyBaseLayerOpacity() {
@@ -12011,6 +12063,21 @@ function syncPlanning3dBaseButtons() {
   });
 }
 
+function setPlanning3dPanelCollapsed(collapsed = false, options = {}) {
+  planning3dState.panelCollapsed = Boolean(collapsed);
+  if (dom.planning3dShell) {
+    dom.planning3dShell.dataset.panel = planning3dState.panelCollapsed ? "collapsed" : "expanded";
+  }
+  if (dom.planning3dPanelToggleBtn) {
+    dom.planning3dPanelToggleBtn.classList.toggle("active", planning3dState.panelCollapsed);
+    dom.planning3dPanelToggleBtn.setAttribute("aria-pressed", planning3dState.panelCollapsed ? "true" : "false");
+    setTextIfChanged(dom.planning3dPanelToggleBtn, planning3dState.panelCollapsed ? "Mostrar panel" : "Ocultar panel");
+  }
+  if (!options.skipResize && planning3dState.map) {
+    window.setTimeout(() => stabilizePlanning3dViewport({ focus: false }), 110);
+  }
+}
+
 function getPlanning3dSunDateTime() {
   const now = new Date();
   const dateValue = planning3dState.sunDate || formatDateInput(now);
@@ -14699,6 +14766,7 @@ async function openPlanning3dViewer() {
   planning3dState.visualReady = false;
   planning3dState.visualSnapshot = null;
   clearPlanning3dVisualRecoveryTimers();
+  setPlanning3dPanelCollapsed(planning3dState.panelCollapsed, { skipResize: true });
   dom.planning3dModal?.classList.remove("hidden");
   if (dom.planning3dModal) {
     dom.planning3dModal.setAttribute("aria-hidden", "false");
@@ -20810,42 +20878,6 @@ function buildTerritorialCsvExport() {
     ]);
   });
 
-  (state.fieldEvidenceData?.topSectors || []).forEach((sector) => {
-    rows.push([
-      "evidencia_campo_sector",
-      sector.id,
-      sector.name,
-      sector.supportLabel,
-      `${sector.areaHa.toFixed(1)} ha`,
-      `${sector.rasterCount} raster(s)`,
-      sector.summary,
-    ]);
-  });
-
-  (state.fieldEvidenceData?.topStations || []).forEach((station) => {
-    rows.push([
-      "evidencia_campo_estacion",
-      station.id,
-      station.name,
-      station.kind,
-      station.annualMetricLabel,
-      station.historicalMetricLabel,
-      station.summary,
-    ]);
-  });
-
-  (state.fieldEvidenceData?.topHistory || []).forEach((source) => {
-    rows.push([
-      "evidencia_campo_historia",
-      source.id,
-      source.name,
-      source.sourceKind,
-      `${source.areaHa.toFixed(1)} ha`,
-      `${source.year || "s/f"}`,
-      source.summary,
-    ]);
-  });
-
   buildTerritorialAlerts().forEach((alert) => {
     rows.push([
       "alerta_territorial",
@@ -20929,13 +20961,6 @@ function buildTerritorialGeoJsonExport() {
     });
   }
 
-  if (state.fieldEvidenceData) {
-    pushFeatures(state.fieldEvidenceData.sectorsCollection, "evidencia_campo", "sectores");
-    pushFeatures(state.fieldEvidenceData.stationCollection, "evidencia_campo", "estaciones");
-    pushFeatures(state.fieldEvidenceData.sensitiveCollection, "evidencia_campo", "areas_sensibles");
-    pushFeatures(state.fieldEvidenceData.historyCollection, "evidencia_campo", "memoria_historica");
-  }
-
   if (state.fodaCameData) {
     pushFeatures(state.fodaCameData.zoneSurface, "foda_came", "zonas_estrategicas");
     state.fodaCameData.priorityZones.forEach((zone) => {
@@ -21010,24 +21035,23 @@ function buildTerritorialJsonExport() {
       signals: state.aiGeoData.signals,
       interpretation: state.aiGeoData.interpretation,
     } : null,
-    evidenciaCampo: state.fieldEvidenceData ? {
-      summary: state.fieldEvidenceData.summary,
-      topSectors: state.fieldEvidenceData.topSectors,
-      topStations: state.fieldEvidenceData.topStations,
-      topSensitiveThemes: state.fieldEvidenceData.topSensitiveThemes,
-      topHistory: state.fieldEvidenceData.topHistory,
-      climateSeries: state.fieldEvidenceData.climateSeries,
-      inventoryCategories: state.fieldEvidenceData.inventoryCategories,
-      consultancyProjects: state.fieldEvidenceData.consultancyProjects,
-      consultancyBaseThemes: state.fieldEvidenceData.consultancyBaseThemes,
-      sensitiveSourceSummary: state.fieldEvidenceData.sensitiveSourceSummary,
-      sourceSummary: state.fieldEvidenceData.sourceSummary,
+    soporteInterno: state.fieldEvidenceData ? {
+      evidenciaCampoIntegrada: true,
+      supportLabel: state.fieldEvidenceData.summary?.supportLabel || "Soporte territorial",
+      supportScore: state.fieldEvidenceData.summary?.supportScore || 0,
+      stationCount: state.fieldEvidenceData.summary?.stationCount || 0,
+      historyCount: state.fieldEvidenceData.summary?.historyCount || 0,
+      sensitiveThemeCount: state.fieldEvidenceData.summary?.sensitiveThemeCount || 0,
     } : null,
     alerts: buildTerritorialAlerts(),
   };
 }
 
-function buildTerritorialReportHtml() {
+function buildTerritorialReportHtml(options = {}) {
+  const settings = {
+    autoPrint: false,
+    ...options,
+  };
   const snapshot = buildTerritorialDecisionSnapshot();
   const sheets = buildTerritorialSectorSheets();
   const alerts = buildTerritorialAlerts();
@@ -21052,13 +21076,20 @@ function buildTerritorialReportHtml() {
         .tone-critical { border-color: #c37b7b; }
         .tone-pending { border-color: #c9cec5; }
         .sheet { margin-bottom: 14px; }
+        .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 18px; }
+        .toolbar button { border: 1px solid #d8ddd5; background: #fff; color: #243129; border-radius: 999px; padding: 10px 16px; font-weight: 700; cursor: pointer; }
+        .toolbar button:hover { background: #f5f1ea; }
         ul { margin: 0; padding-left: 18px; }
+        @media print { .screen-only { display: none !important; } body { margin: 18px; } }
       </style>
     </head>
     <body>
       <p class="kicker">Geoportal territorial ${escapeHtmlContent(areaProfile.scopeLabel)}</p>
       <h1>Informe ejecutivo territorial</h1>
       <p>Generado el ${escapeHtmlContent(today.toLocaleString("es-EC"))} con la corrida territorial activa sobre ${escapeHtmlContent(areaProfile.scopeLabel)}.</p>
+      <div class="toolbar screen-only">
+        <button type="button" onclick="window.print()">Imprimir o guardar como PDF</button>
+      </div>
       ${snapshot ? `
         <section>
           <p class="kicker">Semaforo integrado</p>
@@ -21151,6 +21182,13 @@ function buildTerritorialReportHtml() {
           </div>
         </section>
       ` : ""}
+      ${settings.autoPrint ? `
+        <script>
+          window.addEventListener("load", () => {
+            window.setTimeout(() => window.print(), 260);
+          });
+        </script>
+      ` : ""}
     </body>
   </html>`;
 }
@@ -21171,12 +21209,12 @@ function downloadTerritorialFile(filename, content, mimeType) {
   window.setTimeout(() => window.URL.revokeObjectURL(url), 400);
 }
 
-function openTerritorialReport() {
+function openTerritorialReport(options = {}) {
   if (typeof window === "undefined" || typeof Blob === "undefined") {
     return;
   }
 
-  const html = buildTerritorialReportHtml();
+  const html = buildTerritorialReportHtml(options);
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
   const url = window.URL.createObjectURL(blob);
   window.open(url, "_blank", "noopener");
@@ -21987,7 +22025,13 @@ function renderTerritorialExportPanel() {
   }
 
   const areaProfile = getTerritorialAreaProfile();
-  const hasAnyData = Boolean(state.planningData || state.landChangeData || state.hydrologyData || state.fieldEvidenceData);
+  const hasAnyData = Boolean(
+    state.planningData
+    || state.landChangeData
+    || state.hydrologyData
+    || state.fodaCameData
+    || state.aiGeoData?.mode === "territorial"
+  );
   if (!hasAnyData) {
     dom.territorialExportPanel.classList.add("empty-state");
     dom.territorialExportPanel.classList.remove("has-data");
@@ -22001,7 +22045,6 @@ function renderTerritorialExportPanel() {
     hydrology: state.hydrologyData?.prioritySectors?.length || 0,
     fodaCame: state.fodaCameData?.priorityZones?.length || 0,
     aiGeo: state.aiGeoData?.mode === "territorial" ? (state.aiGeoData.signals?.length || 0) : 0,
-    fieldEvidence: 0,
   };
   dom.territorialExportPanel.classList.remove("empty-state");
   dom.territorialExportPanel.classList.add("has-data");
@@ -22027,6 +22070,8 @@ function renderTerritorialExportPanel() {
       </div>
       <div class="action-row analysis-actions">
         <button class="secondary-button" type="button" data-export-format="report">Abrir informe</button>
+        <button class="ghost-button" type="button" data-export-format="print">Imprimir / PDF</button>
+        <button class="ghost-button" type="button" data-export-format="html">Descargar HTML</button>
         <button class="ghost-button" type="button" data-export-format="csv">Descargar CSV</button>
         <button class="ghost-button" type="button" data-export-format="geojson">Descargar GeoJSON</button>
         <button class="ghost-button" type="button" data-export-format="json">Resumen JSON</button>

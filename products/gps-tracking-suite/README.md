@@ -27,7 +27,9 @@ Producto standalone de seguimiento GPS y telemetria en tiempo real, separado del
 - `tools/install_tracking_server_autostart.ps1`: instala el servidor como host persistente.
 - `tools/remove_tracking_server_autostart.ps1`: retira el autoarranque del servidor.
 - `tools/build_deploy_package.ps1`: genera zip de entrega.
+- `tools/validate_deploy_bundle.ps1`: revisa la estructura del producto y puede construir el paquete final.
 - `Empaquetar Carpeta de Entrega.bat`: genera una carpeta unica lista para copiar y tambien su zip.
+- `Verificar Instalacion GeoTrack RT.bat`: ejecuta una verificacion rapida del producto standalone.
 - `vendor/generate_activation_license.ps1`: genera la licencia local del cliente desde el lado proveedor.
 - `deploy/`: plantillas de publicacion por Caddy e IIS.
 
@@ -60,6 +62,26 @@ Producto standalone de seguimiento GPS y telemetria en tiempo real, separado del
 - Usa `ingestToken` para evitar envios no autorizados.
 - Solo comparte el token en links si `shareIngestTokenInSenderLinks` esta en `true`.
 - Si el cliente tiene dominio publico, sirve el modulo por HTTPS para permitir geolocalizacion desde cualquier red.
+
+## Verificacion antes de entregar
+
+Antes de copiar el producto a la empresa cliente, conviene ejecutar:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tools\validate_deploy_bundle.ps1 -BuildPackage
+```
+
+O con acceso rapido:
+
+```powershell
+.\Verificar Instalacion GeoTrack RT.bat -BuildPackage
+```
+
+Eso valida archivos clave, configuracion, estructura del producto y genera un paquete de entrega en `dist\` con:
+
+- carpeta unica lista para copiar
+- archivo `.zip`
+- `release-manifest.json` con inventario, pesos y hash SHA-256 por archivo
 
 ## Activacion local por computadora
 
@@ -115,3 +137,4 @@ La salida deja:
 
 - una carpeta unica lista para copiar en `dist/`
 - un zip de esa misma entrega en `dist/`
+- un `release-manifest.json` dentro de la carpeta de entrega

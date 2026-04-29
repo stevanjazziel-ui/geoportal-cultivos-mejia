@@ -24,6 +24,7 @@ Geoportal navegable orientado al canton Mejia con rutas de agronomia y planifica
 - Raster exacto de escena real usando COG publico de Sentinel-2 cuando existe coincidencia para la fecha y mosaico.
 - Landsat 8/9 y Sentinel-1 se muestran como escena recortada a la huella real usando el thumbnail publico del catalogo.
 - El render de escena prioriza previews web mas utiles y mejora el color/contraste del raster exacto para lectura mas limpia en el mapa.
+- Modulo de `Inteligencia Geoespacial` para clasificacion IA, deteccion de cambios, alertas y una interpretacion automatizada orientada a agronomia y planificacion.
 - Analisis intralote con dibujo de poligonos o seleccion de lotes demo.
 - Modulo de planificacion territorial con calculo multivariable para VIS, escuelas, hospitales y equipamientos.
 - Modulo territorial adicional de `Huella urbana / Transformacion del suelo rural` para comparar 2010, 2016, 2022 y una proyeccion 2030 sobre Mejia.
@@ -31,6 +32,7 @@ Geoportal navegable orientado al canton Mejia con rutas de agronomia y planifica
 - Selector territorial de fuente satelital con `Sentinel-2`, `Landsat`, `Sentinel-1` y `VIIRS` segun el objetivo de planificacion.
 - Matriz visible de variables territoriales por fuente satelital y ponderacion integrada al puntaje multicriterio.
 - Visualizador 3D urbano en el modulo territorial con extrusiones de construcciones reales y soporte catastral desde los shapes cargados en el proyecto.
+- Modulo estrategico `FODA + CAME` para traducir la lectura territorial a fortalezas, oportunidades, debilidades, amenazas y acciones de intervencion.
 - Integracion local de fotos georreferenciadas para el visor 3D, con consulta por cercania desde una carpeta externa.
 - Backend local opcional con proxy STAC, cache en memoria y endpoint de analisis.
 - Estimaciones beta de relieve, clima agricola y asistente guiado por etapa.
@@ -66,7 +68,7 @@ Modo recomendado:
 
 ## Validacion automatica
 
-- Para correr una prueba de humo completa del geoportal, incluyendo `agronomia`, `planificacion`, `evidencia territorial` y un caso dedicado del `visor 3D`, ejecuta:
+- Para correr una prueba de humo completa del geoportal, incluyendo `agronomia`, `inteligencia geoespacial`, `planificacion FODA + CAME` y un caso dedicado del `visor 3D`, ejecuta:
   ```powershell
   powershell -ExecutionPolicy Bypass -File .\tools\run_geoportal_smoke_suite.ps1
   ```
@@ -74,7 +76,16 @@ Modo recomendado:
   ```powershell
   .\Probar Geoportal Completo.bat
   ```
+- Para una revision previa a publicacion o a la entrega del modulo comercial, ejecuta:
+  ```powershell
+  powershell -ExecutionPolicy Bypass -File .\tools\run_release_readiness.ps1 -BuildStandalonePackage
+  ```
+- O con acceso rapido:
+  ```powershell
+  .\Verificar Geoportal y Producto GPS.bat -BuildStandalonePackage
+  ```
 - La suite deja capturas PNG y un resumen JSON en `tmp\smoke\`.
+- La revision integral deja un resumen JSON adicional en `tmp\release\`.
 
 ## Conexion Satloc G4
 
@@ -118,3 +129,4 @@ El puente esta pensado para salida NMEA 0183 con sentencias `GGA`, `RMC` o `VTG`
 - El estudio de transformacion del suelo rural es una replica metodologica sintetica inspirada en referentes nacionales; no reemplaza una delimitacion oficial de huella urbana ni un catastro normativo.
 - El visor 3D actual ya muestra construcciones y catastro; la vinculacion de fotos de fachadas por coordenadas queda lista para una siguiente iteracion.
 - La galeria de fotos del visor 3D es local: las imagenes no se empujan al repo ni a GitHub Pages, se sirven unicamente desde tu maquina mediante `server.ps1`.
+- La `evidencia territorial` ya no se presenta como modulo publico separado; ahora se usa como soporte interno de los analisis territoriales, exportes y recomendaciones.

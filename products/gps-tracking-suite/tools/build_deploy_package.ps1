@@ -11,6 +11,17 @@ $zipPath = Join-Path $DistDirectory $safeName
 $folderName = [System.IO.Path]::GetFileNameWithoutExtension($safeName)
 $folderPath = Join-Path $DistDirectory $folderName
 
+function Get-RelativePath {
+  param(
+    [Parameter(Mandatory = $true)][string]$BasePath,
+    [Parameter(Mandatory = $true)][string]$TargetPath
+  )
+
+  $baseUri = New-Object System.Uri(($BasePath.TrimEnd('\') + '\'))
+  $targetUri = New-Object System.Uri($TargetPath)
+  return [System.Uri]::UnescapeDataString($baseUri.MakeRelativeUri($targetUri).ToString()).Replace('/', '\')
+}
+
 if (-not (Test-Path -LiteralPath $DistDirectory)) {
   New-Item -ItemType Directory -Path $DistDirectory -Force | Out-Null
 }
@@ -42,6 +53,7 @@ $items = @(
   (Join-Path $Root "Instalar Inicio Automatico Satloc G4.bat")
   (Join-Path $Root "Quitar Inicio Automatico GeoTrack RT.bat")
   (Join-Path $Root "Quitar Inicio Automatico Satloc G4.bat")
+  (Join-Path $Root "Verificar Instalacion GeoTrack RT.bat")
 )
 
 $emptyDirectories = @(
@@ -55,6 +67,17 @@ foreach ($directory in $emptyDirectories) {
   }
 }
 
+$placeholderFiles = @(
+  @{
+    Path = Join-Path $folderPath "data\.keep"
+    Content = "Directorio reservado para datos operativos del cliente."
+  },
+  @{
+    Path = Join-Path $folderPath "data\logs\.keep"
+    Content = "Directorio reservado para logs operativos del cliente."
+  }
+)
+
 foreach ($item in $items) {
   if (-not (Test-Path -LiteralPath $item)) {
     continue
@@ -63,6 +86,39 @@ foreach ($item in $items) {
   $destination = Join-Path $folderPath (Split-Path -Leaf $item)
   Copy-Item -LiteralPath $item -Destination $destination -Recurse -Force
 }
+
+foreach ($placeholder in $placeholderFiles) {
+  Set-Content -LiteralPath $placeholder.Path -Value $placeholder.Content -Encoding UTF8
+}
+
+$manifestPath = Join-Path $folderPath "release-manifest.json"
+$packagedFiles = Get-ChildItem -LiteralPath $folderPath -Recurse -File | Where-Object { $_.FullName -ne $manifestPath } | Sort-Object FullName
+$manifestFiles = foreach ($file in $packagedFiles) {
+  $hash = Get-FileHash -LiteralPath $file.FullName -Algorithm SHA256
+  [pscustomobject]@{
+    path = (Get-RelativePath -BasePath $folderPath -TargetPath $file.FullName).Replace('\', '/')
+    size = [int64]$file.Length
+    sha256 = $hash.Hash.ToLowerInvariant()
+  }
+}
+
+$totalBytes = 0
+if ($manifestFiles) {
+  $totalBytes = ($manifestFiles | Measure-Object -Property size -Sum).Sum
+}
+
+$manifest = [ordered]@{
+  productName = "GeoTrack RT"
+  generatedAt = (Get-Date).ToString("o")
+  packageFolder = (Split-Path -Leaf $folderPath)
+  zipFileName = (Split-Path -Leaf $zipPath)
+  sourceRoot = $Root
+  fileCount = @($manifestFiles).Count
+  totalBytes = [int64]$totalBytes
+  files = $manifestFiles
+}
+
+$manifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $manifestPath -Encoding UTF8
 
 Compress-Archive -Path (Join-Path $folderPath "*") -DestinationPath $zipPath -CompressionLevel Optimal
 Write-Host ("Carpeta de entrega generada en {0}" -f $folderPath) -ForegroundColor Green
