@@ -6,10 +6,10 @@
   <meta http-equiv="Cache-Control" content="no-store">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Geoportal Cultivos | Mejia y Quevedo</title>
+  <title>Plataforma Inteligente | Mejia y Quevedo</title>
   <meta
     name="description"
-    content="Geoportal para analisis agronomico en Mejia y Quevedo, y planificacion territorial en Mejia, con imagenes satelitales multifuente, modulos tematicos y analisis por AOI."
+    content="Plataforma de inteligencia territorial, agronomica y operativa para Mejia y Quevedo, con imagenes satelitales multifuente, estudios guiados, seguimiento operativo y analisis por AOI."
   >
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,7 +31,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260428-1">
+  <link rel="stylesheet" href="./styles.css?v=20260429-2">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -54,8 +54,8 @@
   <div id="loginOverlay" class="login-overlay">
     <section class="login-card">
       <div class="login-copy">
-        <span class="eyebrow">Geoportal Territorial y Agronomico</span>
-        <h1>Geoportal de Cultivos y Territorio</h1>
+        <span class="eyebrow">Plataforma inteligente</span>
+        <h1>Plataforma de inteligencia territorial, agronomica y operativa</h1>
         <p class="lead">
           Plataforma de decisiones espaciales para PC y celular que combina imagenes satelitales
           multifuente, analisis agronomico, lectura territorial, seguimiento operativo y validacion 3D
@@ -63,7 +63,7 @@
         </p>
         <div class="login-features">
           <article>
-            <h2>3 sensores</h2>
+          <h2>3 sensores</h2>
             <p>Sentinel-2, Landsat 8/9 y Sentinel-1 con escenas comparables desde un mismo panel.</p>
           </article>
           <article>
@@ -109,7 +109,7 @@
         </button>
         <div>
           <span class="eyebrow">Mejia + Quevedo, Ecuador</span>
-          <h1>Geoportal de Cultivos</h1>
+          <h1>Plataforma inteligente</h1>
         </div>
       </div>
 
@@ -140,7 +140,7 @@
         </div>
         <div class="user-pill">
           <span class="status-dot"></span>
-            Usuario publico - v20260429-1
+            Usuario publico - v20260429-2
         </div>
       </div>
     </header>
@@ -365,7 +365,9 @@
               <div id="workflowGuideActions" class="action-row workflow-guide-actions"></div>
             </article>
 
-            <article class="module-card" data-module-track="agronomia">
+            <div id="moduleQuickNav" class="module-quick-nav"></div>
+
+            <article id="intraloteCard" class="module-card" data-module-track="agronomia">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">Precision</p>
@@ -384,7 +386,7 @@
               </div>
             </article>
 
-            <article class="module-card" data-module-track="agronomia">
+            <article id="demCard" class="module-card" data-module-track="agronomia">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">Copernicus GLO-30</p>
@@ -403,7 +405,7 @@
               </div>
             </article>
 
-            <article class="module-card" data-module-track="agronomia">
+            <article id="climateCard" class="module-card" data-module-track="agronomia">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">ERA5-Land y MODIS</p>
@@ -422,7 +424,7 @@
               </div>
             </article>
 
-            <article class="module-card" data-module-track="agronomia">
+            <article id="inamhiCard" class="module-card" data-module-track="agronomia">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">INAMHI historico</p>
@@ -453,6 +455,67 @@
               </p>
             </article>
 
+            <article id="hydroNetworkCard" class="module-card" data-module-track="agronomia">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Infraestructura y drenaje</p>
+                  <h3>Red hidrica productiva</h3>
+                </div>
+                <button id="runHydroNetworkBtn" class="secondary-button" type="button">Leer red hidrica</button>
+              </div>
+              <p class="module-copy">
+                Identifica y grafica rios, acequias y quebradas del ambito agricola para lectura de riego,
+                drenaje, proteccion de riberas y condicionamiento operativo de lotes.
+              </p>
+              <div id="hydroNetworkResults" class="metrics-grid empty-state">
+                Ejecuta el modulo para medir kilometros de red hidrica, cercania al lote y prioridades de manejo.
+              </div>
+              <div id="hydroNetworkVisual" class="agronomy-visual empty-state">
+                Aqui apareceran la mezcla entre rios, acequias y quebradas, la distancia al agua y la prioridad operativa del ambito.
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="focusHydroNetworkBtn" class="secondary-button" type="button">Centrar red</button>
+                <button id="clearHydroNetworkBtn" class="ghost-button" type="button">Limpiar red</button>
+              </div>
+            </article>
+
+            <article id="agroSuitabilityCard" class="module-card" data-module-track="agronomia">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Decision agroclimatica</p>
+                  <h3>Aptitud agroclimatica por cultivo</h3>
+                </div>
+                <button id="runAgroSuitabilityBtn" class="secondary-button" type="button">Evaluar cultivo</button>
+              </div>
+              <p class="module-copy">
+                Cruza escena satelital, humedad, temperatura, relieve y cercania a la red hidrica para priorizar
+                cultivos y lotes con mejor ajuste productivo en Mejia o Quevedo.
+              </p>
+              <div class="planning-toolbar">
+                <label class="field">
+                  <span>Cultivo objetivo</span>
+                  <select id="agroSuitabilityCropSelect">
+                    <option value="papa">Papa</option>
+                    <option value="maiz">Maiz</option>
+                    <option value="pasto">Pasto</option>
+                    <option value="hortaliza">Hortaliza</option>
+                    <option value="cacao">Cacao</option>
+                    <option value="banano">Banano</option>
+                  </select>
+                </label>
+              </div>
+              <div id="agroSuitabilityResults" class="metrics-grid empty-state">
+                Ejecuta el modulo para ver aptitud por cultivo, lotes compatibles y alertas de manejo.
+              </div>
+              <div id="agroSuitabilityVisual" class="agronomy-visual empty-state">
+                Aqui apareceran el ranking de lotes, la ventana termica-hidrica y la recomendacion agroclimatica.
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="focusAgroSuitabilityBtn" class="secondary-button" type="button">Centrar aptitud</button>
+                <button id="clearAgroSuitabilityBtn" class="ghost-button" type="button">Limpiar aptitud</button>
+              </div>
+            </article>
+
             <article id="gpsCard" class="module-card" data-module-track="agronomia">
               <div class="module-head">
                 <div>
@@ -471,11 +534,29 @@
                 <button id="startGpsDemoBtn" class="ghost-button" type="button">Demo GPS / aereo</button>
                 <button id="stopGpsTrackingBtn" class="ghost-button" type="button">Detener</button>
               </div>
+              <div class="gps-geofence-toolbar">
+                <input id="gpsGeofenceFileInput" class="visually-hidden" type="file" accept=".kml,.geojson,.json">
+                <label class="field compact gps-geofence-field">
+                  <span>Tolerancia del corredor (m)</span>
+                  <input id="gpsGeofenceTolerance" type="number" min="10" max="500" step="5" value="45">
+                </label>
+                <div class="action-row module-action-row">
+                  <button id="openGpsGeofenceBtn" class="ghost-button" type="button">Subir KML / GeoJSON</button>
+                  <button id="focusGpsGeofenceBtn" class="ghost-button" type="button">Centrar corredor</button>
+                  <button id="clearGpsGeofenceBtn" class="ghost-button" type="button">Quitar corredor</button>
+                </div>
+              </div>
               <div id="gpsResults" class="metrics-grid empty-state">
                 Activa el modulo para seguir un dispositivo terrestre o aereo, un feed local o un recorrido demo sobre el mapa.
               </div>
+              <div id="gpsGeofenceResults" class="metrics-grid empty-state">
+                Carga un KML o GeoJSON para delimitar por donde debe ir el GPS y vigilar salidas del corredor.
+              </div>
               <div id="gpsVisual" class="agronomy-visual empty-state">
                 Aqui apareceran la trayectoria, velocidad, altura, precision y estado operativo del seguimiento GPS.
+              </div>
+              <div id="gpsGeofenceEvents" class="gps-event-log empty-state">
+                Aqui apareceran las advertencias y el registro de entradas o salidas respecto al corredor cargado.
               </div>
               <p class="service-note">
                 Este modulo admite geolocalizacion del navegador, relay publico por internet, feed local desde <code>server.ps1</code> o una simulacion de recorrido. El feed puede venir de un celular, una laptop, un dron o una avioneta si entregan <code>lat</code>, <code>lon</code>, <code>timestamp</code> y, opcionalmente, <code>altitudeM</code>, <code>speedKmh</code>, <code>headingDeg</code> y <code>batteryPct</code>. El link <strong>Internet</strong> no requiere estar en la misma Wi-Fi.
@@ -622,6 +703,60 @@
               </div>
             </article>
 
+            <article id="mobilityCard" class="module-card planning-card hidden" data-module-track="planificacion">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Movilidad y accesibilidad</p>
+                  <h3>Cobertura, tiempos y conectividad</h3>
+                </div>
+                <button id="runMobilityBtn" class="secondary-button" type="button">Evaluar movilidad</button>
+              </div>
+              <p class="module-copy">
+                Mide accesibilidad territorial, conectividad a vias y cercania funcional a escuelas, salud y
+                equipamientos para revelar sectores bien servidos y brechas de movilidad.
+              </p>
+              <div id="mobilityResults" class="metrics-grid empty-state">
+                Ejecuta el estudio para ver cobertura funcional, tiempos de acceso y sectores criticos de conectividad.
+              </div>
+              <div id="mobilitySummary" class="territorial-readout empty-state">
+                Aqui apareceran la lectura de cobertura, el tiempo estimado a servicios y la movilidad dominante del ambito.
+              </div>
+              <div id="mobilitySectors" class="hydrology-sectors empty-state">
+                Aqui apareceran los sectores con mejor y peor accesibilidad para centrar la intervencion territorial.
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="focusMobilityBtn" class="secondary-button" type="button">Centrar movilidad</button>
+                <button id="clearMobilityBtn" class="ghost-button" type="button">Limpiar movilidad</button>
+              </div>
+            </article>
+
+            <article id="riskCard" class="module-card planning-card hidden" data-module-track="planificacion">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Riesgo territorial</p>
+                  <h3>Riesgo territorial compuesto</h3>
+                </div>
+                <button id="runRiskBtn" class="secondary-button" type="button">Evaluar riesgo</button>
+              </div>
+              <p class="module-copy">
+                Cruza pendiente, drenajes, presion de ocupacion, restricciones y seguridad hidrica para delimitar
+                sectores criticos, amenazas dominantes y franjas de contencion prioritaria.
+              </p>
+              <div id="riskResults" class="metrics-grid empty-state">
+                Ejecuta el estudio para ver area critica, drivers de riesgo y sectores con necesidad de contencion.
+              </div>
+              <div id="riskDrivers" class="planning-pills empty-state">
+                Aqui apareceran los drivers compuestos que explican la peligrosidad y exposicion territorial.
+              </div>
+              <div id="riskSectors" class="land-change-sectors empty-state">
+                Aqui apareceran los sectores criticos, su amenaza dominante y la accion territorial recomendada.
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="focusRiskBtn" class="secondary-button" type="button">Centrar riesgo</button>
+                <button id="clearRiskBtn" class="ghost-button" type="button">Limpiar riesgo</button>
+              </div>
+            </article>
+
             <article id="landChangeCard" class="module-card planning-card hidden" data-module-track="planificacion">
               <div class="module-head">
                 <div>
@@ -730,7 +865,7 @@
               </div>
             </article>
 
-            <article class="module-card planning-card hidden" data-module-track="planificacion">
+            <article id="planningResultsCard" class="module-card planning-card hidden" data-module-track="planificacion">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">Priorizacion territorial</p>
@@ -756,7 +891,7 @@
               </div>
             </article>
 
-            <article class="module-card planning-card hidden" data-module-track="planificacion">
+            <article id="territorialScenarioCard" class="module-card planning-card hidden" data-module-track="planificacion">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">Comparador</p>
@@ -772,7 +907,7 @@
               </div>
             </article>
 
-            <article class="module-card planning-card hidden" data-module-track="planificacion">
+            <article id="territorialReadoutCard" class="module-card planning-card hidden" data-module-track="planificacion">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">Lectura avanzada</p>
@@ -798,7 +933,7 @@
               </div>
             </article>
 
-            <article class="module-card planning-card hidden" data-module-track="planificacion">
+            <article id="territorialDecisionCard" class="module-card planning-card hidden" data-module-track="planificacion">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">Decision tecnica</p>
@@ -820,7 +955,7 @@
               </div>
             </article>
 
-            <article class="module-card planning-card hidden" data-module-track="planificacion">
+            <article id="territorialAlertsCard" class="module-card planning-card hidden" data-module-track="planificacion">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">Monitoreo</p>
@@ -836,7 +971,7 @@
               </div>
             </article>
 
-            <article class="module-card planning-card hidden" data-module-track="planificacion">
+            <article id="planning3dCard" class="module-card planning-card hidden" data-module-track="planificacion">
               <div class="module-head">
                 <div>
                   <p class="module-kicker">Visualizador urbano</p>

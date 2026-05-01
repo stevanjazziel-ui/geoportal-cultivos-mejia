@@ -19,9 +19,19 @@ const layerCatalog = [
         description: "Conectividad vial principal para entrada a lotes y logistica de cosecha.",
       },
       {
-        id: "canales",
-        title: "Canales y acequias",
-        description: "Infraestructura lineal de riego de ejemplo.",
+        id: "rios",
+        title: "Rios y drenajes mayores",
+        description: "Cauces principales para lectura de abastecimiento, drenaje y proteccion de riberas.",
+      },
+      {
+        id: "acequias",
+        title: "Acequias y canales de riego",
+        description: "Infraestructura de distribucion de agua para operacion agricola.",
+      },
+      {
+        id: "quebradas",
+        title: "Quebradas y escorrentias",
+        description: "Frentes de drenaje, escorrentia y contencion preventiva.",
       },
     ],
   },
@@ -61,6 +71,322 @@ const layerCatalog = [
     ],
   },
 ];
+
+const hydroFeatureCatalog = {
+  rios: [
+    lineFeature("Rio San Pedro", [
+      [-78.675, -0.413],
+      [-78.646, -0.435],
+      [-78.621, -0.458],
+      [-78.604, -0.486],
+      [-78.588, -0.518],
+    ], {
+      category: "hidrico",
+      hydroKind: "rio",
+      hydroRole: "Cauce principal",
+      protectionM: 55,
+      irrigationValue: 0.86,
+      summary: "Corredor fluvial principal con influencia sobre drenaje y proteccion ribereña.",
+    }),
+    lineFeature("Rio Cutuchi", [
+      [-78.702, -0.468],
+      [-78.675, -0.483],
+      [-78.649, -0.502],
+      [-78.62, -0.521],
+      [-78.588, -0.54],
+    ], {
+      category: "hidrico",
+      hydroKind: "rio",
+      hydroRole: "Aporte altoandino",
+      protectionM: 48,
+      irrigationValue: 0.74,
+      summary: "Cauce andino de soporte para drenaje y recarga sobre el sur de Mejia.",
+    }),
+    lineFeature("Rio Pita", [
+      [-78.627, -0.339],
+      [-78.612, -0.351],
+      [-78.6, -0.365],
+      [-78.586, -0.379],
+      [-78.57, -0.389],
+    ], {
+      category: "hidrico",
+      hydroKind: "rio",
+      hydroRole: "Borde norte",
+      protectionM: 42,
+      irrigationValue: 0.58,
+      summary: "Cauce de borde con control de escorrentia y proteccion sobre Cutuglagua.",
+    }),
+    lineFeature("Rio Quevedo", [
+      [-79.548, -1.008],
+      [-79.518, -1.02],
+      [-79.487, -1.036],
+      [-79.459, -1.058],
+      [-79.432, -1.084],
+    ], {
+      category: "hidrico",
+      hydroKind: "rio",
+      hydroRole: "Cauce tropical principal",
+      protectionM: 60,
+      irrigationValue: 0.9,
+      territoryId: "quevedo",
+      summary: "Eje fluvial principal para drenaje, riego y prevencion de saturacion en Quevedo.",
+    }),
+    lineFeature("Estero San Pablo", [
+      [-79.53, -1.042],
+      [-79.498, -1.049],
+      [-79.472, -1.061],
+      [-79.447, -1.078],
+    ], {
+      category: "hidrico",
+      hydroKind: "rio",
+      hydroRole: "Dren principal secundario",
+      protectionM: 34,
+      irrigationValue: 0.63,
+      territoryId: "quevedo",
+      summary: "Estero de drenaje productivo y soporte para evacuacion de excedentes hídricos.",
+    }),
+  ],
+  acequias: [
+    lineFeature("Acequia norte Machachi", [
+      [-78.652, -0.462],
+      [-78.629, -0.469],
+      [-78.604, -0.479],
+      [-78.579, -0.49],
+      [-78.553, -0.499],
+    ], {
+      category: "hidrico",
+      hydroKind: "acequia",
+      hydroRole: "Distribucion de riego",
+      protectionM: 18,
+      irrigationValue: 0.94,
+      summary: "Acequia de distribucion para riego parcelario y regulacion operativa.",
+    }),
+    lineFeature("Acequia sur Mejia", [
+      [-78.664, -0.553],
+      [-78.634, -0.548],
+      [-78.603, -0.551],
+      [-78.571, -0.556],
+      [-78.539, -0.563],
+    ], {
+      category: "hidrico",
+      hydroKind: "acequia",
+      hydroRole: "Riego parcelario",
+      protectionM: 16,
+      irrigationValue: 0.82,
+      summary: "Canal secundario de riego para lotes del corredor agricola sur.",
+    }),
+    lineFeature("Acequia Cutuglagua", [
+      [-78.614, -0.346],
+      [-78.601, -0.355],
+      [-78.589, -0.365],
+      [-78.575, -0.376],
+    ], {
+      category: "hidrico",
+      hydroKind: "acequia",
+      hydroRole: "Riego de borde",
+      protectionM: 14,
+      irrigationValue: 0.7,
+      summary: "Acequia de soporte a unidades agricolas y control de humedad superficial.",
+    }),
+    lineFeature("Canal Pichilingue", [
+      [-79.522, -1.014],
+      [-79.498, -1.026],
+      [-79.474, -1.038],
+      [-79.452, -1.05],
+    ], {
+      category: "hidrico",
+      hydroKind: "acequia",
+      hydroRole: "Distribucion tropical",
+      protectionM: 18,
+      irrigationValue: 0.92,
+      territoryId: "quevedo",
+      summary: "Canal de riego principal del nucleo productivo Pichilingue - San Carlos.",
+    }),
+    lineFeature("Canal San Carlos", [
+      [-79.531, -1.034],
+      [-79.507, -1.041],
+      [-79.481, -1.047],
+      [-79.457, -1.056],
+      [-79.433, -1.068],
+    ], {
+      category: "hidrico",
+      hydroKind: "acequia",
+      hydroRole: "Riego parcelario",
+      protectionM: 16,
+      irrigationValue: 0.88,
+      territoryId: "quevedo",
+      summary: "Canal secundario de soporte productivo y reparto de agua por lotes.",
+    }),
+  ],
+  quebradas: [
+    lineFeature("Quebrada Aloag", [
+      [-78.704, -0.437],
+      [-78.689, -0.45],
+      [-78.673, -0.466],
+      [-78.656, -0.483],
+    ], {
+      category: "hidrico",
+      hydroKind: "quebrada",
+      hydroRole: "Escorrentia andina",
+      protectionM: 28,
+      irrigationValue: 0.31,
+      summary: "Quebrada de respuesta rapida asociada a escorrentia y saturacion puntual.",
+    }),
+    lineFeature("Quebrada El Timbo", [
+      [-78.636, -0.446],
+      [-78.623, -0.461],
+      [-78.61, -0.477],
+      [-78.596, -0.495],
+    ], {
+      category: "hidrico",
+      hydroKind: "quebrada",
+      hydroRole: "Drenaje intermedio",
+      protectionM: 24,
+      irrigationValue: 0.28,
+      summary: "Quebrada de drenaje intermedio con necesidad de faja de resguardo en temporada humeda.",
+    }),
+    lineFeature("Quebrada Cutuglagua", [
+      [-78.62, -0.342],
+      [-78.607, -0.352],
+      [-78.594, -0.366],
+      [-78.581, -0.382],
+    ], {
+      category: "hidrico",
+      hydroKind: "quebrada",
+      hydroRole: "Borde sensible",
+      protectionM: 26,
+      irrigationValue: 0.22,
+      summary: "Quebrada sensible para control de ocupacion, drenaje y proteccion de taludes.",
+    }),
+    lineFeature("Quebrada Quevedo bajo", [
+      [-79.517, -1.055],
+      [-79.49, -1.062],
+      [-79.458, -1.073],
+      [-79.426, -1.083],
+    ], {
+      category: "hidrico",
+      hydroKind: "quebrada",
+      hydroRole: "Drenaje bajo tropical",
+      protectionM: 22,
+      irrigationValue: 0.24,
+      territoryId: "quevedo",
+      summary: "Quebrada baja de desagüe con alta sensibilidad a saturacion e inundacion local.",
+    }),
+    lineFeature("Quebrada Loma Alta", [
+      [-79.507, -1.012],
+      [-79.492, -1.028],
+      [-79.478, -1.041],
+      [-79.465, -1.058],
+    ], {
+      category: "hidrico",
+      hydroKind: "quebrada",
+      hydroRole: "Escorrentia de borde",
+      protectionM: 21,
+      irrigationValue: 0.18,
+      territoryId: "quevedo",
+      summary: "Escorrentia de borde con control prioritario en lotes y caminos rurales.",
+    }),
+  ],
+};
+
+const agroSuitabilityCropCatalog = {
+  papa: {
+    id: "papa",
+    label: "Papa",
+    thermalRange: [8, 19],
+    idealRainMm: 22,
+    idealMoisturePct: 52,
+    idealSlope: 8,
+    idealAltitudeM: 2950,
+    hydroNeed: "media",
+    hydroWeight: 0.18,
+    imageryWeight: 0.28,
+    climateWeight: 0.24,
+    terrainWeight: 0.18,
+    stabilityWeight: 0.12,
+    recommendation: "Prioriza lotes altos, con humedad estable y acceso medio a acequia o rio regulado.",
+  },
+  maiz: {
+    id: "maiz",
+    label: "Maiz",
+    thermalRange: [12, 28],
+    idealRainMm: 18,
+    idealMoisturePct: 44,
+    idealSlope: 7,
+    idealAltitudeM: 1820,
+    hydroNeed: "media",
+    hydroWeight: 0.16,
+    imageryWeight: 0.24,
+    climateWeight: 0.28,
+    terrainWeight: 0.16,
+    stabilityWeight: 0.16,
+    recommendation: "Busca lotes con temperatura media alta, relieve moderado y humedad operativa sin saturacion.",
+  },
+  pasto: {
+    id: "pasto",
+    label: "Pasto",
+    thermalRange: [6, 22],
+    idealRainMm: 24,
+    idealMoisturePct: 56,
+    idealSlope: 11,
+    idealAltitudeM: 2850,
+    hydroNeed: "alta",
+    hydroWeight: 0.2,
+    imageryWeight: 0.2,
+    climateWeight: 0.22,
+    terrainWeight: 0.14,
+    stabilityWeight: 0.24,
+    recommendation: "Favorece sectores con agua cercana, vigor sostenido y menor estres termico.",
+  },
+  hortaliza: {
+    id: "hortaliza",
+    label: "Hortaliza",
+    thermalRange: [10, 24],
+    idealRainMm: 17,
+    idealMoisturePct: 48,
+    idealSlope: 6,
+    idealAltitudeM: 2480,
+    hydroNeed: "alta",
+    hydroWeight: 0.22,
+    imageryWeight: 0.24,
+    climateWeight: 0.24,
+    terrainWeight: 0.18,
+    stabilityWeight: 0.12,
+    recommendation: "Requiere lotes con acceso fino a riego, buen drenaje y microclima estable para ciclos cortos.",
+  },
+  cacao: {
+    id: "cacao",
+    label: "Cacao",
+    thermalRange: [20, 32],
+    idealRainMm: 28,
+    idealMoisturePct: 62,
+    idealSlope: 9,
+    idealAltitudeM: 320,
+    hydroNeed: "alta",
+    hydroWeight: 0.24,
+    imageryWeight: 0.18,
+    climateWeight: 0.3,
+    terrainWeight: 0.1,
+    stabilityWeight: 0.18,
+    recommendation: "Prioriza lotes humedos, tropicales y con drenaje protegido para mantener dosel estable.",
+  },
+  banano: {
+    id: "banano",
+    label: "Banano",
+    thermalRange: [22, 34],
+    idealRainMm: 26,
+    idealMoisturePct: 64,
+    idealSlope: 5,
+    idealAltitudeM: 180,
+    hydroNeed: "alta",
+    hydroWeight: 0.22,
+    imageryWeight: 0.18,
+    climateWeight: 0.32,
+    terrainWeight: 0.12,
+    stabilityWeight: 0.16,
+    recommendation: "Conviene en sectores bajos, calidos y con soporte hidrico continuo pero bien drenado.",
+  },
+};
 
 const demoImagesBySensor = {
   sentinel2: [
@@ -259,6 +585,8 @@ const backendService = {
   analysisPath: "/api/indices/analyze",
   inamhiLivePath: "/api/agronomy/inamhi-live",
   gpsLivePath: "/api/agronomy/gps/live",
+  gpsGeofenceEventsPath: "/api/agronomy/gps/geofence/events",
+  gpsGeofenceLogPath: "/api/agronomy/gps/geofence/log",
   localIpPath: "/api/network/local-ip",
   defaultOrigins: ["http://127.0.0.1:8765", "http://localhost:8765"],
 };
@@ -278,6 +606,8 @@ const gpsRelayService = {
     "https://unpkg.com/mqtt/dist/mqtt.min.js",
   ],
 };
+
+const gpsGeofenceStoragePrefix = "geoportal-gps-geofence-events-v1";
 
 const gpsRelaySessionStorageKey = "geoportal.gpsRelay.sessionId";
 
@@ -1013,40 +1343,25 @@ const geoSources = {
       ], { category: "vial", territoryId: "quevedo" }),
     ],
   },
+  rios: {
+    type: "FeatureCollection",
+    features: hydroFeatureCatalog.rios.map(cloneFeature),
+  },
+  acequias: {
+    type: "FeatureCollection",
+    features: hydroFeatureCatalog.acequias.map(cloneFeature),
+  },
+  quebradas: {
+    type: "FeatureCollection",
+    features: hydroFeatureCatalog.quebradas.map(cloneFeature),
+  },
   canales: {
     type: "FeatureCollection",
     features: [
-      lineFeature("Canal norte", [
-        [-78.68, -0.45],
-        [-78.62, -0.46],
-        [-78.56, -0.49],
-        [-78.49, -0.52],
-      ], { category: "hidrico" }),
-      lineFeature("Acequia sur", [
-        [-78.66, -0.57],
-        [-78.61, -0.55],
-        [-78.54, -0.56],
-        [-78.47, -0.58],
-      ], { category: "hidrico" }),
-      lineFeature("Quebrada Cutuglagua", [
-        [-78.62, -0.342],
-        [-78.607, -0.352],
-        [-78.594, -0.366],
-        [-78.581, -0.382],
-      ], { category: "hidrico" }),
-      lineFeature("Canal Pichilingue", [
-        [-79.525, -1.01],
-        [-79.498, -1.026],
-        [-79.47, -1.041],
-        [-79.446, -1.056],
-      ], { category: "hidrico", territoryId: "quevedo" }),
-      lineFeature("Dren Quevedo bajo", [
-        [-79.517, -1.055],
-        [-79.49, -1.062],
-        [-79.458, -1.073],
-        [-79.426, -1.083],
-      ], { category: "hidrico", territoryId: "quevedo" }),
-    ],
+      ...hydroFeatureCatalog.rios,
+      ...hydroFeatureCatalog.acequias,
+      ...hydroFeatureCatalog.quebradas,
+    ].map(cloneFeature),
   },
   lotes: {
     type: "FeatureCollection",
@@ -1536,6 +1851,23 @@ const layerStyles = {
     weight: 3,
     opacity: 0.9,
     dashArray: "8 8",
+  },
+  rios: {
+    color: "#226d85",
+    weight: 3.4,
+    opacity: 0.96,
+  },
+  acequias: {
+    color: "#2f8faa",
+    weight: 2.8,
+    opacity: 0.94,
+    dashArray: "10 5",
+  },
+  quebradas: {
+    color: "#3d9882",
+    weight: 2.5,
+    opacity: 0.9,
+    dashArray: "6 8",
   },
   canales: {
     color: "#28748a",
@@ -2547,18 +2879,26 @@ const state = {
   hydrologyDemandId: "eficienciaMedia",
   hydrologyData: null,
   hydrologyHighlightId: null,
+  mobilityData: null,
+  mobilityHighlightId: null,
+  riskData: null,
+  riskHighlightId: null,
   fieldEvidenceCatalog: null,
   fieldEvidenceData: null,
   fieldEvidenceHighlightId: null,
   fieldEvidenceHighlightType: "sector",
   territorialFocus: "planning",
   entryRoute: "agronomia",
+  agronomyFocus: "imagery",
+  agroSuitabilityCropId: "papa",
   agronomyOutputs: {
     intralote: null,
     dem: null,
     climate: null,
     inamhi: null,
     inamhiLive: null,
+    hydroNetwork: null,
+    agroSuitability: null,
     gps: null,
   },
   gpsTracking: {
@@ -2578,6 +2918,10 @@ const state = {
     track: [],
     accuracyM: null,
     lastDeviceSnapshot: null,
+    geofence: null,
+    geofenceEvents: [],
+    geofenceDeviceStates: {},
+    geofenceAlertFeatures: [],
   },
   gpsSender: {
     open: false,
@@ -2586,6 +2930,8 @@ const state = {
     links: [],
     relaySessionId: null,
   },
+  collapsedModules: {},
+  moduleQuickNavActiveId: null,
   wizardProgress: {},
   wizardBusy: false,
 };
@@ -2603,6 +2949,10 @@ const mapState = {
   sceneFootprintLayer: null,
   sceneFootprintFocusId: null,
   managementLayer: null,
+  hydroNetworkLayer: null,
+  hydroNetworkBufferLayer: null,
+  agroSuitabilityLayer: null,
+  agroSuitabilityHotspotLayer: null,
   planningLayer: null,
   planningCandidatesLayer: null,
   planningCoverageLayer: null,
@@ -2611,6 +2961,12 @@ const mapState = {
   planningServiceGapLayer: null,
   planningFacilityLayer: null,
   planningSolarLayer: null,
+  mobilityLayer: null,
+  mobilityGapLayer: null,
+  mobilityLinkLayer: null,
+  riskLayer: null,
+  riskHotspotLayer: null,
+  riskBufferLayer: null,
   fodaCameZoneLayer: null,
   fodaCamePriorityLayer: null,
   aiGeoClassificationLayer: null,
@@ -2632,6 +2988,9 @@ const mapState = {
   gpsTrackLayer: null,
   gpsAccuracyLayer: null,
   gpsHomeLayer: null,
+  gpsFenceRouteLayer: null,
+  gpsFenceLayer: null,
+  gpsFenceAlertLayer: null,
   studyAreaLayer: null,
   currentPlotLayer: null,
 };
@@ -3098,6 +3457,12 @@ function setTerritorialArea(areaId = state.territorialAreaId, options = {}) {
     if (state.planningData) {
       runPlanningAnalysis(true);
     }
+    if (state.mobilityData) {
+      runMobilityAnalysis(true);
+    }
+    if (state.riskData) {
+      runRiskAnalysis(true);
+    }
     if (state.landChangeData) {
       runLandChangeAnalysis(true);
     }
@@ -3181,11 +3546,14 @@ function resetAgronomySelectionState() {
   state.sentinelTransport = "direct";
   state.sentinelCacheHit = false;
   state.sentinelError = null;
+  state.agronomyFocus = "imagery";
   state.agronomyOutputs.intralote = null;
   state.agronomyOutputs.dem = null;
   state.agronomyOutputs.climate = null;
   state.agronomyOutputs.inamhi = null;
   state.agronomyOutputs.inamhiLive = null;
+  state.agronomyOutputs.hydroNetwork = null;
+  state.agronomyOutputs.agroSuitability = null;
   state.agronomyOutputs.gps = null;
 
   if (dom.overlayPlot) {
@@ -3203,12 +3571,16 @@ function resetAgronomySelectionState() {
   resetMetricGrid(dom.climateResults, "Ejecuta el modulo para cargar indicadores climaticos.");
   resetMetricGrid(dom.inamhiResults, "Ejecuta el modulo para cargar estaciones INAMHI de referencia.");
   resetMetricGrid(dom.inamhiLiveResults, "Ejecuta la lectura en vivo para ver temperatura, humedad, lluvia y viento de la red activa.");
+  resetMetricGrid(dom.hydroNetworkResults, "Ejecuta el modulo para medir kilometros de red hidrica, cercania al lote y prioridades de manejo.");
+  resetMetricGrid(dom.agroSuitabilityResults, "Ejecuta el modulo para ver aptitud por cultivo, lotes compatibles y alertas de manejo.");
   resetMetricGrid(dom.gpsResults, "Activa el modulo para seguir un dispositivo terrestre o aereo, un feed local o un recorrido demo sobre el mapa.");
   resetVisualPanel(dom.intraloteVisual, "Aqui apareceran la distribucion de zonas de manejo y la lectura grafica de indices del lote.");
   resetVisualPanel(dom.demVisual, "Aqui apareceran el perfil de pendiente, la altitud relativa y el riesgo topografico del lote.");
   resetVisualPanel(dom.climateVisual, "Aqui apareceran la lectura visual de lluvia, humedad, temperatura y estres termico.");
   resetVisualPanel(dom.inamhiVisual, "Aqui apareceran la lectura visual de lluvia historica, ventana humeda/seca y cobertura temporal de las estaciones.");
   resetVisualPanel(dom.inamhiLiveVisual, "Aqui apareceran la lectura operativa en tiempo real, la ultima actualizacion y el estado de las estaciones activas.");
+  resetVisualPanel(dom.hydroNetworkVisual, "Aqui apareceran la mezcla entre rios, acequias y quebradas, la distancia al agua y la prioridad operativa del ambito.");
+  resetVisualPanel(dom.agroSuitabilityVisual, "Aqui apareceran el ranking de lotes, la ventana termica-hidrica y la recomendacion agroclimatica.");
   resetVisualPanel(dom.gpsVisual, "Aqui apareceran la trayectoria, velocidad, altura, precision y estado operativo del seguimiento GPS.");
   renderSceneControls();
   renderSentinelResults();
@@ -3297,6 +3669,8 @@ async function setAgronomyArea(areaId = state.agronomyAreaId, options = {}) {
   const changed = state.agronomyAreaId !== nextAreaId;
   const hadInamhiReadout = dom.inamhiResults?.classList.contains("has-data");
   const hadInamhiLiveReadout = dom.inamhiLiveResults?.classList.contains("has-data");
+  const hadHydroReadout = dom.hydroNetworkResults?.classList.contains("has-data");
+  const hadSuitabilityReadout = dom.agroSuitabilityResults?.classList.contains("has-data");
   state.agronomyAreaId = nextAreaId;
 
   syncAgronomyAreaUi();
@@ -3312,7 +3686,7 @@ async function setAgronomyArea(areaId = state.agronomyAreaId, options = {}) {
 
   if (mapState.map) {
     renderStudyAreaLayer();
-    refreshVisibleGeoLayers(["parroquias", "vias", "canales", "lotes", "estaciones"]);
+    refreshVisibleGeoLayers(["parroquias", "vias", "rios", "acequias", "quebradas", "lotes", "estaciones"]);
     if (options.fit !== false) {
       fitAgronomyArea();
     }
@@ -3327,6 +3701,12 @@ async function setAgronomyArea(areaId = state.agronomyAreaId, options = {}) {
   }
   if (hadInamhiLiveReadout) {
     await runInamhiLiveAnalysis(true);
+  }
+  if (hadHydroReadout) {
+    await runHydroNetworkAnalysis(true);
+  }
+  if (hadSuitabilityReadout) {
+    await runAgroSuitabilityAnalysis(true);
   }
 
   if (!options.silent && changed) {
@@ -4238,26 +4618,30 @@ const workflowGuideCatalog = {
   agronomia: {
     badge: "Campo guiado",
     title: "Ruta guiada para decidir en campo",
-    defaultCopy: "Empieza por una pregunta concreta: que lote revisar, que imagen usar, como validar clima y como seguir la operacion en tiempo real.",
+    defaultCopy: "Empieza por una pregunta concreta: que lote revisar, que imagen usar, como leer el agua productiva, que cultivo conviene y como seguir la operacion en tiempo real.",
     steps: [
       { id: "scene", title: "Elegir zona y escena", pending: "Selecciona ambito e imagen satelital." },
       { id: "diagnosis", title: "Diagnosticar el lote", pending: "Usa lote demo o dibuja un poligono." },
-      { id: "climate", title: "Cruzar clima y estaciones", pending: "Activa clima o INAMHI para contexto." },
+      { id: "water", title: "Leer agua productiva", pending: "Activa rios, acequias y quebradas del ambito." },
+      { id: "climate", title: "Cruzar clima y cultivo", pending: "Activa clima, INAMHI o aptitud agroclimatica." },
       { id: "operations", title: "Validar operacion", pending: "Activa GPS, dron o feed operativo." },
     ],
     actions: [
       { id: "agronomy-scenes", label: "Abrir imagenes", tone: "secondary" },
       { id: "agronomy-demo", label: "Usar lote demo", tone: "ghost" },
-      { id: "agronomy-assistant", label: "Abrir asistente", tone: "ghost" },
+      { id: "agronomy-water", label: "Leer agua", tone: "ghost" },
+      { id: "agronomy-suitability", label: "Ver cultivo", tone: "ghost" },
       { id: "agronomy-gps", label: "Ver GPS", tone: "ghost" },
     ],
   },
   planificacion: {
     badge: "Decision guiada",
     title: "Ruta guiada para decidir donde intervenir",
-    defaultCopy: "Primero entendemos aptitud base, luego presion territorial y seguridad hidrica, despues armamos estrategia y por ultimo validamos el sector en 3D.",
+    defaultCopy: "Primero entendemos aptitud base, despues cobertura y movilidad, luego riesgo y agua, despues armamos estrategia y por ultimo validamos el sector en 3D.",
     steps: [
       { id: "aptitude", title: "Aptitud base", pending: "Corre la primera lectura multivariable." },
+      { id: "mobility", title: "Movilidad y accesibilidad", pending: "Mide cobertura, tiempos y conectividad." },
+      { id: "risk", title: "Riesgo compuesto", pending: "Cruza amenaza, exposicion y contencion." },
       { id: "footprint", title: "Huella y expansion", pending: "Mide como cambia el suelo rural." },
       { id: "water", title: "Seguridad hidrica", pending: "Contrasta oferta, demanda y resiliencia." },
       { id: "strategy", title: "Estrategia FODA + CAME", pending: "Convierte el diagnostico en acciones." },
@@ -4265,6 +4649,8 @@ const workflowGuideCatalog = {
     ],
     actions: [
       { id: "planning-aptitude", label: "Evaluar aptitud", tone: "secondary" },
+      { id: "planning-mobility", label: "Evaluar movilidad", tone: "ghost" },
+      { id: "planning-risk", label: "Evaluar riesgo", tone: "ghost" },
       { id: "planning-footprint", label: "Analizar huella", tone: "ghost" },
       { id: "planning-water", label: "Simular agua", tone: "ghost" },
       { id: "planning-strategy", label: "Construir estrategia", tone: "ghost" },
@@ -4334,12 +4720,24 @@ function cacheDom() {
   dom.runClimateBtn = document.querySelector("#runClimateBtn");
   dom.runInamhiBtn = document.querySelector("#runInamhiBtn");
   dom.runInamhiLiveBtn = document.querySelector("#runInamhiLiveBtn");
+  dom.runHydroNetworkBtn = document.querySelector("#runHydroNetworkBtn");
+  dom.focusHydroNetworkBtn = document.querySelector("#focusHydroNetworkBtn");
+  dom.clearHydroNetworkBtn = document.querySelector("#clearHydroNetworkBtn");
+  dom.runAgroSuitabilityBtn = document.querySelector("#runAgroSuitabilityBtn");
+  dom.focusAgroSuitabilityBtn = document.querySelector("#focusAgroSuitabilityBtn");
+  dom.clearAgroSuitabilityBtn = document.querySelector("#clearAgroSuitabilityBtn");
+  dom.agroSuitabilityCropSelect = document.querySelector("#agroSuitabilityCropSelect");
   dom.startGpsBrowserBtn = document.querySelector("#startGpsBrowserBtn");
   dom.startGpsFeedBtn = document.querySelector("#startGpsFeedBtn");
   dom.openGpsBridgeBtn = document.querySelector("#openGpsBridgeBtn");
   dom.openSatlocBridgeBtn = document.querySelector("#openSatlocBridgeBtn");
   dom.startGpsDemoBtn = document.querySelector("#startGpsDemoBtn");
   dom.stopGpsTrackingBtn = document.querySelector("#stopGpsTrackingBtn");
+  dom.gpsGeofenceFileInput = document.querySelector("#gpsGeofenceFileInput");
+  dom.openGpsGeofenceBtn = document.querySelector("#openGpsGeofenceBtn");
+  dom.focusGpsGeofenceBtn = document.querySelector("#focusGpsGeofenceBtn");
+  dom.clearGpsGeofenceBtn = document.querySelector("#clearGpsGeofenceBtn");
+  dom.gpsGeofenceTolerance = document.querySelector("#gpsGeofenceTolerance");
   dom.gpsSenderModal = document.querySelector("#gpsSenderModal");
   dom.gpsSenderBackdrop = document.querySelector("#gpsSenderBackdrop");
   dom.gpsSenderCloseBtn = document.querySelector("#gpsSenderCloseBtn");
@@ -4377,6 +4775,12 @@ function cacheDom() {
   dom.hydrologyHorizonSelect = document.querySelector("#hydrologyHorizonSelect");
   dom.hydrologyDemandSelect = document.querySelector("#hydrologyDemandSelect");
   dom.hydrologyScopeInput = document.querySelector("#hydrologyScopeInput");
+  dom.runMobilityBtn = document.querySelector("#runMobilityBtn");
+  dom.focusMobilityBtn = document.querySelector("#focusMobilityBtn");
+  dom.clearMobilityBtn = document.querySelector("#clearMobilityBtn");
+  dom.runRiskBtn = document.querySelector("#runRiskBtn");
+  dom.focusRiskBtn = document.querySelector("#focusRiskBtn");
+  dom.clearRiskBtn = document.querySelector("#clearRiskBtn");
   dom.runFieldEvidenceBtn = document.querySelector("#runFieldEvidenceBtn");
   dom.focusFieldEvidenceBtn = document.querySelector("#focusFieldEvidenceBtn");
   dom.clearFieldEvidenceBtn = document.querySelector("#clearFieldEvidenceBtn");
@@ -4390,8 +4794,14 @@ function cacheDom() {
   dom.inamhiVisual = document.querySelector("#inamhiVisual");
   dom.inamhiLiveResults = document.querySelector("#inamhiLiveResults");
   dom.inamhiLiveVisual = document.querySelector("#inamhiLiveVisual");
+  dom.hydroNetworkResults = document.querySelector("#hydroNetworkResults");
+  dom.hydroNetworkVisual = document.querySelector("#hydroNetworkVisual");
+  dom.agroSuitabilityResults = document.querySelector("#agroSuitabilityResults");
+  dom.agroSuitabilityVisual = document.querySelector("#agroSuitabilityVisual");
   dom.gpsResults = document.querySelector("#gpsResults");
+  dom.gpsGeofenceResults = document.querySelector("#gpsGeofenceResults");
   dom.gpsVisual = document.querySelector("#gpsVisual");
+  dom.gpsGeofenceEvents = document.querySelector("#gpsGeofenceEvents");
   dom.planningResults = document.querySelector("#planningResults");
   dom.planningWeights = document.querySelector("#planningWeights");
   dom.planningCandidates = document.querySelector("#planningCandidates");
@@ -4424,6 +4834,12 @@ function cacheDom() {
   dom.hydrologyTimeline = document.querySelector("#hydrologyTimeline");
   dom.hydrologySectors = document.querySelector("#hydrologySectors");
   dom.hydrologySourceNote = document.querySelector("#hydrologySourceNote");
+  dom.mobilityResults = document.querySelector("#mobilityResults");
+  dom.mobilitySummary = document.querySelector("#mobilitySummary");
+  dom.mobilitySectors = document.querySelector("#mobilitySectors");
+  dom.riskResults = document.querySelector("#riskResults");
+  dom.riskDrivers = document.querySelector("#riskDrivers");
+  dom.riskSectors = document.querySelector("#riskSectors");
   dom.fieldEvidenceResults = document.querySelector("#fieldEvidenceResults");
   dom.fieldEvidenceInventory = document.querySelector("#fieldEvidenceInventory");
   dom.fieldEvidenceSectors = document.querySelector("#fieldEvidenceSectors");
@@ -4435,6 +4851,8 @@ function cacheDom() {
   dom.aiGeoCard = document.querySelector("#aiGeoCard");
   dom.landChangeCard = document.querySelector("#landChangeCard");
   dom.hydrologyCard = document.querySelector("#hydrologyCard");
+  dom.mobilityCard = document.querySelector("#mobilityCard");
+  dom.riskCard = document.querySelector("#riskCard");
   dom.fieldEvidenceCard = document.querySelector("#fieldEvidenceCard");
   dom.planningModuleCards = Array.from(document.querySelectorAll('[data-module-track="planificacion"]'));
   dom.evidenceModuleCards = Array.from(document.querySelectorAll('[data-module-track="evidencia"]'));
@@ -4468,6 +4886,7 @@ function cacheDom() {
   dom.modulesSectionTitle = document.querySelector("#modulesSectionTitle");
   dom.modulesSectionCopy = document.querySelector("#modulesSectionCopy");
   dom.workflowGuideCard = document.querySelector("#workflowGuideCard");
+  dom.moduleQuickNav = document.querySelector("#moduleQuickNav");
   dom.workflowGuideTitle = document.querySelector("#workflowGuideTitle");
   dom.workflowGuideBadge = document.querySelector("#workflowGuideBadge");
   dom.workflowGuideCopy = document.querySelector("#workflowGuideCopy");
@@ -4476,6 +4895,8 @@ function cacheDom() {
   dom.modeFooterPill = document.querySelector("#modeFooterPill");
   dom.agronomyModuleCards = Array.from(document.querySelectorAll('[data-module-track="agronomia"]'));
   dom.gpsCard = document.querySelector("#gpsCard");
+  dom.hydroNetworkCard = document.querySelector("#hydroNetworkCard");
+  dom.agroSuitabilityCard = document.querySelector("#agroSuitabilityCard");
   dom.wizardCard = document.querySelector("#wizardCard");
   dom.wizardModes = document.querySelector("#wizardModes");
   dom.wizardSteps = document.querySelector("#wizardSteps");
@@ -4492,6 +4913,7 @@ function bootstrapApp() {
   setDefaultDates();
   setPlanning3dSunDefaults();
   applyPlanning3dAreaProfile(planning3dState.areaId);
+  decorateModuleCards();
   bindUI();
   syncAgronomyAreaUi();
   ensureSelectedIndex();
@@ -4500,6 +4922,7 @@ function bootstrapApp() {
   renderIndexButtons();
   renderWizardAssistantState();
   renderPlanningModule();
+  renderModuleQuickNav();
   renderPlanning3dPanel();
   syncEntryRouteUi(state.entryRoute);
   renderSceneControls();
@@ -4526,6 +4949,8 @@ function bindUI() {
   dom.fodaCameStrategies?.addEventListener("click", handleFodaCameInteraction);
   dom.landChangeSectors?.addEventListener("click", handleLandChangeSectorsInteraction);
   dom.hydrologySectors?.addEventListener("click", handleHydrologySectorsInteraction);
+  dom.mobilitySectors?.addEventListener("click", handleMobilitySectorsInteraction);
+  dom.riskSectors?.addEventListener("click", handleRiskSectorsInteraction);
   dom.fieldEvidenceSectors?.addEventListener("click", handleFieldEvidenceInteraction);
   dom.fieldEvidenceStations?.addEventListener("click", handleFieldEvidenceInteraction);
   dom.fieldEvidenceSensitive?.addEventListener("click", handleFieldEvidenceInteraction);
@@ -4537,6 +4962,8 @@ function bindUI() {
   dom.wizardModes?.addEventListener("click", handleWizardModeInteraction);
   dom.wizardSteps?.addEventListener("click", handleWizardStepInteraction);
   dom.workflowGuideActions?.addEventListener("click", handleWorkflowGuideAction);
+  dom.moduleQuickNav?.addEventListener("click", handleModuleQuickNavInteraction);
+  document.querySelector('.tab-panel[data-panel="modulos"]')?.addEventListener("click", handleModuleCardToggleInteraction);
 
   if (dom.sensorSelect) {
     dom.sensorSelect.addEventListener("change", () => {
@@ -4712,6 +5139,31 @@ function bindUI() {
     ]);
     return runModuleAction(dom.runInamhiLiveBtn, "Leyendo en vivo...", () => runInamhiLiveAnalysis());
   });
+  dom.runHydroNetworkBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.hydroNetworkResults, "Midiendo rios, acequias y quebradas del ambito agricola...", [
+      { target: dom.hydroNetworkVisual, message: "Preparando la red hidrica, las prioridades de riego y las franjas de proteccion..." },
+    ]);
+    return runModuleAction(dom.runHydroNetworkBtn, "Leyendo red...", () => runHydroNetworkAnalysis());
+  });
+  dom.focusHydroNetworkBtn?.addEventListener("click", focusHydroNetworkStudy);
+  dom.clearHydroNetworkBtn?.addEventListener("click", clearHydroNetworkAnalysis);
+  dom.runAgroSuitabilityBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.agroSuitabilityResults, "Cruce agroclimatico en curso para el cultivo seleccionado...", [
+      { target: dom.agroSuitabilityVisual, message: "Preparando ranking de lotes, ventana termica-hidrica y recomendacion por cultivo..." },
+    ]);
+    return runModuleAction(dom.runAgroSuitabilityBtn, "Evaluando cultivo...", () => runAgroSuitabilityAnalysis());
+  });
+  dom.focusAgroSuitabilityBtn?.addEventListener("click", focusAgroSuitabilityStudy);
+  dom.clearAgroSuitabilityBtn?.addEventListener("click", clearAgroSuitabilityAnalysis);
+  dom.agroSuitabilityCropSelect?.addEventListener("change", () => {
+    state.agroSuitabilityCropId = dom.agroSuitabilityCropSelect.value || "papa";
+    if (state.agronomyOutputs.agroSuitability) {
+      runAgroSuitabilityAnalysis(true);
+    } else {
+      updateMapSummary();
+      renderWorkflowGuide();
+    }
+  });
   dom.startGpsBrowserBtn?.addEventListener("click", () => {
     setModulePendingState(dom.gpsResults, "Activando geolocalizacion del navegador y esperando senal GPS...", [
       { target: dom.gpsVisual, message: "Preparando trayectoria, precision y estado operativo del dispositivo..." },
@@ -4726,6 +5178,11 @@ function bindUI() {
   });
   dom.openGpsBridgeBtn?.addEventListener("click", () => openGpsBridgePage());
   dom.openSatlocBridgeBtn?.addEventListener("click", () => openSatlocBridgePage());
+  dom.openGpsGeofenceBtn?.addEventListener("click", () => dom.gpsGeofenceFileInput?.click());
+  dom.gpsGeofenceFileInput?.addEventListener("change", handleGpsGeofenceFileSelection);
+  dom.gpsGeofenceTolerance?.addEventListener("change", handleGpsGeofenceToleranceChange);
+  dom.focusGpsGeofenceBtn?.addEventListener("click", focusGpsGeofenceStudy);
+  dom.clearGpsGeofenceBtn?.addEventListener("click", clearGpsGeofence);
   dom.gpsSenderCloseBtn?.addEventListener("click", closeGpsSenderModal);
   dom.gpsSenderBackdrop?.addEventListener("click", closeGpsSenderModal);
   dom.gpsSenderRefreshBtn?.addEventListener("click", () => refreshGpsSenderLinks(true));
@@ -4800,6 +5257,24 @@ function bindUI() {
   });
   dom.focusHydrologyBtn?.addEventListener("click", focusHydrologyStudy);
   dom.clearHydrologyBtn?.addEventListener("click", clearHydrologyAnalysis);
+  dom.runMobilityBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.mobilityResults, "Midiendo conectividad territorial, tiempos y cobertura funcional...", [
+      { target: dom.mobilitySummary, message: "Preparando lectura de cobertura, tiempos y deficit de accesibilidad..." },
+      { target: dom.mobilitySectors, message: "Priorizando sectores con mejor y peor conectividad para intervencion territorial..." },
+    ]);
+    return runModuleAction(dom.runMobilityBtn, "Evaluando movilidad...", () => runMobilityAnalysis());
+  });
+  dom.focusMobilityBtn?.addEventListener("click", focusMobilityStudy);
+  dom.clearMobilityBtn?.addEventListener("click", clearMobilityAnalysis);
+  dom.runRiskBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.riskResults, "Calculando riesgo compuesto con pendiente, drenaje y presion territorial...", [
+      { target: dom.riskDrivers, message: "Preparando drivers dominantes de amenaza, exposicion y contencion..." },
+      { target: dom.riskSectors, message: "Jerarquizando sectores criticos y acciones prioritarias de manejo..." },
+    ]);
+    return runModuleAction(dom.runRiskBtn, "Evaluando riesgo...", () => runRiskAnalysis());
+  });
+  dom.focusRiskBtn?.addEventListener("click", focusRiskStudy);
+  dom.clearRiskBtn?.addEventListener("click", clearRiskAnalysis);
   dom.runFieldEvidenceBtn?.addEventListener("click", () => {
     setModulePendingState(dom.fieldEvidenceResults, "Reuniendo evidencia de campo, estaciones y memoria territorial...", [
       { target: dom.fieldEvidenceInventory, message: "Resumiendo catalogo maestro, fuentes y objetos geograficos disponibles..." },
@@ -5132,6 +5607,34 @@ function handleHydrologySectorsInteraction(event) {
   }
 
   focusHydrologySector(button.dataset.hydrologySectorId);
+}
+
+function handleModuleQuickNavInteraction(event) {
+  const button = event.target.closest("[data-module-card]");
+  if (!button || !dom.moduleQuickNav?.contains(button)) {
+    return;
+  }
+
+  const card = document.getElementById(button.dataset.moduleCard || "");
+  if (!card) {
+    return;
+  }
+  setModuleCardCollapsed(card.id, false);
+  setModuleQuickNavActive(card.id);
+  focusModuleCard(card);
+}
+
+function handleModuleCardToggleInteraction(event) {
+  const button = event.target.closest("[data-module-toggle]");
+  if (!button) {
+    return;
+  }
+  const cardId = button.dataset.moduleToggle || "";
+  const nextState = !state.collapsedModules[cardId];
+  setModuleCardCollapsed(cardId, nextState);
+  if (!nextState) {
+    setModuleQuickNavActive(cardId);
+  }
 }
 
 function handleFieldEvidenceInteraction(event) {
@@ -5487,6 +5990,12 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     if (state.planningData) {
       renderPlanningOverlay(state.planningData);
     }
+    if (state.mobilityData) {
+      renderMobilityOverlay(state.mobilityData);
+    }
+    if (state.riskData) {
+      renderRiskOverlay(state.riskData);
+    }
     if (state.landChangeData) {
       renderLandChangeOverlay(state.landChangeData);
     }
@@ -5524,10 +6033,12 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   clearFodaCameOverlay();
   clearLandChangeOverlay();
   clearHydrologyOverlay();
+  clearMobilityOverlay();
+  clearRiskOverlay();
   clearFieldEvidenceOverlay();
   clearAiGeoOverlay();
   renderStudyAreaLayer();
-  refreshVisibleGeoLayers(["parroquias", "vias", "canales", "lotes", "estaciones"]);
+  refreshVisibleGeoLayers(["parroquias", "vias", "rios", "acequias", "quebradas", "lotes", "estaciones"]);
   if (state.currentPlot) {
     renderCurrentPlotLayer();
   } else {
@@ -5539,8 +6050,16 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   if (state.agronomyOutputs.inamhiLive) {
     renderInamhiLiveOverlay(state.agronomyOutputs.inamhiLive);
   }
+  if (state.agronomyOutputs.hydroNetwork) {
+    renderHydroNetworkOverlay(state.agronomyOutputs.hydroNetwork);
+  }
+  if (state.agronomyOutputs.agroSuitability) {
+    renderAgroSuitabilityOverlay(state.agronomyOutputs.agroSuitability);
+  }
   if (state.agronomyOutputs.gps) {
     renderGpsTrackingOverlay(state.agronomyOutputs.gps);
+  } else if (state.gpsTracking.geofence) {
+    renderGpsGeofenceOverlay();
   }
   if (state.aiGeoData?.mode === "agronomia") {
     renderAiGeoOverlay(state.aiGeoData);
@@ -5569,12 +6088,19 @@ function clearAgronomyMapContext() {
     "sceneFootprintLayer",
     "sentinelLayer",
     "managementLayer",
+    "hydroNetworkLayer",
+    "hydroNetworkBufferLayer",
+    "agroSuitabilityLayer",
+    "agroSuitabilityHotspotLayer",
     "currentPlotLayer",
     "inamhiLiveLayer",
     "gpsDeviceLayer",
     "gpsTrackLayer",
     "gpsAccuracyLayer",
     "gpsHomeLayer",
+    "gpsFenceRouteLayer",
+    "gpsFenceLayer",
+    "gpsFenceAlertLayer",
   ].forEach((layerKeyName) => {
     if (mapState[layerKeyName]) {
       mapState.map.removeLayer(mapState[layerKeyName]);
@@ -5597,6 +6123,10 @@ function focusModuleCard(card) {
     return;
   }
 
+  if (card.id) {
+    setModuleCardCollapsed(card.id, false);
+    setModuleQuickNavActive(card.id);
+  }
   card.classList.add("entry-focus");
   card.scrollIntoView({
     behavior: "smooth",
@@ -5630,6 +6160,162 @@ function focusGpsModuleCard() {
   focusModuleCard(dom.gpsCard);
 }
 
+function getVisibleModuleCards() {
+  return Array.from(document.querySelectorAll('.tab-panel[data-panel="modulos"] .module-card'))
+    .filter((card) => !card.classList.contains("hidden"));
+}
+
+function getModuleCardLabel(card) {
+  const shortLabels = {
+    intraloteCard: "Intralote",
+    demCard: "DEM",
+    climateCard: "Clima",
+    inamhiCard: "INAMHI",
+    hydroNetworkCard: "Red hidrica",
+    agroSuitabilityCard: "Aptitud cultivo",
+    gpsCard: "GPS",
+    planningCard: "Aptitud",
+    planningResultsCard: "Resultados",
+    territorialScenarioCard: "Escenarios",
+    hydrologyCard: "Agua",
+    mobilityCard: "Movilidad",
+    riskCard: "Riesgo",
+    landChangeCard: "Huella",
+    fodaCameCard: "FODA+CAME",
+    territorialReadoutCard: "Lectura",
+    territorialDecisionCard: "Fichas",
+    territorialAlertsCard: "Alertas",
+    planning3dCard: "Visor 3D",
+    wizardCard: "Asistente",
+    aiGeoCard: "IA",
+  };
+  if (card?.id && shortLabels[card.id]) {
+    return shortLabels[card.id];
+  }
+  return card?.querySelector("h3")?.textContent?.trim() || card?.dataset?.moduleTrack || "Modulo";
+}
+
+function setModuleQuickNavActive(cardId = "") {
+  state.moduleQuickNavActiveId = cardId || null;
+  if (!dom.moduleQuickNav) {
+    return;
+  }
+  dom.moduleQuickNav.querySelectorAll("[data-module-card]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.moduleCard === cardId);
+  });
+}
+
+function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
+  if (isPlanningRoute(route)) {
+    return {
+      workflowGuideCard: false,
+      planningCard: false,
+      planningResultsCard: false,
+      territorialScenarioCard: true,
+      mobilityCard: true,
+      riskCard: true,
+      hydrologyCard: true,
+      landChangeCard: true,
+      fodaCameCard: true,
+      territorialReadoutCard: true,
+      territorialDecisionCard: true,
+      territorialAlertsCard: true,
+      planning3dCard: true,
+      aiGeoCard: true,
+    };
+  }
+
+  return {
+    workflowGuideCard: false,
+    intraloteCard: false,
+    demCard: true,
+    climateCard: true,
+    inamhiCard: true,
+    gpsCard: false,
+    hydroNetworkCard: true,
+    agroSuitabilityCard: true,
+    wizardCard: true,
+    aiGeoCard: true,
+  };
+}
+
+function setModuleCardCollapsed(cardId, collapsed) {
+  if (!cardId) {
+    return;
+  }
+  state.collapsedModules[cardId] = !!collapsed;
+  const card = document.getElementById(cardId);
+  if (!card) {
+    return;
+  }
+  card.classList.toggle("is-collapsed", !!collapsed);
+  const toggle = card.querySelector(".module-collapse-btn");
+  if (toggle) {
+    toggle.textContent = collapsed ? "+" : "-";
+    toggle.setAttribute("aria-expanded", String(!collapsed));
+    toggle.setAttribute("aria-label", collapsed ? "Expandir modulo" : "Contraer modulo");
+    toggle.title = collapsed ? "Expandir modulo" : "Contraer modulo";
+  }
+}
+
+function collapseModuleCardsForRoute(route = state.entryRoute || "agronomia") {
+  const defaults = getDefaultCollapsedModules(route);
+  getVisibleModuleCards().forEach((card, index) => {
+    if (!card.id) {
+      return;
+    }
+    const explicit = Object.prototype.hasOwnProperty.call(state.collapsedModules, card.id)
+      ? state.collapsedModules[card.id]
+      : defaults[card.id];
+    const collapsed = typeof explicit === "boolean"
+      ? explicit
+      : (index > 0);
+    setModuleCardCollapsed(card.id, collapsed);
+  });
+}
+
+function decorateModuleCards() {
+  document.querySelectorAll(".module-card").forEach((card) => {
+    const head = card.querySelector(".module-head");
+    if (!head) {
+      return;
+    }
+    let actions = head.querySelector(".module-head-actions");
+    if (!actions) {
+      actions = document.createElement("div");
+      actions.className = "module-head-actions";
+      Array.from(head.children).slice(1).forEach((child) => actions.appendChild(child));
+      head.appendChild(actions);
+    }
+    if (card.id && !actions.querySelector(".module-collapse-btn") && card.id !== "workflowGuideCard") {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "ghost-button module-collapse-btn";
+      button.dataset.moduleToggle = card.id;
+      button.textContent = "+";
+      button.setAttribute("aria-expanded", "false");
+      button.setAttribute("aria-label", "Expandir modulo");
+      actions.appendChild(button);
+    }
+  });
+}
+
+function renderModuleQuickNav() {
+  if (!dom.moduleQuickNav) {
+    return;
+  }
+  const cards = getVisibleModuleCards().filter((card) => card.id && card.id !== "workflowGuideCard");
+  if (!cards.length) {
+    dom.moduleQuickNav.innerHTML = "";
+    return;
+  }
+  setHtmlIfChanged(dom.moduleQuickNav, cards.map((card) => `
+    <button class="module-quick-button ${state.moduleQuickNavActiveId === card.id ? "active" : ""}" type="button" data-module-card="${card.id}">
+      ${escapeHtmlContent(getModuleCardLabel(card))}
+    </button>
+  `).join(""));
+}
+
 function clearPlanningModuleFocus() {
   if (dom.planningCard) {
     dom.planningCard.classList.remove("entry-focus");
@@ -5646,6 +6332,18 @@ function clearPlanningModuleFocus() {
   if (dom.gpsCard) {
     dom.gpsCard.classList.remove("entry-focus");
   }
+  if (dom.hydroNetworkCard) {
+    dom.hydroNetworkCard.classList.remove("entry-focus");
+  }
+  if (dom.agroSuitabilityCard) {
+    dom.agroSuitabilityCard.classList.remove("entry-focus");
+  }
+  if (dom.mobilityCard) {
+    dom.mobilityCard.classList.remove("entry-focus");
+  }
+  if (dom.riskCard) {
+    dom.riskCard.classList.remove("entry-focus");
+  }
 }
 
 function getWorkflowGuideModel(route = state.entryRoute || "agronomia") {
@@ -5656,14 +6354,18 @@ function getWorkflowGuideModel(route = state.entryRoute || "agronomia") {
   if (isPlanningRoute(route)) {
     const areaProfile = getTerritorialAreaProfile();
     const planningReady = !!state.planningData;
+    const mobilityReady = !!state.mobilityData;
+    const riskReady = !!state.riskData;
     const landReady = !!state.landChangeData;
     const waterReady = !!state.hydrologyData;
     const strategyReady = !!state.fodaCameData;
     const threeDReady = !!planning3dState.manifest || planning3dState.modalOpen;
     const summaryCopy = strategyReady
       ? `${state.fodaCameData.summary.dominantActionLabel} domina la lectura actual en ${areaProfile.scopeLabel}. Ya puedes exportar y validar los sectores en 3D.`
-      : planningReady
-        ? `${state.planningData.candidates.length} candidatos priorizados en ${areaProfile.scopeLabel}. Completa huella, agua y estrategia para cerrar la decision.`
+      : riskReady
+        ? `${state.riskData.summary.dominantActionLabel} domina la gestion del riesgo en ${areaProfile.scopeLabel}. Completa estrategia y validacion 3D para cerrar la decision.`
+        : planningReady
+          ? `${state.planningData.candidates.length} candidatos priorizados en ${areaProfile.scopeLabel}. Completa movilidad, riesgo, huella y agua para cerrar la decision.`
         : `${profile.defaultCopy} El ambito activo es ${areaProfile.scopeLabel}.`;
     return {
       ...profile,
@@ -5676,23 +6378,33 @@ function getWorkflowGuideModel(route = state.entryRoute || "agronomia") {
         },
         {
           ...profile.steps[1],
-          tone: landReady ? "ready" : "pending",
-          stateLabel: landReady ? `${formatLandChangeHa(state.landChangeData.summary.transformedHa)} ha evaluadas` : profile.steps[1].pending,
+          tone: mobilityReady ? "ready" : "pending",
+          stateLabel: mobilityReady ? state.mobilityData.summary.coverageLabel : profile.steps[1].pending,
         },
         {
           ...profile.steps[2],
-          tone: waterReady ? "ready" : "pending",
-          stateLabel: waterReady ? state.hydrologyData.summary.balanceLabel : profile.steps[2].pending,
+          tone: riskReady ? "ready" : "pending",
+          stateLabel: riskReady ? state.riskData.summary.riskLabel : profile.steps[2].pending,
         },
         {
           ...profile.steps[3],
-          tone: strategyReady ? "ready" : "pending",
-          stateLabel: strategyReady ? `${state.fodaCameData.priorityZones.length} zonas estrategicas` : profile.steps[3].pending,
+          tone: landReady ? "ready" : "pending",
+          stateLabel: landReady ? `${formatLandChangeHa(state.landChangeData.summary.transformedHa)} ha evaluadas` : profile.steps[3].pending,
         },
         {
           ...profile.steps[4],
+          tone: waterReady ? "ready" : "pending",
+          stateLabel: waterReady ? state.hydrologyData.summary.balanceLabel : profile.steps[4].pending,
+        },
+        {
+          ...profile.steps[5],
+          tone: strategyReady ? "ready" : "pending",
+          stateLabel: strategyReady ? `${state.fodaCameData.priorityZones.length} zonas estrategicas` : profile.steps[5].pending,
+        },
+        {
+          ...profile.steps[6],
           tone: threeDReady ? "available" : "pending",
-          stateLabel: threeDReady ? "Visor listo para validar calle, volumen y sombra" : profile.steps[4].pending,
+          stateLabel: threeDReady ? "Visor listo para validar calle, volumen y sombra" : profile.steps[6].pending,
         },
       ],
     };
@@ -5701,11 +6413,14 @@ function getWorkflowGuideModel(route = state.entryRoute || "agronomia") {
   const areaProfile = getAgronomyAreaProfile();
   const image = getSelectedImage();
   const hasDiagnosis = !!(state.agronomyOutputs.intralote || state.agronomyOutputs.dem || state.currentPlot);
-  const hasClimate = !!(state.agronomyOutputs.climate || state.agronomyOutputs.inamhi || state.agronomyOutputs.inamhiLive);
+  const hasWater = !!state.agronomyOutputs.hydroNetwork;
+  const hasClimate = !!(state.agronomyOutputs.climate || state.agronomyOutputs.inamhi || state.agronomyOutputs.inamhiLive || state.agronomyOutputs.agroSuitability);
   const hasOperations = isGpsTrackingActive() || !!state.agronomyOutputs.gps;
   const activeDevice = state.agronomyOutputs.gps?.activeDevice || state.gpsTracking.lastDeviceSnapshot;
   const summaryCopy = state.aiGeoData?.mode === "agronomia"
     ? `${state.aiGeoData.summary.dominantClassLabel} domina la lectura actual en ${state.aiGeoData.context.scopeLabel}.`
+    : state.agronomyOutputs.agroSuitability
+      ? `${state.agronomyOutputs.agroSuitability.summary.bestCropLabel} destaca en ${state.agronomyOutputs.agroSuitability.context.scopeLabel}. Ya puedes contrastar agua, clima y lote prioritario.`
     : image
       ? `${image.title} ya esta lista para lectura operativa en ${areaProfile.scopeLabel}.`
       : `${profile.defaultCopy} El ambito activo es ${areaProfile.scopeLabel}.`;
@@ -5725,13 +6440,22 @@ function getWorkflowGuideModel(route = state.entryRoute || "agronomia") {
       },
       {
         ...profile.steps[2],
-        tone: hasClimate ? "ready" : "pending",
-        stateLabel: hasClimate ? "Clima e INAMHI listos para contexto" : profile.steps[2].pending,
+        tone: hasWater ? "ready" : "pending",
+        stateLabel: hasWater ? state.agronomyOutputs.hydroNetwork.summary.waterLabel : profile.steps[2].pending,
       },
       {
         ...profile.steps[3],
+        tone: hasClimate ? "ready" : "pending",
+        stateLabel: hasClimate
+          ? state.agronomyOutputs.agroSuitability
+            ? `${state.agronomyOutputs.agroSuitability.cropProfile.label} con ${state.agronomyOutputs.agroSuitability.summary.meanScore}/100`
+            : "Clima e INAMHI listos para contexto"
+          : profile.steps[3].pending,
+      },
+      {
+        ...profile.steps[4],
         tone: hasOperations ? "live" : "pending",
-        stateLabel: hasOperations ? `${activeDevice?.label || "Dispositivo activo"} en seguimiento` : profile.steps[3].pending,
+        stateLabel: hasOperations ? `${activeDevice?.label || "Dispositivo activo"} en seguimiento` : profile.steps[4].pending,
       },
     ],
   };
@@ -5803,6 +6527,18 @@ function runWorkflowGuideAction(actionId) {
       focusWizardModuleCard();
       setStatus("Asistente agricola listo. Puedes ejecutar un paso o el plan completo segun tu necesidad.");
       return;
+    case "agronomy-water":
+      openSidebarWorkingPanel("modulos");
+      dom.runHydroNetworkBtn?.click();
+      focusModuleCard(dom.hydroNetworkCard);
+      setStatus("Red hidrica lista para leer riego, drenaje y proteccion de riberas.");
+      return;
+    case "agronomy-suitability":
+      openSidebarWorkingPanel("modulos");
+      dom.runAgroSuitabilityBtn?.click();
+      focusModuleCard(dom.agroSuitabilityCard);
+      setStatus("Aptitud agroclimatica lista para contrastar lotes y cultivo objetivo.");
+      return;
     case "agronomy-gps":
       openSidebarWorkingPanel("modulos");
       focusGpsModuleCard();
@@ -5812,6 +6548,16 @@ function runWorkflowGuideAction(actionId) {
       openSidebarWorkingPanel("modulos");
       dom.runPlanningBtn?.click();
       focusPlanningModuleCard();
+      return;
+    case "planning-mobility":
+      openSidebarWorkingPanel("modulos");
+      dom.runMobilityBtn?.click();
+      focusModuleCard(dom.mobilityCard);
+      return;
+    case "planning-risk":
+      openSidebarWorkingPanel("modulos");
+      dom.runRiskBtn?.click();
+      focusModuleCard(dom.riskCard);
       return;
     case "planning-footprint":
       openSidebarWorkingPanel("modulos");
@@ -5898,6 +6644,8 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
     });
   }
   renderWorkflowGuide();
+  collapseModuleCardsForRoute(route);
+  renderModuleQuickNav();
   syncSatelliteLayerToggle();
   syncEsriResolutionButtons();
   syncSatelliteSuperResolution();
@@ -6300,7 +7048,7 @@ function getGeoLayerSource(layerId) {
     return null;
   }
 
-  if (!["parroquias", "vias", "canales", "lotes", "estaciones"].includes(layerId)) {
+  if (!["parroquias", "vias", "rios", "acequias", "quebradas", "canales", "lotes", "estaciones"].includes(layerId)) {
     return geojson;
   }
 
@@ -6316,6 +7064,15 @@ function buildLayerDescription(layerId, properties = {}) {
   }
   if (layerId === "estaciones") {
     return `${properties.provider || "Estacion meteorologica"}${properties.seriesCode ? ` con serie ${properties.seriesCode}` : ""}. ${properties.summary || "Punto de referencia climatica del ambito agronomico."}`;
+  }
+  if (layerId === "rios") {
+    return `${properties.hydroRole || "Cauce principal"} con franja sugerida de ${properties.protectionM || 0} m. ${properties.summary || "Estructura mayor de abastecimiento y drenaje."}`;
+  }
+  if (layerId === "acequias") {
+    return `${properties.hydroRole || "Acequia"} con valor de riego ${Math.round((Number(properties.irrigationValue) || 0) * 100)}%. ${properties.summary || "Infraestructura lineal de distribucion de agua."}`;
+  }
+  if (layerId === "quebradas") {
+    return `${properties.hydroRole || "Quebrada"} con resguardo sugerido de ${properties.protectionM || 0} m. ${properties.summary || "Frente de drenaje y escorrentia prioritaria."}`;
   }
   if (layerId === "canales") {
     return "Infraestructura de riego demostrativa para analisis hidrico.";
@@ -8898,6 +9655,12 @@ function setCurrentPlot(feature, label) {
   runIntraloteAnalysis();
   runDemAnalysis(true);
   runClimateAnalysis(true);
+  if (state.agronomyOutputs.hydroNetwork) {
+    runHydroNetworkAnalysis(true);
+  }
+  if (state.agronomyOutputs.agroSuitability) {
+    runAgroSuitabilityAnalysis(true);
+  }
   if (state.planningData) {
     runPlanningAnalysis(true);
   }
@@ -9879,6 +10642,756 @@ function renderInamhiLiveOverlay(result = state.agronomyOutputs.inamhiLive) {
   }).addTo(mapState.map);
 }
 
+function getCurrentAgronomyTarget() {
+  if (state.currentPlot) {
+    return {
+      feature: cloneFeature(state.currentPlot),
+      scopeLabel: state.currentPlotLabel,
+      scopeType: "plot",
+      targetKey: getFeatureKey(state.currentPlot),
+    };
+  }
+
+  const feature = getAgronomyAreaFeature();
+  return {
+    feature,
+    scopeLabel: getAgronomyAreaProfile().scopeLabel,
+    scopeType: "studyArea",
+    targetKey: getFeatureKey(feature),
+  };
+}
+
+function getHydroFeatureTone(kind = "") {
+  if (kind === "rio") {
+    return { stroke: "#2d7eb5", fill: "#98d6f2" };
+  }
+  if (kind === "acequia") {
+    return { stroke: "#3f9a7d", fill: "#9fd7c4" };
+  }
+  return { stroke: "#9f6e42", fill: "#e1c087" };
+}
+
+function getHydroDistanceLabel(distanceKm = 0) {
+  if (distanceKm <= 0.12) {
+    return "Agua inmediata";
+  }
+  if (distanceKm <= 0.4) {
+    return "Agua cercana";
+  }
+  if (distanceKm <= 0.85) {
+    return "Agua intermedia";
+  }
+  return "Agua lejana";
+}
+
+function getHydroPriorityLabel(distanceKm = 0, irrigationValue = 50, kind = "") {
+  const weighted = irrigationValue - distanceKm * 36 + (kind === "acequia" ? 8 : kind === "rio" ? 4 : 0);
+  if (weighted >= 70) {
+    return "Prioridad alta";
+  }
+  if (weighted >= 52) {
+    return "Prioridad media";
+  }
+  return "Prioridad baja";
+}
+
+function buildHydroNetworkAnalysis() {
+  const context = getCurrentAgronomyTarget();
+  const anchor = turf.centroid(context.feature);
+  const groups = [
+    { id: "rios", kind: "rio", label: "Rios", features: getAgronomyAreaFeatures(geoSources.rios?.features, state.agronomyAreaId) },
+    { id: "acequias", kind: "acequia", label: "Acequias", features: getAgronomyAreaFeatures(geoSources.acequias?.features, state.agronomyAreaId) },
+    { id: "quebradas", kind: "quebrada", label: "Quebradas", features: getAgronomyAreaFeatures(geoSources.quebradas?.features, state.agronomyAreaId) },
+  ];
+
+  const items = groups.flatMap((group) => group.features.map((feature, index) => {
+    const cloned = cloneFeature(feature);
+    const lengthKm = Number(turf.length(cloned, { units: "kilometers" }).toFixed(2));
+    const distanceKm = Number(distanceToFeatureKm(anchor, cloned).toFixed(3));
+    const protectionM = Number(cloned.properties?.protectionM || (group.kind === "rio" ? 40 : group.kind === "acequia" ? 18 : 24));
+    const irrigationValue = Number(cloned.properties?.irrigationValue || (group.kind === "acequia" ? 84 : group.kind === "rio" ? 72 : 48));
+    const priorityLabel = getHydroPriorityLabel(distanceKm, irrigationValue, group.kind);
+    const tone = priorityLabel === "Prioridad alta" ? "high" : priorityLabel === "Prioridad media" ? "mid" : "low";
+    return {
+      id: cloned.id || cloned.properties?.name || `${group.id}-${index + 1}`,
+      kind: group.kind,
+      kindLabel: group.label,
+      label: cloned.properties?.name || `${group.label} ${index + 1}`,
+      summary: cloned.properties?.summary || `Elemento ${group.label.toLowerCase()} integrado para lectura hidrica del ambito.`,
+      feature: cloned,
+      distanceKm,
+      lengthKm,
+      protectionM,
+      irrigationValue,
+      priorityLabel,
+      tone,
+    };
+  }));
+
+  const ranked = items
+    .slice()
+    .sort((left, right) => {
+      if (left.distanceKm !== right.distanceKm) {
+        return left.distanceKm - right.distanceKm;
+      }
+      return right.irrigationValue - left.irrigationValue;
+    })
+    .map((item, index) => ({
+      ...item,
+      rank: index + 1,
+    }));
+
+  const topItems = ranked.slice(0, 6);
+  const totalLengthKm = ranked.reduce((sum, item) => sum + item.lengthKm, 0);
+  const protectedAreaHa = ranked.reduce((sum, item) => {
+    try {
+      return sum + (turf.area(turf.buffer(item.feature, item.protectionM / 1000, { units: "kilometers" })) / 10000);
+    } catch (_) {
+      return sum;
+    }
+  }, 0);
+  const nearest = ranked[0] || null;
+  const summary = {
+    totalCount: ranked.length,
+    riverCount: ranked.filter((item) => item.kind === "rio").length,
+    acequiaCount: ranked.filter((item) => item.kind === "acequia").length,
+    quebradaCount: ranked.filter((item) => item.kind === "quebrada").length,
+    totalLengthKm: Number(totalLengthKm.toFixed(1)),
+    protectedAreaHa: Number(protectedAreaHa.toFixed(1)),
+    nearestDistanceKm: nearest?.distanceKm || 0,
+    waterLabel: nearest ? getHydroDistanceLabel(nearest.distanceKm) : "Sin red",
+    dominantKindLabel: topItems[0]?.kindLabel || "Sin red",
+    priorityCount: ranked.filter((item) => item.priorityLabel === "Prioridad alta").length,
+    nearestName: nearest?.label || "Sin referencia",
+  };
+
+  const bufferFeatures = topItems.map((item) => {
+    try {
+      const buffered = turf.buffer(item.feature, item.protectionM / 1000, { units: "kilometers" });
+      buffered.properties = {
+        ...buffered.properties,
+        hydroFeatureId: item.id,
+        name: item.label,
+        kind: item.kind,
+        kindLabel: item.kindLabel,
+        priorityLabel: item.priorityLabel,
+        protectionM: item.protectionM,
+        summary: item.summary,
+      };
+      return buffered;
+    } catch (_) {
+      return null;
+    }
+  }).filter(Boolean);
+
+  const lineCollection = {
+    type: "FeatureCollection",
+    features: ranked.map((item) => ({
+      ...item.feature,
+      properties: {
+        ...(item.feature.properties || {}),
+        hydroFeatureId: item.id,
+        name: item.label,
+        kind: item.kind,
+        kindLabel: item.kindLabel,
+        priorityLabel: item.priorityLabel,
+        distanceKm: item.distanceKm,
+        lengthKm: item.lengthKm,
+        protectionM: item.protectionM,
+        irrigationValue: item.irrigationValue,
+        summary: item.summary,
+      },
+    })),
+  };
+
+  return {
+    context,
+    anchor,
+    ranked,
+    focusItems: topItems,
+    summary,
+    lineCollection,
+    bufferCollection: {
+      type: "FeatureCollection",
+      features: bufferFeatures,
+    },
+  };
+}
+
+function renderHydroNetworkVisual(result = null) {
+  if (!dom.hydroNetworkVisual) {
+    return;
+  }
+  if (!result?.ranked?.length) {
+    resetVisualPanel(dom.hydroNetworkVisual, "Aqui apareceran la mezcla entre rios, acequias y quebradas, la distancia al agua y la prioridad operativa del ambito.");
+    return;
+  }
+
+  const maxLength = Math.max(...result.ranked.map((item) => item.lengthKm), 0.1);
+  dom.hydroNetworkVisual.classList.remove("empty-state");
+  dom.hydroNetworkVisual.classList.add("has-data");
+  setHtmlIfChanged(dom.hydroNetworkVisual, `
+    <div class="agronomy-visual-head">
+      <div>
+        <p class="section-kicker">Hidrologia operativa</p>
+        <h4>Rios, acequias y quebradas del ambito</h4>
+      </div>
+      <span class="agronomy-visual-pill tone-${result.summary.priorityCount ? "mid" : "low"}">${result.summary.waterLabel}</span>
+    </div>
+    <div class="agronomy-tag-row">
+      <span class="agronomy-visual-pill">${result.context.scopeLabel}</span>
+      <span class="agronomy-visual-pill">${result.summary.totalLengthKm.toFixed(1)} km</span>
+      <span class="agronomy-visual-pill">${result.summary.protectedAreaHa.toFixed(1)} ha protegidas</span>
+      <span class="agronomy-visual-pill">${result.summary.priorityCount} prioridades altas</span>
+    </div>
+    <div class="gps-device-list">
+      ${result.focusItems.map((item) => `
+        <article class="gps-device-card">
+          <strong>${item.label}</strong>
+          <p>${item.kindLabel} · ${item.priorityLabel}</p>
+          <p>${item.lengthKm.toFixed(2)} km · ${formatDistanceKm(item.distanceKm)} del lote/ambito</p>
+          <div class="agronomy-bar-track">
+            <i style="width: ${Math.max(10, Math.round(item.lengthKm / maxLength * 100))}%"></i>
+          </div>
+          <p>${item.summary}</p>
+        </article>
+      `).join("")}
+    </div>
+    <p class="agronomy-visual-copy">La red hidrica dominante es ${result.summary.dominantKindLabel.toLowerCase()} y la referencia mas cercana es ${result.summary.nearestName} a ${formatDistanceKm(result.summary.nearestDistanceKm)} del ambito actual.</p>
+  `);
+}
+
+function renderHydroNetworkOverlay(result = state.agronomyOutputs.hydroNetwork) {
+  clearHydroNetworkOverlay();
+  if (!mapState.map || !result?.lineCollection?.features?.length || state.entryRoute !== "agronomia") {
+    return;
+  }
+
+  if (result.bufferCollection?.features?.length) {
+    mapState.hydroNetworkBufferLayer = L.geoJSON(result.bufferCollection, {
+      style: (feature) => {
+        const palette = getHydroFeatureTone(feature.properties?.kind);
+        return {
+          color: palette.stroke,
+          weight: 1.1,
+          fillColor: palette.fill,
+          fillOpacity: 0.08,
+          dashArray: "8 7",
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          `<h3 class="popup-title">${feature.properties?.name || "Franja hidrica"}</h3><p class="popup-copy">${feature.properties?.kindLabel || "Red hidrica"} con proteccion sugerida de ${feature.properties?.protectionM || 0} m. ${feature.properties?.summary || ""}</p>`
+        );
+      },
+    }).addTo(mapState.map);
+  }
+
+  mapState.hydroNetworkLayer = L.geoJSON(result.lineCollection, {
+    style: (feature) => {
+      const palette = getHydroFeatureTone(feature.properties?.kind);
+      return {
+        color: palette.stroke,
+        weight: feature.properties?.priorityLabel === "Prioridad alta" ? 3.8 : 2.6,
+        opacity: 0.92,
+        dashArray: feature.properties?.kind === "quebrada" ? "9 7" : null,
+      };
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(
+        `<h3 class="popup-title">${feature.properties?.name || "Red hidrica"}</h3><p class="popup-copy">${feature.properties?.kindLabel || "Elemento"} · ${feature.properties?.priorityLabel || "Prioridad"} · ${formatDistanceKm(feature.properties?.distanceKm || 0)} del ambito. ${feature.properties?.summary || ""}</p>`
+      );
+    },
+  }).addTo(mapState.map);
+
+  mapState.hydroNetworkLayer?.bringToFront?.();
+  mapState.currentPlotLayer?.bringToFront?.();
+  mapState.managementLayer?.bringToFront?.();
+}
+
+function clearHydroNetworkOverlay() {
+  ["hydroNetworkLayer", "hydroNetworkBufferLayer"].forEach((layerName) => {
+    if (mapState[layerName]) {
+      mapState.map?.removeLayer(mapState[layerName]);
+      mapState[layerName] = null;
+    }
+  });
+}
+
+async function runHydroNetworkAnalysis(silent = false) {
+  try {
+    const result = buildHydroNetworkAnalysis();
+    state.agronomyOutputs.hydroNetwork = result;
+    state.agronomyFocus = "hydroNetwork";
+    const cards = [
+      {
+        label: "Red total",
+        value: `${result.summary.totalLengthKm.toFixed(1)} km`,
+        copy: `${result.summary.totalCount} elementos hidricos activos en ${result.context.scopeLabel}.`,
+      },
+      {
+        label: "Referencia mas cercana",
+        value: result.summary.nearestName,
+        copy: `${formatDistanceKm(result.summary.nearestDistanceKm)} y estado ${result.summary.waterLabel.toLowerCase()}.`,
+        highlight: true,
+      },
+      {
+        label: "Rios",
+        value: `${result.summary.riverCount}`,
+        copy: "Cauces principales graficados para proteccion y lectura de disponibilidad.",
+      },
+      {
+        label: "Acequias",
+        value: `${result.summary.acequiaCount}`,
+        copy: "Infraestructura de riego y distribucion priorizada dentro del ambito.",
+      },
+      {
+        label: "Quebradas",
+        value: `${result.summary.quebradaCount}`,
+        copy: "Drenajes naturales con potencial de restriccion o desborde local.",
+      },
+      {
+        label: "Proteccion sugerida",
+        value: `${result.summary.protectedAreaHa.toFixed(1)} ha`,
+        copy: `${result.summary.priorityCount} prioridades altas con franja preventiva o de manejo.`,
+      },
+    ];
+    paintMetricGrid(dom.hydroNetworkResults, cards);
+    renderHydroNetworkVisual(result);
+    renderHydroNetworkOverlay(result);
+    renderWorkflowGuide();
+    updateMapSummary();
+    if (!silent) {
+      setStatus(`Red hidrica productiva lista para ${result.context.scopeLabel}: ${result.summary.totalCount} elementos, ${result.summary.totalLengthKm.toFixed(1)} km y agua ${result.summary.waterLabel.toLowerCase()}.`);
+    }
+    return result;
+  } catch (error) {
+    console.warn("Fallo el modulo de red hidrica productiva.", error);
+    state.agronomyOutputs.hydroNetwork = null;
+    clearHydroNetworkOverlay();
+    resetMetricGrid(dom.hydroNetworkResults, "No se pudo construir la red hidrica del ambito agricola.");
+    resetVisualPanel(dom.hydroNetworkVisual, "No se pudo resumir rios, acequias y quebradas en esta corrida.");
+    renderWorkflowGuide();
+    updateMapSummary();
+    if (!silent) {
+      setStatus(`Red hidrica productiva: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    return null;
+  }
+}
+
+function focusHydroNetworkStudy() {
+  if (!mapState.map || (!mapState.hydroNetworkLayer && !mapState.hydroNetworkBufferLayer)) {
+    return;
+  }
+  state.agronomyFocus = "hydroNetwork";
+  const bounds = mapState.hydroNetworkBufferLayer?.getBounds?.() || mapState.hydroNetworkLayer?.getBounds?.();
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, {
+      padding: [42, 42],
+      maxZoom: 14,
+    });
+  }
+  updateMapSummary();
+}
+
+function clearHydroNetworkAnalysis() {
+  state.agronomyOutputs.hydroNetwork = null;
+  clearHydroNetworkOverlay();
+  resetMetricGrid(dom.hydroNetworkResults, "Ejecuta el modulo para medir kilometros de red hidrica, cercania al lote y prioridades de manejo.");
+  resetVisualPanel(dom.hydroNetworkVisual, "Aqui apareceran la mezcla entre rios, acequias y quebradas, la distancia al agua y la prioridad operativa del ambito.");
+  renderWorkflowGuide();
+  updateMapSummary();
+  setStatus(`Red hidrica productiva limpiada para ${getCurrentAgronomyScopeLabel()}.`);
+}
+
+function getAreaThermalProfile(areaId = state.agronomyAreaId) {
+  if (areaId === "quevedo") {
+    return { altitudeM: 85, minTempC: 22, maxTempC: 31, rainfallMm: 38 };
+  }
+  return { altitudeM: 2890, minTempC: 8, maxTempC: 21, rainfallMm: 18 };
+}
+
+function scoreAgroRange(value, optimumMin, optimumMax, tolerance = 0) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return 0.35;
+  }
+  const min = optimumMin - tolerance;
+  const max = optimumMax + tolerance;
+  if (numeric < min || numeric > max) {
+    return 0.12;
+  }
+  if (numeric >= optimumMin && numeric <= optimumMax) {
+    return 1;
+  }
+  if (numeric < optimumMin) {
+    return clamp((numeric - min) / Math.max(optimumMin - min, 0.001), 0.1, 1);
+  }
+  return clamp((max - numeric) / Math.max(max - optimumMax, 0.001), 0.1, 1);
+}
+
+function getAgroSuitabilityTone(score = 0) {
+  if (score >= 78) {
+    return "low";
+  }
+  if (score >= 58) {
+    return "mid";
+  }
+  return "high";
+}
+
+function buildAgroSuitabilityAnalysis() {
+  const cropProfile = agroSuitabilityCropCatalog[state.agroSuitabilityCropId] || agroSuitabilityCropCatalog.papa;
+  const context = getCurrentAgronomyTarget();
+  const thermalBase = getAreaThermalProfile();
+  const hydroAnalysis = state.agronomyOutputs.hydroNetwork || buildHydroNetworkAnalysis();
+  const hydroFeatures = hydroAnalysis.ranked.map((item) => item.feature);
+  const scene = getSelectedImage() || getFallbackScene();
+  const contextAnalysis = scene ? resolveAnalysisForTarget(scene, context) : null;
+  const moistureKey = scene ? getMoistureIndexKey(scene) : "NDMI";
+  const focusKey = scene ? getFocusIndexKey(scene) : "NDVI";
+  const candidateLots = [];
+  if (state.currentPlot) {
+    candidateLots.push(cloneFeature(state.currentPlot));
+  }
+  getAgronomyDemoPlots(state.agronomyAreaId).forEach((feature) => {
+    const key = getFeatureKey(feature);
+    if (!candidateLots.some((item) => getFeatureKey(item) === key)) {
+      candidateLots.push(cloneFeature(feature));
+    }
+  });
+
+  const lots = candidateLots.slice(0, 7).map((feature, index) => {
+    const centroidFeature = turf.centroid(feature);
+    const [lon, lat] = centroidFeature.geometry.coordinates;
+    const hydroMatch = hydroFeatures.length
+      ? getNearestFeatureMatch(centroidFeature, hydroFeatures)
+      : { feature: null, distanceKm: 1.5 };
+    const altitudeM = Number((feature.properties?.altitudeM || (thermalBase.altitudeM + pseudoNoise(lon, lat, 31) * (state.agronomyAreaId === "quevedo" ? 30 : 420))).toFixed(0));
+    const rainfallMm = Number((state.agronomyOutputs.climate?.rainfall || (thermalBase.rainfallMm + Math.abs(pseudoNoise(lon, lat, 29)) * 16)).toFixed(1));
+    const minTempC = Number((state.agronomyOutputs.climate?.minTemp || (thermalBase.minTempC + pseudoNoise(lon, lat, 13) * 1.6)).toFixed(1));
+    const maxTempC = Number((state.agronomyOutputs.climate?.maxTemp || (thermalBase.maxTempC + pseudoNoise(lat, lon, 15) * 2.1)).toFixed(1));
+    const meanTempC = Number((((minTempC + maxTempC) / 2)).toFixed(1));
+    const slope = Number((index === 0 && state.agronomyOutputs.dem?.meanSlope
+      ? state.agronomyOutputs.dem.meanSlope
+      : clamp(3 + Math.abs(pseudoNoise(lon, lat, 17)) * (state.agronomyAreaId === "quevedo" ? 7 : 14), 2, 18)).toFixed(1));
+    const moisture = Number((state.agronomyOutputs.climate?.soilMoisture
+      || (contextAnalysis ? clamp(
+        24 + normalizeMetricValue(contextAnalysis.summary[moistureKey]?.mean || 0, indexConfig[moistureKey] || indexConfig.NDMI) * 44
+        + pseudoNoise(lat, lon, 41) * 5,
+        22,
+        78
+      ) : 46)).toFixed(0));
+    const vigorScore = contextAnalysis
+      ? normalizeMetricValue(contextAnalysis.summary[focusKey]?.mean || 0, indexConfig[focusKey] || indexConfig.NDVI)
+      : 0.56;
+    const waterDistanceKm = Number((hydroMatch.distanceKm || 0).toFixed(3));
+    const tempScore = scoreAgroRange(meanTempC, cropProfile.minTempC, cropProfile.maxTempC, 2.8);
+    const rainScore = scoreAgroRange(rainfallMm, cropProfile.minRainMm, cropProfile.maxRainMm, 8);
+    const moistureScore = scoreAgroRange(moisture, cropProfile.minMoisturePct, cropProfile.maxMoisturePct, 10);
+    const slopeScore = scoreAgroRange(slope, 0, cropProfile.maxSlopePct, 4);
+    const altitudeScore = scoreAgroRange(altitudeM, cropProfile.minAltitudeM, cropProfile.maxAltitudeM, state.agronomyAreaId === "quevedo" ? 120 : 220);
+    const hydroScore = clamp(1 - (waterDistanceKm / 1.2), 0.12, 1);
+    const weightedScore = (
+      tempScore * cropProfile.temperatureWeight
+      + rainScore * cropProfile.moistureWeight
+      + moistureScore * 0.2
+      + slopeScore * cropProfile.slopeWeight
+      + altitudeScore * cropProfile.altitudeWeight
+      + hydroScore * cropProfile.hydroWeight
+      + vigorScore * 0.08
+    ) / (cropProfile.temperatureWeight + cropProfile.moistureWeight + 0.2 + cropProfile.slopeWeight + cropProfile.altitudeWeight + cropProfile.hydroWeight + 0.08);
+    const score = Math.round(clamp(weightedScore * 100, 18, 96));
+    const fitLabel = score >= 78 ? "Aptitud alta" : score >= 58 ? "Aptitud media" : "Aptitud baja";
+    const recommendation = score >= 78
+      ? `Mantener ${cropProfile.label.toLowerCase()} como cultivo objetivo y programar manejo sobre ${cropProfile.recommendation}.`
+      : score >= 58
+        ? `Ajustar agua y manejo antes de consolidar ${cropProfile.label.toLowerCase()} en este lote.`
+        : `No priorizar ${cropProfile.label.toLowerCase()} sin corregir pendiente, humedad o acceso al agua.`;
+    return {
+      id: feature.id || feature.properties?.name || `lot-${index + 1}`,
+      feature,
+      centroid: centroidFeature.geometry.coordinates,
+      label: feature.properties?.name || feature.properties?.label || `Lote ${index + 1}`,
+      score,
+      fitLabel,
+      tone: getAgroSuitabilityTone(score),
+      rainfallMm,
+      minTempC,
+      maxTempC,
+      meanTempC,
+      moisture,
+      slope,
+      altitudeM,
+      waterDistanceKm,
+      recommendation,
+    };
+  }).sort((left, right) => right.score - left.score).map((item, index) => ({
+    ...item,
+    rank: index + 1,
+  }));
+
+  const bestLot = lots[0] || null;
+  const meanScore = lots.length ? Math.round(lots.reduce((sum, item) => sum + item.score, 0) / lots.length) : 0;
+  const surface = {
+    type: "FeatureCollection",
+    features: lots.map((lot) => ({
+      ...cloneFeature(lot.feature),
+      properties: {
+        ...(lot.feature.properties || {}),
+        suitabilityId: lot.id,
+        suitabilityLabel: lot.label,
+        suitabilityScore: lot.score,
+        suitabilityTone: lot.tone,
+        fitLabel: lot.fitLabel,
+        recommendation: lot.recommendation,
+      },
+    })),
+  };
+  const hotspotCollection = {
+    type: "FeatureCollection",
+    features: lots.slice(0, 4).map((lot) => pointFeature(lot.label, lot.centroid, {
+      suitabilityId: lot.id,
+      suitabilityScore: lot.score,
+      fitLabel: lot.fitLabel,
+      recommendation: lot.recommendation,
+    })),
+  };
+
+  return {
+    context,
+    cropProfile,
+    image: scene,
+    lots,
+    surface,
+    hotspotCollection,
+    summary: {
+      meanScore,
+      bestCropLabel: cropProfile.label,
+      bestLotLabel: bestLot?.label || "Sin lote",
+      bestScore: bestLot?.score || 0,
+      meanRainfallMm: Number((lots.reduce((sum, item) => sum + item.rainfallMm, 0) / Math.max(lots.length, 1)).toFixed(1)),
+      meanMoisturePct: Math.round(lots.reduce((sum, item) => sum + item.moisture, 0) / Math.max(lots.length, 1)),
+      meanSlopePct: Number((lots.reduce((sum, item) => sum + item.slope, 0) / Math.max(lots.length, 1)).toFixed(1)),
+      nearestWaterKm: bestLot?.waterDistanceKm || 0,
+      compatibleLots: lots.filter((lot) => lot.score >= 58).length,
+    },
+  };
+}
+
+function renderAgroSuitabilityVisual(result = null) {
+  if (!dom.agroSuitabilityVisual) {
+    return;
+  }
+  if (!result?.lots?.length) {
+    resetVisualPanel(dom.agroSuitabilityVisual, "Aqui apareceran el ranking de lotes, la ventana termica-hidrica y la recomendacion agroclimatica.");
+    return;
+  }
+
+  const bestLot = result.lots[0];
+  dom.agroSuitabilityVisual.classList.remove("empty-state");
+  dom.agroSuitabilityVisual.classList.add("has-data");
+  setHtmlIfChanged(dom.agroSuitabilityVisual, `
+    <div class="agronomy-visual-head">
+      <div>
+        <p class="section-kicker">Aptitud por cultivo</p>
+        <h4>${result.cropProfile.label} como lectura objetivo</h4>
+      </div>
+      <span class="agronomy-visual-pill tone-${bestLot.tone}">${bestLot.fitLabel}</span>
+    </div>
+    <div class="agronomy-tag-row">
+      <span class="agronomy-visual-pill">${result.context.scopeLabel}</span>
+      <span class="agronomy-visual-pill">${result.summary.meanScore}/100</span>
+      <span class="agronomy-visual-pill">${result.summary.compatibleLots} lotes compatibles</span>
+      <span class="agronomy-visual-pill">${formatDistanceKm(result.summary.nearestWaterKm)} al agua</span>
+    </div>
+    <div class="agronomy-bar-grid">
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Lluvia media</span>
+          <strong>${result.summary.meanRainfallMm.toFixed(1)} mm</strong>
+        </div>
+        <div class="agronomy-bar-track"><i style="width: ${clamp(Math.round(result.summary.meanRainfallMm / 45 * 100), 8, 100)}%"></i></div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Humedad media</span>
+          <strong>${result.summary.meanMoisturePct}%</strong>
+        </div>
+        <div class="agronomy-bar-track"><i style="width: ${clamp(result.summary.meanMoisturePct, 10, 100)}%"></i></div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Pendiente media</span>
+          <strong>${result.summary.meanSlopePct.toFixed(1)}%</strong>
+        </div>
+        <div class="agronomy-bar-track"><i style="width: ${clamp(Math.round(result.summary.meanSlopePct / 24 * 100), 8, 100)}%"></i></div>
+      </article>
+      <article class="agronomy-bar-card">
+        <div class="agronomy-bar-head">
+          <span>Mejor lote</span>
+          <strong>${bestLot.score}/100</strong>
+        </div>
+        <div class="agronomy-bar-track"><i style="width: ${bestLot.score}%"></i></div>
+      </article>
+    </div>
+    <div class="gps-device-list">
+      ${result.lots.slice(0, 5).map((lot) => `
+        <article class="gps-device-card">
+          <strong>${lot.label}</strong>
+          <p>${lot.fitLabel} · Prioridad ${lot.rank}</p>
+          <p>${lot.meanTempC.toFixed(1)} C · ${lot.rainfallMm.toFixed(1)} mm · ${lot.moisture}% humedad</p>
+          <p>${lot.slope.toFixed(1)}% pendiente · ${formatDistanceKm(lot.waterDistanceKm)} al agua</p>
+          <p>${lot.recommendation}</p>
+        </article>
+      `).join("")}
+    </div>
+    <p class="agronomy-visual-copy">${bestLot.label} lidera la corrida para ${result.cropProfile.label.toLowerCase()} con ${bestLot.score}/100. ${bestLot.recommendation}</p>
+  `);
+}
+
+function renderAgroSuitabilityOverlay(result = state.agronomyOutputs.agroSuitability) {
+  clearAgroSuitabilityOverlay();
+  if (!mapState.map || !result?.surface?.features?.length || state.entryRoute !== "agronomia") {
+    return;
+  }
+
+  mapState.agroSuitabilityLayer = L.geoJSON(result.surface, {
+    style: (feature) => {
+      const score = Number(feature.properties?.suitabilityScore || 0);
+      return {
+        color: score >= 78 ? "#2f7f5f" : score >= 58 ? "#c18c31" : "#a35443",
+        weight: 1.9,
+        fillColor: score >= 78 ? "#8fc9aa" : score >= 58 ? "#e2bb72" : "#d69c8c",
+        fillOpacity: 0.26,
+      };
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(
+        `<h3 class="popup-title">${feature.properties?.suitabilityLabel || "Lote"}</h3><p class="popup-copy">${feature.properties?.fitLabel || "Aptitud"} · ${feature.properties?.suitabilityScore || 0}/100. ${feature.properties?.recommendation || ""}</p>`
+      );
+    },
+  }).addTo(mapState.map);
+
+  if (result.hotspotCollection?.features?.length) {
+    mapState.agroSuitabilityHotspotLayer = L.geoJSON(result.hotspotCollection, {
+      pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+        radius: 7,
+        color: "#fff8ef",
+        weight: 2,
+        fillColor: Number(feature.properties?.suitabilityScore || 0) >= 78 ? "#2f7f5f" : "#c18c31",
+        fillOpacity: 0.96,
+      }),
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(
+          `<h3 class="popup-title">${feature.properties?.name || "Lote recomendado"}</h3><p class="popup-copy">${feature.properties?.fitLabel || "Aptitud"} · ${feature.properties?.suitabilityScore || 0}/100. ${feature.properties?.recommendation || ""}</p>`
+        );
+      },
+    }).addTo(mapState.map);
+  }
+
+  mapState.agroSuitabilityLayer?.bringToFront?.();
+  mapState.agroSuitabilityHotspotLayer?.bringToFront?.();
+  mapState.currentPlotLayer?.bringToFront?.();
+}
+
+function clearAgroSuitabilityOverlay() {
+  ["agroSuitabilityLayer", "agroSuitabilityHotspotLayer"].forEach((layerName) => {
+    if (mapState[layerName]) {
+      mapState.map?.removeLayer(mapState[layerName]);
+      mapState[layerName] = null;
+    }
+  });
+}
+
+async function runAgroSuitabilityAnalysis(silent = false) {
+  try {
+    const result = buildAgroSuitabilityAnalysis();
+    state.agronomyOutputs.agroSuitability = result;
+    state.agronomyFocus = "agroSuitability";
+    const cards = [
+      {
+        label: "Cultivo objetivo",
+        value: result.cropProfile.label,
+        copy: `Ventana ${result.cropProfile.minTempC}-${result.cropProfile.maxTempC} C y altitud ${result.cropProfile.minAltitudeM}-${result.cropProfile.maxAltitudeM} m.`,
+      },
+      {
+        label: "Aptitud media",
+        value: `${result.summary.meanScore}/100`,
+        copy: `${result.summary.compatibleLots} lotes cumplen el umbral operativo para ${result.cropProfile.label.toLowerCase()}.`,
+        highlight: true,
+      },
+      {
+        label: "Mejor lote",
+        value: result.summary.bestLotLabel,
+        copy: `${result.summary.bestScore}/100 y agua a ${formatDistanceKm(result.summary.nearestWaterKm)}.`,
+      },
+      {
+        label: "Lluvia de soporte",
+        value: `${result.summary.meanRainfallMm.toFixed(1)} mm`,
+        copy: "Promedio sintetico del ambito para el cultivo seleccionado.",
+      },
+      {
+        label: "Humedad de soporte",
+        value: `${result.summary.meanMoisturePct}%`,
+        copy: "Cruce de humedad local, escena satelital y clima de referencia.",
+      },
+      {
+        label: "Pendiente media",
+        value: `${result.summary.meanSlopePct.toFixed(1)}%`,
+        copy: result.summary.meanSlopePct <= result.cropProfile.maxSlopePct ? "Dentro del rango operativo recomendado." : "Pide manejo de pendiente o cambio de cultivo.",
+      },
+    ];
+    paintMetricGrid(dom.agroSuitabilityResults, cards);
+    renderAgroSuitabilityVisual(result);
+    renderAgroSuitabilityOverlay(result);
+    renderWorkflowGuide();
+    updateMapSummary();
+    if (!silent) {
+      setStatus(`Aptitud agroclimatica lista para ${result.cropProfile.label.toLowerCase()} en ${result.context.scopeLabel}. Mejor lote: ${result.summary.bestLotLabel} con ${result.summary.bestScore}/100.`);
+    }
+    return result;
+  } catch (error) {
+    console.warn("Fallo la aptitud agroclimatica.", error);
+    state.agronomyOutputs.agroSuitability = null;
+    clearAgroSuitabilityOverlay();
+    resetMetricGrid(dom.agroSuitabilityResults, "No se pudo calcular la aptitud por cultivo para el ambito actual.");
+    resetVisualPanel(dom.agroSuitabilityVisual, "No se pudo construir el ranking de lotes y la recomendacion agroclimatica.");
+    renderWorkflowGuide();
+    updateMapSummary();
+    if (!silent) {
+      setStatus(`Aptitud agroclimatica: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    return null;
+  }
+}
+
+function focusAgroSuitabilityStudy() {
+  if (!mapState.map || (!mapState.agroSuitabilityLayer && !mapState.agroSuitabilityHotspotLayer)) {
+    return;
+  }
+  state.agronomyFocus = "agroSuitability";
+  const bounds = mapState.agroSuitabilityLayer?.getBounds?.() || mapState.agroSuitabilityHotspotLayer?.getBounds?.();
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, {
+      padding: [42, 42],
+      maxZoom: 15,
+    });
+  }
+  updateMapSummary();
+}
+
+function clearAgroSuitabilityAnalysis() {
+  state.agronomyOutputs.agroSuitability = null;
+  clearAgroSuitabilityOverlay();
+  resetMetricGrid(dom.agroSuitabilityResults, "Ejecuta el modulo para ver aptitud por cultivo, lotes compatibles y alertas de manejo.");
+  resetVisualPanel(dom.agroSuitabilityVisual, "Aqui apareceran el ranking de lotes, la ventana termica-hidrica y la recomendacion agroclimatica.");
+  renderWorkflowGuide();
+  updateMapSummary();
+  setStatus(`Aptitud agroclimatica limpiada para ${getCurrentAgronomyScopeLabel()}.`);
+}
+
 function normalizeGpsHeading(value) {
   const heading = Number(value);
   if (!Number.isFinite(heading)) {
@@ -10112,6 +11625,812 @@ function appendGpsTrackPoint(device) {
   state.gpsTracking.track = track.slice(-180);
 }
 
+function getGpsGeofenceToleranceM() {
+  return clamp(Math.round(Number(
+    dom.gpsGeofenceTolerance?.value
+    ?? state.gpsTracking.geofence?.toleranceM
+    ?? 45
+  ) || 45), 10, 500);
+}
+
+function formatGpsDistanceMeters(distanceM) {
+  if (!Number.isFinite(Number(distanceM))) {
+    return "sin dato";
+  }
+  const meters = Math.abs(Number(distanceM));
+  if (meters >= 1000) {
+    return `${(meters / 1000).toFixed(meters >= 10000 ? 0 : 1)} km`;
+  }
+  return `${Math.round(meters)} m`;
+}
+
+function ensurePolygonRingClosed(points = []) {
+  if (points.length < 3) {
+    return [];
+  }
+  const ring = [...points];
+  const first = ring[0];
+  const last = ring[ring.length - 1];
+  if (first[0] !== last[0] || first[1] !== last[1]) {
+    ring.push([...first]);
+  }
+  return ring;
+}
+
+function parseDelimitedCoordinatePairs(text = "") {
+  return String(text || "")
+    .trim()
+    .split(/\s+/)
+    .map((chunk) => chunk.split(",").map((value) => Number(value.trim())))
+    .filter((parts) => Number.isFinite(parts[0]) && Number.isFinite(parts[1]))
+    .map(([lon, lat]) => [lon, lat]);
+}
+
+function getXmlElementsByLocalName(root, localName) {
+  if (!root) {
+    return [];
+  }
+  return Array.from(root.getElementsByTagNameNS?.("*", localName) || root.getElementsByTagName?.(localName) || []);
+}
+
+function getFirstXmlElementText(root, localName) {
+  return getXmlElementsByLocalName(root, localName)[0]?.textContent?.trim() || "";
+}
+
+function parseGpsGeofenceGeoJson(text = "") {
+  let parsed;
+  try {
+    parsed = JSON.parse(text);
+  } catch (error) {
+    throw new Error("El archivo GeoJSON no tiene un formato JSON valido.");
+  }
+
+  if (!parsed || typeof parsed !== "object") {
+    throw new Error("El archivo cargado no contiene una geometria valida.");
+  }
+
+  if (parsed.type === "FeatureCollection") {
+    return parsed;
+  }
+  if (parsed.type === "Feature") {
+    return {
+      type: "FeatureCollection",
+      features: [parsed],
+    };
+  }
+  if (parsed.type && parsed.coordinates) {
+    return {
+      type: "FeatureCollection",
+      features: [{
+        type: "Feature",
+        properties: {},
+        geometry: parsed,
+      }],
+    };
+  }
+
+  throw new Error("El GeoJSON debe contener una Feature, un FeatureCollection o una geometria.");
+}
+
+function parseGpsGeofenceKml(text = "") {
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(text, "application/xml");
+  const parseError = xml.getElementsByTagName("parsererror")[0];
+  if (parseError) {
+    throw new Error("No se pudo leer el archivo KML.");
+  }
+
+  const placemarks = getXmlElementsByLocalName(xml, "Placemark");
+  const containers = placemarks.length ? placemarks : [xml.documentElement];
+  const features = [];
+
+  containers.forEach((placemark, placemarkIndex) => {
+    const baseName = getFirstXmlElementText(placemark, "name") || `Corredor ${placemarkIndex + 1}`;
+
+    getXmlElementsByLocalName(placemark, "LineString").forEach((lineNode, lineIndex) => {
+      const coordinates = parseDelimitedCoordinatePairs(getFirstXmlElementText(lineNode, "coordinates"));
+      if (coordinates.length >= 2) {
+        features.push({
+          type: "Feature",
+          properties: {
+            name: lineIndex ? `${baseName} ${lineIndex + 1}` : baseName,
+          },
+          geometry: {
+            type: "LineString",
+            coordinates,
+          },
+        });
+      }
+    });
+
+    getXmlElementsByLocalName(placemark, "Polygon").forEach((polygonNode, polygonIndex) => {
+      const outerBoundary = getXmlElementsByLocalName(polygonNode, "outerBoundaryIs")[0] || polygonNode;
+      const ringNode = getXmlElementsByLocalName(outerBoundary, "LinearRing")[0] || outerBoundary;
+      const ring = ensurePolygonRingClosed(parseDelimitedCoordinatePairs(getFirstXmlElementText(ringNode, "coordinates")));
+      if (ring.length >= 4) {
+        features.push({
+          type: "Feature",
+          properties: {
+            name: polygonIndex ? `${baseName} area ${polygonIndex + 1}` : baseName,
+          },
+          geometry: {
+            type: "Polygon",
+            coordinates: [ring],
+          },
+        });
+      }
+    });
+  });
+
+  return {
+    type: "FeatureCollection",
+    features,
+  };
+}
+
+function getSupportedGpsGeofenceFeatures(collection = null) {
+  const features = Array.isArray(collection?.features) ? collection.features : [];
+  return features
+    .map((feature) => cloneFeature(feature))
+    .filter((feature) => ["LineString", "MultiLineString", "Polygon", "MultiPolygon"].includes(feature?.geometry?.type));
+}
+
+function buildGpsGeofenceFromFeatures(features = [], options = {}) {
+  const toleranceM = clamp(Math.round(Number(options.toleranceM) || 45), 10, 500);
+  const supportedFeatures = getSupportedGpsGeofenceFeatures({
+    type: "FeatureCollection",
+    features,
+  });
+
+  if (!supportedFeatures.length) {
+    throw new Error("El archivo no incluye LineString, MultiLineString, Polygon o MultiPolygon para vigilar el GPS.");
+  }
+
+  const sourceName = String(options.sourceName || "corredor-gps").trim() || "corredor-gps";
+  const sourceLabel = sourceName.replace(/\.[^.]+$/u, "") || "Corredor GPS";
+  const lineFeatures = supportedFeatures.filter((feature) => feature.geometry.type === "LineString" || feature.geometry.type === "MultiLineString");
+  const polygonFeatures = supportedFeatures.filter((feature) => feature.geometry.type === "Polygon" || feature.geometry.type === "MultiPolygon");
+
+  if (lineFeatures.length) {
+    const routeCoordinates = lineFeatures.flatMap((feature) => feature.geometry.type === "LineString"
+      ? [feature.geometry.coordinates]
+      : feature.geometry.coordinates);
+    const routeFeature = routeCoordinates.length === 1
+      ? {
+          type: "Feature",
+          properties: {
+            name: lineFeatures[0]?.properties?.name || sourceLabel,
+          },
+          geometry: {
+            type: "LineString",
+            coordinates: routeCoordinates[0],
+          },
+        }
+      : {
+          type: "Feature",
+          properties: {
+            name: lineFeatures[0]?.properties?.name || sourceLabel,
+          },
+          geometry: {
+            type: "MultiLineString",
+            coordinates: routeCoordinates,
+          },
+        };
+    const areaFeature = turf.buffer(routeFeature, toleranceM / 1000, { units: "kilometers" });
+    return {
+      id: `gps-geofence-${Date.now()}`,
+      label: routeFeature.properties?.name || sourceLabel,
+      sourceName,
+      featureType: "corridor",
+      toleranceM,
+      routeFeature,
+      areaFeature,
+      sourceFeatures: supportedFeatures.map(cloneFeature),
+      uploadedAt: new Date().toISOString(),
+      sourceFeatureCount: lineFeatures.length,
+      routeLengthKm: Number(turf.length(routeFeature, { units: "kilometers" }).toFixed(2)),
+      areaHa: Number((turf.area(areaFeature) / 10000).toFixed(1)),
+      summary: null,
+    };
+  }
+
+  const polygonCollection = {
+    type: "FeatureCollection",
+    features: polygonFeatures,
+  };
+  const areaBaseFeature = polygonFeatures.length === 1
+    ? cloneFeature(polygonFeatures[0])
+    : turf.combine(polygonCollection).features[0];
+  const areaFeature = toleranceM > 0
+    ? turf.buffer(areaBaseFeature, toleranceM / 1000, { units: "kilometers" })
+    : areaBaseFeature;
+
+  return {
+    id: `gps-geofence-${Date.now()}`,
+    label: areaBaseFeature.properties?.name || sourceLabel,
+    sourceName,
+    featureType: "zone",
+    toleranceM,
+    routeFeature: null,
+    areaFeature,
+    sourceFeatures: supportedFeatures.map(cloneFeature),
+    uploadedAt: new Date().toISOString(),
+    sourceFeatureCount: polygonFeatures.length,
+    routeLengthKm: 0,
+    areaHa: Number((turf.area(areaFeature) / 10000).toFixed(1)),
+    summary: null,
+  };
+}
+
+function getGpsGeofenceDefaultSummary(geofence = state.gpsTracking.geofence) {
+  if (!geofence) {
+    return null;
+  }
+  const events = Array.isArray(state.gpsTracking.geofenceEvents) ? state.gpsTracking.geofenceEvents : [];
+  return {
+    monitoredCount: 0,
+    insideCount: 0,
+    outsideCount: 0,
+    eventCount: events.length,
+    statusTone: "mid",
+    statusLabel: "Corredor cargado",
+    lastEvent: events[0] || null,
+  };
+}
+
+function getGpsGeofenceStorageKey(areaId = state.agronomyAreaId || "machachi") {
+  return `${gpsGeofenceStoragePrefix}:${String(areaId || "machachi").trim().toLowerCase()}`;
+}
+
+function mergeGpsGeofenceEventLists(...eventSets) {
+  const merged = new Map();
+  eventSets.flat().forEach((event) => {
+    if (!event?.id) {
+      return;
+    }
+    merged.set(event.id, {
+      ...event,
+    });
+  });
+  return [...merged.values()].sort((left, right) => new Date(right.timestamp || 0).getTime() - new Date(left.timestamp || 0).getTime());
+}
+
+function readPersistedGpsGeofenceEventsFromLocal(areaId = state.agronomyAreaId) {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return [];
+  }
+  try {
+    const raw = window.localStorage.getItem(getGpsGeofenceStorageKey(areaId));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function writePersistedGpsGeofenceEventsToLocal(events = [], areaId = state.agronomyAreaId) {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return;
+  }
+  try {
+    window.localStorage.setItem(getGpsGeofenceStorageKey(areaId), JSON.stringify(events.slice(0, 80)));
+  } catch (_) {
+    // El navegador puede bloquear almacenamiento local; no detenemos el flujo.
+  }
+}
+
+async function fetchPersistedGpsGeofenceEvents(options = {}) {
+  const settings = {
+    areaId: state.agronomyAreaId,
+    geofenceLabel: state.gpsTracking.geofence?.label || "",
+    limit: 18,
+    ...options,
+  };
+  let backendEvents = [];
+  const allLocalEvents = readPersistedGpsGeofenceEventsFromLocal(settings.areaId);
+  const localEvents = allLocalEvents
+    .filter((event) => !settings.geofenceLabel || event.geofenceLabel === settings.geofenceLabel);
+
+  const backend = await detectBackend(!state.backendAvailable);
+  if (backend.available && state.backendUrl) {
+    try {
+      const payload = await fetchJson(`${state.backendUrl}${backendService.gpsGeofenceLogPath}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          areaId: settings.areaId,
+          geofenceLabel: settings.geofenceLabel,
+          limit: settings.limit,
+        }),
+      });
+      backendEvents = Array.isArray(payload?.events) ? payload.events : [];
+    } catch (_) {
+      // Si el backend falla, seguimos con el respaldo local.
+    }
+  }
+
+  const merged = mergeGpsGeofenceEventLists(localEvents, backendEvents).slice(0, settings.limit);
+  const preserved = settings.geofenceLabel
+    ? mergeGpsGeofenceEventLists(
+        allLocalEvents.filter((event) => event.geofenceLabel !== settings.geofenceLabel),
+        merged
+      )
+    : merged;
+  writePersistedGpsGeofenceEventsToLocal(preserved, settings.areaId);
+  return merged;
+}
+
+async function persistGpsGeofenceEvents(events = [], geofence = state.gpsTracking.geofence) {
+  if (!events.length || !geofence) {
+    return;
+  }
+
+  const normalizedEvents = events.map((event) => ({
+    ...event,
+    areaId: state.agronomyAreaId,
+    geofenceLabel: geofence.label,
+    sourceName: geofence.sourceName,
+    toleranceM: geofence.toleranceM,
+  }));
+  const allLocalEvents = readPersistedGpsGeofenceEventsFromLocal(state.agronomyAreaId);
+  const mergedLocal = mergeGpsGeofenceEventLists(
+    normalizedEvents,
+    allLocalEvents
+  );
+  writePersistedGpsGeofenceEventsToLocal(mergedLocal, state.agronomyAreaId);
+
+  const backend = await detectBackend(!state.backendAvailable);
+  if (backend.available && state.backendUrl) {
+    try {
+      await fetchJson(`${state.backendUrl}${backendService.gpsGeofenceEventsPath}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          areaId: state.agronomyAreaId,
+          geofenceLabel: geofence.label,
+          events: normalizedEvents,
+        }),
+      });
+    } catch (_) {
+      // La bitacora ya quedo al menos en localStorage.
+    }
+  }
+}
+
+function evaluateGpsGeofenceDevice(device, geofence = state.gpsTracking.geofence) {
+  if (!geofence || !hasGpsCoordinates(device)) {
+    return null;
+  }
+
+  const point = turf.point([Number(device.lon), Number(device.lat)], {
+    id: device.id,
+    label: device.label,
+    deviceType: device.deviceType,
+  });
+
+  if (geofence.featureType === "corridor" && geofence.routeFeature) {
+    const distanceM = turf.pointToLineDistance(point, geofence.routeFeature, { units: "kilometers" }) * 1000;
+    const inside = distanceM <= geofence.toleranceM;
+    return {
+      inside,
+      distanceM,
+      outsideByM: Math.max(0, distanceM - geofence.toleranceM),
+    };
+  }
+
+  if (geofence.areaFeature) {
+    const inside = turf.booleanPointInPolygon(point, geofence.areaFeature);
+    const distanceM = inside
+      ? 0
+      : turf.pointToLineDistance(point, geometryToBoundaryLine(geofence.areaFeature.geometry), { units: "kilometers" }) * 1000;
+    return {
+      inside,
+      distanceM,
+      outsideByM: inside ? 0 : distanceM,
+    };
+  }
+
+  return null;
+}
+
+function syncGpsGeofenceMonitoring(devices = state.gpsTracking.devices) {
+  const geofence = state.gpsTracking.geofence;
+  if (!geofence) {
+    state.gpsTracking.geofenceDeviceStates = {};
+    state.gpsTracking.geofenceAlertFeatures = [];
+    return null;
+  }
+
+  const nextStates = {};
+  const alertFeatures = [];
+  const nextEvents = [];
+  let insideCount = 0;
+  let outsideCount = 0;
+  const timestamp = new Date().toISOString();
+
+  (Array.isArray(devices) ? devices : [])
+    .filter(hasGpsCoordinates)
+    .forEach((device) => {
+      const evaluation = evaluateGpsGeofenceDevice(device, geofence);
+      if (!evaluation) {
+        return;
+      }
+
+      const previous = state.gpsTracking.geofenceDeviceStates?.[device.id] || null;
+      const currentState = {
+        inside: evaluation.inside,
+        distanceM: Number(evaluation.distanceM.toFixed(1)),
+        outsideByM: Number(evaluation.outsideByM.toFixed(1)),
+        checkedAt: device.timestamp || timestamp,
+      };
+      nextStates[device.id] = currentState;
+
+      if (evaluation.inside) {
+        insideCount += 1;
+      } else {
+        outsideCount += 1;
+        alertFeatures.push(pointFeature(device.label || "GPS fuera de corredor", [Number(device.lon), Number(device.lat)], {
+          ...device,
+          eventKind: "warning",
+          distanceM: currentState.distanceM,
+          outsideByM: currentState.outsideByM,
+          geofenceLabel: geofence.label,
+        }));
+      }
+
+      if (!previous && evaluation.inside) {
+        return;
+      }
+      if (previous && previous.inside === evaluation.inside) {
+        return;
+      }
+
+      const warningEvent = !evaluation.inside;
+      nextEvents.push({
+        id: `gps-geofence-event-${device.id}-${device.timestamp || Date.now()}`,
+        kind: warningEvent ? "warning" : "recovered",
+        title: warningEvent
+          ? `${device.label || "Dispositivo"} salio del corredor`
+          : `${device.label || "Dispositivo"} regreso al corredor`,
+        copy: warningEvent
+          ? `El equipo se separo ${formatGpsDistanceMeters(currentState.outsideByM || currentState.distanceM)} del corredor permitido ${geofence.label}.`
+          : `El equipo volvio al corredor permitido ${geofence.label} y retomo la ruta esperada.`,
+        deviceId: device.id,
+        deviceLabel: device.label || "GPS",
+        deviceType: device.deviceType || "Dispositivo",
+        timestamp: device.timestamp || timestamp,
+        distanceM: currentState.distanceM,
+        outsideByM: currentState.outsideByM,
+        speedKmh: Number(device.speedKmh || 0),
+        geofenceLabel: geofence.label,
+        sourceName: geofence.sourceName,
+        toleranceM: geofence.toleranceM,
+        areaId: state.agronomyAreaId,
+      });
+    });
+
+  if (nextEvents.length) {
+    state.gpsTracking.geofenceEvents = [...nextEvents.reverse(), ...(state.gpsTracking.geofenceEvents || [])].slice(0, 18);
+    persistGpsGeofenceEvents(nextEvents, geofence);
+    const latestEvent = nextEvents[nextEvents.length - 1];
+    if (latestEvent) {
+      setStatus(latestEvent.kind === "warning"
+        ? `Advertencia GPS: ${latestEvent.title}.`
+        : `GPS estabilizado: ${latestEvent.title}.`);
+    }
+  }
+
+  state.gpsTracking.geofenceDeviceStates = nextStates;
+  state.gpsTracking.geofenceAlertFeatures = alertFeatures;
+
+  const summary = {
+    monitoredCount: insideCount + outsideCount,
+    insideCount,
+    outsideCount,
+    eventCount: state.gpsTracking.geofenceEvents.length,
+    statusTone: outsideCount ? "high" : insideCount ? "low" : "mid",
+    statusLabel: outsideCount
+      ? `${outsideCount} fuera del corredor`
+      : insideCount
+        ? "Todos dentro del corredor"
+        : "Esperando primera posicion",
+    lastEvent: state.gpsTracking.geofenceEvents[0] || null,
+  };
+  geofence.summary = summary;
+  return summary;
+}
+
+function renderGpsGeofenceResults(summary = state.gpsTracking.geofence?.summary || getGpsGeofenceDefaultSummary()) {
+  if (!dom.gpsGeofenceResults) {
+    return;
+  }
+
+  const geofence = state.gpsTracking.geofence;
+  if (!geofence) {
+    resetMetricGrid(dom.gpsGeofenceResults, "Carga un KML o GeoJSON para delimitar por donde debe ir el GPS y vigilar salidas del corredor.");
+    return;
+  }
+
+  const effectiveSummary = summary || getGpsGeofenceDefaultSummary(geofence);
+  const lastEvent = effectiveSummary?.lastEvent || null;
+  const cards = [
+    {
+      label: "Corredor activo",
+      value: geofence.label,
+      copy: `${geofence.sourceFeatureCount} geometria(s) leidas desde ${geofence.sourceName}.`,
+      highlight: true,
+    },
+    {
+      label: "Tipo",
+      value: geofence.featureType === "corridor" ? "Ruta vigilada" : "Area permitida",
+      copy: geofence.featureType === "corridor"
+        ? `Margen de ${formatGpsDistanceMeters(geofence.toleranceM)} a cada lado del eje cargado.`
+        : `Control por poligono con margen operativo de ${formatGpsDistanceMeters(geofence.toleranceM)}.`,
+    },
+    {
+      label: geofence.featureType === "corridor" ? "Longitud" : "Cobertura",
+      value: geofence.featureType === "corridor"
+        ? `${Number(geofence.routeLengthKm || 0).toFixed(2)} km`
+        : `${Number(geofence.areaHa || 0).toFixed(1)} ha`,
+      copy: geofence.featureType === "corridor"
+        ? `${Number(geofence.areaHa || 0).toFixed(1)} ha de corredor util para vigilancia.`
+        : "Superficie operativa permitida para el seguimiento cargado.",
+    },
+    {
+      label: "Dispositivos vigilados",
+      value: `${effectiveSummary?.monitoredCount || 0}`,
+      copy: effectiveSummary?.monitoredCount
+        ? `${effectiveSummary.insideCount} dentro y ${effectiveSummary.outsideCount} fuera del trazado esperado.`
+        : "Aun no hay posiciones validas para contrastar contra el corredor.",
+    },
+    {
+      label: "Estado",
+      value: effectiveSummary?.statusLabel || "Corredor listo",
+      copy: effectiveSummary?.outsideCount
+        ? "Hay desviaciones registradas y quedan marcadas en el mapa."
+        : "Sin salidas registradas sobre el corredor activo.",
+    },
+    {
+      label: "Ultimo evento",
+      value: lastEvent ? formatGpsSignalAge(lastEvent.timestamp) : "Sin eventos",
+      copy: lastEvent ? lastEvent.title : "La bitacora se llenara cuando un equipo salga o regrese.",
+    },
+  ];
+  paintMetricGrid(dom.gpsGeofenceResults, cards);
+}
+
+function renderGpsGeofenceEvents() {
+  if (!dom.gpsGeofenceEvents) {
+    return;
+  }
+
+  const geofence = state.gpsTracking.geofence;
+  const events = Array.isArray(state.gpsTracking.geofenceEvents) ? state.gpsTracking.geofenceEvents : [];
+  if (!geofence) {
+    dom.gpsGeofenceEvents.className = "gps-event-log empty-state";
+    setTextIfChanged(dom.gpsGeofenceEvents, "Aqui apareceran las advertencias y el registro de entradas o salidas respecto al corredor cargado.");
+    return;
+  }
+
+  if (!events.length) {
+    dom.gpsGeofenceEvents.className = "gps-event-log empty-state";
+    setTextIfChanged(dom.gpsGeofenceEvents, "Corredor listo. Cuando un equipo salga o vuelva a entrar, quedara registrado aqui.");
+    return;
+  }
+
+  dom.gpsGeofenceEvents.className = "gps-event-log has-data";
+  setHtmlIfChanged(dom.gpsGeofenceEvents, events.slice(0, 8).map((event) => `
+    <article class="gps-event-card ${event.kind}">
+      <div class="gps-event-head">
+        <strong>${escapeHtmlContent(event.title)}</strong>
+        <span>${escapeHtmlContent(formatGpsSignalAge(event.timestamp))}</span>
+      </div>
+      <div class="gps-event-tags">
+        <span>${escapeHtmlContent(event.deviceType || "GPS")}</span>
+        <span>${escapeHtmlContent(formatGpsDistanceMeters(event.outsideByM || event.distanceM))}</span>
+        <span>${escapeHtmlContent(`${Number(event.speedKmh || 0).toFixed(1)} km/h`)}</span>
+      </div>
+      <p>${escapeHtmlContent(event.copy)}</p>
+    </article>
+  `).join(""));
+}
+
+function renderGpsGeofenceOverlay() {
+  if (!mapState.map) {
+    return;
+  }
+
+  ["gpsFenceRouteLayer", "gpsFenceLayer", "gpsFenceAlertLayer"].forEach((layerName) => {
+    if (mapState[layerName]) {
+      mapState.map.removeLayer(mapState[layerName]);
+      mapState[layerName] = null;
+    }
+  });
+
+  const geofence = state.gpsTracking.geofence;
+  if (!geofence || state.entryRoute !== "agronomia") {
+    return;
+  }
+
+  if (geofence.areaFeature?.geometry) {
+    mapState.gpsFenceLayer = L.geoJSON(geofence.areaFeature, {
+      style: {
+        color: "#3a7aa0",
+        weight: 2,
+        opacity: 0.74,
+        fillColor: "#8fd0e6",
+        fillOpacity: 0.12,
+        dashArray: geofence.featureType === "corridor" ? "6 8" : null,
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (geofence.routeFeature?.geometry) {
+    mapState.gpsFenceRouteLayer = L.geoJSON(geofence.routeFeature, {
+      style: {
+        color: "#214d3a",
+        weight: 3,
+        opacity: 0.9,
+        dashArray: "10 8",
+      },
+      onEachFeature(feature, layer) {
+        layer.bindPopup(`
+          <strong>${feature.properties?.name || geofence.label}</strong><br>
+          Corredor vigilado con tolerancia ${formatGpsDistanceMeters(geofence.toleranceM)}.
+        `);
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (Array.isArray(state.gpsTracking.geofenceAlertFeatures) && state.gpsTracking.geofenceAlertFeatures.length) {
+    mapState.gpsFenceAlertLayer = L.geoJSON({
+      type: "FeatureCollection",
+      features: state.gpsTracking.geofenceAlertFeatures,
+    }, {
+      pointToLayer(feature, latlng) {
+        return L.circleMarker(latlng, {
+          radius: 7,
+          color: "#8a3f2e",
+          weight: 2,
+          fillColor: "#f4a261",
+          fillOpacity: 0.94,
+        });
+      },
+      onEachFeature(feature, layer) {
+        layer.bindPopup(`
+          <strong>${feature.properties?.label || "Dispositivo fuera de corredor"}</strong><br>
+          ${feature.properties?.deviceType || "GPS"}<br>
+          Separacion: ${formatGpsDistanceMeters(feature.properties?.outsideByM || feature.properties?.distanceM)}<br>
+          Velocidad: ${Number(feature.properties?.speedKmh || 0).toFixed(1)} km/h
+        `);
+      },
+    }).addTo(mapState.map);
+  }
+}
+
+function refreshGpsGeofenceState(devices = state.gpsTracking.devices) {
+  const summary = syncGpsGeofenceMonitoring(devices);
+  renderGpsGeofenceResults(summary);
+  renderGpsGeofenceEvents();
+  renderGpsGeofenceOverlay();
+  return summary;
+}
+
+function focusGpsGeofenceStudy() {
+  const geofence = state.gpsTracking.geofence;
+  if (!geofence || !mapState.map) {
+    setStatus("Carga primero un KML o GeoJSON para centrar el corredor del GPS.");
+    return;
+  }
+  focusGpsModuleCard();
+  const bounds = buildBoundsFromFeatures([geofence.areaFeature, geofence.routeFeature].filter((feature) => feature?.geometry));
+  if (bounds) {
+    mapState.map.fitBounds(bounds, {
+      padding: [26, 26],
+      maxZoom: getSafeAgronomyMapZoom(17),
+    });
+  }
+}
+
+function clearGpsGeofence() {
+  if (!state.gpsTracking.geofence) {
+    setStatus("No hay corredor GPS cargado para limpiar.");
+    return;
+  }
+  state.gpsTracking.geofence = null;
+  state.gpsTracking.geofenceEvents = [];
+  state.gpsTracking.geofenceDeviceStates = {};
+  state.gpsTracking.geofenceAlertFeatures = [];
+  renderGpsGeofenceResults();
+  renderGpsGeofenceEvents();
+  renderGpsGeofenceOverlay();
+  if (state.agronomyOutputs.gps) {
+    renderGpsTrackingResults(state.agronomyOutputs.gps);
+    renderGpsTrackingVisual(state.agronomyOutputs.gps);
+  }
+  updateMapSummary();
+  setStatus("Corredor GPS retirado. El seguimiento sigue activo sin control de ruta.");
+}
+
+async function handleGpsGeofenceFileSelection(event) {
+  const file = event?.target?.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  try {
+    const text = await file.text();
+    const collection = /\.kml$/iu.test(file.name)
+      ? parseGpsGeofenceKml(text)
+      : parseGpsGeofenceGeoJson(text);
+    const geofence = buildGpsGeofenceFromFeatures(collection.features, {
+      sourceName: file.name,
+      toleranceM: getGpsGeofenceToleranceM(),
+    });
+    state.gpsTracking.geofence = geofence;
+    state.gpsTracking.geofenceEvents = await fetchPersistedGpsGeofenceEvents({
+      areaId: state.agronomyAreaId,
+      geofenceLabel: geofence.label,
+    });
+    state.gpsTracking.geofenceDeviceStates = {};
+    state.gpsTracking.geofenceAlertFeatures = [];
+    refreshGpsGeofenceState(state.gpsTracking.devices);
+    if (state.agronomyOutputs.gps) {
+      renderGpsTrackingResults(state.agronomyOutputs.gps);
+      renderGpsTrackingVisual(state.agronomyOutputs.gps);
+    }
+    updateMapSummary();
+    focusGpsGeofenceStudy();
+    setStatus(`Corredor GPS cargado desde ${file.name}. Ya puedes vigilar salidas y retornos sobre el mapa.`);
+  } catch (error) {
+    renderGpsGeofenceResults();
+    renderGpsGeofenceEvents();
+    setStatus(`No se pudo cargar el corredor GPS: ${error.message || "archivo no valido"}.`);
+  } finally {
+    if (event?.target) {
+      event.target.value = "";
+    }
+  }
+}
+
+function handleGpsGeofenceToleranceChange() {
+  const geofence = state.gpsTracking.geofence;
+  if (!geofence?.sourceFeatures?.length) {
+    return;
+  }
+
+  try {
+    state.gpsTracking.geofence = buildGpsGeofenceFromFeatures(geofence.sourceFeatures, {
+      sourceName: geofence.sourceName,
+      toleranceM: getGpsGeofenceToleranceM(),
+    });
+    state.gpsTracking.geofenceEvents = [];
+    state.gpsTracking.geofenceDeviceStates = {};
+    state.gpsTracking.geofenceAlertFeatures = [];
+    fetchPersistedGpsGeofenceEvents({
+      areaId: state.agronomyAreaId,
+      geofenceLabel: state.gpsTracking.geofence.label,
+    }).then((events) => {
+      state.gpsTracking.geofenceEvents = events;
+      refreshGpsGeofenceState(state.gpsTracking.devices);
+      updateMapSummary();
+    }).catch(() => {});
+    refreshGpsGeofenceState(state.gpsTracking.devices);
+    if (state.agronomyOutputs.gps) {
+      renderGpsTrackingResults(state.agronomyOutputs.gps);
+      renderGpsTrackingVisual(state.agronomyOutputs.gps);
+    }
+    updateMapSummary();
+    setStatus("Tolerancia del corredor GPS actualizada y recalculada para el seguimiento activo.");
+  } catch (error) {
+    setStatus(`No se pudo recalcular el corredor GPS: ${error.message || "tolerancia invalida"}.`);
+  }
+}
+
 function applyGpsTrackingSnapshot(payload, options = {}) {
   const devices = Array.isArray(payload?.devices)
     ? payload.devices.filter(hasGpsCoordinates)
@@ -10121,9 +12440,11 @@ function applyGpsTrackingSnapshot(payload, options = {}) {
     : devices;
 
   if (!devices.length) {
+    refreshGpsGeofenceState([]);
     resetMetricGrid(dom.gpsResults, "No hay dispositivos GPS visibles para el ambito activo.");
     resetVisualPanel(dom.gpsVisual, "No hay dispositivos GPS disponibles para construir la lectura operativa.");
     renderGpsTrackingOverlay(null);
+    updateMapSummary();
     return null;
   }
 
@@ -10167,12 +12488,14 @@ function applyGpsTrackingSnapshot(payload, options = {}) {
       activeSignalAge: formatGpsSignalAge(activeDevice.timestamp),
     },
   };
+  result.geofence = refreshGpsGeofenceState(devices);
   result.readout = buildGpsReadout(result);
   state.agronomyOutputs.gps = result;
   renderGpsTrackingResults(result);
   renderGpsTrackingVisual(result);
   renderGpsTrackingOverlay(result);
   renderWorkflowGuide();
+  updateMapSummary();
   if (options.fitOnFirst && mapState.map && Number.isFinite(Number(activeDevice.lat)) && Number.isFinite(Number(activeDevice.lon))) {
     const targetZoom = getSafeAgronomyMapZoom(Math.max(mapState.map.getZoom(), getAgronomyAreaMapView().zoom + 1));
     mapState.map.flyTo([Number(activeDevice.lat), Number(activeDevice.lon)], targetZoom, {
@@ -10423,6 +12746,8 @@ function renderGpsTrackingResults(result = null) {
   const active = result.activeDevice;
   const aerial = isAerialTelemetryDevice(active);
   const summary = getGpsAerialSummary(result);
+  const geofence = state.gpsTracking.geofence;
+  const activeFenceState = geofence ? state.gpsTracking.geofenceDeviceStates?.[active.id] || null : null;
   const cards = [
     {
       label: "Fuente",
@@ -10457,6 +12782,17 @@ function renderGpsTrackingResults(result = null) {
       value: aerial ? formatGpsVerticalSpeed(active.verticalSpeedMps) : `${Math.round(Number(active.batteryPct || 0))}%`,
       copy: aerial ? "Velocidad vertical derivada del seguimiento aereo." : "Autonomia estimada del dispositivo activo.",
     },
+    ...(geofence ? [{
+      label: "Corredor",
+      value: activeFenceState
+        ? (activeFenceState.inside ? "Dentro" : "Fuera")
+        : "Sin contraste",
+      copy: activeFenceState
+        ? activeFenceState.inside
+          ? `Sigue dentro del corredor ${geofence.label} con margen ${formatGpsDistanceMeters(geofence.toleranceM)}.`
+          : `Se separo ${formatGpsDistanceMeters(activeFenceState.outsideByM || activeFenceState.distanceM)} del corredor permitido.`
+        : "El corredor esta cargado, pero aun no hay una posicion valida para el dispositivo activo.",
+    }] : []),
     {
       label: "Ultima senal",
       value: result.summary.activeSignalAge,
@@ -10486,6 +12822,9 @@ function renderGpsTrackingVisual(result = null) {
   const active = result.activeDevice;
   const aerial = isAerialTelemetryDevice(active);
   const aerialSummary = getGpsAerialSummary(result);
+  const geofence = state.gpsTracking.geofence;
+  const geofenceSummary = geofence?.summary || null;
+  const activeFenceState = geofence ? state.gpsTracking.geofenceDeviceStates?.[active.id] || null : null;
   const listedDevices = Array.isArray(result.connectedDevices) && result.connectedDevices.length
     ? result.connectedDevices
     : (result.devices || []);
@@ -10512,6 +12851,7 @@ function renderGpsTrackingVisual(result = null) {
       <span class="agronomy-visual-pill">${active.deviceType || "Dispositivo"}</span>
       <span class="agronomy-visual-pill tone-${result.tone}">${active.flightStatus || active.statusLabel || "En seguimiento"}</span>
       ${aerial ? `<span class="agronomy-visual-pill">${formatGpsAltitude(active.altitudeM)}</span>` : ""}
+      ${geofence ? `<span class="agronomy-visual-pill tone-${activeFenceState?.inside === false ? "high" : "low"}">${activeFenceState ? (activeFenceState.inside ? "En corredor" : "Fuera de corredor") : "Corredor activo"}</span>` : ""}
     </div>
     <div class="agronomy-bar-grid">
       <article class="agronomy-bar-card">
@@ -10561,6 +12901,11 @@ function renderGpsTrackingVisual(result = null) {
         </article>
       `).join("")}
     </div>
+    ${geofence ? `<p class="agronomy-visual-copy">${activeFenceState
+      ? activeFenceState.inside
+        ? `${active.label} se mantiene dentro del corredor ${geofence.label}.`
+        : `${active.label} se encuentra fuera del corredor ${geofence.label} por ${formatGpsDistanceMeters(activeFenceState.outsideByM || activeFenceState.distanceM)}.`
+      : `Corredor ${geofence.label} activo y listo para contrastar nuevas posiciones.`}${geofenceSummary?.outsideCount ? ` Hay ${geofenceSummary.outsideCount} dispositivo(s) fuera de ruta.` : ""}</p>` : ""}
     <p class="agronomy-visual-copy">${buildGpsReadout(result)}</p>
   `);
 }
@@ -10569,6 +12914,8 @@ function renderGpsTrackingOverlay(result = state.agronomyOutputs.gps) {
   if (!mapState.map) {
     return;
   }
+
+  renderGpsGeofenceOverlay();
 
   ["gpsDeviceLayer", "gpsTrackLayer", "gpsAccuracyLayer", "gpsHomeLayer"].forEach((layerName) => {
     if (mapState[layerName]) {
@@ -10663,6 +13010,7 @@ function renderGpsTrackingOverlay(result = state.agronomyOutputs.gps) {
   }
 
   mapState.gpsDeviceLayer?.bringToFront?.();
+  mapState.gpsFenceAlertLayer?.bringToFront?.();
 }
 
 function isGpsTrackingActive() {
@@ -10720,6 +13068,8 @@ function stopGpsTracking(options = {}) {
     preservePanels: true,
     ...options,
   };
+  const preservedGeofence = state.gpsTracking.geofence || null;
+  const preservedGeofenceEvents = Array.isArray(state.gpsTracking.geofenceEvents) ? [...state.gpsTracking.geofenceEvents] : [];
 
   if (state.gpsTracking.watchId != null && navigator.geolocation?.clearWatch) {
     navigator.geolocation.clearWatch(state.gpsTracking.watchId);
@@ -10762,9 +13112,18 @@ function stopGpsTracking(options = {}) {
     track: [],
     accuracyM: null,
     lastDeviceSnapshot: null,
+    geofence: preservedGeofence,
+    geofenceEvents: preservedGeofenceEvents,
+    geofenceDeviceStates: {},
+    geofenceAlertFeatures: [],
   };
+  if (state.gpsTracking.geofence) {
+    state.gpsTracking.geofence.summary = getGpsGeofenceDefaultSummary(state.gpsTracking.geofence);
+  }
   state.agronomyOutputs.gps = null;
   renderGpsTrackingOverlay(null);
+  renderGpsGeofenceResults();
+  renderGpsGeofenceEvents();
 
   if (!settings.preservePanels) {
     resetMetricGrid(dom.gpsResults, "Activa el modulo para seguir un dispositivo terrestre o aereo, un feed local o un recorrido demo sobre el mapa.");
@@ -10775,6 +13134,7 @@ function stopGpsTracking(options = {}) {
     setStatus("Seguimiento GPS detenido. Puedes activar otra fuente cuando quieras.");
   }
   renderWorkflowGuide();
+  updateMapSummary();
 }
 
 function getBrowserGpsSpeedKmh(nextPoint, timestamp) {
@@ -12323,8 +14683,8 @@ function setPlanning3dPanelCollapsed(collapsed = false, options = {}) {
     dom.planning3dShell.dataset.panel = planning3dState.panelCollapsed ? "collapsed" : "expanded";
   }
   if (dom.planning3dPanelToggleBtn) {
-    dom.planning3dPanelToggleBtn.classList.toggle("active", planning3dState.panelCollapsed);
-    dom.planning3dPanelToggleBtn.setAttribute("aria-pressed", planning3dState.panelCollapsed ? "true" : "false");
+    dom.planning3dPanelToggleBtn.classList.toggle("active", !planning3dState.panelCollapsed);
+    dom.planning3dPanelToggleBtn.setAttribute("aria-pressed", planning3dState.panelCollapsed ? "false" : "true");
     setTextIfChanged(dom.planning3dPanelToggleBtn, planning3dState.panelCollapsed ? "Mostrar panel" : "Ocultar panel");
   }
   if (!options.skipResize && planning3dState.map) {
@@ -15023,7 +17383,7 @@ async function openPlanning3dViewer() {
   planning3dState.visualReady = false;
   planning3dState.visualSnapshot = null;
   clearPlanning3dVisualRecoveryTimers();
-  const preferCompactOpening = typeof window !== "undefined" && window.innerWidth >= 1240;
+  const preferCompactOpening = typeof window !== "undefined" && window.innerWidth >= 1080;
   setPlanning3dPanelCollapsed(preferCompactOpening, { skipResize: true });
   dom.planning3dModal?.classList.remove("hidden");
   if (dom.planning3dModal) {
@@ -15254,6 +17614,8 @@ function renderPlanningModule() {
   renderAiGeoModule();
   renderPlanningVariableMatrix();
   renderFodaCameModule();
+  renderMobilityModule();
+  renderRiskModule();
   renderLandChangeModule();
   renderHydrologyModule();
   renderFieldEvidenceModule();
@@ -15306,6 +17668,18 @@ function renderPlanningModule() {
   }
   if (dom.clearLandChangeBtn) {
     dom.clearLandChangeBtn.disabled = !state.landChangeData;
+  }
+  if (dom.focusMobilityBtn) {
+    dom.focusMobilityBtn.disabled = !(state.mobilityData?.prioritySectors?.length);
+  }
+  if (dom.clearMobilityBtn) {
+    dom.clearMobilityBtn.disabled = !state.mobilityData;
+  }
+  if (dom.focusRiskBtn) {
+    dom.focusRiskBtn.disabled = !(state.riskData?.prioritySectors?.length);
+  }
+  if (dom.clearRiskBtn) {
+    dom.clearRiskBtn.disabled = !state.riskData;
   }
   if (dom.hydrologyClimateSelect) {
     dom.hydrologyClimateSelect.value = state.hydrologyClimateId;
@@ -17375,6 +19749,702 @@ function formatLandChangeHa(value) {
 
 function formatLandChangePopulation(value) {
   return new Intl.NumberFormat("es-EC").format(Math.round(value || 0));
+}
+
+function buildTerritorialStudyGrid(target = getCurrentTerritorialTarget(), cellSizeKm = 1.2) {
+  const grid = turf.squareGrid(turf.bbox(target.feature), cellSizeKm, { units: "kilometers" });
+  return grid.features.filter((cell) => {
+    try {
+      return turf.booleanPointInPolygon(turf.centroid(cell), target.feature);
+    } catch (_) {
+      return false;
+    }
+  });
+}
+
+function getMobilityCoverageLabel(score = 0) {
+  if (score >= 74) {
+    return "Cobertura alta";
+  }
+  if (score >= 58) {
+    return "Cobertura media";
+  }
+  return "Cobertura baja";
+}
+
+function renderMobilityModule() {
+  const areaProfile = getTerritorialAreaProfile();
+  if (!state.mobilityData) {
+    resetMetricGrid(dom.mobilityResults, `Ejecuta el estudio para ver cobertura funcional, tiempos de acceso y sectores criticos de conectividad en ${areaProfile.scopeLabel}.`);
+    dom.mobilitySummary?.classList.add("empty-state");
+    dom.mobilitySummary?.classList.remove("has-data");
+    if (dom.mobilitySummary) {
+      setTextIfChanged(dom.mobilitySummary, "Aqui apareceran la lectura de cobertura, el tiempo estimado a servicios y la movilidad dominante del ambito.");
+    }
+    dom.mobilitySectors?.classList.add("empty-state");
+    dom.mobilitySectors?.classList.remove("has-data");
+    if (dom.mobilitySectors) {
+      setTextIfChanged(dom.mobilitySectors, "Aqui apareceran los sectores con mejor y peor accesibilidad para centrar la intervencion territorial.");
+    }
+    return;
+  }
+
+  const analysis = state.mobilityData;
+  dom.mobilitySummary?.classList.remove("empty-state");
+  dom.mobilitySummary?.classList.add("has-data");
+  if (dom.mobilitySummary) {
+    setHtmlIfChanged(dom.mobilitySummary, `
+      <div class="territorial-readout-head">
+        <div>
+          <p class="section-kicker">Lectura integrada</p>
+          <h4>Accesibilidad y cobertura funcional</h4>
+        </div>
+        <span class="planning-pill emphasis">${analysis.summary.coverageLabel}</span>
+      </div>
+      <p class="territorial-readout-copy">${analysis.summary.readout}</p>
+    `);
+  }
+
+  dom.mobilitySectors?.classList.remove("empty-state");
+  dom.mobilitySectors?.classList.add("has-data");
+  if (dom.mobilitySectors) {
+    setHtmlIfChanged(dom.mobilitySectors, analysis.prioritySectors.map((sector) => `
+      <article class="field-evidence-card ${sector.id === state.mobilityHighlightId ? "active" : ""}">
+        <div class="field-evidence-head">
+          <div>
+            <p class="candidate-rank">${sector.priorityLabel}</p>
+            <h4>${sector.name}</h4>
+          </div>
+          <span class="planning-pill emphasis">${sector.coverageLabel}</span>
+        </div>
+        <p class="territorial-readout-copy">${sector.summary}</p>
+        <div class="field-evidence-metrics">
+          <span>${sector.travelMinutes} min</span>
+          <span>${formatDistanceKm(sector.roadDistanceKm)} a via</span>
+          <span>${sector.score}/100</span>
+        </div>
+        <button class="ghost-button" type="button" data-mobility-sector-id="${sector.id}">Ver en mapa</button>
+      </article>
+    `).join(""));
+  }
+}
+
+function buildMobilityAnalysis() {
+  const target = getCurrentTerritorialTarget();
+  const roadFeatures = filterFeaturesByTerritorialArea(geoSources.vias?.features, state.territorialAreaId);
+  const facilityFeatures = filterFeaturesByTerritorialArea(geoSources.equipamientos?.features, state.territorialAreaId);
+  const urbanFeatures = filterFeaturesByTerritorialArea(geoSources.manchaUrbana?.features, state.territorialAreaId);
+  const cellSizeKm = target.scopeType === "studyArea" ? 2.6 : 0.8;
+  const sectors = buildTerritorialStudyGrid(target, cellSizeKm).slice(0, 48).map((cell, index) => {
+    const centroid = turf.centroid(cell);
+    const road = getNearestFeatureMatch(centroid, roadFeatures);
+    const school = getNearestFeatureMatch(centroid, facilityFeatures, (feature) => feature.properties?.serviceType === "escuela");
+    const hospital = getNearestFeatureMatch(centroid, facilityFeatures, (feature) => feature.properties?.serviceType === "hospital");
+    const equip = getNearestFeatureMatch(centroid, facilityFeatures, (feature) => feature.properties?.serviceType === "equipamiento");
+    const urban = getNearestFeatureMatch(centroid, urbanFeatures);
+    const travelMinutes = Math.round(((road.distanceKm || 0) * 4.8 + Math.min(school.distanceKm || 99, hospital.distanceKm || 99, equip.distanceKm || 99) * 8.5) * 3.8);
+    const score = Math.round(clamp(
+      100
+      - (road.distanceKm || 0) * 26
+      - Math.min(school.distanceKm || 99, 4.2) * 13
+      - Math.min(hospital.distanceKm || 99, 4.2) * 12
+      - Math.min(equip.distanceKm || 99, 4.2) * 10
+      - Math.min(urban.distanceKm || 99, 4.2) * 7,
+      18,
+      96
+    ));
+    const coverageLabel = getMobilityCoverageLabel(score);
+    return {
+      id: `mobility-${index + 1}`,
+      name: `Sector ${index + 1} ${getRelativeDirectionLabel(turf.centroid(target.feature).geometry.coordinates, centroid.geometry.coordinates)}`,
+      feature: cell,
+      centroid: centroid.geometry.coordinates,
+      score,
+      coverageLabel,
+      roadDistanceKm: Number((road.distanceKm || 0).toFixed(2)),
+      schoolDistanceKm: Number((school.distanceKm || 0).toFixed(2)),
+      hospitalDistanceKm: Number((hospital.distanceKm || 0).toFixed(2)),
+      equipDistanceKm: Number((equip.distanceKm || 0).toFixed(2)),
+      travelMinutes,
+      summary: coverageLabel === "Cobertura alta"
+        ? "Sector bien conectado, con acceso funcional a vias y servicios base."
+        : coverageLabel === "Cobertura media"
+          ? "Sector con conectividad usable, pero con brechas parciales de tiempo o equipamiento."
+          : "Sector con baja accesibilidad y mayor necesidad de corregir conectividad o cobertura.",
+      priorityLabel: coverageLabel === "Cobertura baja" ? "Corregir" : coverageLabel === "Cobertura media" ? "Ajustar" : "Mantener",
+      nearestServiceName: (school.feature?.properties?.name || hospital.feature?.properties?.name || equip.feature?.properties?.name || "servicio"),
+      nearestServiceCoords: school.distanceKm <= hospital.distanceKm && school.distanceKm <= equip.distanceKm
+        ? turf.centroid(school.feature || centroid).geometry.coordinates
+        : hospital.distanceKm <= equip.distanceKm
+          ? turf.centroid(hospital.feature || centroid).geometry.coordinates
+          : turf.centroid(equip.feature || centroid).geometry.coordinates,
+    };
+  }).filter(Boolean);
+
+  const prioritySectors = sectors
+    .slice()
+    .sort((left, right) => left.score - right.score)
+    .slice(0, 5)
+    .map((sector, index) => ({ ...sector, rank: index + 1 }));
+  const meanScore = Math.round(sectors.reduce((sum, sector) => sum + sector.score, 0) / Math.max(sectors.length, 1));
+  const meanTravelMinutes = Math.round(sectors.reduce((sum, sector) => sum + sector.travelMinutes, 0) / Math.max(sectors.length, 1));
+  const accessibleAreaHa = sectors.reduce((sum, sector) => sum + (sector.score >= 74 ? turf.area(sector.feature) / 10000 : 0), 0);
+  const gapAreaHa = sectors.reduce((sum, sector) => sum + (sector.score < 58 ? turf.area(sector.feature) / 10000 : 0), 0);
+
+  return {
+    context: target,
+    sectors,
+    prioritySectors,
+    summary: {
+      meanScore,
+      meanTravelMinutes,
+      accessibleAreaHa: Number(accessibleAreaHa.toFixed(1)),
+      gapAreaHa: Number(gapAreaHa.toFixed(1)),
+      coverageLabel: getMobilityCoverageLabel(meanScore),
+      readout: `Tiempo medio estimado ${meanTravelMinutes} min y ${accessibleAreaHa.toFixed(1)} ha con cobertura alta. ${prioritySectors.length} sectores quedan en correccion por brechas de conectividad o servicio.`,
+    },
+  };
+}
+
+async function runMobilityAnalysis(silent = false) {
+  try {
+    const analysis = buildMobilityAnalysis();
+    state.mobilityData = analysis;
+    state.mobilityHighlightId = analysis.prioritySectors[0]?.id || null;
+    state.territorialFocus = "mobility";
+    const cards = [
+      {
+        label: "Cobertura media",
+        value: `${analysis.summary.meanScore}/100`,
+        copy: `${analysis.summary.coverageLabel} para ${analysis.context.scopeLabel}.`,
+        highlight: true,
+      },
+      {
+        label: "Tiempo medio",
+        value: `${analysis.summary.meanTravelMinutes} min`,
+        copy: "Estimacion combinada hacia vias y servicios base.",
+      },
+      {
+        label: "Area bien servida",
+        value: `${analysis.summary.accessibleAreaHa.toFixed(1)} ha`,
+        copy: "Superficie con accesibilidad funcional alta.",
+      },
+      {
+        label: "Brecha de movilidad",
+        value: `${analysis.summary.gapAreaHa.toFixed(1)} ha`,
+        copy: `${analysis.prioritySectors.length} sectores prioritarios requieren correccion o refuerzo.`,
+      },
+    ];
+    paintMetricGrid(dom.mobilityResults, cards);
+    renderMobilityModule();
+    renderMobilityOverlay(analysis);
+    updateMapSummary();
+    if (!silent) {
+      setStatus(`Movilidad y accesibilidad listas para ${analysis.context.scopeLabel}: ${analysis.summary.coverageLabel.toLowerCase()} con ${analysis.prioritySectors.length} sectores criticos visibles.`);
+    }
+    return analysis;
+  } catch (error) {
+    console.warn("Fallo el estudio de movilidad.", error);
+    state.mobilityData = null;
+    state.mobilityHighlightId = null;
+    clearMobilityOverlay();
+    resetTerritorialModuleState(dom.mobilityResults, "No se pudo calcular el estudio de movilidad para esta corrida.", [
+      { target: dom.mobilitySummary, message: "No fue posible resumir cobertura, tiempos y conectividad territorial." },
+      { target: dom.mobilitySectors, message: "No fue posible priorizar sectores por accesibilidad en esta corrida." },
+    ]);
+    if (!silent) {
+      setStatus(`Movilidad y accesibilidad: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    updateMapSummary();
+    return null;
+  }
+}
+
+function clearMobilityAnalysis() {
+  state.mobilityData = null;
+  state.mobilityHighlightId = null;
+  clearMobilityOverlay();
+  renderPlanningModule();
+  updateMapSummary();
+  setStatus(`Estudio de movilidad limpiado para ${getTerritorialAreaProfile().scopeLabel}.`);
+}
+
+function renderMobilityOverlay(analysis) {
+  clearMobilityOverlay();
+  if (!mapState.map || !analysis?.sectors?.length || state.entryRoute !== "planificacion") {
+    return;
+  }
+
+  mapState.mobilityLayer = L.geoJSON({
+    type: "FeatureCollection",
+    features: analysis.sectors.map((sector) => ({
+      ...cloneFeature(sector.feature),
+      properties: {
+        ...(sector.feature.properties || {}),
+        mobilitySectorId: sector.id,
+        name: sector.name,
+        score: sector.score,
+        coverageLabel: sector.coverageLabel,
+        summary: sector.summary,
+      },
+    })),
+  }, {
+    style: (feature) => {
+      const score = Number(feature.properties?.score || 0);
+      const active = feature.properties?.mobilitySectorId === state.mobilityHighlightId;
+      return {
+        color: score >= 74 ? "#2f7f5f" : score >= 58 ? "#c18c31" : "#a35443",
+        weight: active ? 2.6 : 1.5,
+        fillColor: score >= 74 ? "#8fc9aa" : score >= 58 ? "#e2bb72" : "#d69c8c",
+        fillOpacity: active ? 0.28 : 0.18,
+      };
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.coverageLabel || "Cobertura"} · ${feature.properties?.score || 0}/100. ${feature.properties?.summary || ""}</p>`);
+    },
+  }).addTo(mapState.map);
+
+  mapState.mobilityGapLayer = L.geoJSON({
+    type: "FeatureCollection",
+    features: analysis.prioritySectors.map((sector) => turf.buffer(turf.point(sector.centroid), 0.22, { units: "kilometers" })),
+  }, {
+    style: {
+      color: "#c18c31",
+      weight: 1.2,
+      fillColor: "#efc36b",
+      fillOpacity: 0.08,
+      dashArray: "7 7",
+    },
+  }).addTo(mapState.map);
+
+  mapState.mobilityLinkLayer = L.geoJSON({
+    type: "FeatureCollection",
+    features: analysis.prioritySectors
+      .filter((sector) => Array.isArray(sector.nearestServiceCoords))
+      .map((sector) => lineFeature(`${sector.name} -> ${sector.nearestServiceName}`, [sector.centroid, sector.nearestServiceCoords], {
+        mobilitySectorId: sector.id,
+        name: sector.name,
+        nearestServiceName: sector.nearestServiceName,
+      })),
+  }, {
+    style: {
+      color: "#6a8db5",
+      weight: 2,
+      opacity: 0.8,
+      dashArray: "8 6",
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Conexion"}</h3><p class="popup-copy">Vinculo hacia ${feature.properties?.nearestServiceName || "servicio"} para corregir brecha de movilidad.</p>`);
+    },
+  }).addTo(mapState.map);
+
+  mapState.mobilityLayer?.bringToFront?.();
+  mapState.mobilityLinkLayer?.bringToFront?.();
+}
+
+function clearMobilityOverlay() {
+  ["mobilityLayer", "mobilityGapLayer", "mobilityLinkLayer"].forEach((layerName) => {
+    if (mapState[layerName]) {
+      mapState.map?.removeLayer(mapState[layerName]);
+      mapState[layerName] = null;
+    }
+  });
+}
+
+function focusMobilityStudy() {
+  if (!mapState.map || (!mapState.mobilityLayer && !mapState.mobilityGapLayer)) {
+    return;
+  }
+  state.territorialFocus = "mobility";
+  renderMobilityModule();
+  renderMobilityOverlay(state.mobilityData);
+  updateMapSummary();
+  const bounds = mapState.mobilityLayer?.getBounds?.() || mapState.mobilityGapLayer?.getBounds?.();
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 12 });
+  }
+}
+
+function focusMobilitySector(sectorId) {
+  const sector = state.mobilityData?.sectors?.find((item) => item.id === sectorId);
+  if (!sector || !mapState.map) {
+    return;
+  }
+  state.mobilityHighlightId = sectorId;
+  state.territorialFocus = "mobility";
+  renderMobilityModule();
+  renderMobilityOverlay(state.mobilityData);
+  updateMapSummary();
+  const bounds = L.geoJSON(sector.feature).getBounds();
+  mapState.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 13 });
+}
+
+function handleMobilitySectorsInteraction(event) {
+  const button = event.target.closest("[data-mobility-sector-id]");
+  if (!button || !dom.mobilitySectors?.contains(button)) {
+    return;
+  }
+  focusMobilitySector(button.dataset.mobilitySectorId);
+}
+
+function getRiskLevelLabel(score = 0) {
+  if (score >= 74) {
+    return "Riesgo alto";
+  }
+  if (score >= 58) {
+    return "Riesgo medio";
+  }
+  return "Riesgo bajo";
+}
+
+function renderRiskModule() {
+  const areaProfile = getTerritorialAreaProfile();
+  if (!state.riskData) {
+    resetMetricGrid(dom.riskResults, `Ejecuta el estudio para ver area critica, drivers de riesgo y sectores con necesidad de contencion en ${areaProfile.scopeLabel}.`);
+    dom.riskDrivers?.classList.add("empty-state");
+    dom.riskDrivers?.classList.remove("has-data");
+    if (dom.riskDrivers) {
+      setTextIfChanged(dom.riskDrivers, "Aqui apareceran los drivers compuestos que explican la peligrosidad y exposicion territorial.");
+    }
+    dom.riskSectors?.classList.add("empty-state");
+    dom.riskSectors?.classList.remove("has-data");
+    if (dom.riskSectors) {
+      setTextIfChanged(dom.riskSectors, "Aqui apareceran los sectores criticos, su amenaza dominante y la accion territorial recomendada.");
+    }
+    return;
+  }
+
+  const analysis = state.riskData;
+  dom.riskDrivers?.classList.remove("empty-state");
+  dom.riskDrivers?.classList.add("has-data");
+  if (dom.riskDrivers) {
+    setHtmlIfChanged(dom.riskDrivers, [
+      `Pendiente ${analysis.summary.meanSlopePct.toFixed(1)}%`,
+      `Drenaje ${analysis.summary.nearestDrainLabel}`,
+      `Exposicion ${analysis.summary.exposureLabel}`,
+      `Accion ${analysis.summary.dominantActionLabel}`,
+      `${analysis.prioritySectors.length} sectores criticos`,
+    ].map((item) => `<span class="planning-pill emphasis">${item}</span>`).join(""));
+  }
+
+  dom.riskSectors?.classList.remove("empty-state");
+  dom.riskSectors?.classList.add("has-data");
+  if (dom.riskSectors) {
+    setHtmlIfChanged(dom.riskSectors, analysis.prioritySectors.map((sector) => `
+      <article class="land-change-sector ${sector.id === state.riskHighlightId ? "active" : ""}">
+        <div class="land-change-sector-head">
+          <div>
+            <p class="land-change-sector-kicker">${sector.priorityLabel}</p>
+            <h4>${sector.name}</h4>
+          </div>
+          <span class="land-change-pill tone-${sector.tone}">${sector.riskLabel}</span>
+        </div>
+        <p class="land-change-sector-copy">${sector.summary}</p>
+        <div class="land-change-sector-grid">
+          <article class="land-change-sector-metric">
+            <span>Pendiente</span>
+            <strong>${sector.slopePct.toFixed(1)}%</strong>
+          </article>
+          <article class="land-change-sector-metric">
+            <span>Drenaje</span>
+            <strong>${formatDistanceKm(sector.drainDistanceKm)}</strong>
+          </article>
+          <article class="land-change-sector-metric">
+            <span>Exposicion</span>
+            <strong>${sector.exposureLabel}</strong>
+          </article>
+          <article class="land-change-sector-metric">
+            <span>Puntaje</span>
+            <strong>${sector.score}/100</strong>
+          </article>
+        </div>
+        <div class="land-change-sector-tags">
+          ${sector.tags.map((tag) => `<span>${tag}</span>`).join("")}
+        </div>
+        <p class="land-change-sector-note">${sector.recommendation}</p>
+        <button class="ghost-button" type="button" data-risk-sector-id="${sector.id}">Ver en mapa</button>
+      </article>
+    `).join(""));
+  }
+}
+
+function buildRiskAnalysis() {
+  const target = getCurrentTerritorialTarget();
+  const roadFeatures = filterFeaturesByTerritorialArea(geoSources.vias?.features, state.territorialAreaId);
+  const drainFeatures = filterFeaturesByTerritorialArea(geoSources.canales?.features, state.territorialAreaId);
+  const urbanFeatures = filterFeaturesByTerritorialArea(geoSources.manchaUrbana?.features, state.territorialAreaId);
+  const sensitiveProfiles = getPlanningSensitiveConstraintProfiles(target.feature);
+  const hydrologySectors = state.hydrologyData?.sectors || [];
+  const cellSizeKm = target.scopeType === "studyArea" ? 2.8 : 0.9;
+
+  const sectors = buildTerritorialStudyGrid(target, cellSizeKm).slice(0, 48).map((cell, index) => {
+    const centroid = turf.centroid(cell);
+    const [lon, lat] = centroid.geometry.coordinates;
+    const road = getNearestFeatureMatch(centroid, roadFeatures);
+    const drain = getNearestFeatureMatch(centroid, drainFeatures);
+    const urban = getNearestFeatureMatch(centroid, urbanFeatures);
+    const insideUrban = urbanFeatures.some((feature) => turf.booleanIntersects(feature, cell));
+    const slopePct = Number(computePlanningSlope(lon, lat, road.distanceKm || 0, drain.distanceKm || 0, insideUrban).toFixed(1));
+    const hydrologySector = hydrologySectors.length
+      ? hydrologySectors.reduce((best, sector) => {
+        const distanceKm = turf.distance(centroid, turf.point(sector.centroid), { units: "kilometers" });
+        return !best || distanceKm < best.distanceKm ? { sector, distanceKm } : best;
+      }, null)
+      : null;
+    const hydricRisk = hydrologySector ? Math.max(Number(hydrologySector.sector?.floodRisk) || 0, Number(hydrologySector.sector?.droughtRisk) || 0) : 42;
+    const sensitivePenalty = sensitiveProfiles.reduce((sum, profile) => sum + (Number(profile.penalty) || 0), 0) / Math.max(sensitiveProfiles.length, 1);
+    const exposureScore = clamp((insideUrban ? 18 : 0) + Math.max(0, 22 - (urban.distanceKm || 0) * 12) + Math.max(0, 18 - (road.distanceKm || 0) * 8), 8, 42);
+    const score = Math.round(clamp(
+      slopePct * 2.2
+      + Math.max(0, 20 - (drain.distanceKm || 0) * 25)
+      + hydricRisk * 0.44
+      + sensitivePenalty * 26
+      + exposureScore,
+      18,
+      96
+    ));
+    const riskLabel = getRiskLevelLabel(score);
+    const dominantThreat = slopePct >= 12
+      ? "Inestabilidad de ladera"
+      : (drain.distanceKm || 99) <= 0.3
+        ? "Desborde y escorrentia"
+        : "Exposicion urbana";
+    const dominantActionLabel = riskLabel === "Riesgo alto" ? "Afrontar" : riskLabel === "Riesgo medio" ? "Contener" : "Monitorear";
+    return {
+      id: `risk-${index + 1}`,
+      name: `Sector ${index + 1} ${getRelativeDirectionLabel(turf.centroid(target.feature).geometry.coordinates, centroid.geometry.coordinates)}`,
+      feature: cell,
+      centroid: centroid.geometry.coordinates,
+      score,
+      slopePct,
+      drainDistanceKm: Number((drain.distanceKm || 0).toFixed(2)),
+      hydricRisk,
+      riskLabel,
+      tone: score >= 74 ? "high" : score >= 58 ? "mid" : "low",
+      exposureLabel: insideUrban ? "Alta" : (urban.distanceKm || 0) <= 0.8 ? "Media" : "Baja",
+      dominantThreat,
+      dominantActionLabel,
+      priorityLabel: dominantActionLabel,
+      summary: `${dominantThreat} con ${riskLabel.toLowerCase()} y exposicion ${insideUrban ? "urbana" : "territorial"} dentro de ${target.scopeLabel}.`,
+      recommendation: dominantActionLabel === "Afrontar"
+        ? "Evitar nueva ocupacion y reforzar control del corredor o borde sensible."
+        : dominantActionLabel === "Contener"
+          ? "Aplicar condicionamientos, drenaje y seguimiento del borde antes de consolidar intervencion."
+          : "Mantener vigilancia y monitoreo preventivo del sector.",
+      tags: [
+        dominantThreat,
+        `${slopePct.toFixed(1)}% pendiente`,
+        `${formatDistanceKm(drain.distanceKm || 0)} al drenaje`,
+        `Riesgo hidrico ${Math.round(hydricRisk)}`,
+      ],
+    };
+  }).filter(Boolean);
+
+  const prioritySectors = sectors
+    .slice()
+    .sort((left, right) => right.score - left.score)
+    .slice(0, 5)
+    .map((sector, index) => ({ ...sector, rank: index + 1 }));
+  const meanScore = Math.round(sectors.reduce((sum, sector) => sum + sector.score, 0) / Math.max(sectors.length, 1));
+  const meanSlopePct = sectors.reduce((sum, sector) => sum + sector.slopePct, 0) / Math.max(sectors.length, 1);
+  const criticalAreaHa = sectors.reduce((sum, sector) => sum + (sector.score >= 74 ? turf.area(sector.feature) / 10000 : 0), 0);
+
+  return {
+    context: target,
+    sectors,
+    prioritySectors,
+    summary: {
+      meanScore,
+      meanSlopePct: Number(meanSlopePct.toFixed(1)),
+      criticalAreaHa: Number(criticalAreaHa.toFixed(1)),
+      riskLabel: getRiskLevelLabel(meanScore),
+      dominantActionLabel: prioritySectors[0]?.dominantActionLabel || "Monitorear",
+      nearestDrainLabel: prioritySectors[0]?.drainDistanceKm <= 0.3 ? "Muy cercano" : prioritySectors[0]?.drainDistanceKm <= 0.8 ? "Cercano" : "Moderado",
+      exposureLabel: prioritySectors[0]?.exposureLabel || "Media",
+    },
+  };
+}
+
+async function runRiskAnalysis(silent = false) {
+  try {
+    const analysis = buildRiskAnalysis();
+    state.riskData = analysis;
+    state.riskHighlightId = analysis.prioritySectors[0]?.id || null;
+    state.territorialFocus = "risk";
+    const cards = [
+      {
+        label: "Riesgo compuesto",
+        value: `${analysis.summary.meanScore}/100`,
+        copy: `${analysis.summary.riskLabel} para ${analysis.context.scopeLabel}.`,
+        highlight: true,
+      },
+      {
+        label: "Area critica",
+        value: `${analysis.summary.criticalAreaHa.toFixed(1)} ha`,
+        copy: `${analysis.prioritySectors.length} sectores concentran la contencion prioritaria.`,
+      },
+      {
+        label: "Pendiente media",
+        value: `${analysis.summary.meanSlopePct.toFixed(1)}%`,
+        copy: "Cruce sintetico de relieve, drenaje y exposicion.",
+      },
+      {
+        label: "Accion dominante",
+        value: analysis.summary.dominantActionLabel,
+        copy: `${analysis.summary.nearestDrainLabel} respecto a drenajes y exposicion ${analysis.summary.exposureLabel.toLowerCase()}.`,
+      },
+    ];
+    paintMetricGrid(dom.riskResults, cards);
+    renderRiskModule();
+    renderRiskOverlay(analysis);
+    updateMapSummary();
+    if (!silent) {
+      setStatus(`Riesgo territorial compuesto listo para ${analysis.context.scopeLabel}: ${analysis.summary.riskLabel.toLowerCase()} con ${analysis.prioritySectors.length} sectores criticos visibles.`);
+    }
+    return analysis;
+  } catch (error) {
+    console.warn("Fallo el estudio de riesgo territorial compuesto.", error);
+    state.riskData = null;
+    state.riskHighlightId = null;
+    clearRiskOverlay();
+    resetTerritorialModuleState(dom.riskResults, "No se pudo calcular el estudio de riesgo territorial en esta corrida.", [
+      { target: dom.riskDrivers, message: "No fue posible sintetizar los drivers de riesgo compuesto." },
+      { target: dom.riskSectors, message: "No fue posible priorizar sectores criticos de contencion." },
+    ]);
+    if (!silent) {
+      setStatus(`Riesgo territorial compuesto: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    updateMapSummary();
+    return null;
+  }
+}
+
+function clearRiskAnalysis() {
+  state.riskData = null;
+  state.riskHighlightId = null;
+  clearRiskOverlay();
+  renderPlanningModule();
+  updateMapSummary();
+  setStatus(`Estudio de riesgo territorial limpiado para ${getTerritorialAreaProfile().scopeLabel}.`);
+}
+
+function renderRiskOverlay(analysis) {
+  clearRiskOverlay();
+  if (!mapState.map || !analysis?.sectors?.length || state.entryRoute !== "planificacion") {
+    return;
+  }
+
+  mapState.riskLayer = L.geoJSON({
+    type: "FeatureCollection",
+    features: analysis.sectors.map((sector) => ({
+      ...cloneFeature(sector.feature),
+      properties: {
+        ...(sector.feature.properties || {}),
+        riskSectorId: sector.id,
+        name: sector.name,
+        score: sector.score,
+        riskLabel: sector.riskLabel,
+        summary: sector.summary,
+      },
+    })),
+  }, {
+    style: (feature) => {
+      const score = Number(feature.properties?.score || 0);
+      const active = feature.properties?.riskSectorId === state.riskHighlightId;
+      return {
+        color: score >= 74 ? "#9f5441" : score >= 58 ? "#c18c31" : "#2f7f5f",
+        weight: active ? 2.6 : 1.5,
+        fillColor: score >= 74 ? "#d38a74" : score >= 58 ? "#e2bb72" : "#8fc9aa",
+        fillOpacity: active ? 0.3 : 0.19,
+      };
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.riskLabel || "Riesgo"} · ${feature.properties?.score || 0}/100. ${feature.properties?.summary || ""}</p>`);
+    },
+  }).addTo(mapState.map);
+
+  mapState.riskBufferLayer = L.geoJSON({
+    type: "FeatureCollection",
+    features: analysis.prioritySectors.map((sector) => turf.buffer(sector.feature, 0.12, { units: "kilometers" })),
+  }, {
+    style: {
+      color: "#9f5441",
+      weight: 1.4,
+      fillColor: "#d38a74",
+      fillOpacity: 0.08,
+      dashArray: "7 8",
+    },
+  }).addTo(mapState.map);
+
+  mapState.riskHotspotLayer = L.geoJSON({
+    type: "FeatureCollection",
+    features: analysis.prioritySectors.map((sector) => pointFeature(sector.name, sector.centroid, {
+      riskSectorId: sector.id,
+      name: sector.name,
+      riskLabel: sector.riskLabel,
+      score: sector.score,
+      summary: sector.summary,
+    })),
+  }, {
+    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+      radius: 7,
+      color: "#fff5eb",
+      weight: 2,
+      fillColor: "#9f5441",
+      fillOpacity: 0.96,
+    }),
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Hotspot"}</h3><p class="popup-copy">${feature.properties?.riskLabel || "Riesgo"} · ${feature.properties?.score || 0}/100. ${feature.properties?.summary || ""}</p>`);
+    },
+  }).addTo(mapState.map);
+
+  mapState.riskLayer?.bringToFront?.();
+  mapState.riskHotspotLayer?.bringToFront?.();
+}
+
+function clearRiskOverlay() {
+  ["riskLayer", "riskHotspotLayer", "riskBufferLayer"].forEach((layerName) => {
+    if (mapState[layerName]) {
+      mapState.map?.removeLayer(mapState[layerName]);
+      mapState[layerName] = null;
+    }
+  });
+}
+
+function focusRiskStudy() {
+  if (!mapState.map || (!mapState.riskLayer && !mapState.riskBufferLayer)) {
+    return;
+  }
+  state.territorialFocus = "risk";
+  renderRiskModule();
+  renderRiskOverlay(state.riskData);
+  updateMapSummary();
+  const bounds = mapState.riskLayer?.getBounds?.() || mapState.riskBufferLayer?.getBounds?.();
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 12 });
+  }
+}
+
+function focusRiskSector(sectorId) {
+  const sector = state.riskData?.sectors?.find((item) => item.id === sectorId);
+  if (!sector || !mapState.map) {
+    return;
+  }
+  state.riskHighlightId = sectorId;
+  state.territorialFocus = "risk";
+  renderRiskModule();
+  renderRiskOverlay(state.riskData);
+  updateMapSummary();
+  const bounds = L.geoJSON(sector.feature).getBounds();
+  mapState.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 13 });
+}
+
+function handleRiskSectorsInteraction(event) {
+  const button = event.target.closest("[data-risk-sector-id]");
+  if (!button || !dom.riskSectors?.contains(button)) {
+    return;
+  }
+  focusRiskSector(button.dataset.riskSectorId);
 }
 
 function renderHydrologyModule() {
@@ -24688,11 +27758,12 @@ function updateMapSummary(force = false) {
 
   if (isGpsTrackingActive() || state.agronomyOutputs.gps) {
     const activeDevice = state.agronomyOutputs.gps?.activeDevice || state.gpsTracking.lastDeviceSnapshot;
+    const geofenceSummary = state.gpsTracking.geofence?.summary || null;
     setTextIfChanged(dom.overlayIndex, "GPS");
     setTextIfChanged(dom.mapTitle, activeDevice?.label ? `Seguimiento GPS: ${activeDevice.label}` : "Seguimiento GPS en vivo");
     setTextIfChanged(dom.mapSubtitle, activeDevice
-      ? `Base Esri limpia con ultima senal ${formatGpsSignalAge(activeDevice.timestamp)}. Sin escenas Sentinel ni grillas NDVI superpuestas.`
-      : "Base Esri limpia preparada para recibir el celular, dron, avioneta o feed GPS externo.");
+      ? `Base Esri limpia con ultima senal ${formatGpsSignalAge(activeDevice.timestamp)}. Sin escenas Sentinel ni grillas NDVI superpuestas.${geofenceSummary ? (geofenceSummary.outsideCount ? ` Hay ${geofenceSummary.outsideCount} dispositivo(s) fuera del corredor cargado.` : " Todos los dispositivos visibles siguen dentro del corredor cargado.") : ""}`
+      : `Base Esri limpia preparada para recibir el celular, dron, avioneta o feed GPS externo.${geofenceSummary ? " El corredor GPS ya esta cargado y listo para vigilar desvios." : ""}`);
     renderMapBadges();
     return;
   }
@@ -24964,6 +28035,7 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
 
   if (isGpsTrackingActive() || state.agronomyOutputs.gps) {
     const activeDevice = state.agronomyOutputs.gps?.activeDevice || state.gpsTracking.lastDeviceSnapshot;
+    const geofenceSummary = state.gpsTracking.geofence?.summary || null;
     const badges = [
       {
         tone: "analysis",
@@ -24982,6 +28054,14 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
         label: "Sin grilla NDVI",
       },
     ];
+    if (geofenceSummary) {
+      badges.push({
+        tone: geofenceSummary.outsideCount ? "compare" : "neutral",
+        label: geofenceSummary.outsideCount
+          ? `${geofenceSummary.outsideCount} fuera de ruta`
+          : "Corredor activo",
+      });
+    }
     if (activeDevice?.accuracyM) {
       badges.push({
         tone: "neutral",

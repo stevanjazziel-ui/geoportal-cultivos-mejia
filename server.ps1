@@ -42,7 +42,9 @@ $Planning3dDatasets = @{
 $Planning3dPhotoRoot = "E:\FOTOS MACHACHI"
 $AgronomyInamhiLiveFeedPath = Join-Path $Root "data\inamhi_live_feed.json"
 $AgronomyGpsLiveFeedPath = Join-Path $Root "data\gps_live_feed.json"
+$AgronomyGpsGeofenceEventsPath = Join-Path $Root "data\gps_geofence_events.json"
 $AgronomyGpsLiveMemory = $null
+$AgronomyGpsGeofenceMemory = $null
 $AgronomyRealtimeStations = @(
   @{
     stationCode = "M120"
@@ -1617,6 +1619,174 @@ function Save-AgronomyGpsLiveFeed($Body) {
   }
 }
 
+function New-AgronomyGpsGeofenceEventRecord($Event, [string]$FallbackAreaId, [string]$FallbackGeofenceLabel, [datetime]$Now) {
+  if (-not $Event) {
+    return $null
+  }
+
+  $deviceLabel = if ($Event.PSObject.Properties.Name -contains "deviceLabel" -and -not [string]::IsNullOrWhiteSpace([string]$Event.deviceLabel)) {
+    [string]$Event.deviceLabel
+  } elseif ($Event.PSObject.Properties.Name -contains "label" -and -not [string]::IsNullOrWhiteSpace([string]$Event.label)) {
+    [string]$Event.label
+  } else {
+    "GPS"
+  }
+  $eventTimestamp = if ($Event.PSObject.Properties.Name -contains "timestamp" -and -not [string]::IsNullOrWhiteSpace([string]$Event.timestamp)) {
+    [string]$Event.timestamp
+  } else {
+    $Now.ToString("o")
+  }
+  $eventKind = if ($Event.PSObject.Properties.Name -contains "kind" -and -not [string]::IsNullOrWhiteSpace([string]$Event.kind)) {
+    [string]$Event.kind
+  } else {
+    "warning"
+  }
+  $areaId = Normalize-AgronomyAreaId $(if ($Event.PSObject.Properties.Name -contains "areaId") { [string]$Event.areaId } else { $FallbackAreaId })
+  $geofenceLabel = if ($Event.PSObject.Properties.Name -contains "geofenceLabel" -and -not [string]::IsNullOrWhiteSpace([string]$Event.geofenceLabel)) {
+    [string]$Event.geofenceLabel
+  } else {
+    $FallbackGeofenceLabel
+  }
+
+  return [pscustomobject][ordered]@{
+    id = if ($Event.PSObject.Properties.Name -contains "id" -and -not [string]::IsNullOrWhiteSpace([string]$Event.id)) {
+      [string]$Event.id
+    } else {
+      ("gps-geofence-{0}-{1}" -f (Convert-ToGpsDeviceId $(if ($Event.PSObject.Properties.Name -contains "deviceId") { [string]$Event.deviceId } else { "" }) $deviceLabel), $Now.ToFileTimeUtc())
+    }
+    kind = $eventKind
+    title = if ($Event.PSObject.Properties.Name -contains "title" -and -not [string]::IsNullOrWhiteSpace([string]$Event.title)) { [string]$Event.title } else { "Evento GPS" }
+    copy = if ($Event.PSObject.Properties.Name -contains "copy" -and -not [string]::IsNullOrWhiteSpace([string]$Event.copy)) { [string]$Event.copy } else { "Evento de corredor GPS registrado." }
+    areaId = $areaId
+    geofenceLabel = $geofenceLabel
+    sourceName = if ($Event.PSObject.Properties.Name -contains "sourceName" -and -not [string]::IsNullOrWhiteSpace([string]$Event.sourceName)) { [string]$Event.sourceName } else { "" }
+    toleranceM = [Math]::Round((Convert-ToInvariantDouble $Event.toleranceM 0), 0)
+    deviceId = Convert-ToGpsDeviceId $(if ($Event.PSObject.Properties.Name -contains "deviceId") { [string]$Event.deviceId } else { "" }) $deviceLabel
+    deviceLabel = $deviceLabel
+    deviceType = if ($Event.PSObject.Properties.Name -contains "deviceType" -and -not [string]::IsNullOrWhiteSpace([string]$Event.deviceType)) { [string]$Event.deviceType } else { "GPS" }
+    distanceM = [Math]::Round((Convert-ToInvariantDouble $Event.distanceM 0), 1)
+    outsideByM = [Math]::Round((Convert-ToInvariantDouble $Event.outsideByM 0), 1)
+    speedKmh = [Math]::Round((Convert-ToInvariantDouble $Event.speedKmh 0), 1)
+    timestamp = $eventTimestamp
+    recordedAt = $Now.ToString("o")
+  }
+}
+
+function Save-AgronomyGpsGeofenceEvents($Body) {
+  $now = Get-Date
+  $defaultAreaId = Normalize-AgronomyAreaId $(if ($Body -and $Body.PSObject.Properties.Name -contains "areaId") { [string]$Body.areaId } else { "mejia" })
+  $fallbackGeofenceLabel = if ($Body -and $Body.PSObject.Properties.Name -contains "geofenceLabel") { [string]$Body.geofenceLabel } else { "" }
+  $incomingEvents = @()
+
+  if ($Body -and $Body.PSObject.Properties.Name -contains "events" -and $Body.events) {
+    $incomingEvents = @($Body.events)
+  } elseif ($Body -and $Body.PSObject.Properties.Name -contains "event" -and $Body.event) {
+    $incomingEvents = @($Body.event)
+  } elseif ($Body) {
+    $incomingEvents = @($Body)
+  }
+
+  $normalizedIncoming = @()
+  foreach ($entry in $incomingEvents) {
+    $record = New-AgronomyGpsGeofenceEventRecord $entry $defaultAreaId $fallbackGeofenceLabel $now
+    if ($record) {
+      $normalizedIncoming += $record
+    }
+  }
+
+  if (-not $normalizedIncoming.Count) {
+    return @{
+      ok = $false
+      error = "No se recibieron eventos de corredor GPS validos."
+      receivedCount = @($incomingEvents).Count
+    }
+  }
+
+  $merged = @{}
+  $currentFeed = if ($script:AgronomyGpsGeofenceMemory) { $script:AgronomyGpsGeofenceMemory } else { Read-LiveJsonFile $AgronomyGpsGeofenceEventsPath }
+  if ($currentFeed -and $currentFeed.events) {
+    foreach ($eventItem in @($currentFeed.events)) {
+      $record = New-AgronomyGpsGeofenceEventRecord $eventItem $defaultAreaId $fallbackGeofenceLabel $now
+      if ($record) {
+        $merged[[string]$record.id] = $record
+      }
+    }
+  }
+
+  foreach ($record in $normalizedIncoming) {
+    $merged[[string]$record.id] = $record
+  }
+
+  $events = @(
+    $merged.GetEnumerator() |
+      Sort-Object { [datetime]$_.Value.timestamp } -Descending |
+      Select-Object -First 300 |
+      ForEach-Object { $_.Value }
+  )
+
+  $payload = [ordered]@{
+    fetchedAt = $now.ToString("o")
+    events = $events
+  }
+
+  $script:AgronomyGpsGeofenceMemory = [pscustomobject]$payload
+  Ensure-ParentDirectory $AgronomyGpsGeofenceEventsPath
+  $payload | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $AgronomyGpsGeofenceEventsPath -Encoding UTF8
+
+  return @{
+    ok = $true
+    mode = "ingest"
+    fetchedAt = $payload.fetchedAt
+    savedCount = $normalizedIncoming.Count
+    eventCount = $events.Count
+    events = $events | Select-Object -First 25
+    message = "Bitacora GPS del corredor almacenada."
+  }
+}
+
+function Get-AgronomyGpsGeofenceEventsPayload($Body) {
+  $areaId = Normalize-AgronomyAreaId $(if ($Body -and $Body.PSObject.Properties.Name -contains "areaId") { [string]$Body.areaId } else { "mejia" })
+  $geofenceLabel = if ($Body -and $Body.PSObject.Properties.Name -contains "geofenceLabel") { [string]$Body.geofenceLabel } else { "" }
+  $limit = [Math]::Min([Math]::Max([int](Convert-ToInvariantDouble $(if ($Body -and $Body.PSObject.Properties.Name -contains "limit") { $Body.limit } else { 18 }) 18), 1), 60)
+  $feed = if ($script:AgronomyGpsGeofenceMemory) { $script:AgronomyGpsGeofenceMemory } else { Read-LiveJsonFile $AgronomyGpsGeofenceEventsPath }
+  $events = @()
+
+  if ($feed -and $feed.events) {
+    $events = @(
+      foreach ($entry in @($feed.events)) {
+        $record = New-AgronomyGpsGeofenceEventRecord $entry $areaId $geofenceLabel (Get-Date)
+        if (-not $record) {
+          continue
+        }
+        if (-not [string]::IsNullOrWhiteSpace($areaId) -and [string]$record.areaId -ne $areaId) {
+          continue
+        }
+        if (-not [string]::IsNullOrWhiteSpace($geofenceLabel) -and [string]$record.geofenceLabel -ne $geofenceLabel) {
+          continue
+        }
+        $record
+      }
+    )
+  }
+
+  $ordered = @(
+    $events |
+      Sort-Object { [datetime]$_.timestamp } -Descending |
+      Select-Object -First $limit
+  )
+
+  return @{
+    ok = $true
+    mode = "file"
+    fetchedAt = if ($feed -and $feed.fetchedAt) { [string]$feed.fetchedAt } else { (Get-Date).ToString("o") }
+    areaId = $areaId
+    geofenceLabel = $geofenceLabel
+    eventCount = $ordered.Count
+    events = $ordered
+    message = if ($ordered.Count) { "Bitacora de corredor GPS recuperada." } else { "Sin eventos guardados para este corredor." }
+  }
+}
+
 function Get-AgronomyLiveWeatherBase([string]$AreaId) {
   switch ($AreaId) {
     "machachi" {
@@ -2186,6 +2356,22 @@ try {
         } else {
           Write-Json $stream 400 $result
         }
+        continue
+      }
+      if ($request.Path -eq "/api/agronomy/gps/geofence/events" -and $request.Method -eq "POST") {
+        $body = if ([string]::IsNullOrWhiteSpace($request.Body)) { @{} } else { $request.Body | ConvertFrom-Json }
+        $result = Save-AgronomyGpsGeofenceEvents $body
+        if ($result.ok) {
+          Write-Json $stream 200 $result
+        } else {
+          Write-Json $stream 400 $result
+        }
+        continue
+      }
+      if ($request.Path -eq "/api/agronomy/gps/geofence/log" -and $request.Method -eq "POST") {
+        $body = if ([string]::IsNullOrWhiteSpace($request.Body)) { @{} } else { $request.Body | ConvertFrom-Json }
+        $result = Get-AgronomyGpsGeofenceEventsPayload $body
+        Write-Json $stream 200 $result
         continue
       }
       if ($request.Path -eq "/api/planning/3d/manifest") {
