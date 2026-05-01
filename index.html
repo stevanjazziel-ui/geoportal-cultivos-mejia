@@ -6,10 +6,10 @@
   <meta http-equiv="Cache-Control" content="no-store">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <title>Plataforma Inteligente | Mejia y Quevedo</title>
+  <title>Centro de Decisiones | Mejia y Quevedo</title>
   <meta
     name="description"
-    content="Plataforma de inteligencia territorial, agronomica y operativa para Mejia y Quevedo, con imagenes satelitales multifuente, estudios guiados, seguimiento operativo y analisis por AOI."
+    content="Centro de decisiones agronomicas, territoriales y operativas para Mejia y Quevedo, con imagenes satelitales, estudios guiados, seguimiento operativo y analisis por AOI."
   >
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,7 +31,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260429-2">
+  <link rel="stylesheet" href="./styles.css?v=20260501-1">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -54,43 +54,47 @@
   <div id="loginOverlay" class="login-overlay">
     <section class="login-card">
       <div class="login-copy">
-        <span class="eyebrow">Plataforma inteligente</span>
-        <h1>Plataforma de inteligencia territorial, agronomica y operativa</h1>
+        <span class="eyebrow">Centro de decisiones</span>
+        <h1>Campo, territorio y operacion en una sola plataforma</h1>
         <p class="lead">
-          Plataforma de decisiones espaciales para PC y celular que combina imagenes satelitales
-          multifuente, analisis agronomico, lectura territorial, seguimiento operativo y validacion 3D
-          desde un mismo lugar.
+          Un espacio de trabajo claro para analizar imagenes satelitales, estudios territoriales,
+          seguimiento GPS y validacion 3D sin perderte entre capas, botones o tecnicismos.
         </p>
         <div class="login-features">
           <article>
-          <h2>3 sensores</h2>
-            <p>Sentinel-2, Landsat 8/9 y Sentinel-1 con escenas comparables desde un mismo panel.</p>
+            <h2>Guiado por tareas</h2>
+            <p>El sistema te lleva por preguntas de trabajo y no solo por controles tecnicos.</p>
           </article>
           <article>
-            <h2>Analitica aplicada</h2>
-            <p>Intralote, relieve, clima y planificacion multivariable para suelo urbano y equipamientos.</p>
+            <h2>Lectura aplicada</h2>
+            <p>Agronomia, territorio, agua, clima, GPS y 3D conectados dentro de un mismo flujo.</p>
           </article>
+        </div>
+        <div class="login-trust">
+          <span>Escalable para campo y oficina</span>
+          <span>Imagen satelital y analisis guiado</span>
+          <span>Disenado para decisiones reales</span>
         </div>
       </div>
 
       <div class="login-panel">
         <div class="login-panel-inner">
           <p class="login-kicker">Elegir recorrido</p>
-          <h2>Que quieres resolver primero</h2>
+          <h2>Empieza por lo que quieres resolver</h2>
           <p>
-            Entra directo a la ruta de trabajo y luego el sistema te guiara por tareas,
-            no solo por capas y controles tecnicos.
+            Entra directo a una ruta de trabajo. Luego el sistema organiza escenas,
+            capas, estudios y acciones alrededor de esa necesidad.
           </p>
           <div class="entry-options">
             <button id="openAgronomyBtn" class="entry-option" type="button">
               <span class="entry-eyebrow">Ruta 1</span>
-              <strong>Agronomia</strong>
-              <span>Abre imagenes satelitales, indices, lotes y diagnostico productivo en Mejia y Quevedo.</span>
+              <strong>Agronomia y campo</strong>
+              <span>Escenas, lotes, agua, clima, estaciones y seguimiento operativo en Mejia y Quevedo.</span>
             </button>
             <button id="openPlanningBtn" class="entry-option planning" type="button">
               <span class="entry-eyebrow">Ruta 2</span>
-              <strong>Planificacion territorial</strong>
-              <span>Entra al modulo de aptitud para VIS, escuelas, hospitales y equipamientos.</span>
+              <strong>Territorio y equipamientos</strong>
+              <span>Aptitud, huella, riesgo, movilidad, estrategia y visor 3D para decisiones territoriales.</span>
             </button>
           </div>
           <p class="login-note">
@@ -108,8 +112,8 @@
           Panel
         </button>
         <div>
-          <span class="eyebrow">Mejia + Quevedo, Ecuador</span>
-          <h1>Plataforma inteligente</h1>
+          <span class="eyebrow">Mejia + Quevedo | Centro de decisiones</span>
+          <h1>Agronomia y territorio</h1>
         </div>
       </div>
 
@@ -140,7 +144,7 @@
         </div>
         <div class="user-pill">
           <span class="status-dot"></span>
-            Usuario publico - v20260429-2
+            Usuario publico · v20260501-1
         </div>
       </div>
     </header>
@@ -257,7 +261,7 @@
                <button id="sentinelSubmitBtn" class="primary-button" type="submit">Buscar escenas</button>
              </form>
              <p id="sensorSupportNote" class="service-note">
-               Sentinel-2 mantiene el flujo mas completo: NDVI, NDWI, NDRE, MSAVI y raster exacto a 10 m cuando existe COG publico coincidente.
+               Sentinel-2 ofrece el flujo mas completo. Para AOI asistido y cache local, ejecuta <code>server.ps1</code>.
              </p>
 
              <div class="section-block compact">
@@ -377,7 +381,7 @@
               </div>
             </div>
             <div id="moduleSearchSummary" class="module-search-summary">
-              Usa la busqueda o los accesos rapidos para encontrar el estudio que necesitas sin recorrer todo el panel.
+              Usa la busqueda o los accesos rapidos para encontrar un estudio sin recorrer todo el panel.
             </div>
 
             <article id="intraloteCard" class="module-card" data-module-track="agronomia">
