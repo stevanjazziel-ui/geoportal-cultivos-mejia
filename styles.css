@@ -19,6 +19,7 @@
   --radius-md: 16px;
   --radius-sm: 12px;
   --sidebar-width: clamp(380px, 30vw, 460px);
+  --sidebar-width-modules: clamp(620px, 46vw, 980px);
   --font-display: "Sora", sans-serif;
   --font-body: "IBM Plex Sans", sans-serif;
 }
@@ -593,6 +594,10 @@ button {
   flex: 1;
 }
 
+.app-shell[data-active-tab="modulos"] {
+  --sidebar-width: var(--sidebar-width-modules);
+}
+
 .sidebar {
   position: relative;
   height: 100%;
@@ -1137,15 +1142,74 @@ button {
   top: 0;
   z-index: 3;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
-  padding: 10px 0 2px;
+  overflow-x: auto;
+  padding: 10px 0 6px;
   background: linear-gradient(180deg, rgba(250, 247, 241, 0.96), rgba(250, 247, 241, 0.72), rgba(250, 247, 241, 0));
   backdrop-filter: blur(8px);
+  scrollbar-width: thin;
 }
 
 #moduleQuickNav {
   grid-column: 1 / -1;
+}
+
+.module-browser-toolbar,
+.module-search-summary {
+  grid-column: 1 / -1;
+}
+
+.module-browser-toolbar {
+  position: sticky;
+  top: 54px;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px 12px;
+  align-items: end;
+  padding: 12px 0 6px;
+  background: linear-gradient(180deg, rgba(250, 247, 241, 0.98), rgba(250, 247, 241, 0.82), rgba(250, 247, 241, 0));
+  backdrop-filter: blur(8px);
+}
+
+.module-search-field {
+  max-width: 100%;
+}
+
+.module-search-field input[type="search"] {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(47, 61, 50, 0.14);
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+.module-browser-actions {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.module-search-summary {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(47, 61, 50, 0.08);
+  background: rgba(255, 255, 255, 0.62);
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.module-search-hidden {
+  display: none !important;
+}
+
+.app-shell[data-active-tab="modulos"] .sidebar {
+  padding: 18px 20px;
 }
 
 .module-quick-nav:empty {
@@ -1662,6 +1726,20 @@ button {
   #gpsCard .gps-geofence-toolbar .module-action-row {
     margin-top: 0;
   }
+}
+
+@media (max-width: 1180px) {
+  .module-browser-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .module-browser-actions {
+    justify-content: flex-start;
+  }
+}
+
+.app-shell[data-active-tab="modulos"] .tab-panel[data-panel="modulos"].active {
+  gap: 14px;
 }
 
 .wizard-steps {

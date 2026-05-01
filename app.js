@@ -2932,6 +2932,8 @@ const state = {
   },
   collapsedModules: {},
   moduleQuickNavActiveId: null,
+  moduleSearchQuery: "",
+  moduleSearchRoute: "agronomia",
   wizardProgress: {},
   wizardBusy: false,
 };
@@ -4887,6 +4889,11 @@ function cacheDom() {
   dom.modulesSectionCopy = document.querySelector("#modulesSectionCopy");
   dom.workflowGuideCard = document.querySelector("#workflowGuideCard");
   dom.moduleQuickNav = document.querySelector("#moduleQuickNav");
+  dom.moduleBrowserToolbar = document.querySelector("#moduleBrowserToolbar");
+  dom.moduleSearchInput = document.querySelector("#moduleSearchInput");
+  dom.expandVisibleModulesBtn = document.querySelector("#expandVisibleModulesBtn");
+  dom.collapseVisibleModulesBtn = document.querySelector("#collapseVisibleModulesBtn");
+  dom.moduleSearchSummary = document.querySelector("#moduleSearchSummary");
   dom.workflowGuideTitle = document.querySelector("#workflowGuideTitle");
   dom.workflowGuideBadge = document.querySelector("#workflowGuideBadge");
   dom.workflowGuideCopy = document.querySelector("#workflowGuideCopy");
@@ -4963,6 +4970,9 @@ function bindUI() {
   dom.wizardSteps?.addEventListener("click", handleWizardStepInteraction);
   dom.workflowGuideActions?.addEventListener("click", handleWorkflowGuideAction);
   dom.moduleQuickNav?.addEventListener("click", handleModuleQuickNavInteraction);
+  dom.moduleSearchInput?.addEventListener("input", handleModuleSearchInput);
+  dom.expandVisibleModulesBtn?.addEventListener("click", handleExpandVisibleModules);
+  dom.collapseVisibleModulesBtn?.addEventListener("click", handleCollapseVisibleModules);
   document.querySelector('.tab-panel[data-panel="modulos"]')?.addEventListener("click", handleModuleCardToggleInteraction);
 
   if (dom.sensorSelect) {
@@ -6123,6 +6133,13 @@ function focusModuleCard(card) {
     return;
   }
 
+  if (card.classList.contains("module-search-hidden")) {
+    state.moduleSearchQuery = "";
+    state.moduleSearchRoute = state.entryRoute || "agronomia";
+    setValueIfChanged(dom.moduleSearchInput, "");
+    applyModuleSearchFilter({ preserveActive: true });
+  }
+
   if (card.id) {
     setModuleCardCollapsed(card.id, false);
     setModuleQuickNavActive(card.id);
@@ -6160,9 +6177,14 @@ function focusGpsModuleCard() {
   focusModuleCard(dom.gpsCard);
 }
 
-function getVisibleModuleCards() {
+function getRouteModuleCards() {
   return Array.from(document.querySelectorAll('.tab-panel[data-panel="modulos"] .module-card'))
     .filter((card) => !card.classList.contains("hidden"));
+}
+
+function getVisibleModuleCards() {
+  return getRouteModuleCards()
+    .filter((card) => !card.classList.contains("module-search-hidden"));
 }
 
 function getModuleCardLabel(card) {
@@ -6193,6 +6215,26 @@ function getModuleCardLabel(card) {
     return shortLabels[card.id];
   }
   return card?.querySelector("h3")?.textContent?.trim() || card?.dataset?.moduleTrack || "Modulo";
+}
+
+function getModuleSearchableText(card) {
+  if (!card) {
+    return "";
+  }
+
+  return normalizeTerritorialText([
+    card.id,
+    card.dataset?.moduleTrack,
+    card.querySelector(".module-kicker")?.textContent,
+    card.querySelector("h3")?.textContent,
+    card.querySelector(".module-copy")?.textContent,
+  ].filter(Boolean).join(" "));
+}
+
+function getModuleRouteLabel(route = state.entryRoute || "agronomia") {
+  return isPlanningRoute(route)
+    ? "planificacion territorial"
+    : "agronomia";
 }
 
 function setModuleQuickNavActive(cardId = "") {
@@ -6260,7 +6302,7 @@ function setModuleCardCollapsed(cardId, collapsed) {
 
 function collapseModuleCardsForRoute(route = state.entryRoute || "agronomia") {
   const defaults = getDefaultCollapsedModules(route);
-  getVisibleModuleCards().forEach((card, index) => {
+  getRouteModuleCards().forEach((card, index) => {
     if (!card.id) {
       return;
     }
@@ -6314,6 +6356,93 @@ function renderModuleQuickNav() {
       ${escapeHtmlContent(getModuleCardLabel(card))}
     </button>
   `).join(""));
+}
+
+function renderModuleSearchSummary() {
+  if (!dom.moduleSearchSummary) {
+    return;
+  }
+
+  const routeCards = getRouteModuleCards().filter((card) => card.id && card.id !== "workflowGuideCard");
+  const visibleCards = getVisibleModuleCards().filter((card) => card.id && card.id !== "workflowGuideCard");
+  const query = (state.moduleSearchQuery || "").trim();
+  const routeLabel = getModuleRouteLabel();
+
+  if (!routeCards.length) {
+    setTextIfChanged(dom.moduleSearchSummary, "No hay modulos disponibles todavia en esta ruta.");
+    return;
+  }
+
+  if (!query) {
+    setTextIfChanged(
+      dom.moduleSearchSummary,
+      `Mostrando ${visibleCards.length} modulos de ${routeLabel}. Usa la busqueda o los accesos rapidos para entrar directo al estudio que necesitas.`
+    );
+    return;
+  }
+
+  if (!visibleCards.length) {
+    setTextIfChanged(
+      dom.moduleSearchSummary,
+      `No encontre modulos para "${query}" en ${routeLabel}. Prueba con GPS, agua, riesgo, clima, FODA o 3D.`
+    );
+    return;
+  }
+
+  setTextIfChanged(
+    dom.moduleSearchSummary,
+    `Mostrando ${visibleCards.length} de ${routeCards.length} modulos para "${query}" en ${routeLabel}.`
+  );
+}
+
+function applyModuleSearchFilter(options = {}) {
+  const query = normalizeTerritorialText(state.moduleSearchQuery);
+  const routeCards = getRouteModuleCards();
+
+  routeCards.forEach((card) => {
+    if (card.id === "workflowGuideCard") {
+      card.classList.remove("module-search-hidden");
+      return;
+    }
+    const matches = !query || getModuleSearchableText(card).includes(query);
+    card.classList.toggle("module-search-hidden", !matches);
+  });
+
+  const visibleCards = getVisibleModuleCards().filter((card) => card.id && card.id !== "workflowGuideCard");
+  if (!options.preserveActive || !visibleCards.some((card) => card.id === state.moduleQuickNavActiveId)) {
+    setModuleQuickNavActive(visibleCards[0]?.id || "");
+  }
+
+  renderModuleQuickNav();
+  renderModuleSearchSummary();
+}
+
+function setVisibleModuleCardsCollapsed(collapsed = false) {
+  getVisibleModuleCards()
+    .filter((card) => card.id && card.id !== "workflowGuideCard")
+    .forEach((card) => {
+      setModuleCardCollapsed(card.id, collapsed);
+    });
+}
+
+function handleModuleSearchInput(event) {
+  state.moduleSearchQuery = event?.target?.value || "";
+  applyModuleSearchFilter();
+
+  const visibleCards = getVisibleModuleCards().filter((card) => card.id && card.id !== "workflowGuideCard");
+  if (visibleCards.length === 1) {
+    setModuleCardCollapsed(visibleCards[0].id, false);
+  }
+}
+
+function handleExpandVisibleModules() {
+  setVisibleModuleCardsCollapsed(false);
+  renderModuleSearchSummary();
+}
+
+function handleCollapseVisibleModules() {
+  setVisibleModuleCardsCollapsed(true);
+  renderModuleSearchSummary();
 }
 
 function clearPlanningModuleFocus() {
@@ -6587,6 +6716,11 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   const isPlanning = isPlanningRoute(route);
   const isEvidence = isEvidenceRoute(route);
   const isTerritorial = isPlanning || isEvidence;
+  if (state.moduleSearchRoute !== route) {
+    state.moduleSearchRoute = route;
+    state.moduleSearchQuery = "";
+    setValueIfChanged(dom.moduleSearchInput, "");
+  }
   if (dom.appShell) {
     dom.appShell.dataset.route = route;
   }
@@ -6645,7 +6779,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   }
   renderWorkflowGuide();
   collapseModuleCardsForRoute(route);
-  renderModuleQuickNav();
+  applyModuleSearchFilter();
   syncSatelliteLayerToggle();
   syncEsriResolutionButtons();
   syncSatelliteSuperResolution();
@@ -6950,12 +7084,18 @@ function setPlanning3dSunDefaults() {
 
 function setActiveTab(tabId) {
   state.activeTab = tabId;
+  if (dom.appShell) {
+    dom.appShell.dataset.activeTab = tabId;
+  }
   dom.tabButtons.forEach((button) => {
     button.classList.toggle("active", button.dataset.tab === tabId);
   });
   dom.tabPanels.forEach((panel) => {
     panel.classList.toggle("active", panel.dataset.panel === tabId);
   });
+  if (tabId === "modulos") {
+    applyModuleSearchFilter({ preserveActive: true });
+  }
   dom.sidebar.classList.remove("open");
 }
 
