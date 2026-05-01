@@ -4684,6 +4684,10 @@ function cacheDom() {
   dom.sidebarClose = document.querySelector("#sidebarClose");
   dom.sidebarTitle = document.querySelector("#sidebarTitle");
   dom.sidebarSubtitle = document.querySelector("#sidebarSubtitle");
+  dom.sidebarDock = document.querySelector("#sidebarDock");
+  dom.sidebarDockTitle = document.querySelector("#sidebarDockTitle");
+  dom.sidebarDockSubtitle = document.querySelector("#sidebarDockSubtitle");
+  dom.sidebarDockActions = document.querySelector("#sidebarDockActions");
   dom.toggleSatelliteLayersBtn = document.querySelector("#toggleSatelliteLayersBtn");
   dom.esriResolutionButtons = Array.from(document.querySelectorAll("[data-esri-resolution]"));
   dom.toggleSatelliteSuperResolutionBtn = document.querySelector("#toggleSatelliteSuperResolutionBtn");
@@ -4949,6 +4953,7 @@ function bootstrapApp() {
   renderWizardAssistantState();
   renderPlanningModule();
   renderModuleQuickNav();
+  renderSidebarDock();
   renderPlanning3dPanel();
   syncEntryRouteUi(state.entryRoute);
   renderSceneControls();
@@ -4959,6 +4964,31 @@ function bootstrapApp() {
   hydratePlanning3dManifest();
   setTerritorialArea(state.territorialAreaId, { rerun: false, reload3d: false, silent: true });
   applyRouteFromUrl();
+}
+
+function queueMapLayoutRefresh() {
+  if (!mapState.map) {
+    return;
+  }
+
+  const run = () => {
+    if (!mapState.map) {
+      return;
+    }
+    try {
+      mapState.map.invalidateSize({ pan: false, debounceMoveend: true });
+    } catch (error) {
+      mapState.map.invalidateSize();
+    }
+  };
+
+  if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+    window.requestAnimationFrame(run);
+  }
+  run();
+  [90, 220, 420].forEach((delay) => {
+    window.setTimeout(run, delay);
+  });
 }
 
 function bindUI() {
@@ -4975,8 +5005,14 @@ function bindUI() {
     enterPublicView("agronomia");
   });
   dom.openFieldEvidenceBtn?.addEventListener("click", () => enterPublicView("evidencia"));
-  dom.sidebarToggle.addEventListener("click", () => dom.sidebar.classList.add("open"));
-  dom.sidebarClose.addEventListener("click", () => dom.sidebar.classList.remove("open"));
+  dom.sidebarToggle.addEventListener("click", () => {
+    dom.sidebar.classList.add("open");
+    queueMapLayoutRefresh();
+  });
+  dom.sidebarClose.addEventListener("click", () => {
+    dom.sidebar.classList.remove("open");
+    queueMapLayoutRefresh();
+  });
   dom.sceneTimeline?.addEventListener("click", handleSceneTimelineInteraction);
   dom.sentinelResults?.addEventListener("click", handleSentinelResultsInteraction);
   dom.indexButtons?.addEventListener("click", handleIndexButtonInteraction);
@@ -4999,6 +5035,7 @@ function bindUI() {
   dom.wizardSteps?.addEventListener("click", handleWizardStepInteraction);
   dom.workflowGuideActions?.addEventListener("click", handleWorkflowGuideAction);
   dom.moduleQuickNav?.addEventListener("click", handleModuleQuickNavInteraction);
+  dom.sidebarDockActions?.addEventListener("click", handleSidebarDockAction);
   dom.moduleSearchInput?.addEventListener("input", handleModuleSearchInput);
   dom.expandVisibleModulesBtn?.addEventListener("click", handleExpandVisibleModules);
   dom.collapseVisibleModulesBtn?.addEventListener("click", handleCollapseVisibleModules);
@@ -5534,6 +5571,10 @@ function bindUI() {
       closePlanning3dViewer();
     }
   });
+
+  window.addEventListener("resize", () => {
+    queueMapLayoutRefresh();
+  });
 }
 
 function handleSceneTimelineInteraction(event) {
@@ -5984,8 +6025,8 @@ function enterPublicView(route = state.entryRoute || "agronomia") {
     initializeMap();
   }
   window.setTimeout(() => {
-    mapState.map.invalidateSize();
     applyEntryRoute(route);
+    queueMapLayoutRefresh();
   }, 160);
 }
 
@@ -6701,6 +6742,63 @@ function handleWorkflowGuideAction(event) {
 function openSidebarWorkingPanel(tabId = "modulos") {
   setActiveTab(tabId);
   dom.sidebar?.classList.add("open");
+  queueMapLayoutRefresh();
+}
+
+function getSidebarDockConfig(route = state.entryRoute || "agronomia") {
+  if (isPlanningRoute(route)) {
+    return {
+      title: "Accesos territoriales",
+      subtitle: "Abre copiloto, riesgo o 3D sin recorrer toda la ruta.",
+      actions: [
+        { id: "planning-copilot", label: "Copiloto" },
+        { id: "planning-risk", label: "Riesgo" },
+        { id: "planning-3d", label: "3D" },
+      ],
+    };
+  }
+
+  return {
+    title: "Accesos rapidos",
+    subtitle: "Escena, agua y GPS sin recorrer todo el panel.",
+    actions: [
+      { id: "agronomy-scenes", label: "Escenas" },
+      { id: "agronomy-water", label: "Agua" },
+      { id: "agronomy-gps", label: "GPS" },
+    ],
+  };
+}
+
+function renderSidebarDock(route = state.entryRoute || "agronomia") {
+  if (!dom.sidebarDockActions) {
+    return;
+  }
+
+  const config = getSidebarDockConfig(route);
+  setTextIfChanged(dom.sidebarDockTitle, config.title);
+  setTextIfChanged(dom.sidebarDockSubtitle, config.subtitle);
+  setHtmlIfChanged(dom.sidebarDockActions, config.actions.map((action) => `
+    <button class="sidebar-dock-button" type="button" data-sidebar-action="${escapeHtmlContent(action.id)}">
+      ${escapeHtmlContent(action.label)}
+    </button>
+  `).join(""));
+}
+
+function handleSidebarDockAction(event) {
+  const button = event.target.closest("[data-sidebar-action]");
+  if (!button || !dom.sidebarDockActions?.contains(button)) {
+    return;
+  }
+
+  const actionId = button.dataset.sidebarAction;
+  if (actionId === "planning-copilot") {
+    openSidebarWorkingPanel("modulos");
+    focusPlanningCommandCard();
+    setStatus("Copiloto territorial listo para abrir aptitud, riesgo, agua y 3D sin perderte en el panel.");
+    return;
+  }
+
+  runWorkflowGuideAction(actionId);
 }
 
 function runWorkflowGuideAction(actionId) {
@@ -6847,6 +6945,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
     updateLayerVisibility();
   }
   renderWorkflowGuide();
+  renderSidebarDock(route);
   collapseModuleCardsForRoute(route);
   applyModuleSearchFilter();
   syncSatelliteLayerToggle();
@@ -7166,6 +7265,7 @@ function setActiveTab(tabId) {
     applyModuleSearchFilter({ preserveActive: true });
   }
   dom.sidebar.classList.remove("open");
+  queueMapLayoutRefresh();
 }
 
 function renderLayerTree() {

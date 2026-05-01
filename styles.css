@@ -634,6 +634,7 @@ button {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  gap: 12px;
   border-radius: 30px;
   padding: 18px;
   border: 1px solid rgba(255, 255, 255, 0.58);
@@ -720,7 +721,7 @@ button {
   overflow-y: auto;
   gap: 12px;
   padding-right: 4px;
-  padding-bottom: 28px;
+  padding-bottom: 12px;
   scrollbar-gutter: stable;
 }
 
@@ -730,6 +731,63 @@ button {
 
 .tab-panel > * {
   flex: 0 0 auto;
+}
+
+.sidebar-dock {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(57, 73, 66, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(247, 249, 244, 0.9)),
+    radial-gradient(circle at top right, rgba(47, 109, 88, 0.08), transparent 34%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.36);
+}
+
+.sidebar-dock-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.sidebar-dock-copy strong {
+  font-family: var(--font-display);
+  font-size: 0.96rem;
+  letter-spacing: -0.02em;
+}
+
+.sidebar-dock-copy span {
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.sidebar-dock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.sidebar-dock-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 8px 12px;
+  border: 1px solid rgba(57, 73, 66, 0.1);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.84);
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+  transition: transform 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.sidebar-dock-button:hover,
+.sidebar-dock-button:focus-visible {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.98);
+  box-shadow: 0 10px 18px rgba(22, 31, 27, 0.08);
 }
 
 .section-block,
@@ -3281,6 +3339,7 @@ button {
 .map-canvas {
   position: relative;
   z-index: 1;
+  width: 100%;
   height: 100%;
   min-height: 0;
   background: #dfe8e2;
@@ -3530,6 +3589,8 @@ button {
 
 .leaflet-container {
   background: #dde8dd;
+  width: 100%;
+  height: 100%;
 }
 
 .map-stage .leaflet-bottom.leaflet-right {
