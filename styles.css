@@ -271,7 +271,7 @@ button {
 
 .entry-options {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
   margin-top: 20px;
 }
@@ -312,6 +312,10 @@ button {
 
 .entry-option.planning {
   background: rgba(255, 223, 188, 0.16);
+}
+
+.entry-option.operations {
+  background: rgba(196, 224, 219, 0.14);
 }
 
 .entry-option.evidence {
@@ -1186,6 +1190,98 @@ button {
     radial-gradient(circle at top right, rgba(47, 109, 88, 0.1), transparent 44%);
 }
 
+.planning-command-card {
+  gap: 14px;
+  border-color: rgba(36, 74, 63, 0.12);
+  background:
+    linear-gradient(180deg, rgba(249, 252, 248, 0.98), rgba(253, 250, 245, 0.86)),
+    radial-gradient(circle at top right, rgba(47, 109, 88, 0.1), transparent 40%);
+}
+
+.planning-command-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+.planning-command-button {
+  display: grid;
+  gap: 8px;
+  align-content: start;
+  min-height: 124px;
+  padding: 14px;
+  border: 1px solid rgba(47, 61, 50, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.planning-command-button:hover,
+.planning-command-button:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(47, 109, 88, 0.24);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 14px 24px rgba(22, 31, 27, 0.08);
+}
+
+.planning-command-button strong {
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.planning-command-button span:last-child {
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.planning-command-button.primary {
+  background: linear-gradient(145deg, rgba(45, 104, 84, 0.96), rgba(79, 132, 107, 0.9));
+  border-color: transparent;
+  color: #f7f2e9;
+}
+
+.planning-command-button.primary span:last-child {
+  color: rgba(247, 242, 233, 0.78);
+}
+
+.planning-command-button.accent {
+  background: linear-gradient(145deg, rgba(211, 190, 150, 0.38), rgba(255, 255, 255, 0.92));
+}
+
+.planning-command-step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(36, 74, 63, 0.1);
+  color: var(--leaf-deep);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.planning-command-button.primary .planning-command-step {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff6eb;
+}
+
+.planning-command-note {
+  display: flex;
+  align-items: center;
+  min-height: 42px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(47, 61, 50, 0.08);
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .module-quick-nav {
   position: sticky;
   top: 0;
@@ -1755,6 +1851,7 @@ button {
   }
 
   #workflowGuideCard,
+  #planningCommandCard,
   #moduleQuickNav,
   #gpsCard,
   #planningCard,
@@ -1762,6 +1859,7 @@ button {
   #territorialScenarioCard,
   #fodaCameCard,
   #territorialDecisionCard,
+  #planning3dCard,
   #wizardCard,
   #aiGeoCard {
     grid-column: 1 / -1;
@@ -1783,6 +1881,7 @@ button {
   }
 
   #workflowGuideCard,
+  #planningCommandCard,
   #moduleQuickNav,
   #moduleBrowserToolbar,
   #moduleSearchSummary,
@@ -3636,8 +3735,8 @@ button {
 .planning-3d-shell {
   position: relative;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 4px;
+  grid-template-rows: auto auto auto minmax(0, 1fr);
+  gap: 6px;
   width: calc(100vw - 20px);
   height: calc(100vh - 20px);
   padding: 8px 10px 10px;
@@ -3655,7 +3754,7 @@ button {
   grid-template-columns: minmax(0, 1.45fr) auto;
   align-items: start;
   gap: 10px 14px;
-  padding: 2px 4px 2px;
+  padding: 2px 4px 0;
 }
 
 .planning-3d-header h2 {
@@ -3684,7 +3783,7 @@ button {
 
 .planning-3d-header-actions .ghost-button,
 .planning-3d-header-actions .secondary-button {
-  min-height: 42px;
+  min-height: 40px;
   width: 100%;
 }
 
@@ -3699,7 +3798,7 @@ button {
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   align-items: stretch;
   gap: 8px 10px;
-  padding: 7px 9px;
+  padding: 8px 9px;
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.84);
   border: 1px solid rgba(47, 61, 50, 0.1);
@@ -3752,10 +3851,41 @@ button {
   min-height: 40px;
 }
 
+.planning-3d-quick-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.planning-3d-quick-chip {
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(47, 61, 50, 0.1);
+  background: rgba(255, 255, 255, 0.78);
+  box-shadow: 0 10px 24px rgba(22, 31, 27, 0.08);
+}
+
+.planning-3d-quick-chip span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.planning-3d-quick-chip strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+  line-height: 1.1;
+}
+
 .planning-3d-layout {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.48fr) minmax(280px, 320px);
+  grid-template-columns: minmax(0, 1.56fr) minmax(270px, 308px);
   gap: 8px;
   min-height: 0;
   height: 100%;
@@ -3809,6 +3939,10 @@ button {
   grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   padding: 6px 8px;
   border-radius: 18px;
+}
+
+.planning-3d-shell[data-panel="collapsed"] .planning-3d-quick-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .planning-3d-map.satellite-mode {
@@ -4012,7 +4146,7 @@ button {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 1fr);
   align-content: stretch;
-  gap: 8px;
+  gap: 10px;
   min-height: 0;
   height: 100%;
   z-index: 1;
@@ -4022,10 +4156,10 @@ button {
 
 .planning-3d-summary,
 .planning-3d-selection {
-  padding: 16px;
-  border-radius: 22px;
+  padding: 14px;
+  border-radius: 20px;
   border: 1px solid rgba(47, 61, 50, 0.1);
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(12px);
   box-shadow: 0 16px 34px rgba(22, 31, 27, 0.14);
   overflow: auto;
@@ -4565,6 +4699,10 @@ button {
     overflow: hidden;
   }
 
+  .entry-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .app-shell {
     padding: 12px;
   }
@@ -4624,7 +4762,7 @@ button {
   }
 
   .planning-3d-shell {
-    grid-template-rows: auto auto minmax(0, 1fr);
+    grid-template-rows: auto auto auto minmax(0, 1fr);
     height: calc(100vh - 12px);
     padding: 12px;
   }
@@ -4651,6 +4789,10 @@ button {
   .planning-3d-panel > .service-banner,
   .planning-3d-panel > .planning-3d-progress {
     grid-column: 1 / -1;
+  }
+
+  .planning-3d-quick-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .gps-sender-modal {
@@ -4788,6 +4930,10 @@ button {
 
   .planning-3d-layout {
     grid-template-rows: minmax(460px, 58vh) auto;
+  }
+
+  .planning-3d-quick-summary {
+    grid-template-columns: 1fr 1fr;
   }
 
   .planning-3d-panel {

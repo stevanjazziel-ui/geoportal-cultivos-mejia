@@ -2598,7 +2598,7 @@ const planning3dAreaCatalog = {
     id: "machachi",
     label: "Machachi",
     shortLabel: "Machachi",
-    subtitle: "Huellas reales de construcciones extruidas por n_piso, soporte catastral y base OpenStreetMap para lectura urbana en Machachi.",
+    subtitle: "Huellas reales, catastro y lectura volumetrica para validar implantacion en Machachi.",
     previewBuildingsPath: "./public-data/planning3d/buildings_machachi_preview.geojson",
     previewParcelsPath: "./public-data/planning3d/parcels_machachi_preview.geojson",
     buildingsPath: "./public-data/planning3d/buildings_orthophoto.geojson",
@@ -2619,7 +2619,7 @@ const planning3dAreaCatalog = {
     id: "cutuglagua",
     label: "Cutuglagua",
     shortLabel: "Cutuglagua",
-    subtitle: "Huellas reales de construcciones extruidas por n_piso, soporte catastral y base OpenStreetMap para lectura urbana en Cutuglagua.",
+    subtitle: "Huellas reales, catastro y lectura volumetrica para validar implantacion en Cutuglagua.",
     previewBuildingsPath: "./public-data/planning3d/buildings_cutuglagua_preview.geojson",
     previewParcelsPath: "./public-data/planning3d/parcels_cutuglagua_preview.geojson",
     buildingsPath: "./public-data/planning3d/buildings_cutuglagua.geojson",
@@ -2894,6 +2894,7 @@ const state = {
   fieldEvidenceHighlightType: "sector",
   territorialFocus: "planning",
   entryRoute: "agronomia",
+  pendingEntryAction: null,
   layerSelections: {
     agronomia: null,
     planificacion: null,
@@ -4674,6 +4675,7 @@ function cacheDom() {
   dom.loginOverlay = document.querySelector("#loginOverlay");
   dom.openAgronomyBtn = document.querySelector("#openAgronomyBtn");
   dom.openPlanningBtn = document.querySelector("#openPlanningBtn");
+  dom.openOperationsBtn = document.querySelector("#openOperationsBtn");
   dom.openFieldEvidenceBtn = document.querySelector("#openFieldEvidenceBtn");
   dom.appShell = document.querySelector("#appShell");
   dom.mapStage = document.querySelector(".map-stage");
@@ -4758,6 +4760,13 @@ function cacheDom() {
   dom.gpsSenderAreaCopy = document.querySelector("#gpsSenderAreaCopy");
   dom.gpsSenderOpenLocalBtn = document.querySelector("#gpsSenderOpenLocalBtn");
   dom.gpsSenderSatlocCard = document.querySelector("#gpsSenderSatlocCard");
+  dom.planningCommandCard = document.querySelector("#planningCommandCard");
+  dom.planningQuickAptitudeBtn = document.querySelector("#planningQuickAptitudeBtn");
+  dom.planningQuickRiskBtn = document.querySelector("#planningQuickRiskBtn");
+  dom.planningQuickMobilityBtn = document.querySelector("#planningQuickMobilityBtn");
+  dom.planningQuickWaterBtn = document.querySelector("#planningQuickWaterBtn");
+  dom.planningQuickStrategyBtn = document.querySelector("#planningQuickStrategyBtn");
+  dom.planningQuick3dBtn = document.querySelector("#planningQuick3dBtn");
   dom.runPlanningBtn = document.querySelector("#runPlanningBtn");
   dom.focusPlanningBtn = document.querySelector("#focusPlanningBtn");
   dom.clearPlanningBtn = document.querySelector("#clearPlanningBtn");
@@ -4882,6 +4891,7 @@ function cacheDom() {
   dom.planning3dProgress = document.querySelector("#planning3dProgress");
   dom.planning3dSummary = document.querySelector("#planning3dSummary");
   dom.planning3dSelection = document.querySelector("#planning3dSelection");
+  dom.planning3dQuickSummary = document.querySelector("#planning3dQuickSummary");
   dom.planning3dMap = document.querySelector("#planning3dMap");
   dom.planning3dSubtitle = document.querySelector("#planning3dSubtitle");
   dom.planning3dHeightScale = document.querySelector("#planning3dHeightScale");
@@ -4952,8 +4962,18 @@ function bootstrapApp() {
 }
 
 function bindUI() {
-  dom.openAgronomyBtn.addEventListener("click", () => enterPublicView("agronomia"));
-  dom.openPlanningBtn.addEventListener("click", () => enterPublicView("planificacion"));
+  dom.openAgronomyBtn.addEventListener("click", () => {
+    state.pendingEntryAction = null;
+    enterPublicView("agronomia");
+  });
+  dom.openPlanningBtn.addEventListener("click", () => {
+    state.pendingEntryAction = null;
+    enterPublicView("planificacion");
+  });
+  dom.openOperationsBtn?.addEventListener("click", () => {
+    state.pendingEntryAction = "operations";
+    enterPublicView("agronomia");
+  });
   dom.openFieldEvidenceBtn?.addEventListener("click", () => enterPublicView("evidencia"));
   dom.sidebarToggle.addEventListener("click", () => dom.sidebar.classList.add("open"));
   dom.sidebarClose.addEventListener("click", () => dom.sidebar.classList.remove("open"));
@@ -5197,6 +5217,12 @@ function bindUI() {
   });
   dom.openGpsBridgeBtn?.addEventListener("click", () => openGpsBridgePage());
   dom.openSatlocBridgeBtn?.addEventListener("click", () => openSatlocBridgePage());
+  dom.planningQuickAptitudeBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-aptitude"));
+  dom.planningQuickRiskBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-risk"));
+  dom.planningQuickMobilityBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-mobility"));
+  dom.planningQuickWaterBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-water"));
+  dom.planningQuickStrategyBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-strategy"));
+  dom.planningQuick3dBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-3d"));
   dom.openGpsGeofenceBtn?.addEventListener("click", () => dom.gpsGeofenceFileInput?.click());
   dom.gpsGeofenceFileInput?.addEventListener("change", handleGpsGeofenceFileSelection);
   dom.gpsGeofenceTolerance?.addEventListener("change", handleGpsGeofenceToleranceChange);
@@ -5968,8 +5994,11 @@ function applyRouteFromUrl() {
   const routeParam = params.get("route");
   const tabParam = params.get("tab");
   const viewerParam = params.get("viewer");
+  state.pendingEntryAction = routeParam === "operacion" ? "operations" : null;
   const route = routeParam === "planificacion"
     ? "planificacion"
+    : routeParam === "operacion"
+      ? "agronomia"
     : routeParam === "evidencia"
       ? "planificacion"
       : routeParam === "agronomia"
@@ -6000,6 +6029,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   syncEntryRouteUi(route);
 
   if (isPlanningRoute(route)) {
+    state.pendingEntryAction = null;
     state.territorialFocus = "planning";
     clearAgronomyMapContext();
     if (mapState.studyAreaLayer) {
@@ -6034,14 +6064,14 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
       dom.sidebarTitle.textContent = "Centro de decisiones territoriales";
     }
     if (dom.sidebarSubtitle) {
-      dom.sidebarSubtitle.textContent = "Aptitud, huella, agua, estrategia y 3D sobre el territorio.";
+      dom.sidebarSubtitle.textContent = "Copiloto territorial, estudios clave y validacion 3D en una sola ruta.";
     }
     if (dom.overlayMode) {
       dom.overlayMode.textContent = "Territorial";
     }
     updateMapSummary();
     window.setTimeout(() => {
-      focusPlanningModuleCard();
+      focusPlanningCommandCard();
     }, 120);
     return;
   }
@@ -6096,6 +6126,12 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   }
   clearPlanningModuleFocus();
   updateMapSummary();
+  if (state.pendingEntryAction === "operations") {
+    state.pendingEntryAction = null;
+    window.setTimeout(() => {
+      activateOperationsEntryUi();
+    }, 120);
+  }
 }
 
 function clearAgronomyMapContext() {
@@ -6188,6 +6224,22 @@ function focusGpsModuleCard() {
   focusModuleCard(dom.gpsCard);
 }
 
+function focusPlanningCommandCard() {
+  focusModuleCard(dom.planningCommandCard || dom.planningCard);
+}
+
+function activateOperationsEntryUi() {
+  openSidebarWorkingPanel("modulos");
+  if (state.activeWizard !== "Monitoreo") {
+    state.activeWizard = "Monitoreo";
+    setTextIfChanged(dom.overlayMode, state.activeWizard);
+    renderWizardAssistantState();
+    refreshActiveAnalysis({ silent: true });
+  }
+  focusGpsModuleCard();
+  setStatus("Seguimiento operativo listo para GPS, corredor KML y emision externa.");
+}
+
 function getRouteModuleCards() {
   return Array.from(document.querySelectorAll('.tab-panel[data-panel="modulos"] .module-card'))
     .filter((card) => !card.classList.contains("hidden"));
@@ -6207,6 +6259,7 @@ function getModuleCardLabel(card) {
     hydroNetworkCard: "Red hidrica",
     agroSuitabilityCard: "Aptitud cultivo",
     gpsCard: "GPS",
+    planningCommandCard: "Copiloto",
     planningCard: "Aptitud",
     planningResultsCard: "Resultados",
     territorialScenarioCard: "Escenarios",
@@ -6261,7 +6314,8 @@ function setModuleQuickNavActive(cardId = "") {
 function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
   if (isPlanningRoute(route)) {
     return {
-      workflowGuideCard: false,
+      workflowGuideCard: true,
+      planningCommandCard: false,
       planningCard: false,
       planningResultsCard: false,
       territorialScenarioCard: true,
@@ -6754,14 +6808,14 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   }
   if (dom.modulesSectionTitle) {
     dom.modulesSectionTitle.textContent = isPlanning
-      ? "Ruta territorial guiada"
+      ? "Copiloto territorial"
       : isEvidence
         ? "Evidencia territorial"
         : "Ruta agricola guiada";
   }
   if (dom.modulesSectionCopy) {
     dom.modulesSectionCopy.textContent = isPlanning
-      ? "Empieza por aptitud, huella, agua, estrategia o 3D."
+      ? "Empieza por copiloto, aptitud, riesgo, agua o visor 3D."
       : isEvidence
         ? "Ruta dedicada a quebradas, estaciones, areas sensibles, memoria historica y soporte tecnico de campo para volver mas precisa la lectura territorial."
         : `Empieza por escena, lote, agua, clima o GPS en ${getAgronomyAreaProfile().scopeLabel}.`;
@@ -14537,6 +14591,7 @@ function setPlanning3dStatus(message, tone = "loading") {
 function renderPlanning3dPanel() {
   if (!dom.planning3dAvailability) {
     renderPlanning3dProgress();
+    renderPlanning3dQuickSummary();
     return;
   }
   const areaProfile = getPlanning3dAreaProfile();
@@ -14566,10 +14621,10 @@ function renderPlanning3dPanel() {
   const stats = manifest.buildings?.stats || null;
   const usingPublishedRealData = !manifest.viaBackend && planning3dState.backendMode === "public";
   const backendCopy = manifest.viaBackend
-    ? `Backend local activo sobre ${areaProfile.label}: pisos y alturas reales leidos desde el DBF de construcciones.`
+    ? `Backend local activo: pisos y alturas reales leidos desde el DBF de construcciones.`
     : usingPublishedRealData
-      ? `Modo publicado con GeoJSON real: huellas de construcciones y catastro de ${areaProfile.label} servidas como capas publicas listas para una base urbana clara.`
-      : `Modo publicado para ${areaProfile.label}: si no activas server.ps1 el visor usa alturas estimadas y, si hace falta, una muestra 3D ligera para no bloquear la carga.`;
+      ? `Modo publicado con huellas y catastro reales listos para navegar.`
+      : `Modo ligero activo: mientras no corra server.ps1 el visor usa alturas estimadas para abrir mas rapido.`;
 
   if (dom.planning3dSubtitle) {
     setTextIfChanged(dom.planning3dSubtitle, areaProfile.subtitle);
@@ -14593,7 +14648,7 @@ function renderPlanning3dPanel() {
       </article>
       <article class="planning-3d-stat">
         <span>Base 3D</span>
-        <strong>${planning3dState.currentBase === "satellite" ? "OpenStreetMap" : "Claro urbano"}</strong>
+        <strong>${planning3dState.currentBase === "satellite" ? "Base urbana" : "Plano claro"}</strong>
       </article>
       <article class="planning-3d-stat">
         <span>Modo</span>
@@ -14613,6 +14668,44 @@ function renderPlanning3dPanel() {
   renderPlanning3dSummary();
   renderPlanning3dSelection();
   renderPlanning3dProgress();
+  renderPlanning3dQuickSummary();
+}
+
+function renderPlanning3dQuickSummary() {
+  if (!dom.planning3dQuickSummary) {
+    return;
+  }
+
+  const areaProfile = getPlanning3dAreaProfile();
+  const manifest = getPlanning3dManifest();
+  const buildingStatus = planning3dState.datasetStatus?.buildings || null;
+  const date = getPlanning3dSunDateTime();
+  const sunPosition = computePlanning3dSunPosition(date, areaProfile.center?.[1], areaProfile.center?.[0]);
+  const buildingLabel = buildingStatus?.loaded
+    ? formatPlanning3dCount(buildingStatus.loaded)
+    : manifest.buildings?.available
+      ? formatPlanning3dCount(manifest.buildings.recordCount)
+      : "Preparando";
+  const solarLabel = sunPosition?.daylight ? `${sunPosition.elevation}°` : "Sin sol";
+
+  setHtmlIfChanged(dom.planning3dQuickSummary, `
+    <article class="planning-3d-quick-chip">
+      <span>Nucleo</span>
+      <strong>${areaProfile.label}</strong>
+    </article>
+    <article class="planning-3d-quick-chip">
+      <span>Construcciones</span>
+      <strong>${buildingLabel}</strong>
+    </article>
+    <article class="planning-3d-quick-chip">
+      <span>Vista</span>
+      <strong>${planning3dState.viewMode === "orthographic" ? "Ortogonal" : "Volumen 3D"}</strong>
+    </article>
+    <article class="planning-3d-quick-chip">
+      <span>Sol</span>
+      <strong>${solarLabel}</strong>
+    </article>
+  `);
 }
 
 async function hydratePlanning3dManifest(force = false) {
@@ -17068,7 +17161,8 @@ function renderPlanning3dSummary(force = false) {
     dom.planning3dSummary.classList.remove("has-data");
     setTextIfChanged(dom.planning3dSummary, buildingStatus?.phase && buildingStatus.phase !== "idle"
       ? `Cargando visor 3D: ${getPlanning3dLoadLabel(buildingStatus)}${buildingStatus.total ? ` (${formatPlanning3dCount(buildingStatus.loaded)}/${formatPlanning3dCount(buildingStatus.total)})` : ""}.`
-      : "Aqui veras el estado de carga, el conteo de construcciones y la altura media disponible.");
+      : "Aqui veras el resumen operativo del nucleo 3D.");
+    renderPlanning3dQuickSummary();
     return;
   }
 
@@ -17133,42 +17227,41 @@ function renderPlanning3dSummary(force = false) {
     </div>
     <p class="planning-3d-copy-small">
       ${manifest.viaBackend
-        ? "El backend local esta usando el campo n_piso para definir alturas y mejorar la extrusion del tejido urbano."
+        ? "Alturas reales leidas desde el campo n_piso."
         : usingPublishedRealData
-          ? "El modo publicado esta usando huellas reales y pisos leidos del campo n_piso exportado a GeoJSON."
-          : "Estas alturas son aproximadas para no depender del backend local; al correr server.ps1 el visor usa el campo real n_piso."}
+          ? "Modo publicado con huellas reales y pisos publicados."
+          : "Modo ligero con alturas estimadas mientras no corra server.ps1."}
       ${buildingStatus?.phase === "preview"
-        ? ` Ya tienes una vista rapida activa mientras se completa el detalle total del tejido urbano.`
+        ? " Vista rapida activa mientras entra el detalle completo."
         : buildingStatus?.phase === "building"
-          ? ` El visor sigue refinando el detalle completo en segundo plano para no bloquear la navegacion inicial.`
+          ? " El detalle sigue afinandose en segundo plano."
           : ""}
       ${!planning3dState.parcelsVisible
-        ? " El catastro queda apagado al inicio para que la navegacion 3D abra mas fluida; puedes activarlo cuando necesites leer lotes."
+        ? " Catastro apagado al inicio para abrir mas fluido."
         : ""}
       ${planning3dState.viewMode === "orthographic"
-        ? " La vista actual esta ortogonal para cotejar huellas y trazado urbano; cambia a Vista 3D cuando quieras leer volumenes y perfil de calle."
-        : " La vista actual esta en perspectiva 3D para navegar volumenes, alturas y calles con mas claridad; puedes pasar a Vista ortogonal para cotejar huellas."}
+        ? " Vista ortogonal activa para cotejar huellas y trazado."
+        : " Vista volumen activa para leer alturas y perfil de calle."}
       ${planning3dState.visualReady
-        ? ` El lienzo visible ya esta activo con ${formatPlanning3dCount(visualSnapshot.visibleSceneCount, "0")} elementos de apoyo entre huellas, volumenes o marcadores.`
-        : " Si la escena tarda en dibujarse completa, el visor activa una recuperacion visual automatica con respaldo vectorial sin quitarte el control de la vista, sombras ni catastro."}
-      ${photoStatus
-        ? (photoStatus.indexing
-          ? ` ${photoStatus.message || "Las fotos se estan indexando en segundo plano para habilitar la galeria local."}`
-          : (photoStatus.available
-          ? ` El servicio local encontro ${formatPlanning3dCount(photoStatus.totalFiles)} fotos, con ${formatPlanning3dCount(photoStatus.geotaggedCount)} georreferenciadas.`
-          : ` ${photoStatus.message || "Sin acceso a fotos locales por ahora."}`))
-        : ""}
+        ? ` Lienzo visible con ${formatPlanning3dCount(visualSnapshot.visibleSceneCount, "0")} elementos de apoyo.`
+        : " Si el dibujo tarda, el visor activa una recuperacion visual automatica."}
+      ${photoStatus?.indexing
+        ? ` ${photoStatus.message || "Fotos georreferenciadas indexando en segundo plano."}`
+        : photoStatus?.available
+          ? ` ${formatPlanning3dCount(photoStatus.geotaggedCount)} fotos georreferenciadas disponibles.`
+          : ""}
       ${textureCatalog.derivedFromPhotos
-        ? ` Las fachadas del overlay SVG estan usando perfiles derivados de ${textureCatalog.sampledPhotos || textureCatalog.profiles.length} fotos reales.`
-        : " Mientras no haya analisis local de fotos, las fachadas usan un catalogo base de materiales urbanos."}
+        ? ` Fachadas derivadas de ${textureCatalog.sampledPhotos || textureCatalog.profiles.length} fotos reales.`
+        : " Fachadas usando catalogo base urbano."}
       ${sunPosition
         ? sunPosition.daylight
-          ? ` El asoleamiento esta evaluado para ${solarStamp}, con azimut ${sunPosition.azimuth}° y elevacion ${sunPosition.elevation}°; ahora mismo se proyectan ${formatPlanning3dCount(shadowCount, "0")} sombras visibles.`
-          : ` Para ${solarStamp} el sol queda bajo el horizonte local, por eso no se proyectan sombras en el visor.`
+          ? ` Sol ${solarStamp}: ${formatPlanning3dCount(shadowCount, "0")} sombras visibles.`
+          : ` Para ${solarStamp} no se proyectan sombras.`
         : ""}
-      ${candidateCount ? ` Hay ${candidateCount} sectores priorizados del analisis territorial visibles como nodos amarillos.` : ""}
+      ${candidateCount ? ` ${candidateCount} candidatos territoriales visibles.` : ""}
     </p>
   `);
+  renderPlanning3dQuickSummary();
 }
 
 function renderPlanning3dSelection(force = false) {
@@ -17185,7 +17278,7 @@ function renderPlanning3dSelection(force = false) {
   if (!feature) {
     dom.planning3dSelection.classList.add("empty-state");
     dom.planning3dSelection.classList.remove("has-data");
-    setTextIfChanged(dom.planning3dSelection, "Selecciona una construccion en el visor 3D para revisar altura, bloque y huella.");
+    setTextIfChanged(dom.planning3dSelection, "Selecciona una construccion para revisar altura, bloque y fotos cercanas.");
     return;
   }
 
@@ -17257,7 +17350,7 @@ function renderPlanning3dSelection(force = false) {
     </div>
     <p class="planning-3d-note">
       Fuente de altura: ${props.heightSource === "dbf" ? "campo n_piso del shape de construcciones" : "estimacion geometrica local"}.
-      La extrusion usa la huella real del shape sobre la base OpenStreetMap y el catastro. Las fotos se buscan por cercania al centroide del edificio usando el indice GPS local.
+      La extrusion usa huella real, base urbana y catastro. Las fotos se vinculan por cercania al centroide del edificio.
     </p>
     <section class="planning-3d-photo-section">
       <div class="planning-3d-photo-head">
@@ -17593,7 +17686,7 @@ async function openPlanning3dViewer() {
   }
   syncPlanning3dBaseButtons();
   syncPlanning3dViewButtons();
-  setPlanning3dStatus("Preparando visualizador 3D urbano con vista rapida inicial...", "loading");
+  setPlanning3dStatus("Preparando visor 3D con vista inicial...", "loading");
   setPlanning3dDatasetStatus("buildings", {
     phase: "fetching",
     loaded: 0,

@@ -96,9 +96,14 @@
               <strong>Territorio y equipamientos</strong>
               <span>Aptitud, huella, riesgo, movilidad, estrategia y visor 3D para decisiones territoriales.</span>
             </button>
+            <button id="openOperationsBtn" class="entry-option operations" type="button">
+              <span class="entry-eyebrow">Ruta 3</span>
+              <strong>Operacion y seguimiento</strong>
+              <span>GPS en tiempo real, corredores KML, telemetria y control operativo para campo, dron o aeronave.</span>
+            </button>
           </div>
           <p class="login-note">
-            Ambos accesos entran como usuario publico. Puedes cambiar de ruta luego sin salir del visor.
+            Los tres accesos entran como usuario publico. Puedes cambiar de ruta luego sin salir del visor.
           </p>
         </div>
       </div>
@@ -144,7 +149,7 @@
         </div>
         <div class="user-pill">
           <span class="status-dot"></span>
-            Usuario publico · v20260501-1
+            Usuario publico | v20260501-1
         </div>
       </div>
     </header>
@@ -581,6 +586,53 @@
               </p>
             </article>
 
+            <article id="planningCommandCard" class="module-card planning-card planning-command-card hidden" data-module-track="planificacion">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Copiloto territorial</p>
+                  <h3>Empieza por una decision, no por una lista larga</h3>
+                </div>
+              </div>
+              <p class="module-copy">
+                Lanza la lectura principal y abre solo el bloque que necesitas para suelo, riesgo, movilidad, agua, estrategia o validacion 3D.
+              </p>
+              <div class="planning-command-grid">
+                <button id="planningQuickAptitudeBtn" class="planning-command-button primary" type="button">
+                  <span class="planning-command-step">1</span>
+                  <strong>Aptitud base</strong>
+                  <span>Suelo apto y candidatos</span>
+                </button>
+                <button id="planningQuickRiskBtn" class="planning-command-button" type="button">
+                  <span class="planning-command-step">2</span>
+                  <strong>Riesgo</strong>
+                  <span>Restricciones y contencion</span>
+                </button>
+                <button id="planningQuickMobilityBtn" class="planning-command-button" type="button">
+                  <span class="planning-command-step">3</span>
+                  <strong>Movilidad</strong>
+                  <span>Cobertura y tiempos</span>
+                </button>
+                <button id="planningQuickWaterBtn" class="planning-command-button" type="button">
+                  <span class="planning-command-step">4</span>
+                  <strong>Agua</strong>
+                  <span>Oferta, demanda y resiliencia</span>
+                </button>
+                <button id="planningQuickStrategyBtn" class="planning-command-button" type="button">
+                  <span class="planning-command-step">5</span>
+                  <strong>FODA + CAME</strong>
+                  <span>Diagnostico y accion</span>
+                </button>
+                <button id="planningQuick3dBtn" class="planning-command-button accent" type="button">
+                  <span class="planning-command-step">6</span>
+                  <strong>Validar en 3D</strong>
+                  <span>Volumen, sombra y lote</span>
+                </button>
+              </div>
+              <div class="planning-command-note">
+                Flujo recomendado: aptitud, riesgo, estrategia y cierre 3D.
+              </div>
+            </article>
+
             <article id="planningCard" class="module-card planning-card hidden" data-module-track="planificacion">
               <div class="module-head">
                 <div>
@@ -590,9 +642,7 @@
                 <button id="runPlanningBtn" class="secondary-button" type="button">Evaluar aptitud</button>
               </div>
               <p class="module-copy">
-                Cruza crecimiento de la mancha urbana, accesibilidad, pendiente, riesgo hidrico,
-                deficit de servicios y compatibilidad de ocupacion para ubicar suelo apto para VIS,
-                escuelas, hospitales y equipamientos barriales.
+                Cruza ocupacion, acceso, pendiente, riesgo y servicios para ubicar suelo apto para VIS, escuelas, salud y equipamientos.
               </p>
               <div class="planning-toolbar">
                 <label class="field">
@@ -639,10 +689,10 @@
                 </label>
               </div>
               <p id="planningSourceNote" class="service-note">
-                Sentinel-2 urbano es la base recomendada para expansion de mancha urbana y lectura de cobertura a 10 m.
+                Base recomendada para expansion y cobertura urbana a 10 m.
               </p>
               <div id="planningVariableMatrix" class="planning-variable-matrix">
-                Aqui apareceran las variables territoriales que aporta la fuente satelital seleccionada.
+                Aqui se activan las variables que entran al cruce territorial.
               </div>
             </article>
 
@@ -655,8 +705,7 @@
                 <button id="runHydrologyBtn" class="secondary-button" type="button">Simular escenarios</button>
               </div>
               <p class="module-copy">
-                Replica metodologica para Mejia inspirada en el estudio de disponibilidad hidrica del DMQ:
-                cubo hidroclimatico, oferta-demanda, resiliencia urbana y escenarios climaticos visibles sobre el geoportal.
+                Simula oferta, demanda y resiliencia hidrica para Mejia bajo escenarios climaticos comparables.
               </p>
               <div class="planning-toolbar hydrology-toolbar">
                 <label class="field">
@@ -698,19 +747,19 @@
                 </label>
               </div>
               <p id="hydrologySourceNote" class="service-note">
-                La simulacion sintetiza cubo hidroclimatico, balance hidrico, demanda y resiliencia urbana por subzonas de Mejia.
+                Balance hidrico y resiliencia por subzonas de Mejia.
               </p>
               <div id="hydrologyResults" class="metrics-grid empty-state">
-                Ejecuta el estudio hidrico para ver oferta, demanda, balance, resiliencia y prioridades territoriales.
+                Ejecuta para ver oferta, demanda, balance y prioridad territorial.
               </div>
               <div id="hydrologyDrivers" class="planning-pills empty-state">
-                Aqui apareceran los pilares metodologicos activos del estudio hidrico.
+                Aqui se resumen los pilares activos del estudio.
               </div>
               <div id="hydrologyTimeline" class="hydrology-timeline empty-state">
-                La serie prospectiva mostrara como cambia el balance hidrico de Mejia bajo cada escenario.
+                La serie mostrara como cambia el balance hidrico por escenario.
               </div>
               <div id="hydrologySectors" class="hydrology-sectors empty-state">
-                Aqui apareceran las subzonas hidricas, sus deficits o superavits y las medidas recomendadas.
+                Aqui se listan subzonas, deficits y medidas sugeridas.
               </div>
               <div class="action-row analysis-actions">
                 <button id="focusHydrologyBtn" class="secondary-button" type="button">Centrar estudio</button>
@@ -727,17 +776,16 @@
                 <button id="runMobilityBtn" class="secondary-button" type="button">Evaluar movilidad</button>
               </div>
               <p class="module-copy">
-                Mide accesibilidad territorial, conectividad a vias y cercania funcional a escuelas, salud y
-                equipamientos para revelar sectores bien servidos y brechas de movilidad.
+                Mide conectividad, tiempos y cercania a servicios para revelar sectores bien servidos y brechas de acceso.
               </p>
               <div id="mobilityResults" class="metrics-grid empty-state">
-                Ejecuta el estudio para ver cobertura funcional, tiempos de acceso y sectores criticos de conectividad.
+                Ejecuta para ver cobertura funcional, tiempos de acceso y sectores criticos.
               </div>
               <div id="mobilitySummary" class="territorial-readout empty-state">
-                Aqui apareceran la lectura de cobertura, el tiempo estimado a servicios y la movilidad dominante del ambito.
+                Aqui aparece la lectura de cobertura y el tiempo estimado a servicios.
               </div>
               <div id="mobilitySectors" class="hydrology-sectors empty-state">
-                Aqui apareceran los sectores con mejor y peor accesibilidad para centrar la intervencion territorial.
+                Aqui se ordenan sectores con mejor y peor accesibilidad.
               </div>
               <div class="action-row analysis-actions">
                 <button id="focusMobilityBtn" class="secondary-button" type="button">Centrar movilidad</button>
@@ -754,17 +802,16 @@
                 <button id="runRiskBtn" class="secondary-button" type="button">Evaluar riesgo</button>
               </div>
               <p class="module-copy">
-                Cruza pendiente, drenajes, presion de ocupacion, restricciones y seguridad hidrica para delimitar
-                sectores criticos, amenazas dominantes y franjas de contencion prioritaria.
+                Cruza pendiente, drenaje, ocupacion y restricciones para delimitar sectores criticos y franjas de contencion.
               </p>
               <div id="riskResults" class="metrics-grid empty-state">
-                Ejecuta el estudio para ver area critica, drivers de riesgo y sectores con necesidad de contencion.
+                Ejecuta para ver area critica, drivers de riesgo y sectores con contencion prioritaria.
               </div>
               <div id="riskDrivers" class="planning-pills empty-state">
-                Aqui apareceran los drivers compuestos que explican la peligrosidad y exposicion territorial.
+                Aqui se resumen los drivers de peligrosidad y exposicion.
               </div>
               <div id="riskSectors" class="land-change-sectors empty-state">
-                Aqui apareceran los sectores criticos, su amenaza dominante y la accion territorial recomendada.
+                Aqui se listan sectores criticos, amenaza dominante y accion sugerida.
               </div>
               <div class="action-row analysis-actions">
                 <button id="focusRiskBtn" class="secondary-button" type="button">Centrar riesgo</button>
@@ -781,9 +828,7 @@
                 <button id="runLandChangeBtn" class="secondary-button" type="button">Analizar huella</button>
               </div>
               <p class="module-copy">
-                Replica metodologica para Mejia inspirada en estudios de huella urbana y transformacion del suelo rural:
-                cortes 2010, 2016 y 2022, proyeccion 2030, presion sobre borde agricola y lectura preventiva
-                de corredores y quebradas.
+                Reconstruye la huella urbana, la transformacion del suelo rural y la presion sobre el borde agricola.
               </p>
               <div class="planning-toolbar land-change-toolbar">
                 <label class="field">
@@ -826,22 +871,22 @@
                 </label>
               </div>
               <p id="landChangeSourceNote" class="service-note">
-                La simulacion sintetiza huella urbana 2010-2016-2022, transformacion de suelo rural y riesgo territorial.
+                Serie 2010, 2016 y 2022 con lectura prospectiva al 2030.
               </p>
               <div id="landChangeDoctrine" class="risk-doctrine empty-state">
-                Aqui apareceran los principios de prevencion territorial y manejo del riesgo para interpretar la huella urbana.
+                Aqui se resumen los principios de prevencion para interpretar la huella.
               </div>
               <div id="landChangeResults" class="metrics-grid empty-state">
-                Ejecuta el estudio para ver huella urbana, suelo rural transformado, poblacion estimada y presion territorial.
+                Ejecuta para ver huella urbana, suelo transformado y presion territorial.
               </div>
               <div id="landChangeDrivers" class="planning-pills empty-state">
-                Aqui apareceran los componentes metodologicos activos del estudio de transformacion del suelo.
+                Aqui se listan los componentes activos del estudio.
               </div>
               <div id="landChangeTimeline" class="land-change-timeline empty-state">
-                La serie temporal mostrara el cambio de huella urbana entre 2010, 2016, 2022 y la proyeccion 2030.
+                La serie mostrara el cambio 2010, 2016, 2022 y la proyeccion 2030.
               </div>
               <div id="landChangeSectors" class="land-change-sectors empty-state">
-                Aqui apareceran los hotspots de transformacion rural, riesgo y ocupacion territorial para Mejia.
+                Aqui se listan hotspots de transformacion rural, riesgo y ocupacion.
               </div>
               <div class="action-row analysis-actions">
                 <button id="focusLandChangeBtn" class="secondary-button" type="button">Centrar estudio</button>
@@ -858,21 +903,19 @@
                 <button id="runFodaCameBtn" class="secondary-button" type="button">Construir estrategia</button>
               </div>
               <p class="module-copy">
-                Convierte accesibilidad, servicios, huella urbana, riesgo y resiliencia en una lectura estrategica
-                por fortalezas, oportunidades, debilidades y amenazas, y la traduce a acciones de corregir,
-                afrontar, mantener y explotar sobre zonas concretas del territorio.
+                Convierte acceso, servicios, huella, riesgo y resiliencia en lectura estrategica y acciones por zona.
               </p>
               <div id="fodaCameResults" class="metrics-grid empty-state">
-                Ejecuta el modulo para generar indicadores espaciales, diagnostico FODA y zonas estrategicas de intervencion.
+                Ejecuta para generar diagnostico FODA y zonas estrategicas.
               </div>
               <div id="fodaCameSwot" class="territorial-sector-sheets empty-state">
-                Aqui apareceran fortalezas, oportunidades, debilidades y amenazas sintetizadas por zona.
+                Aqui se sintetizan fortalezas, oportunidades, debilidades y amenazas por zona.
               </div>
               <div id="fodaCameStrategies" class="territorial-alerts-panel empty-state">
-                Aqui apareceran las estrategias CAME y las acciones territoriales por categoria.
+                Aqui se activan estrategias CAME y acciones por categoria.
               </div>
               <div id="fodaCameLayout" class="territorial-export-panel empty-state">
-                Aqui apareceran la interpretacion, conclusion, recomendacion y el layout sugerido para exportar en PNG o PDF.
+                Aqui sale interpretacion, conclusion, recomendacion y layout de exportacion.
               </div>
               <div class="action-row analysis-actions">
                 <button id="focusFodaCameBtn" class="secondary-button" type="button">Centrar zonas</button>
@@ -889,17 +932,16 @@
                 <button id="focusPlanningBtn" class="secondary-button" type="button">Centrar candidatos</button>
               </div>
               <p class="module-copy">
-                Revisa los puntajes de aptitud, la ponderacion activa y los sectores recomendados
-                para implantar vivienda social, escuelas, hospitales y equipamientos barriales.
+                Revisa puntajes de aptitud, ponderacion activa y sectores recomendados para implantar equipamientos.
               </p>
               <div id="planningResults" class="metrics-grid empty-state">
-                Ejecuta el modulo para obtener celdas aptas y candidatos priorizados.
+                Ejecuta para obtener celdas aptas y candidatos priorizados.
               </div>
               <div id="planningWeights" class="planning-pills empty-state">
-                La ponderacion se ajusta automaticamente segun el tipo de equipamiento, la fuente satelital y el escenario de crecimiento.
+                La ponderacion se ajusta segun equipamiento, fuente y escenario.
               </div>
               <div id="planningCandidates" class="planning-candidates empty-state">
-                Aqui apareceran los sectores recomendados para implantacion territorial.
+                Aqui aparecen los sectores recomendados para implantacion.
               </div>
               <div class="action-row analysis-actions">
                 <button id="clearPlanningBtn" class="ghost-button" type="button">Limpiar analisis</button>
@@ -914,11 +956,10 @@
                 </div>
               </div>
               <p class="module-copy">
-                Contrasta escenarios de aptitud, huella urbana y seguridad hidrica para ver que cambia
-                cuando Mejia contiene, acompasa o expande su ocupacion.
+                Contrasta aptitud, huella y seguridad hidrica para ver que cambia entre escenarios.
               </p>
               <div id="territorialScenarioCompare" class="scenario-compare empty-state">
-                Ejecuta los modulos territoriales para ver el comparador grafico de escenarios.
+                Ejecuta estudios territoriales para ver el comparador de escenarios.
               </div>
             </article>
 
@@ -930,8 +971,7 @@
                 </div>
               </div>
               <p class="module-copy">
-                Convierte el analisis en delimitaciones operativas: restricciones reales, cobertura de servicios
-                y lectura solar para apoyar implantacion y ordenamiento.
+                Convierte el analisis en restricciones, cobertura y lectura solar para apoyar implantacion.
               </p>
               <div class="planning-toolbar territorial-solar-toolbar">
                 <label class="field">
@@ -944,7 +984,7 @@
                 </label>
               </div>
               <div id="territorialReadout" class="territorial-readout empty-state">
-                Ejecuta la planificacion territorial para ver restricciones, cobertura y comportamiento solar sobre el suelo candidato.
+                Ejecuta para ver restricciones, cobertura y lectura solar sobre el suelo candidato.
               </div>
             </article>
 
@@ -956,17 +996,16 @@
                 </div>
               </div>
               <p class="module-copy">
-                Resume el estado territorial, prepara fichas operativas por sector y genera salidas para compartir
-                escenarios, candidatos y capas de soporte.
+                Resume el estado territorial, prepara fichas por sector y genera salidas para compartir.
               </p>
               <div id="territorialDecisionBoard" class="territorial-decision-board empty-state">
-                Ejecuta los estudios territoriales para construir el semaforo integrado de aptitud, riesgo y resiliencia.
+                Ejecuta los estudios para construir el semaforo integrado.
               </div>
               <div id="territorialSectorSheets" class="territorial-sector-sheets empty-state">
-                Aqui apareceran fichas tecnicas por candidato, hotspot de huella y sector hidrico prioritario.
+                Aqui aparecen fichas por candidato, hotspot de huella y sector hidrico.
               </div>
               <div id="territorialExportPanel" class="territorial-export-panel empty-state">
-                Los exportables tecnicos se activaran cuando haya resultados territoriales disponibles.
+                Los exportables se activan cuando haya resultados disponibles.
               </div>
             </article>
 
@@ -978,11 +1017,10 @@
                 </div>
               </div>
               <p class="module-copy">
-                Reune alertas operativas sobre ocupacion en quebradas, deficit de servicios,
-                tension hidrica y sectores que requieren contencion o intervencion inmediata.
+                Reune alertas sobre ocupacion, deficit de servicios, tension hidrica y sectores que requieren contencion.
               </p>
               <div id="territorialAlertsPanel" class="territorial-alerts-panel empty-state">
-                Ejecuta los estudios territoriales para activar alertas y prioridades de seguimiento.
+                Ejecuta los estudios para activar alertas y prioridades de seguimiento.
               </div>
             </article>
 
@@ -995,15 +1033,13 @@
                 <button id="openPlanning3dBtn" class="secondary-button" type="button">Abrir visor 3D</button>
               </div>
               <p class="module-copy">
-                Explora construcciones, catastro y candidatos en una vista 3D. En publicado queda visible
-                como modulo territorial y, si ejecutas <code>server.ps1</code>, suma alturas reales y fotos georreferenciadas.
+                Explora construcciones, catastro y candidatos en una vista 3D lista para validar implantacion, volumen y sombra.
               </p>
               <div id="planning3dAvailability" class="planning-3d-availability empty-state">
                 Verificando disponibilidad de shapes y metadata 3D...
               </div>
               <p class="service-note">
-                GitHub Pages publica el visor y la interfaz. Para usar shapes completos, DBF y la carpeta
-                de fotos local, ejecuta <code>powershell -ExecutionPolicy Bypass -File .\server.ps1</code>.
+                Para alturas reales, DBF y fotos locales, ejecuta <code>powershell -ExecutionPolicy Bypass -File .\server.ps1</code>.
               </p>
               <div class="action-row analysis-actions">
                 <button id="reloadPlanning3dBtn" class="ghost-button" type="button">Actualizar shapes</button>
@@ -1119,15 +1155,15 @@
       <header class="planning-3d-header">
         <div>
           <p class="overlay-kicker">Planificacion territorial</p>
-          <h2 id="planning3dTitle">Visualizador 3D urbano</h2>
+          <h2 id="planning3dTitle">Centro 3D urbano</h2>
           <p id="planning3dSubtitle" class="planning-3d-subtitle">
-            Huellas reales de construcciones extruidas por n_piso, soporte catastral y base urbana clara para lectura espacial tridimensional.
+            Huellas reales, catastro y lectura volumetrica para validar implantacion sobre tejido urbano.
           </p>
         </div>
         <div class="planning-3d-header-actions">
-          <button id="planning3dPerspectiveBtn" class="ghost-button" type="button">Vista 3D</button>
+          <button id="planning3dPerspectiveBtn" class="ghost-button" type="button">Vista volumen</button>
           <button id="planning3dOrthographicBtn" class="ghost-button" type="button">Vista ortogonal</button>
-          <button id="planning3dPanelToggleBtn" class="ghost-button active" type="button" aria-pressed="true">Mostrar panel</button>
+          <button id="planning3dPanelToggleBtn" class="ghost-button active" type="button" aria-pressed="true">Panel</button>
           <button id="planning3dResetViewBtn" class="ghost-button" type="button">Recentrar</button>
           <button id="planning3dCloseBtn" class="secondary-button" type="button">Cerrar</button>
         </div>
@@ -1135,8 +1171,8 @@
 
       <div class="planning-3d-toolbar">
         <div class="planning-3d-switch" role="group" aria-label="Mapa base 3D">
-          <button id="planning3dSatelliteBtn" class="base-button active" type="button" data-planning-base="satellite">OpenStreetMap</button>
-          <button id="planning3dLightBtn" class="base-button" type="button" data-planning-base="light">Claro</button>
+          <button id="planning3dSatelliteBtn" class="base-button active" type="button" data-planning-base="satellite">Base urbana</button>
+          <button id="planning3dLightBtn" class="base-button" type="button" data-planning-base="light">Plano claro</button>
         </div>
         <label class="planning-3d-check">
           <input id="planning3dBuildingsToggle" type="checkbox" checked>
@@ -1174,11 +1210,30 @@
         </label>
       </div>
 
+      <div id="planning3dQuickSummary" class="planning-3d-quick-summary">
+        <article class="planning-3d-quick-chip">
+          <span>Nucleo</span>
+          <strong>Machachi</strong>
+        </article>
+        <article class="planning-3d-quick-chip">
+          <span>Vista</span>
+          <strong>3D</strong>
+        </article>
+        <article class="planning-3d-quick-chip">
+          <span>Construcciones</span>
+          <strong>Preparando</strong>
+        </article>
+        <article class="planning-3d-quick-chip">
+          <span>Sol</span>
+          <strong>Sin lectura</strong>
+        </article>
+      </div>
+
       <div class="planning-3d-layout">
         <div id="planning3dMap" class="planning-3d-map" aria-label="Mapa 3D de construcciones"></div>
         <aside class="planning-3d-panel">
           <div id="planning3dStatus" class="service-banner loading">
-            Preparando datasets 3D...
+            Preparando visor 3D...
           </div>
           <div
             id="planning3dProgress"
@@ -1196,13 +1251,13 @@
             <div class="planning-3d-progress-track">
               <span style="width: 0%"></span>
             </div>
-            <p class="planning-3d-progress-copy">Preparando la vista inicial del visor.</p>
+            <p class="planning-3d-progress-copy">Montando la primera vista operativa.</p>
           </div>
           <div id="planning3dSummary" class="planning-3d-summary empty-state">
-            Aqui veras el estado de carga, el conteo de construcciones y la altura media disponible.
+            Aqui veras el resumen operativo del nucleo 3D.
           </div>
           <div id="planning3dSelection" class="planning-3d-selection empty-state">
-            Selecciona una construccion en el visor 3D para revisar altura, bloque y huella.
+            Selecciona una construccion para revisar altura, bloque y fotos cercanas.
           </div>
         </aside>
       </div>
