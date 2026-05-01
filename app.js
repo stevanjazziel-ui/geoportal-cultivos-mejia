@@ -4,6 +4,8 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260501-2";
+
 const layerCatalog = [
   {
     group: "Contexto territorial",
@@ -4590,8 +4592,13 @@ function getSceneLayerStatusLabel(imageOrSensor = null, layerKind = state.sceneL
 
 document.addEventListener("DOMContentLoaded", () => {
   releaseGeoportalFromGpsBridgeServiceWorker();
-  cacheDom();
-  bootstrapApp();
+  checkGeoportalVersionFreshness().then((redirecting) => {
+    if (redirecting) {
+      return;
+    }
+    cacheDom();
+    bootstrapApp();
+  });
 });
 
 function releaseGeoportalFromGpsBridgeServiceWorker() {
@@ -4623,6 +4630,40 @@ function releaseGeoportalFromGpsBridgeServiceWorker() {
         .filter((key) => key.startsWith("geoportal-gps-bridge"))
         .forEach((key) => caches.delete(key).catch(() => {}));
     }).catch(() => {});
+  }
+}
+
+async function checkGeoportalVersionFreshness() {
+  try {
+    const response = await fetch(`./version.json?ts=${Date.now()}`, {
+      cache: "no-store",
+      headers: {
+        Accept: "application/json",
+      },
+    });
+    if (!response.ok) {
+      return;
+    }
+
+    const payload = await response.json();
+    const remoteVersion = String(payload?.version || "").trim();
+    if (!remoteVersion || remoteVersion === APP_VERSION) {
+      return false;
+    }
+
+    const reloadKey = `geoportal-version-refresh:${remoteVersion}`;
+    if (window.sessionStorage?.getItem(reloadKey) === "done") {
+      return false;
+    }
+
+    window.sessionStorage?.setItem(reloadKey, "done");
+    const nextUrl = new URL(window.location.href);
+    nextUrl.searchParams.set("v", remoteVersion);
+    window.location.replace(nextUrl.toString());
+    return true;
+  } catch (error) {
+    // Si la verificacion falla, el geoportal sigue cargando normalmente.
+    return false;
   }
 }
 
@@ -7208,6 +7249,15 @@ function initializeMap() {
   });
 
   mapState.map.on("zoomend", maybeRefreshScenePreviewQuality);
+
+  if (!mapState.resizeObserver && typeof ResizeObserver !== "undefined") {
+    mapState.resizeObserver = new ResizeObserver(() => {
+      queueMapLayoutRefresh();
+    });
+    [dom.mapStage, dom.sidebar, dom.appShell].filter(Boolean).forEach((node) => {
+      mapState.resizeObserver.observe(node);
+    });
+  }
 
   dom.overlayMode.textContent = state.activeWizard;
   updateLayerVisibility();
