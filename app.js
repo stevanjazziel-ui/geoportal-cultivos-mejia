@@ -72,6 +72,11 @@ const layerCatalog = [
   },
 ];
 
+const routeDefaultLayerIds = {
+  agronomia: ["lotes", "estaciones", "rios", "acequias", "quebradas"],
+  planificacion: ["manchaUrbana", "equipamientos", "hidrozonas"],
+};
+
 const hydroFeatureCatalog = {
   rios: [
     lineFeature("Rio San Pedro", [
@@ -2889,6 +2894,10 @@ const state = {
   fieldEvidenceHighlightType: "sector",
   territorialFocus: "planning",
   entryRoute: "agronomia",
+  layerSelections: {
+    agronomia: null,
+    planificacion: null,
+  },
   agronomyFocus: "imagery",
   agroSuitabilityCropId: "papa",
   agronomyOutputs: {
@@ -3604,7 +3613,7 @@ function syncAgronomyAreaUi() {
 
   if (state.entryRoute === "agronomia") {
     if (dom.sidebarSubtitle) {
-      dom.sidebarSubtitle.textContent = `Empieza por la pregunta de campo: escena, diagnostico, clima, estaciones o seguimiento operativo en ${getAgronomyAreaProfile().scopeLabel}.`;
+      dom.sidebarSubtitle.textContent = `Escena, lote, agua, clima y GPS sobre ${getAgronomyAreaProfile().scopeLabel}.`;
     }
   }
 }
@@ -3704,7 +3713,7 @@ async function setAgronomyArea(areaId = state.agronomyAreaId, options = {}) {
   if (hadInamhiLiveReadout) {
     await runInamhiLiveAnalysis(true);
   }
-  if (hadHydroReadout) {
+  if (hadHydroReadout || (state.entryRoute === "agronomia" && options.autoHydro !== false)) {
     await runHydroNetworkAnalysis(true);
   }
   if (hadSuitabilityReadout) {
@@ -3712,7 +3721,7 @@ async function setAgronomyArea(areaId = state.agronomyAreaId, options = {}) {
   }
 
   if (!options.silent && changed) {
-    setStatus(`Ambito agronomico ajustado a ${getAgronomyAreaProfile().scopeLabel}. Ya puedes consultar escenas, lotes demo y analisis sobre esta zona.`);
+      setStatus(`Ambito agronomico ajustado a ${getAgronomyAreaProfile().scopeLabel}. Ya puedes consultar escenas, lotes demo y analisis.`);
   }
 
   return changed;
@@ -4620,7 +4629,7 @@ const workflowGuideCatalog = {
   agronomia: {
     badge: "Campo guiado",
     title: "Ruta guiada para decidir en campo",
-    defaultCopy: "Empieza por una pregunta concreta: que lote revisar, que imagen usar, como leer el agua productiva, que cultivo conviene y como seguir la operacion en tiempo real.",
+    defaultCopy: "Escena, lote, agua, clima y operacion en una sola ruta.",
     steps: [
       { id: "scene", title: "Elegir zona y escena", pending: "Selecciona ambito e imagen satelital." },
       { id: "diagnosis", title: "Diagnosticar el lote", pending: "Usa lote demo o dibuja un poligono." },
@@ -4639,7 +4648,7 @@ const workflowGuideCatalog = {
   planificacion: {
     badge: "Decision guiada",
     title: "Ruta guiada para decidir donde intervenir",
-    defaultCopy: "Primero entendemos aptitud base, despues cobertura y movilidad, luego riesgo y agua, despues armamos estrategia y por ultimo validamos el sector en 3D.",
+    defaultCopy: "Aptitud, cobertura, riesgo, agua, estrategia y validacion 3D.",
     steps: [
       { id: "aptitude", title: "Aptitud base", pending: "Corre la primera lectura multivariable." },
       { id: "mobility", title: "Movilidad y accesibilidad", pending: "Mide cobertura, tiempos y conectividad." },
@@ -5150,8 +5159,8 @@ function bindUI() {
     return runModuleAction(dom.runInamhiLiveBtn, "Leyendo en vivo...", () => runInamhiLiveAnalysis());
   });
   dom.runHydroNetworkBtn?.addEventListener("click", () => {
-    setModulePendingState(dom.hydroNetworkResults, "Midiendo rios, acequias y quebradas del ambito agricola...", [
-      { target: dom.hydroNetworkVisual, message: "Preparando la red hidrica, las prioridades de riego y las franjas de proteccion..." },
+    setModulePendingState(dom.hydroNetworkResults, "Leyendo rios, acequias y quebradas...", [
+      { target: dom.hydroNetworkVisual, message: "Preparando red, prioridad y franjas de proteccion..." },
     ]);
     return runModuleAction(dom.runHydroNetworkBtn, "Leyendo red...", () => runHydroNetworkAnalysis());
   });
@@ -6025,7 +6034,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
       dom.sidebarTitle.textContent = "Centro de decisiones territoriales";
     }
     if (dom.sidebarSubtitle) {
-      dom.sidebarSubtitle.textContent = "Empieza por la decision y no por la capa: crecimiento urbano, aptitud, agua, estrategia y validacion 3D sobre el territorio.";
+      dom.sidebarSubtitle.textContent = "Aptitud, huella, agua, estrategia y 3D sobre el territorio.";
     }
     if (dom.overlayMode) {
       dom.overlayMode.textContent = "Territorial";
@@ -6062,6 +6071,8 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   }
   if (state.agronomyOutputs.hydroNetwork) {
     renderHydroNetworkOverlay(state.agronomyOutputs.hydroNetwork);
+  } else {
+    runHydroNetworkAnalysis(true);
   }
   if (state.agronomyOutputs.agroSuitability) {
     renderAgroSuitabilityOverlay(state.agronomyOutputs.agroSuitability);
@@ -6078,7 +6089,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     dom.sidebarTitle.textContent = "Centro de decisiones agronomicas";
   }
   if (dom.sidebarSubtitle) {
-    dom.sidebarSubtitle.textContent = `Empieza por la pregunta de campo: escena, diagnostico, clima, estaciones o seguimiento operativo en ${getAgronomyAreaProfile().scopeLabel}.`;
+    dom.sidebarSubtitle.textContent = `Escena, lote, agua, clima y GPS sobre ${getAgronomyAreaProfile().scopeLabel}.`;
   }
   if (dom.overlayMode) {
     dom.overlayMode.textContent = state.activeWizard;
@@ -6750,10 +6761,10 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   }
   if (dom.modulesSectionCopy) {
     dom.modulesSectionCopy.textContent = isPlanning
-      ? "Empieza por una decision territorial concreta: donde crecer, donde proteger, donde invertir y como validar la propuesta en 3D."
+      ? "Empieza por aptitud, huella, agua, estrategia o 3D."
       : isEvidence
         ? "Ruta dedicada a quebradas, estaciones, areas sensibles, memoria historica y soporte tecnico de campo para volver mas precisa la lectura territorial."
-        : `Empieza por una tarea de campo concreta: revisar vigor, relieve, clima, estaciones o seguimiento operativo en ${getAgronomyAreaProfile().scopeLabel}.`;
+        : `Empieza por escena, lote, agua, clima o GPS en ${getAgronomyAreaProfile().scopeLabel}.`;
   }
   if (dom.modeFooterPill) {
     dom.modeFooterPill.textContent = isPlanning
@@ -6776,6 +6787,10 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
     dom.agronomyModuleCards.forEach((card) => {
       card.classList.toggle("hidden", isTerritorial);
     });
+  }
+  applyLayerSelectionForRoute(route);
+  if (mapState.map) {
+    updateLayerVisibility();
   }
   renderWorkflowGuide();
   collapseModuleCardsForRoute(route);
@@ -7100,6 +7115,7 @@ function setActiveTab(tabId) {
 }
 
 function renderLayerTree() {
+  const checkedIds = getRouteLayerSelection();
   dom.layersTree.innerHTML = layerCatalog
     .map((group) => {
       const items = group.items
@@ -7107,7 +7123,7 @@ function renderLayerTree() {
           (item) => `
             <label class="layer-item">
               <span class="layer-toggle">
-                <input type="checkbox" data-layer="${item.id}" ${item.id === "lotes" ? "checked" : ""}>
+                <input type="checkbox" data-layer="${item.id}" ${checkedIds.has(item.id) ? "checked" : ""}>
                 <span>
                   <strong>${item.title}</strong>
                   <small>${item.description}</small>
@@ -7128,7 +7144,51 @@ function renderLayerTree() {
     .join("");
 
   dom.layersTree.querySelectorAll("input[data-layer]").forEach((input) => {
-    input.addEventListener("change", updateLayerVisibility);
+    input.addEventListener("change", () => {
+      captureLayerSelectionForRoute();
+      updateLayerVisibility();
+    });
+  });
+}
+
+function getLayerSelectionRouteKey(route = state.entryRoute || "agronomia") {
+  return isPlanningRoute(route) ? "planificacion" : "agronomia";
+}
+
+function getDefaultCheckedLayerIds(route = state.entryRoute || "agronomia") {
+  const routeKey = getLayerSelectionRouteKey(route);
+  return routeDefaultLayerIds[routeKey] || routeDefaultLayerIds.agronomia;
+}
+
+function getRouteLayerSelection(route = state.entryRoute || "agronomia") {
+  const routeKey = getLayerSelectionRouteKey(route);
+  if (!(state.layerSelections[routeKey] instanceof Set)) {
+    state.layerSelections[routeKey] = new Set(getDefaultCheckedLayerIds(route));
+  }
+  return state.layerSelections[routeKey];
+}
+
+function captureLayerSelectionForRoute(route = state.entryRoute || "agronomia") {
+  if (!dom.layersTree) {
+    return;
+  }
+  const routeKey = getLayerSelectionRouteKey(route);
+  const checkedIds = new Set(
+    Array.from(dom.layersTree.querySelectorAll("input[data-layer]"))
+      .filter((input) => input.checked)
+      .map((input) => input.dataset.layer)
+      .filter(Boolean)
+  );
+  state.layerSelections[routeKey] = checkedIds;
+}
+
+function applyLayerSelectionForRoute(route = state.entryRoute || "agronomia") {
+  if (!dom.layersTree) {
+    return;
+  }
+  const checkedIds = getRouteLayerSelection(route);
+  Array.from(dom.layersTree.querySelectorAll("input[data-layer]")).forEach((input) => {
+    input.checked = checkedIds.has(input.dataset.layer);
   });
 }
 
@@ -7148,6 +7208,8 @@ function updateLayerVisibility() {
       mapState[layerKey(layerId)] = null;
     }
   });
+
+  captureLayerSelectionForRoute();
 }
 
 function addGeoLayer(layerId) {
@@ -10963,7 +11025,7 @@ function renderHydroNetworkVisual(result = null) {
     return;
   }
   if (!result?.ranked?.length) {
-    resetVisualPanel(dom.hydroNetworkVisual, "Aqui apareceran la mezcla entre rios, acequias y quebradas, la distancia al agua y la prioridad operativa del ambito.");
+    resetVisualPanel(dom.hydroNetworkVisual, "Aqui veras rios, acequias, quebradas y su prioridad operativa.");
     return;
   }
 
@@ -10988,8 +11050,8 @@ function renderHydroNetworkVisual(result = null) {
       ${result.focusItems.map((item) => `
         <article class="gps-device-card">
           <strong>${item.label}</strong>
-          <p>${item.kindLabel} · ${item.priorityLabel}</p>
-          <p>${item.lengthKm.toFixed(2)} km · ${formatDistanceKm(item.distanceKm)} del lote/ambito</p>
+          <p>${item.kindLabel} - ${item.priorityLabel}</p>
+          <p>${item.lengthKm.toFixed(2)} km - ${formatDistanceKm(item.distanceKm)} del lote/ambito</p>
           <div class="agronomy-bar-track">
             <i style="width: ${Math.max(10, Math.round(item.lengthKm / maxLength * 100))}%"></i>
           </div>
@@ -10997,7 +11059,7 @@ function renderHydroNetworkVisual(result = null) {
         </article>
       `).join("")}
     </div>
-    <p class="agronomy-visual-copy">La red hidrica dominante es ${result.summary.dominantKindLabel.toLowerCase()} y la referencia mas cercana es ${result.summary.nearestName} a ${formatDistanceKm(result.summary.nearestDistanceKm)} del ambito actual.</p>
+    <p class="agronomy-visual-copy">${result.summary.dominantKindLabel} dominante. Referencia mas cercana: ${result.summary.nearestName} a ${formatDistanceKm(result.summary.nearestDistanceKm)}.</p>
   `);
 }
 
@@ -11067,33 +11129,33 @@ async function runHydroNetworkAnalysis(silent = false) {
       {
         label: "Red total",
         value: `${result.summary.totalLengthKm.toFixed(1)} km`,
-        copy: `${result.summary.totalCount} elementos hidricos activos en ${result.context.scopeLabel}.`,
+        copy: `${result.summary.totalCount} elementos hidricos en ${result.context.scopeLabel}.`,
       },
       {
         label: "Referencia mas cercana",
         value: result.summary.nearestName,
-        copy: `${formatDistanceKm(result.summary.nearestDistanceKm)} y estado ${result.summary.waterLabel.toLowerCase()}.`,
+        copy: `${formatDistanceKm(result.summary.nearestDistanceKm)} y agua ${result.summary.waterLabel.toLowerCase()}.`,
         highlight: true,
       },
       {
         label: "Rios",
         value: `${result.summary.riverCount}`,
-        copy: "Cauces principales graficados para proteccion y lectura de disponibilidad.",
+        copy: "Cauces principales para proteccion y disponibilidad.",
       },
       {
         label: "Acequias",
         value: `${result.summary.acequiaCount}`,
-        copy: "Infraestructura de riego y distribucion priorizada dentro del ambito.",
+        copy: "Infraestructura de riego y distribucion del ambito.",
       },
       {
         label: "Quebradas",
         value: `${result.summary.quebradaCount}`,
-        copy: "Drenajes naturales con potencial de restriccion o desborde local.",
+        copy: "Drenajes naturales con posible restriccion o desborde.",
       },
       {
         label: "Proteccion sugerida",
         value: `${result.summary.protectedAreaHa.toFixed(1)} ha`,
-        copy: `${result.summary.priorityCount} prioridades altas con franja preventiva o de manejo.`,
+        copy: `${result.summary.priorityCount} prioridades altas con franja preventiva.`,
       },
     ];
     paintMetricGrid(dom.hydroNetworkResults, cards);
@@ -11102,15 +11164,15 @@ async function runHydroNetworkAnalysis(silent = false) {
     renderWorkflowGuide();
     updateMapSummary();
     if (!silent) {
-      setStatus(`Red hidrica productiva lista para ${result.context.scopeLabel}: ${result.summary.totalCount} elementos, ${result.summary.totalLengthKm.toFixed(1)} km y agua ${result.summary.waterLabel.toLowerCase()}.`);
+      setStatus(`Red hidrica lista para ${result.context.scopeLabel}: ${result.summary.totalCount} elementos y ${result.summary.totalLengthKm.toFixed(1)} km.`);
     }
     return result;
   } catch (error) {
     console.warn("Fallo el modulo de red hidrica productiva.", error);
     state.agronomyOutputs.hydroNetwork = null;
     clearHydroNetworkOverlay();
-    resetMetricGrid(dom.hydroNetworkResults, "No se pudo construir la red hidrica del ambito agricola.");
-    resetVisualPanel(dom.hydroNetworkVisual, "No se pudo resumir rios, acequias y quebradas en esta corrida.");
+    resetMetricGrid(dom.hydroNetworkResults, "No se pudo construir la red hidrica del ambito.");
+    resetVisualPanel(dom.hydroNetworkVisual, "No se pudo resumir la red hidrica en esta corrida.");
     renderWorkflowGuide();
     updateMapSummary();
     if (!silent) {
@@ -11138,11 +11200,11 @@ function focusHydroNetworkStudy() {
 function clearHydroNetworkAnalysis() {
   state.agronomyOutputs.hydroNetwork = null;
   clearHydroNetworkOverlay();
-  resetMetricGrid(dom.hydroNetworkResults, "Ejecuta el modulo para medir kilometros de red hidrica, cercania al lote y prioridades de manejo.");
-  resetVisualPanel(dom.hydroNetworkVisual, "Aqui apareceran la mezcla entre rios, acequias y quebradas, la distancia al agua y la prioridad operativa del ambito.");
+  resetMetricGrid(dom.hydroNetworkResults, "Ejecuta el modulo para ver red, cercania y prioridad.");
+  resetVisualPanel(dom.hydroNetworkVisual, "Aqui veras rios, acequias, quebradas y su prioridad operativa.");
   renderWorkflowGuide();
   updateMapSummary();
-  setStatus(`Red hidrica productiva limpiada para ${getCurrentAgronomyScopeLabel()}.`);
+  setStatus(`Red hidrica limpiada para ${getCurrentAgronomyScopeLabel()}.`);
 }
 
 function getAreaThermalProfile(areaId = state.agronomyAreaId) {
@@ -27842,54 +27904,54 @@ function updateMapSummary(force = false) {
       setTextIfChanged(dom.mapTitle, `IA territorial sobre ${aiGeo.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `${aiGeo.summary.dominantClassLabel} domina la lectura. ${aiGeo.summary.changeHotspotCount} hotspots, ${aiGeo.summary.alertCount} alertas y verificacion 3D lista sobre ${formatPlanning3dCount(aiGeo.summary.buildings3dCount)} construcciones en ${aiGeo.context.scopeLabel}.`
+        `${aiGeo.summary.dominantClassLabel}. ${aiGeo.summary.changeHotspotCount} hotspots, ${aiGeo.summary.alertCount} alertas y ${formatPlanning3dCount(aiGeo.summary.buildings3dCount)} construcciones 3D.`
       );
     } else if (showFodaCame) {
       setTextIfChanged(dom.overlayIndex, "FODA");
       setTextIfChanged(dom.mapTitle, `Analisis FODA + CAME sobre ${fodaCame.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `${fodaCame.summary.dominantActionLabel} domina la corrida. ${fodaCame.priorityZones.length} zonas estrategicas y ${formatLandChangeHa(fodaCame.summary.priorityAreaHa)} ha listos para lectura de intervencion con interpretacion, conclusion y recomendacion tecnica.`
+        `${fodaCame.summary.dominantActionLabel}. ${fodaCame.priorityZones.length} zonas y ${formatLandChangeHa(fodaCame.summary.priorityAreaHa)} ha priorizadas.`
       );
     } else if (showLandChange) {
       setTextIfChanged(dom.overlayIndex, "Huella");
       setTextIfChanged(dom.mapTitle, `Transformacion del suelo rural sobre ${landChange.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `${landChangePeriod.shortLabel}, ${landChangeScenario.label} y enfoque ${landChangeLens.label.toLowerCase()}. ${formatLandChangeHa(landChange.summary.transformedHa)} ha de suelo rural transformado con hotspots, calor de presion y buffers de vigilancia sobre ${landChange.summary.hotspotLabel}.`
+        `${landChangePeriod.shortLabel} · ${landChangeScenario.label} · ${landChangeLens.label}. ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas.`
       );
     } else if (showHydrology) {
       setTextIfChanged(dom.overlayIndex, "Balance");
       setTextIfChanged(dom.mapTitle, `Disponibilidad hidrica sobre ${hydrology.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `${hydrologyClimate.shortLabel}, ${hydrologyHorizon.label} y ${hydrologyDemand.label}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio con ${hydrology.prioritySectors.length} sectores en vigilancia, buffers de proteccion y franjas de atencion hidrica.`
+        `${hydrologyClimate.shortLabel} · ${hydrologyHorizon.shortLabel} · ${hydrologyDemand.shortLabel}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio y ${hydrology.prioritySectors.length} prioridades.`
       );
     } else if (planning) {
       setTextIfChanged(dom.mapTitle, `${planning.program.longLabel} sobre ${planning.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `Fuente ${planning.imageryProfile.shortLabel}, horizonte ${planning.horizon.label}, escenario ${planning.scenario.label}, ${planning.candidates.length} candidatos priorizados, condicionantes visibles por ${formatLandChangeHa(planning.restrictions.uniqueRestrictedAreaHa)} ha, cobertura ${planning.serviceCoverage.overallCoverage}% y lectura solar ${planning.solarReadout.sunPosition.elevation}° sobre el horizonte.`
+        `${planning.imageryProfile.shortLabel} · ${planning.horizon.label} · ${planning.scenario.label}. ${planning.candidates.length} candidatos y cobertura ${planning.serviceCoverage.overallCoverage}%.`
       );
     } else if (fodaCame) {
       setTextIfChanged(dom.overlayIndex, "FODA");
       setTextIfChanged(dom.mapTitle, "Estrategia territorial lista");
-      setTextIfChanged(dom.mapSubtitle, `${fodaCame.summary.dominantSwotLabel} y ${fodaCame.summary.dominantActionLabel.toLowerCase()} como lectura dominante para ${fodaCame.context.scopeLabel}, con ${fodaCame.priorityZones.length} zonas estrategicas visibles en el geoportal.`);
+      setTextIfChanged(dom.mapSubtitle, `${fodaCame.summary.dominantSwotLabel} · ${fodaCame.summary.dominantActionLabel}. ${fodaCame.priorityZones.length} zonas visibles.`);
     } else if (aiGeo?.mode === "territorial") {
       setTextIfChanged(dom.overlayIndex, "IA");
       setTextIfChanged(dom.mapTitle, "Lectura IA territorial lista");
-      setTextIfChanged(dom.mapSubtitle, `${aiGeo.summary.dominantClassLabel} y ${aiGeo.summary.alertCount} alertas sobre ${aiGeo.context.scopeLabel}, con respaldo de huella urbana, hidrologia, evidencia de campo y verificacion 3D.`);
+      setTextIfChanged(dom.mapSubtitle, `${aiGeo.summary.dominantClassLabel} · ${aiGeo.summary.alertCount} alertas sobre ${aiGeo.context.scopeLabel}.`);
     } else if (hydrology) {
       setTextIfChanged(dom.overlayIndex, "Balance");
       setTextIfChanged(dom.mapTitle, "Estudio hidrico de Mejia listo");
-      setTextIfChanged(dom.mapSubtitle, `${hydrology.climate.shortLabel}, ${hydrology.horizon.label} y ${hydrology.demand.label} con balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio y franjas de proteccion activas.`);
+      setTextIfChanged(dom.mapSubtitle, `${hydrology.climate.shortLabel} · ${hydrology.horizon.shortLabel} · ${hydrology.demand.shortLabel}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio.`);
     } else if (landChange) {
       setTextIfChanged(dom.overlayIndex, "Huella");
       setTextIfChanged(dom.mapTitle, "Estudio de transformacion del suelo listo");
-      setTextIfChanged(dom.mapSubtitle, `${landChange.period.shortLabel} con ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas, ${landChange.summary.riskLabel.toLowerCase()} y foco ${landChange.summary.hotspotLabel} con halos de presion.`);
+      setTextIfChanged(dom.mapSubtitle, `${landChange.period.shortLabel} · ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas · ${landChange.summary.hotspotLabel}.`);
     } else {
       setTextIfChanged(dom.mapTitle, "Planificacion territorial lista");
-      setTextIfChanged(dom.mapSubtitle, `Empieza por aptitud, huella, agua, estrategia o visor 3D. La fuente activa es ${imageryProfile.label} y la corrida se preparara sobre ${getTerritorialAreaProfile().scopeLabel}.`);
+      setTextIfChanged(dom.mapSubtitle, `Empieza por aptitud, huella, agua, estrategia o 3D sobre ${getTerritorialAreaProfile().scopeLabel}.`);
     }
     return;
   }
@@ -27902,8 +27964,8 @@ function updateMapSummary(force = false) {
     setTextIfChanged(dom.overlayIndex, "GPS");
     setTextIfChanged(dom.mapTitle, activeDevice?.label ? `Seguimiento GPS: ${activeDevice.label}` : "Seguimiento GPS en vivo");
     setTextIfChanged(dom.mapSubtitle, activeDevice
-      ? `Base Esri limpia con ultima senal ${formatGpsSignalAge(activeDevice.timestamp)}. Sin escenas Sentinel ni grillas NDVI superpuestas.${geofenceSummary ? (geofenceSummary.outsideCount ? ` Hay ${geofenceSummary.outsideCount} dispositivo(s) fuera del corredor cargado.` : " Todos los dispositivos visibles siguen dentro del corredor cargado.") : ""}`
-      : `Base Esri limpia preparada para recibir el celular, dron, avioneta o feed GPS externo.${geofenceSummary ? " El corredor GPS ya esta cargado y listo para vigilar desvios." : ""}`);
+      ? `Ultima senal ${formatGpsSignalAge(activeDevice.timestamp)}.${geofenceSummary ? (geofenceSummary.outsideCount ? ` ${geofenceSummary.outsideCount} fuera del corredor.` : " Dentro del corredor.") : ""}`
+      : `Base lista para recibir GPS.${geofenceSummary ? " Corredor cargado." : ""}`);
     renderMapBadges();
     return;
   }
@@ -27914,7 +27976,7 @@ function updateMapSummary(force = false) {
     setTextIfChanged(dom.mapTitle, `IA agronomica sobre ${aiGeo.context.scopeLabel}`);
     setTextIfChanged(
       dom.mapSubtitle,
-      `${aiGeo.summary.dominantClassLabel} domina la lectura. ${aiGeo.summary.changeHotspotCount} cambios y ${aiGeo.summary.alertCount} alertas con confianza ${aiGeo.summary.confidenceScore}/100 sobre ${aiGeo.context.scopeLabel}.`
+      `${aiGeo.summary.dominantClassLabel}. ${aiGeo.summary.changeHotspotCount} cambios, ${aiGeo.summary.alertCount} alertas y confianza ${aiGeo.summary.confidenceScore}/100.`
     );
     renderMapBadges();
     return;
@@ -27935,7 +27997,7 @@ function updateMapSummary(force = false) {
   if (!image) {
     setTextIfChanged(dom.mapTitle, "No hay escena activa");
     renderMapBadges();
-    setTextIfChanged(dom.mapSubtitle, `Abre Imagenes o usa un lote demo para empezar. El filtro actual de ${sensor.label} trabajara sobre ${getAgronomyAreaProfile().scopeLabel}.`);
+    setTextIfChanged(dom.mapSubtitle, `Abre Imagenes o usa un lote demo sobre ${getAgronomyAreaProfile().scopeLabel}.`);
     return;
   }
 
@@ -27943,7 +28005,7 @@ function updateMapSummary(force = false) {
 
   if (!state.satelliteLayersEnabled) {
     setTextIfChanged(dom.mapTitle, "Capas satelitales desactivadas");
-    setTextIfChanged(dom.mapSubtitle, "El mapa queda solo con la base activa y las capas vectoriales. Pulsa Capas sat: OFF para volver a mostrar escena, huella e indice.");
+    setTextIfChanged(dom.mapSubtitle, "Solo base y capas vectoriales.");
     return;
   }
 
@@ -27951,7 +28013,7 @@ function updateMapSummary(force = false) {
     if (state.surfaceMode === "change" && changeAnalysis && compareImage) {
       const delta = changeAnalysis.summary[state.selectedIndex];
       setTextIfChanged(dom.mapTitle, `Cambio ${indexConfig[state.selectedIndex].label} sobre ${analysis.context.scopeLabel}`);
-      setTextIfChanged(dom.mapSubtitle, `Lectura temporal ${changeAnalysis.direction} con delta medio ${formatDelta(delta.mean, indexConfig[state.selectedIndex])}.`);
+      setTextIfChanged(dom.mapSubtitle, `${changeAnalysis.direction} · delta medio ${formatDelta(delta.mean, indexConfig[state.selectedIndex])}.`);
       return;
     }
 
@@ -27965,15 +28027,15 @@ function updateMapSummary(force = false) {
           : "motor demo";
     setTextIfChanged(dom.mapTitle, `${indexConfig[state.selectedIndex].label} sobre ${analysis.context.scopeLabel}`);
     const outOfScaleNote = isSceneOutOfScaleForUrbanZoom(image)
-      ? " A este zoom la escena Sentinel-2 de 10 m queda fuera de escala urbana, por eso se usa la base satelital para el detalle fino."
+      ? " Base satelital activa para detalle fino."
       : "";
-    setTextIfChanged(dom.mapSubtitle, `Media ${formatValue(stats.mean, indexConfig[state.selectedIndex])} con ${modeLabel}.${outOfScaleNote}`);
+    setTextIfChanged(dom.mapSubtitle, `Media ${formatValue(stats.mean, indexConfig[state.selectedIndex])} · ${modeLabel}.${outOfScaleNote}`);
     return;
   }
 
   if (image.source === "real") {
     setTextIfChanged(dom.mapTitle, `Escena real ${image.title}`);
-    setTextIfChanged(dom.mapSubtitle, "Preparando la capa satelital y el AOI operativo.");
+    setTextIfChanged(dom.mapSubtitle, "Preparando escena y AOI.");
     return;
   }
 

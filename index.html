@@ -346,7 +346,7 @@
                 <span class="beta-badge">Beta temprana</span>
               </div>
               <p id="modulesSectionCopy" class="section-copy">
-                Empieza por una tarea de campo concreta: revisar vigor, relieve, clima, estaciones o seguimiento operativo.
+                Empieza por escena, lote, agua, clima o GPS.
               </p>
             </div>
 
@@ -359,7 +359,7 @@
                 <span id="workflowGuideBadge" class="beta-badge">Guiado</span>
               </div>
               <p id="workflowGuideCopy" class="module-copy">
-                El sistema te guiara por los pasos clave para convertir datos en una decision util.
+                Pasos cortos para llegar a una decision util.
               </p>
               <div id="workflowGuideSteps" class="workflow-guide-steps"></div>
               <div id="workflowGuideActions" class="action-row workflow-guide-actions"></div>
@@ -446,7 +446,7 @@
                 <button id="runInamhiBtn" class="secondary-button" type="button">Leer historico</button>
               </div>
               <p class="module-copy">
-                Sintetiza series historicas de estaciones INAMHI ya integradas al geoportal para leer regimen pluviometrico, estacionalidad y soporte meteorologico por ambito agronomico.
+                Series INAMHI para lluvia, estacionalidad y soporte meteorologico.
               </p>
               <div class="action-row module-action-row">
                 <button id="runInamhiLiveBtn" class="ghost-button" type="button">Leer en vivo</button>
@@ -464,7 +464,7 @@
                 Aqui apareceran la lectura operativa en tiempo real, la ultima actualizacion y el estado de las estaciones activas.
               </div>
               <p class="service-note">
-                La lectura en vivo queda preparada para <code>feed local</code> o integracion oficial. Si no hay fuente operativa disponible, el geoportal muestra una simulacion util del ambito activo y lo indica claramente.
+                Si no hay fuente en vivo, el sistema muestra una simulacion marcada.
               </p>
             </article>
 
@@ -477,14 +477,13 @@
                 <button id="runHydroNetworkBtn" class="secondary-button" type="button">Leer red hidrica</button>
               </div>
               <p class="module-copy">
-                Identifica y grafica rios, acequias y quebradas del ambito agricola para lectura de riego,
-                drenaje, proteccion de riberas y condicionamiento operativo de lotes.
+                Grafica rios, acequias y quebradas para riego, drenaje y resguardo.
               </p>
               <div id="hydroNetworkResults" class="metrics-grid empty-state">
-                Ejecuta el modulo para medir kilometros de red hidrica, cercania al lote y prioridades de manejo.
+                Ejecuta el modulo para ver red, cercania y prioridad.
               </div>
               <div id="hydroNetworkVisual" class="agronomy-visual empty-state">
-                Aqui apareceran la mezcla entre rios, acequias y quebradas, la distancia al agua y la prioridad operativa del ambito.
+                Aqui veras rios, acequias, quebradas y su prioridad operativa.
               </div>
               <div class="action-row analysis-actions">
                 <button id="focusHydroNetworkBtn" class="secondary-button" type="button">Centrar red</button>
@@ -501,8 +500,7 @@
                 <button id="runAgroSuitabilityBtn" class="secondary-button" type="button">Evaluar cultivo</button>
               </div>
               <p class="module-copy">
-                Cruza escena satelital, humedad, temperatura, relieve y cercania a la red hidrica para priorizar
-                cultivos y lotes con mejor ajuste productivo en Mejia o Quevedo.
+                Cruza escena, clima, relieve y agua para priorizar cultivos y lotes.
               </p>
               <div class="planning-toolbar">
                 <label class="field">
@@ -537,7 +535,7 @@
                 </div>
               </div>
               <p class="module-copy">
-                Sigue maquinaria, brigadas, celulares, drones o avionetas con tracker GPS sobre el mapa del modulo agricola, con trayectoria, velocidad, altura, estado y ultima posicion del ambito activo.
+                Sigue celulares, drones, brigadas o aeronaves en tiempo real.
               </p>
               <div class="action-row module-action-row">
                 <button id="startGpsBrowserBtn" class="secondary-button" type="button">Seguir mi GPS</button>
@@ -572,10 +570,10 @@
                 Aqui apareceran las advertencias y el registro de entradas o salidas respecto al corredor cargado.
               </div>
               <p class="service-note">
-                Este modulo admite geolocalizacion del navegador, relay publico por internet, feed local desde <code>server.ps1</code> o una simulacion de recorrido. El feed puede venir de un celular, una laptop, un dron o una avioneta si entregan <code>lat</code>, <code>lon</code>, <code>timestamp</code> y, opcionalmente, <code>altitudeM</code>, <code>speedKmh</code>, <code>headingDeg</code> y <code>batteryPct</code>. El link <strong>Internet</strong> no requiere estar en la misma Wi-Fi.
+                Acepta navegador, relay por internet, feed local o Satloc G4.
               </p>
               <p class="service-note">
-                Si la aeronave usa <strong>Satloc G4</strong>, ya queda lista una via local por <strong>NMEA 0183 -> puerto COM -> geoportal</strong> con el acceso <code>Abrir Puente Satloc G4.bat</code>.
+                Para Satloc G4 usa <code>Abrir Puente Satloc G4.bat</code>.
               </p>
             </article>
 
