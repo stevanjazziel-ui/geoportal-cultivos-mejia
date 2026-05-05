@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="geoportal-version" content="20260505-1">
+  <meta name="geoportal-version" content="20260505-2">
   <title>Centro de Decisiones | Mejia y Quevedo</title>
   <meta
     name="description"
@@ -32,7 +32,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260505-1">
+  <link rel="stylesheet" href="./styles.css?v=20260505-2">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -150,7 +150,7 @@
         </div>
         <div class="user-pill">
           <span class="status-dot"></span>
-            Usuario publico | v20260505-1
+            Usuario publico | v20260505-2
           </div>
       </div>
     </header>
@@ -161,9 +161,9 @@
 
         <section class="sidebar-header">
           <div>
-            <p id="sidebarTitle" class="sidebar-title">Centro de decisiones agronomicas</p>
+            <p id="sidebarTitle" class="sidebar-title">Modulo agronomico inteligente</p>
             <p id="sidebarSubtitle" class="sidebar-subtitle">
-              Empieza por la pregunta de campo: escena, diagnostico, clima, estaciones o seguimiento operativo.
+              Empieza por la decision: escena, diagnostico, agua, oficiales, clima o seguimiento operativo.
             </p>
           </div>
           <button id="sidebarClose" class="icon-button mobile-only" type="button" aria-label="Cerrar panel">
@@ -172,9 +172,9 @@
         </section>
 
         <nav class="tabbar" aria-label="Pestanas del panel lateral">
-          <button id="tabLayersBtn" class="tab-button active" type="button" data-tab="capas">Capas</button>
-          <button id="tabImageryBtn" class="tab-button" type="button" data-tab="sentinel">Imagenes satelitales</button>
-          <button id="tabModulesBtn" class="tab-button" type="button" data-tab="modulos">Modulos</button>
+          <button id="tabLayersBtn" class="tab-button active" type="button" data-tab="capas">Mapa</button>
+          <button id="tabImageryBtn" class="tab-button" type="button" data-tab="sentinel">Imagenes</button>
+          <button id="tabModulesBtn" class="tab-button" type="button" data-tab="modulos">Copiloto</button>
         </nav>
 
         <div class="tab-panels">
@@ -372,6 +372,23 @@
               <div id="moduleFilterRail" class="module-filter-rail"></div>
             </section>
 
+            <div id="moduleBrowserToolbar" class="module-browser-toolbar">
+              <div class="module-browser-copy">
+                <p class="module-kicker">Buscador inteligente</p>
+                <strong>Encuentra una decision en segundos</strong>
+              </div>
+              <div class="module-search-field">
+                <input id="moduleSearchInput" type="search" placeholder="Buscar GPS, agua, riesgo, FODA, 3D o clima">
+              </div>
+              <div class="action-row module-browser-actions">
+                <button id="expandVisibleModulesBtn" class="ghost-button" type="button">Ver todo</button>
+                <button id="collapseVisibleModulesBtn" class="ghost-button" type="button">Solo esencial</button>
+              </div>
+            </div>
+            <div id="moduleSearchSummary" class="module-search-summary">
+              Usa la busqueda o los accesos rapidos para abrir un estudio sin recorrer toda la columna.
+            </div>
+
             <article id="workflowGuideCard" class="module-card workflow-guide-card">
               <div class="module-head">
                 <div>
@@ -388,18 +405,29 @@
             </article>
 
             <div id="moduleQuickNav" class="module-quick-nav"></div>
-            <div id="moduleBrowserToolbar" class="module-browser-toolbar">
-              <div class="module-search-field">
-                <input id="moduleSearchInput" type="search" placeholder="Buscar GPS, agua, riesgo, FODA, 3D o clima">
+
+            <article id="officialDataCard" class="module-card">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Fuentes oficiales IEDG</p>
+                  <h3>Capas oficiales integradas</h3>
+                </div>
+                <button id="runOfficialDataBtn" class="secondary-button" type="button">Activar oficiales</button>
               </div>
-              <div class="action-row module-browser-actions">
-                <button id="expandVisibleModulesBtn" class="ghost-button" type="button">Expandir</button>
-                <button id="collapseVisibleModulesBtn" class="ghost-button" type="button">Compactar</button>
+              <p class="module-copy">
+                Activa agua, riego, suelos, vialidad y servicios oficiales segun la ruta de trabajo.
+              </p>
+              <div id="officialDataResults" class="metrics-grid empty-state">
+                Activa el modulo para cargar las fuentes oficiales mas utiles para esta ruta.
               </div>
-            </div>
-            <div id="moduleSearchSummary" class="module-search-summary">
-              Usa la busqueda o los accesos rapidos para encontrar un estudio sin recorrer todo el panel.
-            </div>
+              <div id="officialDataVisual" class="agronomy-visual empty-state">
+                Aqui apareceran las capas, fuentes y usos recomendados de MAATE, MAG, IGM, MTOP, MSP, Educacion, MIES y PIT.
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="focusOfficialDataBtn" class="secondary-button" type="button">Centrar oficiales</button>
+                <button id="clearOfficialDataBtn" class="ghost-button" type="button">Quitar oficiales</button>
+              </div>
+            </article>
 
             <article id="intraloteCard" class="module-card" data-module-track="agronomia">
               <div class="module-head">
@@ -1126,7 +1154,7 @@
 
         <div id="sidebarDock" class="sidebar-dock">
           <div class="sidebar-dock-copy">
-            <strong id="sidebarDockTitle">Accesos rapidos</strong>
+            <strong id="sidebarDockTitle">Atajos inteligentes</strong>
             <span id="sidebarDockSubtitle">Escena, agua y GPS sin recorrer todo el panel.</span>
           </div>
           <div id="sidebarDockActions" class="sidebar-dock-actions"></div>
@@ -1389,6 +1417,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260501-2" defer></script>
+  <script src="./app.js?v=20260505-2" defer></script>
 </body>
 </html>

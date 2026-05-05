@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260505-1";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260505-2";
 
 const layerCatalog = [
   {
@@ -72,11 +72,158 @@ const layerCatalog = [
       },
     ],
   },
+  {
+    group: "Fuentes oficiales IEDG",
+    items: [
+      {
+        id: "riegoEstatal",
+        title: "Sistema de riego estatal",
+        description: "Referencia oficial MAG para corredores de riego y soporte parcelario.",
+      },
+      {
+        id: "suelosIGM",
+        title: "Suelos y geomorfologia IGM",
+        description: "Unidades sinteticas inspiradas en IGM 1:25 000 para aptitud y restriccion.",
+      },
+      {
+        id: "coberturaMAATE",
+        title: "Cobertura MAATE",
+        description: "Cobertura y uso del suelo para ambiente, vegetacion y transicion territorial.",
+      },
+      {
+        id: "redVialEstatal",
+        title: "Red vial estatal MTOP",
+        description: "Corredores viales oficiales para accesibilidad, geocercas y tiempos.",
+      },
+      {
+        id: "saludPublica",
+        title: "Salud publica MSP",
+        description: "Establecimientos de salud para cobertura y deficit territorial.",
+      },
+      {
+        id: "educacionPublica",
+        title: "Educacion publica",
+        description: "Unidades educativas oficiales para lectura de cobertura y demanda.",
+      },
+      {
+        id: "serviciosSociales",
+        title: "Servicios sociales MIES",
+        description: "Infraestructura social de apoyo para vulnerabilidad y cobertura.",
+      },
+      {
+        id: "presenciaInstitucional",
+        title: "Presencia institucional 2024",
+        description: "Nodos institucionales para centralidad y capacidad operativa territorial.",
+      },
+      {
+        id: "aptitudIGM",
+        title: "Aptitud fisica IGM",
+        description: "Superficie sintetica de aptitud fisica para soporte de implantacion territorial.",
+      },
+    ],
+  },
 ];
 
 const routeDefaultLayerIds = {
   agronomia: ["lotes", "estaciones", "rios", "acequias", "quebradas"],
   planificacion: ["manchaUrbana", "equipamientos", "hidrozonas"],
+};
+
+const officialSourceCatalog = {
+  agronomia: {
+    title: "Fuentes oficiales para agua, suelo y riego",
+    copy: "Integra MAATE, MAG e IGM para leer rios, quebradas, riego estatal, suelos y cobertura de la tierra.",
+    layerIds: ["rios", "acequias", "quebradas", "riegoEstatal", "suelosIGM", "coberturaMAATE"],
+    sources: [
+      {
+        id: "maate",
+        label: "MAATE mapa interactivo",
+        theme: "Hidrografia, agua y cobertura",
+        year: "portal oficial",
+        link: "http://ide.ambiente.gob.ec/mapainteractivo/",
+        use: "Rios, quebradas, agua y cobertura como base de proteccion, drenaje y restriccion.",
+      },
+      {
+        id: "magRiego",
+        label: "MAG sistema de riego estatal",
+        theme: "Riego e infraestructura",
+        year: "2012",
+        link: "https://iedg.presidencia.gob.ec/servicios/descargas/",
+        use: "Corredores de riego y referencia para distribucion parcelaria.",
+      },
+      {
+        id: "igmTerritorio",
+        label: "IGM 1:25 000",
+        theme: "Suelos, geomorfologia, clima e hidrologia",
+        year: "portal oficial",
+        link: "http://www.geoportaligm.gob.ec/proyecto_nacional/",
+        use: "Aptitud agroclimatica, relieve, restricciones y soporte de campo.",
+      },
+      {
+        id: "magOrto",
+        label: "MAG ortofotos y MDT",
+        theme: "Validacion visual",
+        year: "portal oficial",
+        link: "http://geoportal.agricultura.gob.ec/index.php/descarga-ortofotos",
+        use: "Apoyo visual y control de lotes cuando se necesite mejor referencia local.",
+      },
+    ],
+  },
+  planificacion: {
+    title: "Fuentes oficiales para movilidad, servicios y aptitud",
+    copy: "Integra MTOP, MSP, Educacion, MIES, SENPLADES e IGM para reforzar cobertura, movilidad y soporte de decision.",
+    layerIds: ["redVialEstatal", "saludPublica", "educacionPublica", "serviciosSociales", "presenciaInstitucional", "aptitudIGM"],
+    sources: [
+      {
+        id: "mtop",
+        label: "MTOP red vial estatal",
+        theme: "Movilidad y accesibilidad",
+        year: "2019",
+        link: "https://iedg.presidencia.gob.ec/servicios/descargas/",
+        use: "Corredores de acceso, tiempos de llegada y conectividad territorial.",
+      },
+      {
+        id: "msp",
+        label: "MSP establecimientos de salud",
+        theme: "Cobertura sanitaria",
+        year: "2018",
+        link: "https://iedg.presidencia.gob.ec/servicios/descargas/",
+        use: "Deficit y radios funcionales para salud y emergencia.",
+      },
+      {
+        id: "educacion",
+        label: "Ministerio de Educacion",
+        theme: "Cobertura educativa",
+        year: "2014",
+        link: "https://iedg.presidencia.gob.ec/servicios/descargas/",
+        use: "Oferta escolar y brechas para implantacion de nuevos equipamientos.",
+      },
+      {
+        id: "mies",
+        label: "MIES infraestructura social",
+        theme: "Servicios sociales",
+        year: "2018",
+        link: "https://iedg.presidencia.gob.ec/servicios/descargas/",
+        use: "Apoyo a vulnerabilidad, cuidado y centralidad social.",
+      },
+      {
+        id: "pit2024",
+        label: "Presencia Institucional en Territorio 2024",
+        theme: "Capacidad institucional",
+        year: "2024",
+        link: "https://iedg.presidencia.gob.ec/servicios/descargas/",
+        use: "Nodos publicos para centralidad, servicios y operacion territorial.",
+      },
+      {
+        id: "igmAptitud",
+        label: "IGM aptitud fisica del territorio",
+        theme: "Aptitud y restriccion",
+        year: "portal oficial",
+        link: "http://www.geoportaligm.gob.ec/geoinformacion/index-alt3.html",
+        use: "Soporte tecnico para aptitud, restriccion y decisiones de implantacion.",
+      },
+    ],
+  },
 };
 
 const hydroFeatureCatalog = {
@@ -1504,10 +1651,315 @@ const geoSources = {
         seriesCode: "M362",
         territoryId: "quevedo",
         summary: "Estacion de apoyo para San Carlos y anillo productivo noreste de Quevedo.",
-      }),
-    ],
-  },
-  manchaUrbana: {
+        }),
+      ],
+    },
+    riegoEstatal: {
+      type: "FeatureCollection",
+      features: [
+        lineFeature("Sistema estatal Machachi norte", [
+          [-78.648, -0.455],
+          [-78.623, -0.467],
+          [-78.598, -0.478],
+          [-78.571, -0.487],
+        ], {
+          category: "riego",
+          source: "MAG / IEDG",
+          year: 2012,
+          reach: "primario",
+          summary: "Corredor de riego estatal referencial para soporte parcelario del valle de Machachi.",
+        }),
+        lineFeature("Sistema estatal Mejia sur", [
+          [-78.666, -0.551],
+          [-78.632, -0.548],
+          [-78.597, -0.552],
+          [-78.558, -0.561],
+        ], {
+          category: "riego",
+          source: "MAG / IEDG",
+          year: 2012,
+          reach: "secundario",
+          summary: "Tramo de riego estatal de apoyo a corredores productivos del sur de Mejia.",
+        }),
+        lineFeature("Sistema estatal Pichilingue", [
+          [-79.522, -1.014],
+          [-79.497, -1.026],
+          [-79.471, -1.039],
+          [-79.447, -1.054],
+        ], {
+          category: "riego",
+          source: "MAG / IEDG",
+          year: 2012,
+          territoryId: "quevedo",
+          reach: "primario",
+          summary: "Canal estatal tropical de soporte a cacao, banano y maiz en Quevedo.",
+        }),
+      ],
+    },
+    suelosIGM: {
+      type: "FeatureCollection",
+      features: [
+        polygonFeature("Suelos aluviales Machachi", [
+          [-78.617, -0.488],
+          [-78.57, -0.487],
+          [-78.562, -0.522],
+          [-78.604, -0.529],
+          [-78.621, -0.507],
+        ], {
+          category: "suelo",
+          source: "IGM 1:25 000",
+          soilClass: "Aluvial franco",
+          aptitude: "Alta",
+          summary: "Unidad de fondo de valle con aptitud agricola alta y pendiente baja.",
+        }),
+        polygonFeature("Suelos de ladera Aloag", [
+          [-78.706, -0.438],
+          [-78.659, -0.439],
+          [-78.646, -0.483],
+          [-78.685, -0.509],
+          [-78.72, -0.481],
+        ], {
+          category: "suelo",
+          source: "IGM 1:25 000",
+          soilClass: "Coluvial andino",
+          aptitude: "Condicionada",
+          summary: "Laderas con mayor restriccion por pendiente, drenaje rapido y manejo conservacionista.",
+        }),
+        polygonFeature("Suelos tropicales Quevedo", [
+          [-79.53, -1.011],
+          [-79.451, -1.008],
+          [-79.436, -1.067],
+          [-79.507, -1.086],
+          [-79.539, -1.051],
+        ], {
+          category: "suelo",
+          source: "IGM 1:25 000",
+          territoryId: "quevedo",
+          soilClass: "Fluvio lacustre tropical",
+          aptitude: "Alta",
+          summary: "Unidad tropical de buena productividad con sensibilidad a saturacion estacional.",
+        }),
+      ],
+    },
+    coberturaMAATE: {
+      type: "FeatureCollection",
+      features: [
+        polygonFeature("Cobertura agricola Machachi", [
+          [-78.63, -0.472],
+          [-78.586, -0.468],
+          [-78.57, -0.503],
+          [-78.61, -0.518],
+          [-78.637, -0.495],
+        ], {
+          category: "cobertura",
+          source: "MAATE / IEDG",
+          coverClass: "Mosaico agropecuario",
+          summary: "Cobertura productiva dominante con mezcla de lotes, pastos y suelos intervenidos.",
+        }),
+        polygonFeature("Cobertura de proteccion Cutuglagua", [
+          [-78.617, -0.344],
+          [-78.592, -0.342],
+          [-78.575, -0.364],
+          [-78.584, -0.384],
+          [-78.609, -0.381],
+        ], {
+          category: "cobertura",
+          source: "MAATE / IEDG",
+          coverClass: "Proteccion y vegetacion secundaria",
+          summary: "Franja de cobertura sensible para control de borde, escorrentia y ocupacion.",
+        }),
+        polygonFeature("Cobertura productiva Quevedo", [
+          [-79.526, -1.018],
+          [-79.468, -1.013],
+          [-79.447, -1.055],
+          [-79.487, -1.083],
+          [-79.532, -1.057],
+        ], {
+          category: "cobertura",
+          source: "MAATE / IEDG",
+          territoryId: "quevedo",
+          coverClass: "Matriz agricola tropical",
+          summary: "Matriz agricola tropical con alta intensidad productiva y transiciones hacia drenajes bajos.",
+        }),
+      ],
+    },
+    redVialEstatal: {
+      type: "FeatureCollection",
+      features: [
+        lineFeature("Panamericana E35", [
+          [-78.692, -0.392],
+          [-78.639, -0.429],
+          [-78.581, -0.479],
+          [-78.523, -0.54],
+        ], {
+          category: "vial-estatal",
+          source: "MTOP / IEDG",
+          roadClass: "Eje estatal",
+          summary: "Corredor estatal principal para acceso, tiempos de respuesta y geocercas operativas.",
+        }),
+        lineFeature("Acceso Tambillo - Machachi", [
+          [-78.573, -0.431],
+          [-78.54, -0.444],
+          [-78.514, -0.465],
+          [-78.5, -0.486],
+        ], {
+          category: "vial-estatal",
+          source: "MTOP / IEDG",
+          roadClass: "Conector estatal",
+          summary: "Conector de soporte a centralidades, servicios y movilizacion interparroquial.",
+        }),
+        lineFeature("Corredor Quevedo - Valencia", [
+          [-79.533, -1.032],
+          [-79.488, -1.04],
+          [-79.43, -1.046],
+          [-79.392, -1.037],
+        ], {
+          category: "vial-estatal",
+          source: "MTOP / IEDG",
+          territoryId: "quevedo",
+          roadClass: "Eje estatal",
+          summary: "Corredor estatal para conectividad regional y logistica de servicios en Quevedo.",
+        }),
+      ],
+    },
+    saludPublica: {
+      type: "FeatureCollection",
+      features: [
+        pointFeature("Hospital Basico Machachi", [-78.584, -0.509], {
+          category: "salud",
+          serviceType: "hospital",
+          source: "MSP / IEDG",
+          level: "cantonal",
+          summary: "Referencia sanitaria para cobertura principal del valle de Machachi.",
+        }),
+        pointFeature("Centro de Salud Tambillo", [-78.531, -0.451], {
+          category: "salud",
+          serviceType: "centro-salud",
+          source: "MSP / IEDG",
+          level: "parroquial",
+          summary: "Nodo de atencion primaria para cobertura oriental de Mejia.",
+        }),
+        pointFeature("Hospital Quevedo", [-79.47, -1.03], {
+          category: "salud",
+          serviceType: "hospital",
+          source: "MSP / IEDG",
+          territoryId: "quevedo",
+          level: "cantonal",
+          summary: "Nodo principal de salud para cobertura urbana y periurbana de Quevedo.",
+        }),
+      ],
+    },
+    educacionPublica: {
+      type: "FeatureCollection",
+      features: [
+        pointFeature("Unidad Educativa Machachi", [-78.58, -0.514], {
+          category: "educacion",
+          serviceType: "escuela",
+          source: "Ministerio de Educacion / IEDG",
+          level: "urbano",
+          summary: "Equipamiento educativo de referencia para cobertura escolar central.",
+        }),
+        pointFeature("Unidad Educativa Cutuglagua", [-78.593, -0.367], {
+          category: "educacion",
+          serviceType: "escuela",
+          source: "Ministerio de Educacion / IEDG",
+          territoryId: "cutuglagua",
+          level: "parroquial",
+          summary: "Cobertura educativa periurbana para el borde norte de Mejia.",
+        }),
+        pointFeature("Unidad Educativa Quevedo Norte", [-79.455, -1.018], {
+          category: "educacion",
+          serviceType: "escuela",
+          source: "Ministerio de Educacion / IEDG",
+          territoryId: "quevedo",
+          level: "urbano",
+          summary: "Nodo escolar para lectura de cobertura educativa urbana en Quevedo.",
+        }),
+      ],
+    },
+    serviciosSociales: {
+      type: "FeatureCollection",
+      features: [
+        pointFeature("Centro social Machachi", [-78.589, -0.503], {
+          category: "social",
+          serviceType: "social",
+          source: "MIES / IEDG",
+          level: "cantonal",
+          summary: "Infraestructura social para apoyo a cuidado, niñez y vulnerabilidad.",
+        }),
+        pointFeature("Centro social Quevedo", [-79.481, -1.041], {
+          category: "social",
+          serviceType: "social",
+          source: "MIES / IEDG",
+          territoryId: "quevedo",
+          level: "cantonal",
+          summary: "Nodo de apoyo social y vulnerabilidad para cobertura urbana y periurbana.",
+        }),
+      ],
+    },
+    presenciaInstitucional: {
+      type: "FeatureCollection",
+      features: [
+        pointFeature("Nodo institucional Machachi", [-78.587, -0.507], {
+          category: "institucional",
+          serviceType: "institucional",
+          source: "PIT 2024 / IEDG",
+          level: "central",
+          summary: "Concentracion de servicios publicos para centralidad y operacion territorial.",
+        }),
+        pointFeature("Nodo institucional Quevedo", [-79.476, -1.036], {
+          category: "institucional",
+          serviceType: "institucional",
+          source: "PIT 2024 / IEDG",
+          territoryId: "quevedo",
+          level: "central",
+          summary: "Concentracion institucional para respuesta, atencion y articulacion territorial.",
+        }),
+      ],
+    },
+    aptitudIGM: {
+      type: "FeatureCollection",
+      features: [
+        polygonFeature("Aptitud fisica Machachi alta", [
+          [-78.607, -0.494],
+          [-78.573, -0.493],
+          [-78.564, -0.519],
+          [-78.59, -0.53],
+          [-78.611, -0.517],
+        ], {
+          category: "aptitud",
+          source: "IGM aptitud fisica",
+          aptitudeClass: "Alta",
+          summary: "Superficie fisicamente favorable para implantacion con pendientes bajas y soporte vial cercano.",
+        }),
+        polygonFeature("Aptitud fisica Cutuglagua condicionada", [
+          [-78.616, -0.346],
+          [-78.589, -0.344],
+          [-78.572, -0.366],
+          [-78.584, -0.384],
+          [-78.61, -0.379],
+        ], {
+          category: "aptitud",
+          source: "IGM aptitud fisica",
+          aptitudeClass: "Condicionada",
+          summary: "Superficie condicionada por borde, escorrentia y sensibilidad de quebradas.",
+        }),
+        polygonFeature("Aptitud fisica Quevedo media", [
+          [-79.525, -1.014],
+          [-79.469, -1.01],
+          [-79.447, -1.052],
+          [-79.49, -1.081],
+          [-79.533, -1.055],
+        ], {
+          category: "aptitud",
+          source: "IGM aptitud fisica",
+          territoryId: "quevedo",
+          aptitudeClass: "Media",
+          summary: "Superficie util con soporte vial y servicios, pero condicionada por saturacion estacional.",
+        }),
+      ],
+    },
+    manchaUrbana: {
     type: "FeatureCollection",
     features: [
       polygonFeature("Machachi", [
@@ -1876,6 +2328,30 @@ const layerStyles = {
     opacity: 0.9,
     dashArray: "6 8",
   },
+  riegoEstatal: {
+    color: "#2f7f9a",
+    weight: 3.2,
+    opacity: 0.96,
+    dashArray: "12 6",
+  },
+  suelosIGM: {
+    color: "#7d6044",
+    weight: 1.2,
+    fillColor: "#d8ba8f",
+    fillOpacity: 0.16,
+  },
+  coberturaMAATE: {
+    color: "#3a7a5d",
+    weight: 1.1,
+    fillColor: "#86c49b",
+    fillOpacity: 0.14,
+    dashArray: "5 6",
+  },
+  redVialEstatal: {
+    color: "#8c5b38",
+    weight: 3.4,
+    opacity: 0.95,
+  },
   canales: {
     color: "#28748a",
     weight: 3,
@@ -1900,8 +2376,18 @@ const layerStyles = {
     fillOpacity: 0.12,
     dashArray: "6 6",
   },
+  aptitudIGM: {
+    color: "#946d2e",
+    weight: 1.2,
+    fillColor: "#e9c977",
+    fillOpacity: 0.16,
+  },
   estaciones: {},
   equipamientos: {},
+  saludPublica: {},
+  educacionPublica: {},
+  serviciosSociales: {},
+  presenciaInstitucional: {},
 };
 
 const planningProgramCatalog = {
@@ -2912,6 +3398,10 @@ const state = {
     hydroNetwork: null,
     agroSuitability: null,
     gps: null,
+  },
+  officialData: {
+    agronomia: null,
+    planificacion: null,
   },
   gpsTracking: {
     mode: "idle",
@@ -4671,8 +5161,8 @@ async function checkGeoportalVersionFreshness() {
 
 const workflowGuideCatalog = {
   agronomia: {
-    badge: "Campo guiado",
-    title: "Ruta guiada para decidir en campo",
+    badge: "Ruta sugerida",
+    title: "Secuencia corta para decidir en campo",
     defaultCopy: "Escena, lote, agua, clima y operacion en una sola ruta.",
     steps: [
       { id: "scene", title: "Elegir zona y escena", pending: "Selecciona ambito e imagen satelital." },
@@ -4685,13 +5175,14 @@ const workflowGuideCatalog = {
       { id: "agronomy-scenes", label: "Abrir imagenes", tone: "secondary" },
       { id: "agronomy-demo", label: "Usar lote demo", tone: "ghost" },
       { id: "agronomy-water", label: "Leer agua", tone: "ghost" },
+      { id: "agronomy-official", label: "Fuentes oficiales", tone: "ghost" },
       { id: "agronomy-suitability", label: "Ver cultivo", tone: "ghost" },
       { id: "agronomy-gps", label: "Ver GPS", tone: "ghost" },
     ],
   },
   planificacion: {
-    badge: "Decision guiada",
-    title: "Ruta guiada para decidir donde intervenir",
+    badge: "Ruta sugerida",
+    title: "Secuencia corta para decidir donde intervenir",
     defaultCopy: "Aptitud, cobertura, riesgo, agua, estrategia y validacion 3D.",
     steps: [
       { id: "aptitude", title: "Aptitud base", pending: "Corre la primera lectura multivariable." },
@@ -4706,6 +5197,7 @@ const workflowGuideCatalog = {
       { id: "planning-aptitude", label: "Evaluar aptitud", tone: "secondary" },
       { id: "planning-mobility", label: "Evaluar movilidad", tone: "ghost" },
       { id: "planning-risk", label: "Evaluar riesgo", tone: "ghost" },
+      { id: "planning-official", label: "Fuentes oficiales", tone: "ghost" },
       { id: "planning-footprint", label: "Analizar huella", tone: "ghost" },
       { id: "planning-water", label: "Simular agua", tone: "ghost" },
       { id: "planning-strategy", label: "Construir estrategia", tone: "ghost" },
@@ -4863,6 +5355,12 @@ function cacheDom() {
   dom.inamhiLiveVisual = document.querySelector("#inamhiLiveVisual");
   dom.hydroNetworkResults = document.querySelector("#hydroNetworkResults");
   dom.hydroNetworkVisual = document.querySelector("#hydroNetworkVisual");
+  dom.officialDataCard = document.querySelector("#officialDataCard");
+  dom.runOfficialDataBtn = document.querySelector("#runOfficialDataBtn");
+  dom.focusOfficialDataBtn = document.querySelector("#focusOfficialDataBtn");
+  dom.clearOfficialDataBtn = document.querySelector("#clearOfficialDataBtn");
+  dom.officialDataResults = document.querySelector("#officialDataResults");
+  dom.officialDataVisual = document.querySelector("#officialDataVisual");
   dom.agroSuitabilityResults = document.querySelector("#agroSuitabilityResults");
   dom.agroSuitabilityVisual = document.querySelector("#agroSuitabilityVisual");
   dom.gpsResults = document.querySelector("#gpsResults");
@@ -5288,6 +5786,14 @@ function bindUI() {
   });
   dom.focusHydroNetworkBtn?.addEventListener("click", focusHydroNetworkStudy);
   dom.clearHydroNetworkBtn?.addEventListener("click", clearHydroNetworkAnalysis);
+  dom.runOfficialDataBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.officialDataResults, "Activando fuentes oficiales y capas utiles para esta ruta...", [
+      { target: dom.officialDataVisual, message: "Consolidando hidrografia, riego, suelos, vialidad y servicios oficiales..." },
+    ]);
+    return runModuleAction(dom.runOfficialDataBtn, "Activando oficiales...", () => runOfficialDataAnalysis());
+  });
+  dom.focusOfficialDataBtn?.addEventListener("click", focusOfficialDataStudy);
+  dom.clearOfficialDataBtn?.addEventListener("click", clearOfficialDataAnalysis);
   dom.runAgroSuitabilityBtn?.addEventListener("click", () => {
     setModulePendingState(dom.agroSuitabilityResults, "Cruce agroclimatico en curso para el cultivo seleccionado...", [
       { target: dom.agroSuitabilityVisual, message: "Preparando ranking de lotes, ventana termica-hidrica y recomendacion por cultivo..." },
@@ -6167,10 +6673,10 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     setActiveTab("modulos");
     hydratePlanning3dManifest();
     if (dom.sidebarTitle) {
-      dom.sidebarTitle.textContent = "Centro de decisiones territoriales";
+      dom.sidebarTitle.textContent = "Modulo territorial inteligente";
     }
     if (dom.sidebarSubtitle) {
-      dom.sidebarSubtitle.textContent = "Copiloto territorial, estudios clave y validacion 3D en una sola ruta.";
+      dom.sidebarSubtitle.textContent = "Una ruta guiada para resolver aptitud, riesgo, agua, movilidad, estrategia y validacion 3D.";
     }
     if (dom.overlayMode) {
       dom.overlayMode.textContent = "Territorial";
@@ -6222,10 +6728,10 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     renderAiGeoOverlay(state.aiGeoData);
   }
   if (dom.sidebarTitle) {
-    dom.sidebarTitle.textContent = "Centro de decisiones agronomicas";
+    dom.sidebarTitle.textContent = "Modulo agronomico inteligente";
   }
   if (dom.sidebarSubtitle) {
-    dom.sidebarSubtitle.textContent = `Escena, lote, agua, clima y GPS sobre ${getAgronomyAreaProfile().scopeLabel}.`;
+    dom.sidebarSubtitle.textContent = `Escena, lote, agua, oficiales, clima y GPS sobre ${getAgronomyAreaProfile().scopeLabel}.`;
   }
   if (dom.overlayMode) {
     dom.overlayMode.textContent = state.activeWizard;
@@ -6366,6 +6872,7 @@ function getModuleCardLabel(card) {
     climateCard: "Clima",
     inamhiCard: "INAMHI",
     hydroNetworkCard: "Red hidrica",
+    officialDataCard: "Oficiales",
     agroSuitabilityCard: "Aptitud cultivo",
     gpsCard: "GPS",
     planningCommandCard: "Copiloto",
@@ -6413,13 +6920,14 @@ function getModuleRouteLabel(route = state.entryRoute || "agronomia") {
 function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
   if (isPlanningRoute(route)) {
     return {
-      kicker: "Centro territorial",
-      title: "Abre una decision y entra directo al estudio",
-      copy: "Suelo, riesgo, agua, movilidad, estrategia y 3D desde un solo frente.",
+      kicker: "Copiloto inteligente",
+      title: "Elige una decision y el sistema acomoda el trabajo",
+      copy: "Suelo, oficiales, riesgo, agua, movilidad, estrategia y 3D sin navegar una lista interminable.",
       actions: [
         { id: "planning-aptitude", label: "Aptitud", copy: "Suelo y candidatos", tone: "primary" },
         { id: "planning-risk", label: "Riesgo", copy: "Restriccion y contencion", tone: "neutral" },
         { id: "planning-mobility", label: "Movilidad", copy: "Cobertura y tiempos", tone: "neutral" },
+        { id: "planning-official", label: "Oficiales", copy: "Vialidad y servicios", tone: "neutral" },
         { id: "planning-water", label: "Agua", copy: "Oferta y resiliencia", tone: "neutral" },
         { id: "planning-strategy", label: "FODA + CAME", copy: "Diagnostico y accion", tone: "neutral" },
         { id: "planning-3d", label: "Visor 3D", copy: "Volumen y sombra", tone: "accent" },
@@ -6427,6 +6935,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
       filters: [
         { id: "all", label: "Todo" },
         { id: "core", label: "Base" },
+        { id: "official", label: "Oficiales" },
         { id: "risk", label: "Riesgo + agua" },
         { id: "growth", label: "Huella + movilidad" },
         { id: "strategy", label: "Estrategia" },
@@ -6436,13 +6945,14 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
   }
 
   return {
-    kicker: "Centro operativo",
+    kicker: "Copiloto inteligente",
     title: "Abre una tarea de campo sin perderte en la columna",
-    copy: "Escena, agua, clima, cultivo y GPS visibles desde arriba.",
+    copy: "Escena, agua, oficiales, clima, cultivo y GPS visibles desde arriba y listos para resolver.",
     actions: [
       { id: "agronomy-scenes", label: "Imagenes", copy: "Escena y lectura base", tone: "primary" },
       { id: "agronomy-demo", label: "Lote demo", copy: "Entrar con un ejemplo", tone: "neutral" },
       { id: "agronomy-water", label: "Agua", copy: "Rios, acequias y quebradas", tone: "neutral" },
+      { id: "agronomy-official", label: "Oficiales", copy: "Riego, suelos y agua", tone: "neutral" },
       { id: "agronomy-suitability", label: "Cultivo", copy: "Aptitud agroclimatica", tone: "neutral" },
       { id: "agronomy-gps", label: "GPS", copy: "Seguimiento y corredor", tone: "accent" },
       { id: "agronomy-assistant", label: "Asistente", copy: "Plan guiado por etapa", tone: "neutral" },
@@ -6451,6 +6961,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
       { id: "all", label: "Todo" },
       { id: "imagery", label: "Escena + lote" },
       { id: "water", label: "Agua" },
+      { id: "official", label: "Oficiales" },
       { id: "climate", label: "Clima + cultivo" },
       { id: "operations", label: "GPS" },
       { id: "assistant", label: "Asistente + IA" },
@@ -6465,6 +6976,7 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
 
   const planningFilters = {
     core: new Set(["planningCommandCard", "planningCard", "planningResultsCard"]),
+    official: new Set(["officialDataCard"]),
     risk: new Set(["riskCard", "hydrologyCard", "territorialReadoutCard"]),
     growth: new Set(["mobilityCard", "landChangeCard", "territorialScenarioCard"]),
     strategy: new Set(["fodaCameCard", "territorialDecisionCard", "territorialAlertsCard", "aiGeoCard"]),
@@ -6474,6 +6986,7 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
   const agronomyFilters = {
     imagery: new Set(["intraloteCard", "demCard"]),
     water: new Set(["hydroNetworkCard"]),
+    official: new Set(["officialDataCard"]),
     climate: new Set(["climateCard", "inamhiCard", "agroSuitabilityCard"]),
     operations: new Set(["gpsCard"]),
     assistant: new Set(["wizardCard", "aiGeoCard"]),
@@ -6498,6 +7011,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
   if (isPlanningRoute(route)) {
     return {
       workflowGuideCard: true,
+      officialDataCard: false,
       planningCommandCard: true,
       planningCard: true,
       planningResultsCard: true,
@@ -6517,6 +7031,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
 
   return {
     workflowGuideCard: true,
+    officialDataCard: false,
     intraloteCard: true,
     demCard: true,
     climateCard: true,
@@ -6616,6 +7131,10 @@ function renderModuleQuickNav() {
   if (!dom.moduleQuickNav) {
     return;
   }
+  if (window.innerWidth < 1560) {
+    dom.moduleQuickNav.innerHTML = "";
+    return;
+  }
   const cards = getVisibleModuleCards().filter((card) => card.id && card.id !== "workflowGuideCard");
   if (!cards.length) {
     dom.moduleQuickNav.innerHTML = "";
@@ -6647,7 +7166,7 @@ function renderModuleSearchSummary() {
   if (!query) {
     setTextIfChanged(
       dom.moduleSearchSummary,
-      `${visibleCards.length} modulos listos en ${filterLabel.toLowerCase()} para ${routeLabel}.`
+      `${visibleCards.length} modulos listos · ${filterLabel.toLowerCase()} · ${routeLabel}.`
     );
     return;
   }
@@ -6937,11 +7456,12 @@ function openSidebarWorkingPanel(tabId = "modulos") {
 function getSidebarDockConfig(route = state.entryRoute || "agronomia") {
   if (isPlanningRoute(route)) {
     return {
-      title: "Atajos visibles",
-      subtitle: "Abre decisiones clave sin recorrer toda la columna.",
+      title: "Atajos inteligentes",
+      subtitle: "Salta a decisiones clave y fuentes oficiales sin recorrer toda la columna.",
       actions: [
         { id: "planning-copilot", label: "Copiloto" },
         { id: "planning-aptitude", label: "Aptitud" },
+        { id: "planning-official", label: "Oficiales" },
         { id: "planning-risk", label: "Riesgo" },
         { id: "planning-3d", label: "3D" },
       ],
@@ -6949,11 +7469,12 @@ function getSidebarDockConfig(route = state.entryRoute || "agronomia") {
   }
 
   return {
-    title: "Atajos visibles",
-    subtitle: "Escena, agua, cultivo y GPS al alcance de un clic.",
+    title: "Atajos inteligentes",
+    subtitle: "Escena, agua, oficiales, cultivo y GPS al alcance de un clic.",
     actions: [
       { id: "agronomy-scenes", label: "Escenas" },
       { id: "agronomy-water", label: "Agua" },
+      { id: "agronomy-official", label: "Oficiales" },
       { id: "agronomy-suitability", label: "Cultivo" },
       { id: "agronomy-gps", label: "GPS" },
     ],
@@ -7016,6 +7537,12 @@ function runWorkflowGuideAction(actionId) {
       focusModuleCard(dom.hydroNetworkCard);
       setStatus("Red hidrica lista para leer riego, drenaje y proteccion de riberas.");
       return;
+    case "agronomy-official":
+      openSidebarWorkingPanel("modulos");
+      dom.runOfficialDataBtn?.click();
+      focusModuleCard(dom.officialDataCard);
+      setStatus("Fuentes oficiales activas para agua, riego, suelos y soporte agronomico.");
+      return;
     case "agronomy-suitability":
       openSidebarWorkingPanel("modulos");
       dom.runAgroSuitabilityBtn?.click();
@@ -7041,6 +7568,12 @@ function runWorkflowGuideAction(actionId) {
       openSidebarWorkingPanel("modulos");
       dom.runRiskBtn?.click();
       focusModuleCard(dom.riskCard);
+      return;
+    case "planning-official":
+      openSidebarWorkingPanel("modulos");
+      dom.runOfficialDataBtn?.click();
+      focusModuleCard(dom.officialDataCard);
+      setStatus("Fuentes oficiales activas para vialidad, salud, educacion, servicios y aptitud base.");
       return;
     case "planning-footprint":
       openSidebarWorkingPanel("modulos");
@@ -7081,37 +7614,38 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   }
   if (dom.tabImageryBtn) {
     dom.tabImageryBtn.classList.toggle("hidden", isTerritorial);
+    dom.tabImageryBtn.textContent = "Imagenes";
   }
   if (dom.tabModulesBtn) {
-    dom.tabModulesBtn.textContent = "Modulos";
+    dom.tabModulesBtn.textContent = "Copiloto";
   }
   if (dom.modulesSectionKicker) {
     dom.modulesSectionKicker.textContent = isPlanning
-      ? "Decision territorial"
+      ? "Modulo inteligente"
       : isEvidence
         ? "Soporte territorial"
-        : "Decision agronomica";
+        : "Modulo inteligente";
   }
   if (dom.modulesSectionTitle) {
     dom.modulesSectionTitle.textContent = isPlanning
-      ? "Copiloto territorial"
+      ? "Territorio que resuelve"
       : isEvidence
         ? "Evidencia territorial"
-        : "Ruta agricola guiada";
+        : "Campo que resuelve";
   }
   if (dom.modulesSectionCopy) {
     dom.modulesSectionCopy.textContent = isPlanning
-      ? "Empieza por copiloto, aptitud, riesgo, agua o visor 3D."
+      ? "Empieza por copiloto, oficiales, aptitud, riesgo, agua, movilidad o visor 3D."
       : isEvidence
         ? "Ruta dedicada a quebradas, estaciones, areas sensibles, memoria historica y soporte tecnico de campo para volver mas precisa la lectura territorial."
-        : `Empieza por escena, lote, agua, clima o GPS en ${getAgronomyAreaProfile().scopeLabel}.`;
+        : `Empieza por escena, agua, oficiales, clima, cultivo o GPS en ${getAgronomyAreaProfile().scopeLabel}.`;
   }
   if (dom.modeFooterPill) {
     dom.modeFooterPill.textContent = isPlanning
-      ? "Decision territorial"
+      ? "Territorio inteligente"
       : isEvidence
         ? "Evidencia territorial"
-        : "Decision agronomica";
+        : "Campo inteligente";
   }
   if (Array.isArray(dom.planningModuleCards)) {
     dom.planningModuleCards.forEach((card) => {
@@ -7133,6 +7667,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
     updateLayerVisibility();
   }
   renderWorkflowGuide();
+  renderOfficialDataModule(route);
   renderModuleActionHub(route);
   renderSidebarDock(route);
   collapseModuleCardsForRoute(route);
@@ -7140,6 +7675,304 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   syncSatelliteLayerToggle();
   syncEsriResolutionButtons();
   syncSatelliteSuperResolution();
+}
+
+function getOfficialRouteKey(route = state.entryRoute || "agronomia") {
+  return isPlanningRoute(route) || isEvidenceRoute(route) ? "planificacion" : "agronomia";
+}
+
+function getOfficialSourceProfile(route = state.entryRoute || "agronomia") {
+  return officialSourceCatalog[getOfficialRouteKey(route)] || officialSourceCatalog.agronomia;
+}
+
+function getOfficialLayerPreset(route = state.entryRoute || "agronomia") {
+  return [...(getOfficialSourceProfile(route).layerIds || [])];
+}
+
+function setLayerSelectionForIds(layerIds = [], enabled = true, route = state.entryRoute || "agronomia") {
+  const selection = getRouteLayerSelection(route);
+  layerIds.forEach((layerId) => {
+    if (!layerId) {
+      return;
+    }
+    if (enabled) {
+      selection.add(layerId);
+    } else {
+      selection.delete(layerId);
+    }
+  });
+}
+
+function buildOfficialDataSummary(route = state.entryRoute || "agronomia") {
+  const routeKey = getOfficialRouteKey(route);
+  const profile = getOfficialSourceProfile(route);
+  const scopeProfile = routeKey === "agronomia" ? getAgronomyAreaProfile() : getTerritorialAreaProfile();
+  const selection = getRouteLayerSelection(route);
+  const catalogItems = layerCatalog.flatMap((group) => group.items || []);
+  const layerStats = (profile.layerIds || []).map((layerId) => {
+    const layerItem = catalogItems.find((item) => item.id === layerId);
+    const collection = getGeoLayerSource(layerId);
+    const features = Array.isArray(collection?.features)
+      ? collection.features.filter((feature) => feature?.geometry)
+      : [];
+    const pointCount = features.filter((feature) => feature.geometry?.type === "Point").length;
+    const lineCount = features.filter((feature) => ["LineString", "MultiLineString"].includes(feature.geometry?.type)).length;
+    const areaCount = features.filter((feature) => ["Polygon", "MultiPolygon"].includes(feature.geometry?.type)).length;
+    const dominantGeometry = lineCount >= areaCount && lineCount >= pointCount
+      ? "Lineal"
+      : areaCount >= pointCount
+        ? "Superficie"
+        : "Puntos";
+    return {
+      id: layerId,
+      title: layerItem?.title || layerId,
+      description: layerItem?.description || "",
+      count: features.length,
+      pointCount,
+      lineCount,
+      areaCount,
+      dominantGeometry,
+      active: selection.has(layerId),
+      features,
+    };
+  });
+
+  const totalFeatures = layerStats.reduce((sum, item) => sum + item.count, 0);
+  const pointCount = layerStats.reduce((sum, item) => sum + item.pointCount, 0);
+  const lineCount = layerStats.reduce((sum, item) => sum + item.lineCount, 0);
+  const areaCount = layerStats.reduce((sum, item) => sum + item.areaCount, 0);
+  const activeLayerCount = layerStats.filter((item) => item.active).length;
+
+  return {
+    routeKey,
+    areaId: routeKey === "agronomia" ? state.agronomyAreaId : state.territorialAreaId,
+    scopeLabel: scopeProfile.scopeLabel,
+    title: profile.title,
+    copy: profile.copy,
+    layerStats,
+    totalFeatures,
+    pointCount,
+    lineCount,
+    areaCount,
+    activeLayerCount,
+    sourceCount: Array.isArray(profile.sources) ? profile.sources.length : 0,
+    sources: profile.sources || [],
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+function renderOfficialDataModule(route = state.entryRoute || "agronomia") {
+  if (!dom.officialDataResults || !dom.officialDataVisual) {
+    return;
+  }
+
+  const routeKey = getOfficialRouteKey(route);
+  if (state.officialData[routeKey]) {
+    state.officialData[routeKey] = buildOfficialDataSummary(route);
+  }
+
+  const summary = state.officialData[routeKey];
+  if (!summary) {
+    resetMetricGrid(
+      dom.officialDataResults,
+      routeKey === "agronomia"
+        ? "Activa oficiales para leer agua, riego y suelos con respaldo institucional."
+        : "Activa oficiales para ver vialidad, salud, educacion, servicios y aptitud base."
+    );
+    resetVisualPanel(
+      dom.officialDataVisual,
+      routeKey === "agronomia"
+        ? "Aqui apareceran capas hidricas, riego, suelos y cobertura oficiales para el ambito agricola."
+        : "Aqui apareceran vialidad, servicios, presencia institucional y aptitud oficial para el ambito territorial."
+    );
+    return;
+  }
+
+  const cards = routeKey === "agronomia"
+    ? [
+        {
+          label: "Fuentes oficiales",
+          value: `${summary.sourceCount}`,
+          copy: "MAATE, MAG e IGM activadas para la ruta agricola.",
+        },
+        {
+          label: "Capas activas",
+          value: `${summary.activeLayerCount}/${summary.layerStats.length}`,
+          copy: `Lectura oficial aplicada sobre ${summary.scopeLabel}.`,
+        },
+        {
+          label: "Trazos de agua y riego",
+          value: `${summary.lineCount}`,
+          copy: "Rios, acequias, quebradas y corredores de riego visibles.",
+          highlight: true,
+        },
+        {
+          label: "Suelos y coberturas",
+          value: `${summary.areaCount}`,
+          copy: "Superficies de suelo, aptitud o cobertura listas para contraste.",
+        },
+        {
+          label: "Elementos visibles",
+          value: `${summary.totalFeatures}`,
+          copy: "Total de referencias oficiales cargadas en la vista actual.",
+        },
+      ]
+    : [
+        {
+          label: "Fuentes oficiales",
+          value: `${summary.sourceCount}`,
+          copy: "MTOP, MSP, Educacion, MIES, PIT e IGM activadas.",
+        },
+        {
+          label: "Capas activas",
+          value: `${summary.activeLayerCount}/${summary.layerStats.length}`,
+          copy: `Lectura oficial aplicada sobre ${summary.scopeLabel}.`,
+        },
+        {
+          label: "Servicios visibles",
+          value: `${summary.pointCount}`,
+          copy: "Salud, educacion, servicios sociales y presencia institucional.",
+          highlight: true,
+        },
+        {
+          label: "Corredores y aptitud",
+          value: `${summary.lineCount + summary.areaCount}`,
+          copy: "Red vial estatal y superficies de aptitud fisica del territorio.",
+        },
+        {
+          label: "Elementos visibles",
+          value: `${summary.totalFeatures}`,
+          copy: "Total de referencias oficiales cargadas en la vista actual.",
+        },
+      ];
+  paintMetricGrid(dom.officialDataResults, cards);
+
+  const visualMarkup = `
+    <div class="agronomy-visual-head">
+      <div>
+        <h4>${escapeHtmlContent(summary.title)}</h4>
+        <p class="agronomy-visual-copy">${escapeHtmlContent(summary.copy)} Ambito activo: ${escapeHtmlContent(summary.scopeLabel)}.</p>
+      </div>
+      <span class="agronomy-visual-pill tone-low">${summary.totalFeatures} elementos</span>
+    </div>
+    <div class="official-layer-grid">
+      ${summary.layerStats.map((layer) => `
+        <article class="official-layer-card">
+          <div class="official-layer-card-head">
+            <strong>${escapeHtmlContent(layer.title)}</strong>
+            <span class="agronomy-visual-pill ${layer.count ? "tone-low" : "tone-mid"}">${layer.count}</span>
+          </div>
+          <p>${escapeHtmlContent(layer.description || "Capa oficial lista para consulta en el mapa.")}</p>
+          <div class="official-source-tags">
+            <span>${escapeHtmlContent(layer.dominantGeometry)}</span>
+            <span>${layer.pointCount} puntos</span>
+            <span>${layer.lineCount} lineas</span>
+            <span>${layer.areaCount} superficies</span>
+          </div>
+        </article>
+      `).join("")}
+    </div>
+    <div class="official-source-list">
+      ${summary.sources.map((source) => `
+        <article class="official-source-card">
+          <div class="official-source-card-head">
+            <div>
+              <h5>${escapeHtmlContent(source.label)}</h5>
+              <p>${escapeHtmlContent(source.use)}</p>
+            </div>
+            <span class="agronomy-visual-pill tone-mid">${escapeHtmlContent(source.year)}</span>
+          </div>
+          <div class="official-source-tags">
+            <span>${escapeHtmlContent(source.theme)}</span>
+            <span>${routeKey === "agronomia" ? "Agronomia" : "Planificacion"}</span>
+          </div>
+          <a class="official-source-link" href="${escapeHtmlContent(source.link)}" target="_blank" rel="noreferrer">Abrir fuente oficial</a>
+        </article>
+      `).join("")}
+    </div>
+  `;
+  dom.officialDataVisual.classList.remove("empty-state");
+  dom.officialDataVisual.classList.add("has-data");
+  setHtmlIfChanged(dom.officialDataVisual, visualMarkup);
+}
+
+async function runOfficialDataAnalysis(silent = false) {
+  const route = state.entryRoute || "agronomia";
+  const routeKey = getOfficialRouteKey(route);
+  const preset = getOfficialLayerPreset(route);
+  setLayerSelectionForIds(preset, true, route);
+  renderLayerTree();
+  applyLayerSelectionForRoute(route);
+  updateLayerVisibility();
+  state.officialData[routeKey] = buildOfficialDataSummary(route);
+  if (routeKey === "planificacion") {
+    state.territorialFocus = "official";
+  }
+  renderOfficialDataModule(route);
+  updateMapSummary();
+  if (!silent) {
+    const summary = state.officialData[routeKey];
+    setStatus(
+      routeKey === "agronomia"
+        ? `Fuentes oficiales activas en ${summary.scopeLabel}: agua, riego, suelos y cobertura ya estan visibles.`
+        : `Fuentes oficiales activas en ${summary.scopeLabel}: vialidad, salud, educacion, servicios y aptitud ya estan visibles.`
+    );
+  }
+  return state.officialData[routeKey];
+}
+
+function clearOfficialDataAnalysis() {
+  const route = state.entryRoute || "agronomia";
+  const routeKey = getOfficialRouteKey(route);
+  const preset = getOfficialLayerPreset(route);
+  setLayerSelectionForIds(preset, false, route);
+  renderLayerTree();
+  applyLayerSelectionForRoute(route);
+  updateLayerVisibility();
+  state.officialData[routeKey] = null;
+  if (routeKey === "planificacion" && state.territorialFocus === "official") {
+    state.territorialFocus = state.hydrologyData
+      ? "hydrology"
+      : state.landChangeData
+        ? "landChange"
+        : state.fodaCameData
+          ? "fodaCame"
+          : state.planningData
+            ? "planning"
+            : "planning";
+  }
+  renderOfficialDataModule(route);
+  updateMapSummary();
+  setStatus(routeKey === "agronomia"
+    ? "Capas oficiales agronomicas retiradas de la vista actual."
+    : "Capas oficiales territoriales retiradas de la vista actual.");
+}
+
+function focusOfficialDataStudy() {
+  const route = state.entryRoute || "agronomia";
+  const routeKey = getOfficialRouteKey(route);
+  if (!state.officialData[routeKey]?.activeLayerCount) {
+    runOfficialDataAnalysis(true);
+  }
+  const summary = state.officialData[routeKey];
+  if (!summary || !mapState.map) {
+    return;
+  }
+  if (routeKey === "planificacion") {
+    state.territorialFocus = "official";
+  }
+  const bounds = buildBoundsFromFeatures(summary.layerStats.flatMap((layer) => layer.features || []));
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, {
+      padding: [48, 48],
+      maxZoom: routeKey === "agronomia" ? 14 : 12,
+    });
+  }
+  focusModuleCard(dom.officialDataCard);
+  updateMapSummary();
+  setStatus(routeKey === "agronomia"
+    ? `Fuentes oficiales centradas sobre ${summary.scopeLabel}.`
+    : `Fuentes oficiales centradas sobre ${summary.scopeLabel}.`);
 }
 
 function getSatelliteLayerToggleButtons() {
@@ -7504,7 +8337,7 @@ function renderLayerTree() {
 }
 
 function getLayerSelectionRouteKey(route = state.entryRoute || "agronomia") {
-  return isPlanningRoute(route) ? "planificacion" : "agronomia";
+  return isPlanningRoute(route) || isEvidenceRoute(route) ? "planificacion" : "agronomia";
 }
 
 function getDefaultCheckedLayerIds(route = state.entryRoute || "agronomia") {
@@ -7602,14 +8435,24 @@ function getGeoLayerSource(layerId) {
     return null;
   }
 
-  if (!["parroquias", "vias", "rios", "acequias", "quebradas", "canales", "lotes", "estaciones"].includes(layerId)) {
-    return geojson;
+  const agronomyScopedLayers = ["parroquias", "vias", "rios", "acequias", "quebradas", "canales", "lotes", "estaciones", "riegoEstatal", "suelosIGM", "coberturaMAATE"];
+  const planningScopedLayers = ["manchaUrbana", "equipamientos", "hidrozonas", "redVialEstatal", "saludPublica", "educacionPublica", "serviciosSociales", "presenciaInstitucional", "aptitudIGM"];
+
+  if (agronomyScopedLayers.includes(layerId)) {
+    return {
+      ...geojson,
+      features: getAgronomyAreaFeatures(geojson.features),
+    };
   }
 
-  return {
-    ...geojson,
-    features: getAgronomyAreaFeatures(geojson.features),
-  };
+  if (planningScopedLayers.includes(layerId)) {
+    return {
+      ...geojson,
+      features: filterFeaturesByTerritorialArea(geojson.features),
+    };
+  }
+
+  return geojson;
 }
 
 function buildLayerDescription(layerId, properties = {}) {
@@ -7631,6 +8474,18 @@ function buildLayerDescription(layerId, properties = {}) {
   if (layerId === "canales") {
     return "Infraestructura de riego demostrativa para analisis hidrico.";
   }
+  if (layerId === "riegoEstatal") {
+    return `${properties.source || "Fuente oficial"} ${properties.year || ""}. ${properties.summary || "Corredor estatal de riego para soporte parcelario."}`.trim();
+  }
+  if (layerId === "suelosIGM") {
+    return `${properties.soilClass || "Unidad de suelo"} con aptitud ${properties.aptitude || "referencial"}. ${properties.summary || "Soporte oficial para aptitud y restriccion."}`;
+  }
+  if (layerId === "coberturaMAATE") {
+    return `${properties.coverClass || "Cobertura"} segun ${properties.source || "MAATE"}. ${properties.summary || "Capa de ambiente y uso de la tierra."}`;
+  }
+  if (layerId === "redVialEstatal") {
+    return `${properties.roadClass || "Corredor vial"} de ${properties.source || "MTOP"}. ${properties.summary || "Base oficial para conectividad y geocercas."}`;
+  }
   if (layerId === "manchaUrbana") {
     return `Nodo ${properties.hierarchy || "urbano"} con crecimiento relativo ${(Number(properties.growthRate || 0) * 100).toFixed(0)}%.`;
   }
@@ -7640,10 +8495,52 @@ function buildLayerDescription(layerId, properties = {}) {
   if (layerId === "equipamientos") {
     return `${formatFacilityTypeLabel(properties.serviceType)} de escala ${properties.level || "local"} usado para medir cobertura territorial.`;
   }
+  if (layerId === "aptitudIGM") {
+    return `${properties.aptitudeClass || "Aptitud"} segun ${properties.source || "IGM"}. ${properties.summary || "Soporte fisico para implantacion territorial."}`;
+  }
+  if (["saludPublica", "educacionPublica", "serviciosSociales", "presenciaInstitucional"].includes(layerId)) {
+    return `${formatFacilityTypeLabel(properties.serviceType)} con fuente ${properties.source || "IEDG"}. ${properties.summary || "Punto oficial para cobertura y centralidad."}`;
+  }
   return "Capa demostrativa integrada en el visor del geoportal.";
 }
 
 function getPointMarkerStyle(layerId, feature = null) {
+  if (layerId === "saludPublica") {
+    return {
+      radius: 8,
+      weight: 2,
+      color: "#7f3f57",
+      fillColor: "#d97f9d",
+      fillOpacity: 0.92,
+    };
+  }
+  if (layerId === "educacionPublica") {
+    return {
+      radius: 8,
+      weight: 2,
+      color: "#966b22",
+      fillColor: "#efc36b",
+      fillOpacity: 0.94,
+    };
+  }
+  if (layerId === "serviciosSociales") {
+    return {
+      radius: 7,
+      weight: 2,
+      color: "#2f6d58",
+      fillColor: "#69bb8f",
+      fillOpacity: 0.94,
+    };
+  }
+  if (layerId === "presenciaInstitucional") {
+    return {
+      radius: 7,
+      weight: 2,
+      color: "#51607f",
+      fillColor: "#90a3d7",
+      fillOpacity: 0.94,
+    };
+  }
   if (layerId === "equipamientos") {
     const serviceType = feature?.properties?.serviceType;
     if (serviceType === "hospital") {
@@ -28277,6 +29174,7 @@ function updateMapSummary(force = false) {
     const aiGeo = state.aiGeoData;
     const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
+    const officialData = state.officialData.planificacion?.activeLayerCount ? state.officialData.planificacion : null;
     const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
     const landChangePeriod = landChange?.period || getLandChangePeriodProfile();
     const landChangeScenario = landChange?.scenario || getLandChangeScenarioProfile();
@@ -28288,6 +29186,7 @@ function updateMapSummary(force = false) {
     const showAiGeo = state.territorialFocus === "aiGeo" && aiGeo?.mode === "territorial";
     const showLandChange = state.territorialFocus === "landChange" && landChange;
     const showHydrology = state.territorialFocus === "hydrology" && hydrology;
+    const showOfficial = state.territorialFocus === "official" && officialData;
     setTextIfChanged(dom.overlayIndex, planning ? "Aptitud" : imageryProfile.shortLabel);
     renderMapBadges();
     if (showAiGeo) {
@@ -28318,6 +29217,13 @@ function updateMapSummary(force = false) {
         dom.mapSubtitle,
         `${hydrologyClimate.shortLabel} · ${hydrologyHorizon.shortLabel} · ${hydrologyDemand.shortLabel}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio y ${hydrology.prioritySectors.length} prioridades.`
       );
+    } else if (showOfficial) {
+      setTextIfChanged(dom.overlayIndex, "Oficial");
+      setTextIfChanged(dom.mapTitle, `Fuentes oficiales sobre ${officialData.scopeLabel}`);
+      setTextIfChanged(
+        dom.mapSubtitle,
+        `${officialData.activeLayerCount} capas activas, ${officialData.pointCount} servicios y ${officialData.lineCount + officialData.areaCount} corredores o superficies visibles.`
+      );
     } else if (planning) {
       setTextIfChanged(dom.mapTitle, `${planning.program.longLabel} sobre ${planning.context.scopeLabel}`);
       setTextIfChanged(
@@ -28340,6 +29246,13 @@ function updateMapSummary(force = false) {
       setTextIfChanged(dom.overlayIndex, "Huella");
       setTextIfChanged(dom.mapTitle, "Estudio de transformacion del suelo listo");
       setTextIfChanged(dom.mapSubtitle, `${landChange.period.shortLabel} · ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas · ${landChange.summary.hotspotLabel}.`);
+    } else if (officialData) {
+      setTextIfChanged(dom.overlayIndex, "Oficial");
+      setTextIfChanged(dom.mapTitle, `Fuentes oficiales sobre ${officialData.scopeLabel}`);
+      setTextIfChanged(
+        dom.mapSubtitle,
+        `${officialData.activeLayerCount} capas listas, ${officialData.pointCount} servicios y ${officialData.totalFeatures} referencias oficiales visibles.`
+      );
     } else {
       setTextIfChanged(dom.mapTitle, "Planificacion territorial lista");
       setTextIfChanged(dom.mapSubtitle, `Empieza por aptitud, huella, agua, estrategia o 3D sobre ${getTerritorialAreaProfile().scopeLabel}.`);
@@ -28373,6 +29286,8 @@ function updateMapSummary(force = false) {
     return;
   }
 
+  const agronomyOfficial = state.officialData.agronomia?.activeLayerCount ? state.officialData.agronomia : null;
+
   const image = getSelectedImage();
   const sensor = image ? getSensorForImage(image) : getActiveSensor();
   const analysis = getRenderableAnalysis(image);
@@ -28386,9 +29301,14 @@ function updateMapSummary(force = false) {
   }
 
   if (!image) {
-    setTextIfChanged(dom.mapTitle, "No hay escena activa");
+    setTextIfChanged(dom.mapTitle, agronomyOfficial ? `Fuentes oficiales sobre ${agronomyOfficial.scopeLabel}` : "No hay escena activa");
     renderMapBadges();
-    setTextIfChanged(dom.mapSubtitle, `Abre Imagenes o usa un lote demo sobre ${getAgronomyAreaProfile().scopeLabel}.`);
+    setTextIfChanged(
+      dom.mapSubtitle,
+      agronomyOfficial
+        ? `${agronomyOfficial.activeLayerCount} capas activas, ${agronomyOfficial.lineCount} trazos de agua/riego y ${agronomyOfficial.areaCount} superficies oficiales visibles.`
+        : `Abre Imagenes o usa un lote demo sobre ${getAgronomyAreaProfile().scopeLabel}.`
+    );
     return;
   }
 
@@ -28562,6 +29482,29 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
             label: `${hydrology.prioritySectors.length} prioridades`,
           },
         ]
+      : state.territorialFocus === "official" && officialData
+      ? [
+          {
+            tone: "analysis",
+            label: "Oficial",
+          },
+          {
+            tone: "neutral",
+            label: `${officialData.sourceCount} fuentes`,
+          },
+          {
+            tone: "neutral",
+            label: `${officialData.pointCount} servicios`,
+          },
+          {
+            tone: "preview",
+            label: `${officialData.lineCount} corredores`,
+          },
+          {
+            tone: "neutral",
+            label: `${officialData.areaCount} superficies`,
+          },
+        ]
       : [
           {
             tone: "analysis",
@@ -28707,12 +29650,16 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
 
   if (!image) {
     const sensor = getActiveSensor();
+    const officialBadge = state.officialData.agronomia?.activeLayerCount
+      ? `<span class="map-badge analysis">Oficial ${state.officialData.agronomia.activeLayerCount}</span>`
+      : "";
     const planningBadge = state.planningData
       ? `<span class="map-badge analysis">Plan ${state.planningData.program.label}</span>`
       : "";
     setHtmlIfChanged(dom.mapBadges, `
       <span class="map-badge sensor sensor-${sensor.id}">${sensor.label}</span>
       <span class="map-badge muted">Sin escena</span>
+      ${officialBadge}
       ${planningBadge}
     `);
     return;
@@ -28768,6 +29715,13 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
     badges.push({
       tone: "analysis",
       label: `Plan ${state.planningData.program.label}`,
+    });
+  }
+
+  if (state.officialData.agronomia?.activeLayerCount) {
+    badges.push({
+      tone: "analysis",
+      label: `Oficial ${state.officialData.agronomia.activeLayerCount}`,
     });
   }
 
@@ -29055,6 +30009,15 @@ function formatFacilityTypeLabel(serviceType) {
   }
   if (serviceType === "hospital") {
     return "Salud";
+  }
+  if (serviceType === "centro-salud") {
+    return "Centro de salud";
+  }
+  if (serviceType === "social") {
+    return "Servicio social";
+  }
+  if (serviceType === "institucional") {
+    return "Presencia institucional";
   }
   if (serviceType === "equipamiento") {
     return "Equipamiento";
