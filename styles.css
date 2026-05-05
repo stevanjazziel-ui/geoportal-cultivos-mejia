@@ -19,8 +19,8 @@
   --radius-lg: 24px;
   --radius-md: 18px;
   --radius-sm: 12px;
-  --sidebar-width: clamp(336px, 25vw, 410px);
-  --sidebar-width-modules: clamp(540px, 39vw, 860px);
+  --sidebar-width: clamp(320px, 23vw, 390px);
+  --sidebar-width-modules: clamp(500px, 36vw, 760px);
   --font-display: "Sora", sans-serif;
   --font-body: "IBM Plex Sans", sans-serif;
 }
@@ -628,6 +628,14 @@ button {
   --sidebar-width: var(--sidebar-width-modules);
 }
 
+.app-shell[data-route="planificacion"] {
+  --sidebar-width: clamp(340px, 23vw, 420px);
+}
+
+.app-shell[data-route="planificacion"][data-active-tab="modulos"] {
+  --sidebar-width: clamp(520px, 38vw, 780px);
+}
+
 .sidebar {
   position: relative;
   height: 100%;
@@ -699,13 +707,19 @@ button {
   border-radius: 18px;
   background: rgba(241, 244, 239, 0.9);
   border: 1px solid rgba(57, 73, 66, 0.08);
-  overflow-x: auto;
-  scrollbar-width: thin;
+  overflow: auto hidden;
+  scrollbar-width: none;
+}
+
+.tabbar::-webkit-scrollbar {
+  display: none;
 }
 
 .tab-button {
   background: rgba(255, 255, 255, 0.62);
   white-space: nowrap;
+  flex: 0 0 auto;
+  text-align: center;
 }
 
 .tab-panels {
@@ -736,6 +750,7 @@ button {
 .sidebar-dock {
   display: grid;
   gap: 10px;
+  margin-top: auto;
   padding: 12px 14px;
   border-radius: 20px;
   border: 1px solid rgba(57, 73, 66, 0.08);
@@ -1167,7 +1182,7 @@ button {
 
 .module-card {
   gap: 12px;
-  padding: 18px;
+  padding: 16px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(247, 249, 244, 0.8)),
     radial-gradient(circle at top right, rgba(47, 109, 88, 0.06), transparent 38%);
@@ -1219,13 +1234,13 @@ button {
 }
 
 .module-copy {
-  max-width: 62ch;
-  font-size: 0.95rem;
-  line-height: 1.55;
+  max-width: 58ch;
+  font-size: 0.92rem;
+  line-height: 1.5;
 }
 
 .module-card.is-collapsed {
-  gap: 10px;
+  gap: 8px;
 }
 
 .module-card.is-collapsed > :not(.module-head):not(.module-action-row):not(.gps-geofence-toolbar) {
@@ -1246,6 +1261,13 @@ button {
   background:
     linear-gradient(180deg, rgba(247, 251, 248, 0.96), rgba(250, 248, 242, 0.84)),
     radial-gradient(circle at top right, rgba(47, 109, 88, 0.1), transparent 44%);
+}
+
+#gpsCard {
+  border-color: rgba(58, 111, 143, 0.16);
+  background:
+    linear-gradient(180deg, rgba(250, 252, 249, 0.96), rgba(244, 249, 246, 0.9)),
+    radial-gradient(circle at top right, rgba(83, 127, 160, 0.08), transparent 34%);
 }
 
 .planning-command-card {
@@ -1344,14 +1366,7 @@ button {
   position: sticky;
   top: 0;
   z-index: 3;
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 8px;
-  overflow-x: auto;
-  padding: 8px 0 4px;
-  background: linear-gradient(180deg, rgba(248, 249, 244, 0.98), rgba(248, 249, 244, 0.78), rgba(248, 249, 244, 0));
-  backdrop-filter: blur(8px);
-  scrollbar-width: thin;
+  display: none;
 }
 
 #moduleQuickNav {
@@ -1368,30 +1383,45 @@ button {
   top: 50px;
   z-index: 3;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px 12px;
-  align-items: end;
-  padding: 10px 0 6px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  align-items: stretch;
+  padding: 0;
   background: linear-gradient(180deg, rgba(248, 249, 244, 0.98), rgba(248, 249, 244, 0.84), rgba(248, 249, 244, 0));
   backdrop-filter: blur(8px);
+  min-width: 0;
 }
 
 .module-search-field {
   max-width: 100%;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(57, 73, 66, 0.08);
+  background: rgba(255, 255, 255, 0.76);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.26);
 }
 
 .module-search-field input[type="search"] {
   width: 100%;
-  padding: 11px 13px;
+  min-width: 0;
+  padding: 12px 14px;
   border-radius: 14px;
   border: 1px solid rgba(57, 73, 66, 0.12);
-  background: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.92);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
 }
 
 .module-browser-actions {
-  justify-content: flex-end;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+}
+
+.module-browser-actions .ghost-button {
+  width: 100%;
+  justify-content: center;
 }
 
 .module-search-summary {
@@ -1411,8 +1441,108 @@ button {
   display: none !important;
 }
 
+.module-action-hub {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 24px;
+  border: 1px solid rgba(57, 73, 66, 0.08);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(246, 248, 242, 0.92)),
+    radial-gradient(circle at top right, rgba(47, 109, 88, 0.08), transparent 32%);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.3);
+  min-width: 0;
+}
+
+.module-action-hub-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.module-action-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 10px;
+  min-width: 0;
+}
+
+.module-action-card {
+  display: grid;
+  gap: 5px;
+  min-height: 84px;
+  padding: 12px;
+  text-align: left;
+  border-radius: 18px;
+  border: 1px solid rgba(57, 73, 66, 0.1);
+  background: rgba(255, 255, 255, 0.86);
+  color: var(--ink);
+  transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 160ms ease;
+}
+
+.module-action-card strong {
+  font-family: var(--font-display);
+  font-size: 0.96rem;
+  letter-spacing: -0.02em;
+}
+
+.module-action-card span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.module-action-card:hover,
+.module-action-card:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(47, 109, 88, 0.2);
+  box-shadow: 0 14px 24px rgba(22, 31, 27, 0.08);
+}
+
+.module-action-card.tone-primary {
+  background: linear-gradient(145deg, rgba(45, 104, 84, 0.96), rgba(79, 132, 107, 0.9));
+  border-color: transparent;
+  color: #f7f2e9;
+}
+
+.module-action-card.tone-primary span {
+  color: rgba(247, 242, 233, 0.82);
+}
+
+.module-action-card.tone-accent {
+  background: linear-gradient(145deg, rgba(239, 246, 242, 0.98), rgba(255, 248, 238, 0.98));
+  border-color: rgba(47, 109, 88, 0.16);
+}
+
+.module-filter-rail {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 8px;
+  min-width: 0;
+}
+
+.module-filter-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(57, 73, 66, 0.1);
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.module-filter-chip.active {
+  color: #fffaf3;
+  border-color: transparent;
+  background: linear-gradient(135deg, var(--leaf-deep), var(--leaf));
+}
+
 .app-shell[data-active-tab="modulos"] .sidebar {
-  padding: 18px 20px;
+  padding: 16px 18px;
 }
 
 .module-quick-nav:empty {
@@ -1423,6 +1553,7 @@ button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  flex: 1 1 160px;
   padding: 8px 12px;
   border: 1px solid rgba(57, 73, 66, 0.1);
   border-radius: 999px;
@@ -1809,16 +1940,50 @@ button {
 
 .gps-geofence-toolbar {
   display: grid;
-  gap: 10px;
-  padding: 12px 14px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  padding: 14px;
   border-radius: var(--radius-md);
   border: 1px solid rgba(47, 61, 50, 0.08);
-  background: rgba(255, 255, 255, 0.56);
+  background:
+    linear-gradient(145deg, rgba(239, 247, 244, 0.94), rgba(255, 250, 243, 0.96)),
+    radial-gradient(circle at top right, rgba(58, 111, 143, 0.08), transparent 34%);
+}
+
+.gps-geofence-copy {
+  display: grid;
+  gap: 6px;
+}
+
+.gps-geofence-copy h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  letter-spacing: -0.02em;
+}
+
+.gps-geofence-copy p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
 }
 
 .gps-geofence-field {
   gap: 6px;
-  max-width: 240px;
+  max-width: none;
+}
+
+#gpsCard .module-action-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+#gpsCard .module-action-row .ghost-button,
+#gpsCard .module-action-row .secondary-button {
+  width: 100%;
+  justify-content: center;
 }
 
 .gps-event-log.has-data {
@@ -1910,6 +2075,7 @@ button {
 
   #workflowGuideCard,
   #planningCommandCard,
+  #moduleActionHub,
   #moduleQuickNav,
   #gpsCard,
   #planningCard,
@@ -1924,22 +2090,42 @@ button {
   }
 
   #gpsCard .gps-geofence-toolbar {
-    grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
-    align-items: end;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 220px);
+    align-items: start;
+  }
+
+  #gpsCard .gps-geofence-copy {
+    grid-column: 1 / 2;
+  }
+
+  #gpsCard .gps-geofence-field {
+    grid-column: 2 / 3;
+    align-self: start;
   }
 
   #gpsCard .gps-geofence-toolbar .module-action-row {
+    grid-column: 1 / -1;
     margin-top: 0;
   }
 }
 
 @media (min-width: 1560px) {
+  .module-quick-nav:not(:empty) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 6px 0 2px;
+    background: linear-gradient(180deg, rgba(248, 249, 244, 0.98), rgba(248, 249, 244, 0.78), rgba(248, 249, 244, 0));
+    backdrop-filter: blur(8px);
+  }
+
   .tab-panel[data-panel="modulos"].active {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   #workflowGuideCard,
   #planningCommandCard,
+  #moduleActionHub,
   #moduleQuickNav,
   #moduleBrowserToolbar,
   #moduleSearchSummary,
@@ -1964,12 +2150,33 @@ button {
 }
 
 @media (max-width: 1180px) {
+  .module-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .module-filter-chip,
+  .module-quick-button {
+    flex: 1 1 calc(50% - 8px);
+  }
+
   .module-browser-toolbar {
     grid-template-columns: minmax(0, 1fr);
   }
 
   .module-browser-actions {
-    justify-content: flex-start;
+    grid-template-columns: 1fr;
+  }
+
+  .module-filter-rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gps-geofence-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .gps-geofence-field {
+    max-width: none;
   }
 }
 
@@ -3348,14 +3555,23 @@ button {
   contain: layout paint;
 }
 
+.map-canvas .leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 .map-canvas .leaflet-pane,
+.map-canvas .leaflet-map-pane,
 .map-canvas .leaflet-tile-container,
 .map-canvas .leaflet-overlay-pane svg,
 .map-canvas .leaflet-marker-pane,
 .map-canvas .leaflet-tooltip-pane,
-.map-canvas .leaflet-popup-pane {
+.map-canvas .leaflet-popup-pane,
+.map-canvas .leaflet-control-container {
   transform: translateZ(0);
   backface-visibility: hidden;
+  min-width: 100%;
+  min-height: 100%;
 }
 
 .map-canvas img.leaflet-tile {
@@ -3616,7 +3832,7 @@ button {
 }
 
 .app-shell[data-route="planificacion"] .workspace {
-  grid-template-columns: clamp(310px, 21vw, 380px) minmax(0, 1fr);
+  grid-template-columns: minmax(0, var(--sidebar-width)) minmax(0, 1fr);
   gap: 16px;
 }
 

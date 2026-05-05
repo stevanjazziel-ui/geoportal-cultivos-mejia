@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="geoportal-version" content="20260501-2">
+  <meta name="geoportal-version" content="20260505-1">
   <title>Centro de Decisiones | Mejia y Quevedo</title>
   <meta
     name="description"
@@ -32,7 +32,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260501-2">
+  <link rel="stylesheet" href="./styles.css?v=20260505-1">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -104,7 +104,7 @@
             </button>
           </div>
           <p class="login-note">
-            Los tres accesos entran como usuario publico. Puedes cambiar de ruta luego sin salir del visor.
+            Los tres accesos entran directo a decisiones agronomicas, territoriales y operativas.
           </p>
         </div>
       </div>
@@ -119,7 +119,7 @@
         </button>
         <div>
           <span class="eyebrow">Mejia + Quevedo | Centro de decisiones</span>
-          <h1>Agronomia y territorio</h1>
+          <h1>Plataforma de decisiones</h1>
         </div>
       </div>
 
@@ -150,8 +150,8 @@
         </div>
         <div class="user-pill">
           <span class="status-dot"></span>
-            Usuario publico | v20260501-2
-        </div>
+            Usuario publico | v20260505-1
+          </div>
       </div>
     </header>
 
@@ -360,6 +360,18 @@
               </p>
             </div>
 
+            <section id="moduleActionHub" class="module-action-hub" aria-label="Centro de acciones">
+              <div class="module-action-hub-copy">
+                <p id="moduleHubKicker" class="module-kicker">Centro de acciones</p>
+                <h3 id="moduleHubTitle">Abre una decision y el sistema te lleva</h3>
+                <p id="moduleHubCopy" class="module-copy">
+                  Menos lista larga, mas botones utiles para escena, agua, GPS, riesgo, estrategia o 3D.
+                </p>
+              </div>
+              <div id="moduleActionGrid" class="module-action-grid"></div>
+              <div id="moduleFilterRail" class="module-filter-rail"></div>
+            </section>
+
             <article id="workflowGuideCard" class="module-card workflow-guide-card">
               <div class="module-head">
                 <div>
@@ -377,13 +389,12 @@
 
             <div id="moduleQuickNav" class="module-quick-nav"></div>
             <div id="moduleBrowserToolbar" class="module-browser-toolbar">
-              <label class="field compact module-search-field">
-                <span>Buscar modulo</span>
-                <input id="moduleSearchInput" type="search" placeholder="Ej. GPS, agua, FODA, clima, 3D...">
-              </label>
+              <div class="module-search-field">
+                <input id="moduleSearchInput" type="search" placeholder="Buscar GPS, agua, riesgo, FODA, 3D o clima">
+              </div>
               <div class="action-row module-browser-actions">
-                <button id="expandVisibleModulesBtn" class="ghost-button" type="button">Expandir visibles</button>
-                <button id="collapseVisibleModulesBtn" class="ghost-button" type="button">Compactar visibles</button>
+                <button id="expandVisibleModulesBtn" class="ghost-button" type="button">Expandir</button>
+                <button id="collapseVisibleModulesBtn" class="ghost-button" type="button">Compactar</button>
               </div>
             </div>
             <div id="moduleSearchSummary" class="module-search-summary">
@@ -557,6 +568,13 @@
               </div>
               <div class="gps-geofence-toolbar">
                 <input id="gpsGeofenceFileInput" class="visually-hidden" type="file" accept=".kml,.geojson,.json">
+                <div class="gps-geofence-copy">
+                  <p class="module-kicker">Corredor operativo</p>
+                  <h4>Sube KML o GeoJSON y vigila la ruta esperada</h4>
+                  <p>
+                    Si el GPS se sale del corredor, el sistema avisa, pinta la alerta y deja registro del evento.
+                  </p>
+                </div>
                 <label class="field compact gps-geofence-field">
                   <span>Tolerancia del corredor (m)</span>
                   <input id="gpsGeofenceTolerance" type="number" min="10" max="500" step="5" value="45">

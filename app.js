@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260501-2";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260505-1";
 
 const layerCatalog = [
   {
@@ -2945,6 +2945,7 @@ const state = {
   collapsedModules: {},
   moduleQuickNavActiveId: null,
   moduleSearchQuery: "",
+  moduleFilterId: "all",
   moduleSearchRoute: "agronomia",
   wizardProgress: {},
   wizardBusy: false,
@@ -2953,6 +2954,7 @@ const state = {
 const dom = {};
 const mapState = {
   map: null,
+  layoutRefreshTimers: [],
   baseLayers: {},
   activeBaseLayer: null,
   controlGroup: null,
@@ -4951,6 +4953,12 @@ function cacheDom() {
   dom.modulesSectionKicker = document.querySelector("#modulesSectionKicker");
   dom.modulesSectionTitle = document.querySelector("#modulesSectionTitle");
   dom.modulesSectionCopy = document.querySelector("#modulesSectionCopy");
+  dom.moduleActionHub = document.querySelector("#moduleActionHub");
+  dom.moduleHubKicker = document.querySelector("#moduleHubKicker");
+  dom.moduleHubTitle = document.querySelector("#moduleHubTitle");
+  dom.moduleHubCopy = document.querySelector("#moduleHubCopy");
+  dom.moduleActionGrid = document.querySelector("#moduleActionGrid");
+  dom.moduleFilterRail = document.querySelector("#moduleFilterRail");
   dom.workflowGuideCard = document.querySelector("#workflowGuideCard");
   dom.moduleQuickNav = document.querySelector("#moduleQuickNav");
   dom.moduleBrowserToolbar = document.querySelector("#moduleBrowserToolbar");
@@ -5016,6 +5024,15 @@ function queueMapLayoutRefresh() {
     if (!mapState.map) {
       return;
     }
+    const container = mapState.map.getContainer?.();
+    if (container) {
+      container.style.width = "100%";
+      container.style.height = "100%";
+      container.querySelectorAll(".leaflet-map-pane, .leaflet-pane, .leaflet-control-container").forEach((node) => {
+        node.style.width = "100%";
+        node.style.height = "100%";
+      });
+    }
     try {
       mapState.map.invalidateSize({ pan: false, debounceMoveend: true });
     } catch (error) {
@@ -5023,12 +5040,17 @@ function queueMapLayoutRefresh() {
     }
   };
 
-  if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
-    window.requestAnimationFrame(run);
-  }
-  run();
-  [90, 220, 420].forEach((delay) => {
-    window.setTimeout(run, delay);
+  mapState.layoutRefreshTimers.forEach((timerId) => window.clearTimeout(timerId));
+  mapState.layoutRefreshTimers = [];
+  [0, 80, 180, 320, 520].forEach((delay) => {
+    const timerId = window.setTimeout(() => {
+      if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
+        window.requestAnimationFrame(run);
+      } else {
+        run();
+      }
+    }, delay);
+    mapState.layoutRefreshTimers.push(timerId);
   });
 }
 
@@ -5075,6 +5097,8 @@ function bindUI() {
   dom.wizardModes?.addEventListener("click", handleWizardModeInteraction);
   dom.wizardSteps?.addEventListener("click", handleWizardStepInteraction);
   dom.workflowGuideActions?.addEventListener("click", handleWorkflowGuideAction);
+  dom.moduleActionGrid?.addEventListener("click", handleModuleActionHubClick);
+  dom.moduleFilterRail?.addEventListener("click", handleModuleFilterRailClick);
   dom.moduleQuickNav?.addEventListener("click", handleModuleQuickNavInteraction);
   dom.sidebarDockActions?.addEventListener("click", handleSidebarDockAction);
   dom.moduleSearchInput?.addEventListener("input", handleModuleSearchInput);
@@ -6312,6 +6336,9 @@ function focusPlanningCommandCard() {
 
 function activateOperationsEntryUi() {
   openSidebarWorkingPanel("modulos");
+  state.moduleFilterId = "operations";
+  renderModuleActionHub();
+  applyModuleSearchFilter({ preserveActive: true });
   if (state.activeWizard !== "Monitoreo") {
     state.activeWizard = "Monitoreo";
     setTextIfChanged(dom.overlayMode, state.activeWizard);
@@ -6383,6 +6410,80 @@ function getModuleRouteLabel(route = state.entryRoute || "agronomia") {
     : "agronomia";
 }
 
+function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
+  if (isPlanningRoute(route)) {
+    return {
+      kicker: "Centro territorial",
+      title: "Abre una decision y entra directo al estudio",
+      copy: "Suelo, riesgo, agua, movilidad, estrategia y 3D desde un solo frente.",
+      actions: [
+        { id: "planning-aptitude", label: "Aptitud", copy: "Suelo y candidatos", tone: "primary" },
+        { id: "planning-risk", label: "Riesgo", copy: "Restriccion y contencion", tone: "neutral" },
+        { id: "planning-mobility", label: "Movilidad", copy: "Cobertura y tiempos", tone: "neutral" },
+        { id: "planning-water", label: "Agua", copy: "Oferta y resiliencia", tone: "neutral" },
+        { id: "planning-strategy", label: "FODA + CAME", copy: "Diagnostico y accion", tone: "neutral" },
+        { id: "planning-3d", label: "Visor 3D", copy: "Volumen y sombra", tone: "accent" },
+      ],
+      filters: [
+        { id: "all", label: "Todo" },
+        { id: "core", label: "Base" },
+        { id: "risk", label: "Riesgo + agua" },
+        { id: "growth", label: "Huella + movilidad" },
+        { id: "strategy", label: "Estrategia" },
+        { id: "validation", label: "3D" },
+      ],
+    };
+  }
+
+  return {
+    kicker: "Centro operativo",
+    title: "Abre una tarea de campo sin perderte en la columna",
+    copy: "Escena, agua, clima, cultivo y GPS visibles desde arriba.",
+    actions: [
+      { id: "agronomy-scenes", label: "Imagenes", copy: "Escena y lectura base", tone: "primary" },
+      { id: "agronomy-demo", label: "Lote demo", copy: "Entrar con un ejemplo", tone: "neutral" },
+      { id: "agronomy-water", label: "Agua", copy: "Rios, acequias y quebradas", tone: "neutral" },
+      { id: "agronomy-suitability", label: "Cultivo", copy: "Aptitud agroclimatica", tone: "neutral" },
+      { id: "agronomy-gps", label: "GPS", copy: "Seguimiento y corredor", tone: "accent" },
+      { id: "agronomy-assistant", label: "Asistente", copy: "Plan guiado por etapa", tone: "neutral" },
+    ],
+    filters: [
+      { id: "all", label: "Todo" },
+      { id: "imagery", label: "Escena + lote" },
+      { id: "water", label: "Agua" },
+      { id: "climate", label: "Clima + cultivo" },
+      { id: "operations", label: "GPS" },
+      { id: "assistant", label: "Asistente + IA" },
+    ],
+  };
+}
+
+function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "all", route = state.entryRoute || "agronomia") {
+  if (!cardId || filterId === "all") {
+    return true;
+  }
+
+  const planningFilters = {
+    core: new Set(["planningCommandCard", "planningCard", "planningResultsCard"]),
+    risk: new Set(["riskCard", "hydrologyCard", "territorialReadoutCard"]),
+    growth: new Set(["mobilityCard", "landChangeCard", "territorialScenarioCard"]),
+    strategy: new Set(["fodaCameCard", "territorialDecisionCard", "territorialAlertsCard", "aiGeoCard"]),
+    validation: new Set(["planning3dCard"]),
+  };
+
+  const agronomyFilters = {
+    imagery: new Set(["intraloteCard", "demCard"]),
+    water: new Set(["hydroNetworkCard"]),
+    climate: new Set(["climateCard", "inamhiCard", "agroSuitabilityCard"]),
+    operations: new Set(["gpsCard"]),
+    assistant: new Set(["wizardCard", "aiGeoCard"]),
+  };
+
+  const filters = isPlanningRoute(route) ? planningFilters : agronomyFilters;
+  const filterSet = filters[filterId];
+  return filterSet ? filterSet.has(cardId) : true;
+}
+
 function setModuleQuickNavActive(cardId = "") {
   state.moduleQuickNavActiveId = cardId || null;
   if (!dom.moduleQuickNav) {
@@ -6397,9 +6498,9 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
   if (isPlanningRoute(route)) {
     return {
       workflowGuideCard: true,
-      planningCommandCard: false,
-      planningCard: false,
-      planningResultsCard: false,
+      planningCommandCard: true,
+      planningCard: true,
+      planningResultsCard: true,
       territorialScenarioCard: true,
       mobilityCard: true,
       riskCard: true,
@@ -6415,8 +6516,8 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
   }
 
   return {
-    workflowGuideCard: false,
-    intraloteCard: false,
+    workflowGuideCard: true,
+    intraloteCard: true,
     demCard: true,
     climateCard: true,
     inamhiCard: true,
@@ -6489,6 +6590,28 @@ function decorateModuleCards() {
   });
 }
 
+function renderModuleActionHub(route = state.entryRoute || "agronomia") {
+  if (!dom.moduleActionGrid || !dom.moduleFilterRail) {
+    return;
+  }
+
+  const config = getModuleActionHubConfig(route);
+  setTextIfChanged(dom.moduleHubKicker, config.kicker);
+  setTextIfChanged(dom.moduleHubTitle, config.title);
+  setTextIfChanged(dom.moduleHubCopy, config.copy);
+  setHtmlIfChanged(dom.moduleActionGrid, config.actions.map((action) => `
+    <button class="module-action-card tone-${escapeHtmlContent(action.tone || "neutral")}" type="button" data-module-action="${escapeHtmlContent(action.id)}">
+      <strong>${escapeHtmlContent(action.label)}</strong>
+      <span>${escapeHtmlContent(action.copy)}</span>
+    </button>
+  `).join(""));
+  setHtmlIfChanged(dom.moduleFilterRail, config.filters.map((filter) => `
+    <button class="module-filter-chip ${state.moduleFilterId === filter.id ? "active" : ""}" type="button" data-module-filter="${escapeHtmlContent(filter.id)}">
+      ${escapeHtmlContent(filter.label)}
+    </button>
+  `).join(""));
+}
+
 function renderModuleQuickNav() {
   if (!dom.moduleQuickNav) {
     return;
@@ -6514,6 +6637,7 @@ function renderModuleSearchSummary() {
   const visibleCards = getVisibleModuleCards().filter((card) => card.id && card.id !== "workflowGuideCard");
   const query = (state.moduleSearchQuery || "").trim();
   const routeLabel = getModuleRouteLabel();
+  const filterLabel = dom.moduleFilterRail?.querySelector(`[data-module-filter="${state.moduleFilterId}"]`)?.textContent?.trim() || "Todo";
 
   if (!routeCards.length) {
     setTextIfChanged(dom.moduleSearchSummary, "No hay modulos disponibles todavia en esta ruta.");
@@ -6523,7 +6647,7 @@ function renderModuleSearchSummary() {
   if (!query) {
     setTextIfChanged(
       dom.moduleSearchSummary,
-      `Mostrando ${visibleCards.length} modulos de ${routeLabel}. Usa la busqueda o los accesos rapidos para entrar directo al estudio que necesitas.`
+      `${visibleCards.length} modulos listos en ${filterLabel.toLowerCase()} para ${routeLabel}.`
     );
     return;
   }
@@ -6538,20 +6662,23 @@ function renderModuleSearchSummary() {
 
   setTextIfChanged(
     dom.moduleSearchSummary,
-    `Mostrando ${visibleCards.length} de ${routeCards.length} modulos para "${query}" en ${routeLabel}.`
+    `${visibleCards.length} de ${routeCards.length} modulos para "${query}".`
   );
 }
 
 function applyModuleSearchFilter(options = {}) {
   const query = normalizeTerritorialText(state.moduleSearchQuery);
   const routeCards = getRouteModuleCards();
+  const route = state.entryRoute || "agronomia";
 
   routeCards.forEach((card) => {
     if (card.id === "workflowGuideCard") {
       card.classList.remove("module-search-hidden");
       return;
     }
-    const matches = !query || getModuleSearchableText(card).includes(query);
+    const matchesQuery = !query || getModuleSearchableText(card).includes(query);
+    const matchesFilter = getModuleFilterMatch(card.id, state.moduleFilterId, route);
+    const matches = matchesQuery && matchesFilter;
     card.classList.toggle("module-search-hidden", !matches);
   });
 
@@ -6590,6 +6717,27 @@ function handleExpandVisibleModules() {
 function handleCollapseVisibleModules() {
   setVisibleModuleCardsCollapsed(true);
   renderModuleSearchSummary();
+}
+
+function handleModuleActionHubClick(event) {
+  const button = event.target.closest("[data-module-action]");
+  if (!button || !dom.moduleActionGrid?.contains(button)) {
+    return;
+  }
+  const actionId = button.dataset.moduleAction;
+  if (actionId) {
+    runWorkflowGuideAction(actionId);
+  }
+}
+
+function handleModuleFilterRailClick(event) {
+  const button = event.target.closest("[data-module-filter]");
+  if (!button || !dom.moduleFilterRail?.contains(button)) {
+    return;
+  }
+  state.moduleFilterId = button.dataset.moduleFilter || "all";
+  renderModuleActionHub();
+  applyModuleSearchFilter();
 }
 
 function clearPlanningModuleFocus() {
@@ -6789,10 +6937,11 @@ function openSidebarWorkingPanel(tabId = "modulos") {
 function getSidebarDockConfig(route = state.entryRoute || "agronomia") {
   if (isPlanningRoute(route)) {
     return {
-      title: "Accesos territoriales",
-      subtitle: "Abre copiloto, riesgo o 3D sin recorrer toda la ruta.",
+      title: "Atajos visibles",
+      subtitle: "Abre decisiones clave sin recorrer toda la columna.",
       actions: [
         { id: "planning-copilot", label: "Copiloto" },
+        { id: "planning-aptitude", label: "Aptitud" },
         { id: "planning-risk", label: "Riesgo" },
         { id: "planning-3d", label: "3D" },
       ],
@@ -6800,11 +6949,12 @@ function getSidebarDockConfig(route = state.entryRoute || "agronomia") {
   }
 
   return {
-    title: "Accesos rapidos",
-    subtitle: "Escena, agua y GPS sin recorrer todo el panel.",
+    title: "Atajos visibles",
+    subtitle: "Escena, agua, cultivo y GPS al alcance de un clic.",
     actions: [
       { id: "agronomy-scenes", label: "Escenas" },
       { id: "agronomy-water", label: "Agua" },
+      { id: "agronomy-suitability", label: "Cultivo" },
       { id: "agronomy-gps", label: "GPS" },
     ],
   };
@@ -6923,6 +7073,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   if (state.moduleSearchRoute !== route) {
     state.moduleSearchRoute = route;
     state.moduleSearchQuery = "";
+    state.moduleFilterId = "all";
     setValueIfChanged(dom.moduleSearchInput, "");
   }
   if (dom.appShell) {
@@ -6932,11 +7083,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
     dom.tabImageryBtn.classList.toggle("hidden", isTerritorial);
   }
   if (dom.tabModulesBtn) {
-    dom.tabModulesBtn.textContent = isPlanning
-      ? "Modulos territoriales"
-      : isEvidence
-        ? "Evidencia territorial"
-        : "Modulos Agricolas";
+    dom.tabModulesBtn.textContent = "Modulos";
   }
   if (dom.modulesSectionKicker) {
     dom.modulesSectionKicker.textContent = isPlanning
@@ -6986,6 +7133,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
     updateLayerVisibility();
   }
   renderWorkflowGuide();
+  renderModuleActionHub(route);
   renderSidebarDock(route);
   collapseModuleCardsForRoute(route);
   applyModuleSearchFilter();
