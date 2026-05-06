@@ -1232,23 +1232,35 @@ button {
   gap: 10px;
 }
 
+.tab-panel[data-panel="modulos"] .module-card,
+.tab-panel[data-panel="modulos"] .module-browser-toolbar,
+.tab-panel[data-panel="modulos"] .module-search-summary,
+.tab-panel[data-panel="modulos"] .section-block {
+  width: 100%;
+  max-width: 100%;
+  align-self: stretch;
+  flex: 0 0 auto;
+}
+
 .tab-panel[data-panel="modulos"] .module-head-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  display: flex;
   align-items: center;
-  justify-content: stretch;
+  justify-content: flex-start;
+  flex-wrap: nowrap;
   gap: 10px;
   width: 100%;
 }
 
 .tab-panel[data-panel="modulos"] .module-head-actions > :only-child {
-  justify-self: end;
+  margin-left: auto;
   width: auto;
 }
 
 .tab-panel[data-panel="modulos"] .module-head-actions .secondary-button:not(.module-collapse-btn),
 .tab-panel[data-panel="modulos"] .module-head-actions .ghost-button:not(.module-collapse-btn) {
-  width: 100%;
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
   justify-content: center;
 }
 
@@ -1285,6 +1297,7 @@ button {
   min-width: 44px;
   min-height: 46px;
   padding-inline: 0;
+  flex: 0 0 46px;
 }
 
 .workflow-guide-card {

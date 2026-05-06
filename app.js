@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260506-2";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260506-3";
 
 const layerCatalog = [
   {
