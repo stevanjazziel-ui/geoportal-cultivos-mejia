@@ -1227,6 +1227,31 @@ button {
   flex-wrap: wrap;
 }
 
+.tab-panel[data-panel="modulos"] .module-head {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.tab-panel[data-panel="modulos"] .module-head-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  justify-content: stretch;
+  gap: 10px;
+  width: 100%;
+}
+
+.tab-panel[data-panel="modulos"] .module-head-actions > :only-child {
+  justify-self: end;
+  width: auto;
+}
+
+.tab-panel[data-panel="modulos"] .module-head-actions .secondary-button:not(.module-collapse-btn),
+.tab-panel[data-panel="modulos"] .module-head-actions .ghost-button:not(.module-collapse-btn) {
+  width: 100%;
+  justify-content: center;
+}
+
 .module-head h3 {
   font-size: 1.1rem;
   line-height: 1.18;
@@ -1256,7 +1281,10 @@ button {
 }
 
 .module-collapse-btn {
+  width: 46px;
   min-width: 44px;
+  min-height: 46px;
+  padding-inline: 0;
 }
 
 .workflow-guide-card {
@@ -5225,6 +5253,36 @@ button {
   }
 }
 
+@media (max-width: 760px) {
+  .module-action-grid,
+  .module-browser-actions,
+  .workflow-guide-actions,
+  .planning-command-grid,
+  .sidebar-dock-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .tab-panel[data-panel="modulos"] .module-card {
+    padding: 14px;
+    gap: 10px;
+  }
+
+  .tab-panel[data-panel="modulos"] .module-head h3 {
+    font-size: 1rem;
+  }
+
+  .tab-panel[data-panel="modulos"] .module-kicker {
+    margin-bottom: 6px;
+    line-height: 1.25;
+  }
+
+  .tab-panel[data-panel="modulos"] .module-copy {
+    margin-top: 0;
+    font-size: 0.88rem;
+    line-height: 1.45;
+  }
+}
+
 @media (max-width: 640px) {
   .login-overlay {
     padding: 16px;
@@ -5266,19 +5324,23 @@ button {
     justify-content: flex-start;
   }
 
-  .module-head {
-    grid-template-columns: 1fr;
-  }
-
   .section-head {
     flex-direction: column;
   }
 
-  .module-head .secondary-button,
-  .module-head .ghost-button {
-    justify-self: stretch;
-    width: 100%;
+  .tab-panel[data-panel="modulos"] .module-head-actions {
+    grid-template-columns: minmax(0, 1fr) 46px;
+  }
+
+  .tab-panel[data-panel="modulos"] .module-head .secondary-button,
+  .tab-panel[data-panel="modulos"] .module-head .ghost-button {
     white-space: normal;
+  }
+
+  .tab-panel[data-panel="modulos"] .module-head-actions .module-collapse-btn {
+    width: 46px;
+    min-width: 46px;
+    justify-self: end;
   }
 
   .metrics-grid.has-data {
@@ -5317,7 +5379,7 @@ button {
 
   .module-action-grid,
   .module-browser-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .module-filter-rail {
@@ -5336,7 +5398,7 @@ button {
   }
 
   .planning-command-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .planning-command-button {
