@@ -760,6 +760,10 @@ button {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.36);
 }
 
+.app-shell[data-active-tab="modulos"] .sidebar-dock {
+  margin-top: 10px;
+}
+
 .sidebar-dock-copy {
   display: grid;
   gap: 4px;
@@ -1188,7 +1192,7 @@ button {
     radial-gradient(circle at top right, rgba(47, 109, 88, 0.06), transparent 38%);
   border: 1px solid rgba(57, 73, 66, 0.08);
   box-shadow: 0 10px 24px rgba(28, 39, 34, 0.05);
-  overflow: visible;
+  overflow: hidden;
   flex-shrink: 0;
   min-width: 0;
   transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
@@ -2172,10 +2176,10 @@ button {
 
 @media (min-width: 1220px) {
   .tab-panel[data-panel="modulos"].active {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-content: start;
-    align-items: start;
+    display: flex;
+    flex-direction: column;
+    align-content: stretch;
+    align-items: stretch;
     gap: 12px;
   }
 
@@ -2183,20 +2187,13 @@ button {
     min-width: 0;
   }
 
-  #workflowGuideCard,
-  #planningCommandCard,
-  #moduleActionHub,
-  #moduleQuickNav,
-  #gpsCard,
-  #planningCard,
-  #planningResultsCard,
-  #territorialScenarioCard,
-  #fodaCameCard,
-  #territorialDecisionCard,
-  #planning3dCard,
-  #wizardCard,
-  #aiGeoCard {
-    grid-column: 1 / -1;
+  .module-action-grid,
+  .planning-command-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .workflow-guide-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   #gpsCard .gps-geofence-toolbar {
@@ -2221,41 +2218,7 @@ button {
 
 @media (min-width: 1560px) {
   .module-quick-nav:not(:empty) {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 6px 0 2px;
-    background: linear-gradient(180deg, rgba(248, 249, 244, 0.98), rgba(248, 249, 244, 0.78), rgba(248, 249, 244, 0));
-    backdrop-filter: blur(8px);
-  }
-
-  .tab-panel[data-panel="modulos"].active {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  #workflowGuideCard,
-  #planningCommandCard,
-  #moduleActionHub,
-  #moduleQuickNav,
-  #moduleBrowserToolbar,
-  #moduleSearchSummary,
-  #gpsCard,
-  #planningCard,
-  #planningResultsCard,
-  #territorialScenarioCard,
-  #fodaCameCard,
-  #territorialDecisionCard,
-  #wizardCard,
-  #aiGeoCard,
-  #planning3dCard {
-    grid-column: 1 / -1;
-  }
-
-  #landChangeCard,
-  #hydrologyCard,
-  #mobilityCard,
-  #riskCard {
-    grid-column: span 2;
+    display: none;
   }
 }
 

@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260505-2";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260505-3";
 
 const layerCatalog = [
   {
@@ -7011,8 +7011,8 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
   if (isPlanningRoute(route)) {
     return {
       workflowGuideCard: true,
-      officialDataCard: false,
-      planningCommandCard: true,
+      officialDataCard: true,
+      planningCommandCard: false,
       planningCard: true,
       planningResultsCard: true,
       territorialScenarioCard: true,
@@ -7031,7 +7031,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
 
   return {
     workflowGuideCard: true,
-    officialDataCard: false,
+    officialDataCard: true,
     intraloteCard: true,
     demCard: true,
     climateCard: true,
