@@ -633,7 +633,7 @@ button {
 }
 
 .app-shell[data-route="planificacion"][data-active-tab="modulos"] {
-  --sidebar-width: clamp(520px, 38vw, 780px);
+  --sidebar-width: clamp(560px, 40vw, 820px);
 }
 
 .sidebar {
@@ -1229,7 +1229,7 @@ button {
 
 .tab-panel[data-panel="modulos"] .module-head {
   grid-template-columns: 1fr;
-  gap: 10px;
+  gap: 8px;
 }
 
 .tab-panel[data-panel="modulos"] .module-card,
@@ -1242,26 +1242,35 @@ button {
   flex: 0 0 auto;
 }
 
+.tab-panel[data-panel="modulos"] #modulesSectionCopy {
+  display: none;
+}
+
 .tab-panel[data-panel="modulos"] .module-head-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  flex-wrap: nowrap;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 46px;
+  align-items: stretch;
+  justify-content: stretch;
+  gap: 8px;
   width: 100%;
 }
 
 .tab-panel[data-panel="modulos"] .module-head-actions > :only-child {
-  margin-left: auto;
-  width: auto;
+  grid-column: 1 / -1;
+  width: 100%;
 }
 
 .tab-panel[data-panel="modulos"] .module-head-actions .secondary-button:not(.module-collapse-btn),
 .tab-panel[data-panel="modulos"] .module-head-actions .ghost-button:not(.module-collapse-btn) {
-  flex: 1 1 auto;
-  min-width: 0;
-  width: auto;
+  display: inline-flex;
+  align-items: center;
   justify-content: center;
+  min-height: 46px;
+  min-width: 0;
+  width: 100%;
+  white-space: normal;
+  line-height: 1.18;
+  text-align: center;
 }
 
 .module-head h3 {
@@ -1292,21 +1301,30 @@ button {
   margin-top: -4px;
 }
 
+.tab-panel[data-panel="modulos"] .module-card.is-collapsed > :not(.module-head) {
+  display: none !important;
+}
+
 .module-collapse-btn {
   width: 46px;
   min-width: 44px;
   min-height: 46px;
   padding-inline: 0;
   flex: 0 0 46px;
+  justify-self: end;
 }
 
 .workflow-guide-card {
-  gap: 12px;
+  gap: 10px;
   overflow: hidden;
   border-color: rgba(47, 109, 88, 0.14);
   background:
     linear-gradient(180deg, rgba(249, 252, 248, 0.96), rgba(252, 250, 245, 0.88)),
     radial-gradient(circle at top right, rgba(47, 109, 88, 0.1), transparent 44%);
+}
+
+.workflow-guide-card .module-copy {
+  display: none;
 }
 
 #officialDataCard {
@@ -1436,11 +1454,11 @@ button {
   position: static;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px 12px;
   align-items: stretch;
-  padding: 14px;
-  border-radius: 24px;
+  padding: 12px 14px;
+  border-radius: 22px;
   border: 1px solid rgba(57, 73, 66, 0.08);
   background:
     linear-gradient(180deg, rgba(252, 253, 249, 0.98), rgba(247, 249, 244, 0.92)),
@@ -1450,9 +1468,7 @@ button {
 }
 
 .module-browser-copy {
-  display: grid;
-  gap: 5px;
-  min-width: 0;
+  display: none;
 }
 
 .module-browser-copy strong {
@@ -1476,27 +1492,29 @@ button {
 .module-search-field input[type="search"] {
   width: 100%;
   min-width: 0;
-  padding: 14px 16px;
+  padding: 12px 15px;
   border-radius: 18px;
   border: 1px solid rgba(57, 73, 66, 0.12);
   background: rgba(255, 255, 255, 0.94);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.28);
-  font-size: 0.98rem;
+  font-size: 0.94rem;
 }
 
 .module-browser-actions {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(2, max-content);
   gap: 10px;
+  align-content: center;
 }
 
 .module-browser-actions .ghost-button {
-  width: 100%;
+  width: auto;
+  min-height: 44px;
   justify-content: center;
 }
 
 .module-search-summary {
-  display: flex;
+  display: none;
   align-items: center;
   min-height: 40px;
   padding: 8px 12px;
@@ -1514,9 +1532,9 @@ button {
 
 .module-action-hub {
   display: grid;
-  gap: 14px;
-  padding: 18px;
-  border-radius: 28px;
+  gap: 10px;
+  padding: 14px 14px 12px;
+  border-radius: 24px;
   border: 1px solid rgba(36, 74, 63, 0.12);
   background:
     linear-gradient(180deg, rgba(248, 252, 249, 0.98), rgba(245, 248, 243, 0.94)),
@@ -1529,13 +1547,17 @@ button {
 
 .module-action-hub-copy {
   display: grid;
-  gap: 6px;
+  gap: 4px;
+}
+
+.module-action-hub-copy .module-copy {
+  display: none;
 }
 
 .module-action-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -1590,7 +1612,7 @@ button {
 .module-filter-rail {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -1616,7 +1638,7 @@ button {
 }
 
 .app-shell[data-active-tab="modulos"] .sidebar {
-  padding: 16px 18px;
+  padding: 14px 16px;
 }
 
 .module-quick-nav:empty {
@@ -1654,8 +1676,8 @@ button {
 
 .workflow-guide-steps {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 8px;
 }
 
 .workflow-guide-step {
@@ -1693,10 +1715,7 @@ button {
 }
 
 .workflow-guide-step-copy p {
-  margin: 0;
-  color: var(--muted);
-  line-height: 1.35;
-  font-size: 0.8rem;
+  display: none;
 }
 
 .workflow-guide-step.tone-ready {
@@ -1728,7 +1747,9 @@ button {
 }
 
 .workflow-guide-actions > * {
-  flex: 0 0 auto;
+  flex: 1 1 160px;
+  min-width: 0;
+  justify-content: center;
 }
 
 @media (max-width: 1480px) {
@@ -2295,7 +2316,7 @@ button {
 }
 
 .app-shell[data-active-tab="modulos"] .tab-panel[data-panel="modulos"].active {
-  gap: 14px;
+  gap: 10px;
 }
 
 .wizard-steps {
@@ -4126,11 +4147,11 @@ button {
 .planning-3d-shell {
   position: relative;
   display: grid;
-  grid-template-rows: auto auto auto minmax(0, 1fr);
-  gap: 6px;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 8px;
   width: calc(100vw - 20px);
   height: calc(100vh - 20px);
-  padding: 6px 8px 8px;
+  padding: 10px 12px 12px;
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.28);
   background:
@@ -4141,16 +4162,16 @@ button {
 }
 
 .planning-3d-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 8px 12px;
-  padding: 0 2px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+  padding: 0;
 }
 
 .planning-3d-header > :first-child {
   min-width: 0;
-  flex: 1 1 420px;
+  display: grid;
+  gap: 3px;
 }
 
 .planning-3d-header h2 {
@@ -4162,23 +4183,23 @@ button {
 
 .planning-3d-subtitle {
   margin: 0;
-  max-width: 640px;
+  max-width: 780px;
   color: var(--muted);
-  line-height: 1.28;
-  font-size: 0.84rem;
+  line-height: 1.22;
+  font-size: 0.8rem;
 }
 
 .planning-3d-header-actions {
   display: flex;
   flex: 0 1 auto;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
-  justify-content: flex-end;
-  max-width: min(100%, 720px);
+  justify-content: flex-start;
+  max-width: none;
   overflow-x: auto;
   overflow-y: hidden;
-  padding-bottom: 2px;
+  padding-bottom: 0;
   scrollbar-width: thin;
   scrollbar-color: rgba(47, 61, 50, 0.22) transparent;
 }
@@ -4212,7 +4233,7 @@ button {
   grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
   align-items: stretch;
   gap: 8px;
-  padding: 7px 8px;
+  padding: 8px 10px;
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.84);
   border: 1px solid rgba(47, 61, 50, 0.1);
@@ -4266,9 +4287,7 @@ button {
 }
 
 .planning-3d-quick-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: none;
 }
 
 .planning-3d-quick-chip {
@@ -4300,8 +4319,8 @@ button {
 .planning-3d-layout {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1.56fr) minmax(270px, 308px);
-  gap: 8px;
+  grid-template-columns: minmax(0, 1fr) minmax(272px, 300px);
+  gap: 10px;
   min-height: 0;
   height: 100%;
   align-items: stretch;
@@ -4310,7 +4329,7 @@ button {
 .planning-3d-map {
   position: relative;
   min-height: 0;
-  min-height: 520px;
+  min-height: clamp(620px, 74vh, 920px);
   height: 100%;
   width: 100%;
   border-radius: 24px;
@@ -4338,7 +4357,7 @@ button {
 }
 
 .planning-3d-shell[data-panel="collapsed"] .planning-3d-map {
-  min-height: clamp(620px, 74vh, 880px);
+  min-height: clamp(700px, 82vh, 960px);
 }
 
 .planning-3d-shell[data-panel="collapsed"] .planning-3d-header {
@@ -4356,6 +4375,7 @@ button {
 }
 
 .planning-3d-shell[data-panel="collapsed"] .planning-3d-quick-summary {
+  display: flex;
   gap: 6px;
 }
 
@@ -4560,7 +4580,7 @@ button {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 1fr);
   align-content: stretch;
-  gap: 10px;
+  gap: 8px;
   min-height: 0;
   height: 100%;
   z-index: 1;
@@ -5267,6 +5287,10 @@ button {
 }
 
 @media (max-width: 760px) {
+  .app-shell[data-active-tab="modulos"] .sidebar {
+    padding: 12px 12px 14px;
+  }
+
   .module-action-grid,
   .module-browser-actions,
   .workflow-guide-actions,
@@ -5278,6 +5302,10 @@ button {
   .tab-panel[data-panel="modulos"] .module-card {
     padding: 14px;
     gap: 10px;
+  }
+
+  .tab-panel[data-panel="modulos"] .section-block {
+    padding: 14px;
   }
 
   .tab-panel[data-panel="modulos"] .module-head h3 {
@@ -5293,6 +5321,10 @@ button {
     margin-top: 0;
     font-size: 0.88rem;
     line-height: 1.45;
+  }
+
+  .tab-panel[data-panel="modulos"] .module-head-actions {
+    grid-template-columns: 1fr 46px;
   }
 }
 
@@ -5341,10 +5373,6 @@ button {
     flex-direction: column;
   }
 
-  .tab-panel[data-panel="modulos"] .module-head-actions {
-    grid-template-columns: minmax(0, 1fr) 46px;
-  }
-
   .tab-panel[data-panel="modulos"] .module-head .secondary-button,
   .tab-panel[data-panel="modulos"] .module-head .ghost-button {
     white-space: normal;
@@ -5388,6 +5416,10 @@ button {
   .sidebar-dock {
     padding: 14px;
     border-radius: 22px;
+  }
+
+  .module-browser-toolbar {
+    grid-template-columns: 1fr;
   }
 
   .module-action-grid,
@@ -5463,6 +5495,7 @@ button {
   }
 
   .planning-3d-quick-summary {
+    display: flex;
     grid-template-columns: 1fr 1fr;
   }
 

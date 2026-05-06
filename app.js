@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260506-3";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260506-4";
 
 const layerCatalog = [
   {
@@ -5182,7 +5182,7 @@ const workflowGuideCatalog = {
   },
   planificacion: {
     badge: "Ruta sugerida",
-    title: "Secuencia corta para decidir donde intervenir",
+    title: "Secuencia corta para decidir y validar",
     defaultCopy: "Aptitud, cobertura, riesgo, agua, estrategia y validacion 3D.",
     steps: [
       { id: "aptitude", title: "Aptitud base", pending: "Corre la primera lectura multivariable." },
@@ -7628,17 +7628,17 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   }
   if (dom.modulesSectionTitle) {
     dom.modulesSectionTitle.textContent = isPlanning
-      ? "Territorio que resuelve"
+      ? "Modulo territorial inteligente"
       : isEvidence
         ? "Evidencia territorial"
-        : "Campo que resuelve";
+        : "Modulo agronomico inteligente";
   }
   if (dom.modulesSectionCopy) {
     dom.modulesSectionCopy.textContent = isPlanning
-      ? "Empieza por copiloto, oficiales, aptitud, riesgo, agua, movilidad o visor 3D."
+      ? "Copiloto, oficiales, aptitud, agua, riesgo, estrategia y 3D en una sola ruta."
       : isEvidence
         ? "Ruta dedicada a quebradas, estaciones, areas sensibles, memoria historica y soporte tecnico de campo para volver mas precisa la lectura territorial."
-        : `Empieza por escena, agua, oficiales, clima, cultivo o GPS en ${getAgronomyAreaProfile().scopeLabel}.`;
+        : `Escena, agua, oficiales, clima, cultivo y GPS para ${getAgronomyAreaProfile().scopeLabel}.`;
   }
   if (dom.modeFooterPill) {
     dom.modeFooterPill.textContent = isPlanning
