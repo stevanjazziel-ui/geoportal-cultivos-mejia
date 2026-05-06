@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260505-3";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260506-1";
 
 const layerCatalog = [
   {
@@ -16175,7 +16175,7 @@ function setPlanning3dPanelCollapsed(collapsed = false, options = {}) {
   if (dom.planning3dPanelToggleBtn) {
     dom.planning3dPanelToggleBtn.classList.toggle("active", !planning3dState.panelCollapsed);
     dom.planning3dPanelToggleBtn.setAttribute("aria-pressed", planning3dState.panelCollapsed ? "false" : "true");
-    setTextIfChanged(dom.planning3dPanelToggleBtn, planning3dState.panelCollapsed ? "Mostrar panel" : "Ocultar panel");
+    setTextIfChanged(dom.planning3dPanelToggleBtn, planning3dState.panelCollapsed ? "Ver panel" : "Ocultar");
   }
   if (!options.skipResize && planning3dState.map) {
     window.setTimeout(() => stabilizePlanning3dViewport({ focus: false }), 110);

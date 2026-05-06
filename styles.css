@@ -4089,7 +4089,7 @@ button {
   gap: 6px;
   width: calc(100vw - 20px);
   height: calc(100vh - 20px);
-  padding: 8px 10px 10px;
+  padding: 6px 8px 8px;
   border-radius: 28px;
   border: 1px solid rgba(255, 255, 255, 0.28);
   background:
@@ -4100,41 +4100,64 @@ button {
 }
 
 .planning-3d-header {
-  display: grid;
-  grid-template-columns: minmax(0, 1.45fr) auto;
-  align-items: start;
-  gap: 10px 14px;
-  padding: 2px 4px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px 12px;
+  padding: 0 2px;
+}
+
+.planning-3d-header > :first-child {
+  min-width: 0;
+  flex: 1 1 420px;
 }
 
 .planning-3d-header h2 {
   margin: 0 0 2px;
   font-family: var(--font-display);
-  font-size: clamp(1.22rem, 1.55vw, 1.64rem);
+  font-size: clamp(1.16rem, 1.45vw, 1.56rem);
   line-height: 1.02;
 }
 
 .planning-3d-subtitle {
   margin: 0;
-  max-width: 760px;
+  max-width: 640px;
   color: var(--muted);
   line-height: 1.28;
   font-size: 0.84rem;
 }
 
 .planning-3d-header-actions {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(118px, max-content));
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: nowrap;
   gap: 8px;
-  align-items: stretch;
-  justify-content: end;
-  grid-auto-flow: dense;
+  align-items: center;
+  justify-content: flex-end;
+  max-width: min(100%, 720px);
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(47, 61, 50, 0.22) transparent;
+}
+
+.planning-3d-header-actions::-webkit-scrollbar {
+  height: 6px;
+}
+
+.planning-3d-header-actions::-webkit-scrollbar-thumb {
+  background: rgba(47, 61, 50, 0.22);
+  border-radius: 999px;
 }
 
 .planning-3d-header-actions .ghost-button,
 .planning-3d-header-actions .secondary-button {
-  min-height: 40px;
-  width: 100%;
+  flex: 0 0 auto;
+  min-height: 38px;
+  width: auto;
+  padding-inline: 13px;
+  white-space: nowrap;
 }
 
 .planning-3d-header-actions .ghost-button.active {
@@ -4145,11 +4168,11 @@ button {
 
 .planning-3d-toolbar {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
   align-items: stretch;
-  gap: 8px 10px;
-  padding: 8px 9px;
-  border-radius: 20px;
+  gap: 8px;
+  padding: 7px 8px;
+  border-radius: 16px;
   background: rgba(255, 255, 255, 0.84);
   border: 1px solid rgba(47, 61, 50, 0.1);
 }
@@ -4172,9 +4195,9 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  min-height: 44px;
+  min-height: 42px;
   width: 100%;
-  padding: 8px 12px;
+  padding: 7px 11px;
   border-radius: 999px;
   background: rgba(246, 243, 236, 0.94);
   border: 1px solid rgba(47, 61, 50, 0.09);
@@ -4187,7 +4210,7 @@ button {
 
 .planning-3d-range {
   min-width: 0;
-  max-width: 280px;
+  max-width: 250px;
   margin-left: 0;
   justify-self: stretch;
   grid-column: span 2;
@@ -4198,19 +4221,20 @@ button {
 }
 
 .planning-3d-sun-field input {
-  min-height: 40px;
+  min-height: 38px;
 }
 
 .planning-3d-quick-summary {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
 .planning-3d-quick-chip {
+  flex: 1 1 160px;
   min-width: 0;
-  padding: 10px 12px;
-  border-radius: 18px;
+  padding: 7px 11px;
+  border-radius: 16px;
   border: 1px solid rgba(47, 61, 50, 0.1);
   background: rgba(255, 255, 255, 0.78);
   box-shadow: 0 10px 24px rgba(22, 31, 27, 0.08);
@@ -4218,9 +4242,9 @@ button {
 
 .planning-3d-quick-chip span {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   color: var(--muted);
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -4228,7 +4252,7 @@ button {
 .planning-3d-quick-chip strong {
   display: block;
   font-family: var(--font-display);
-  font-size: 0.98rem;
+  font-size: 0.92rem;
   line-height: 1.1;
 }
 
@@ -4261,7 +4285,7 @@ button {
 
 .planning-3d-shell[data-panel="collapsed"] {
   gap: 6px;
-  padding-top: 6px;
+  padding-top: 4px;
 }
 
 .planning-3d-shell[data-panel="collapsed"] .planning-3d-layout {
@@ -4277,8 +4301,7 @@ button {
 }
 
 .planning-3d-shell[data-panel="collapsed"] .planning-3d-header {
-  grid-template-columns: minmax(0, 1.25fr) auto;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .planning-3d-shell[data-panel="collapsed"] .planning-3d-subtitle {
@@ -4292,7 +4315,7 @@ button {
 }
 
 .planning-3d-shell[data-panel="collapsed"] .planning-3d-quick-summary {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
 }
 
 .planning-3d-map.satellite-mode {
@@ -5114,7 +5137,7 @@ button {
   .planning-3d-shell {
     grid-template-rows: auto auto auto minmax(0, 1fr);
     height: calc(100vh - 12px);
-    padding: 12px;
+    padding: 10px;
   }
 
   .planning-3d-layout {
@@ -5142,7 +5165,7 @@ button {
   }
 
   .planning-3d-quick-summary {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
   }
 
   .gps-sender-modal {
@@ -5325,9 +5348,18 @@ button {
   .planning-3d-header-actions,
   .planning-3d-toolbar,
   .planning-3d-panel {
-    grid-template-columns: 1fr;
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .planning-3d-header {
+    justify-content: flex-start;
+  }
+
+  .planning-3d-header-actions {
+    max-width: none;
+    overflow-x: visible;
+    padding-bottom: 0;
   }
 
   .planning-3d-header h2 {
@@ -5347,7 +5379,7 @@ button {
 
   .planning-3d-shell {
     height: calc(100vh - 10px);
-    padding: 12px;
+    padding: 10px;
     border-radius: 22px;
   }
 
