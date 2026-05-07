@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260506-4";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260507-1";
 
 const layerCatalog = [
   {
@@ -3396,6 +3396,7 @@ const state = {
     inamhi: null,
     inamhiLive: null,
     hydroNetwork: null,
+    irrigationFlow: null,
     agroSuitability: null,
     gps: null,
   },
@@ -4059,6 +4060,7 @@ function resetAgronomySelectionState() {
   state.agronomyOutputs.inamhi = null;
   state.agronomyOutputs.inamhiLive = null;
   state.agronomyOutputs.hydroNetwork = null;
+  state.agronomyOutputs.irrigationFlow = null;
   state.agronomyOutputs.agroSuitability = null;
   state.agronomyOutputs.gps = null;
 
@@ -4078,6 +4080,7 @@ function resetAgronomySelectionState() {
   resetMetricGrid(dom.inamhiResults, "Ejecuta el modulo para cargar estaciones INAMHI de referencia.");
   resetMetricGrid(dom.inamhiLiveResults, "Ejecuta la lectura en vivo para ver temperatura, humedad, lluvia y viento de la red activa.");
   resetMetricGrid(dom.hydroNetworkResults, "Ejecuta el modulo para medir kilometros de red hidrica, cercania al lote y prioridades de manejo.");
+  resetMetricGrid(dom.irrigationFlowResults, "Calcula capacidad, caudal de diseno y aforo real del riego.");
   resetMetricGrid(dom.agroSuitabilityResults, "Ejecuta el modulo para ver aptitud por cultivo, lotes compatibles y alertas de manejo.");
   resetMetricGrid(dom.gpsResults, "Activa el modulo para seguir un dispositivo terrestre o aereo, un feed local o un recorrido demo sobre el mapa.");
   resetVisualPanel(dom.intraloteVisual, "Aqui apareceran la distribucion de zonas de manejo y la lectura grafica de indices del lote.");
@@ -4086,6 +4089,7 @@ function resetAgronomySelectionState() {
   resetVisualPanel(dom.inamhiVisual, "Aqui apareceran la lectura visual de lluvia historica, ventana humeda/seca y cobertura temporal de las estaciones.");
   resetVisualPanel(dom.inamhiLiveVisual, "Aqui apareceran la lectura operativa en tiempo real, la ultima actualizacion y el estado de las estaciones activas.");
   resetVisualPanel(dom.hydroNetworkVisual, "Aqui apareceran la mezcla entre rios, acequias y quebradas, la distancia al agua y la prioridad operativa del ambito.");
+  resetVisualPanel(dom.irrigationFlowVisual, "Aqui aparecera la comparacion entre sistema, cultivo y caudal medido.");
   resetVisualPanel(dom.agroSuitabilityVisual, "Aqui apareceran el ranking de lotes, la ventana termica-hidrica y la recomendacion agroclimatica.");
   resetVisualPanel(dom.gpsVisual, "Aqui apareceran la trayectoria, velocidad, altura, precision y estado operativo del seguimiento GPS.");
   renderSceneControls();
@@ -5275,6 +5279,18 @@ function cacheDom() {
   dom.runHydroNetworkBtn = document.querySelector("#runHydroNetworkBtn");
   dom.focusHydroNetworkBtn = document.querySelector("#focusHydroNetworkBtn");
   dom.clearHydroNetworkBtn = document.querySelector("#clearHydroNetworkBtn");
+  dom.runIrrigationFlowBtn = document.querySelector("#runIrrigationFlowBtn");
+  dom.useIrrigationAreaBtn = document.querySelector("#useIrrigationAreaBtn");
+  dom.clearIrrigationFlowBtn = document.querySelector("#clearIrrigationFlowBtn");
+  dom.irrigationSystemSelect = document.querySelector("#irrigationSystemSelect");
+  dom.irrigationEmitterCount = document.querySelector("#irrigationEmitterCount");
+  dom.irrigationEmitterFlow = document.querySelector("#irrigationEmitterFlow");
+  dom.irrigationEtcInput = document.querySelector("#irrigationEtcInput");
+  dom.irrigationRainInput = document.querySelector("#irrigationRainInput");
+  dom.irrigationAreaInput = document.querySelector("#irrigationAreaInput");
+  dom.irrigationHoursInput = document.querySelector("#irrigationHoursInput");
+  dom.irrigationMeasuredVolumeInput = document.querySelector("#irrigationMeasuredVolumeInput");
+  dom.irrigationMeasuredSecondsInput = document.querySelector("#irrigationMeasuredSecondsInput");
   dom.runAgroSuitabilityBtn = document.querySelector("#runAgroSuitabilityBtn");
   dom.focusAgroSuitabilityBtn = document.querySelector("#focusAgroSuitabilityBtn");
   dom.clearAgroSuitabilityBtn = document.querySelector("#clearAgroSuitabilityBtn");
@@ -5355,6 +5371,8 @@ function cacheDom() {
   dom.inamhiLiveVisual = document.querySelector("#inamhiLiveVisual");
   dom.hydroNetworkResults = document.querySelector("#hydroNetworkResults");
   dom.hydroNetworkVisual = document.querySelector("#hydroNetworkVisual");
+  dom.irrigationFlowResults = document.querySelector("#irrigationFlowResults");
+  dom.irrigationFlowVisual = document.querySelector("#irrigationFlowVisual");
   dom.officialDataCard = document.querySelector("#officialDataCard");
   dom.runOfficialDataBtn = document.querySelector("#runOfficialDataBtn");
   dom.focusOfficialDataBtn = document.querySelector("#focusOfficialDataBtn");
@@ -5786,6 +5804,16 @@ function bindUI() {
   });
   dom.focusHydroNetworkBtn?.addEventListener("click", focusHydroNetworkStudy);
   dom.clearHydroNetworkBtn?.addEventListener("click", clearHydroNetworkAnalysis);
+  dom.runIrrigationFlowBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.irrigationFlowResults, "Calculando capacidad del sistema, necesidad del cultivo y aforo real...", [
+      { target: dom.irrigationFlowVisual, message: "Preparando balance entre diseno, emisores y medicion actual..." },
+    ]);
+    return runModuleAction(dom.runIrrigationFlowBtn, "Calculando...", () => runIrrigationFlowAnalysis());
+  });
+  dom.useIrrigationAreaBtn?.addEventListener("click", () => {
+    syncIrrigationAreaFieldFromPlot(true);
+  });
+  dom.clearIrrigationFlowBtn?.addEventListener("click", clearIrrigationFlowAnalysis);
   dom.runOfficialDataBtn?.addEventListener("click", () => {
     setModulePendingState(dom.officialDataResults, "Activando fuentes oficiales y capas utiles para esta ruta...", [
       { target: dom.officialDataVisual, message: "Consolidando hidrografia, riego, suelos, vialidad y servicios oficiales..." },
@@ -6951,7 +6979,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
     actions: [
       { id: "agronomy-scenes", label: "Imagenes", copy: "Escena y lectura base", tone: "primary" },
       { id: "agronomy-demo", label: "Lote demo", copy: "Entrar con un ejemplo", tone: "neutral" },
-      { id: "agronomy-water", label: "Agua", copy: "Rios, acequias y quebradas", tone: "neutral" },
+      { id: "agronomy-water", label: "Agua", copy: "Red y caudal de riego", tone: "neutral" },
       { id: "agronomy-official", label: "Oficiales", copy: "Riego, suelos y agua", tone: "neutral" },
       { id: "agronomy-suitability", label: "Cultivo", copy: "Aptitud agroclimatica", tone: "neutral" },
       { id: "agronomy-gps", label: "GPS", copy: "Seguimiento y corredor", tone: "accent" },
@@ -7356,7 +7384,7 @@ function getWorkflowGuideModel(route = state.entryRoute || "agronomia") {
   const areaProfile = getAgronomyAreaProfile();
   const image = getSelectedImage();
   const hasDiagnosis = !!(state.agronomyOutputs.intralote || state.agronomyOutputs.dem || state.currentPlot);
-  const hasWater = !!state.agronomyOutputs.hydroNetwork;
+  const hasWater = !!(state.agronomyOutputs.hydroNetwork || state.agronomyOutputs.irrigationFlow);
   const hasClimate = !!(state.agronomyOutputs.climate || state.agronomyOutputs.inamhi || state.agronomyOutputs.inamhiLive || state.agronomyOutputs.agroSuitability);
   const hasOperations = isGpsTrackingActive() || !!state.agronomyOutputs.gps;
   const activeDevice = state.agronomyOutputs.gps?.activeDevice || state.gpsTracking.lastDeviceSnapshot;
@@ -7384,7 +7412,9 @@ function getWorkflowGuideModel(route = state.entryRoute || "agronomia") {
       {
         ...profile.steps[2],
         tone: hasWater ? "ready" : "pending",
-        stateLabel: hasWater ? state.agronomyOutputs.hydroNetwork.summary.waterLabel : profile.steps[2].pending,
+        stateLabel: hasWater
+          ? state.agronomyOutputs.irrigationFlow?.balanceLabel || state.agronomyOutputs.hydroNetwork?.summary?.waterLabel || "Agua evaluada"
+          : profile.steps[2].pending,
       },
       {
         ...profile.steps[3],
@@ -12112,6 +12142,224 @@ function getCurrentAgronomyTarget() {
   };
 }
 
+function readIrrigationInputNumber(input, fallback = null) {
+  const raw = String(input?.value || "").trim().replace(",", ".");
+  if (!raw) {
+    return fallback;
+  }
+  const numeric = Number(raw);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function formatIrrigationNumber(value, digits = 1) {
+  if (!Number.isFinite(value)) {
+    return "Sin dato";
+  }
+  return new Intl.NumberFormat("es-EC", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: digits,
+  }).format(value);
+}
+
+function formatFlowLh(value) {
+  if (!Number.isFinite(value)) {
+    return "Sin dato";
+  }
+  return `${formatIrrigationNumber(value, value >= 100 ? 0 : 1)} L/h`;
+}
+
+function formatFlowLs(value) {
+  if (!Number.isFinite(value)) {
+    return "Sin dato";
+  }
+  return `${formatIrrigationNumber(value / 3600, 3)} L/s`;
+}
+
+function getCurrentPlotAreaM2() {
+  if (!state.currentPlot) {
+    return null;
+  }
+  try {
+    const areaM2 = turf.area(state.currentPlot);
+    return Number.isFinite(areaM2) && areaM2 > 0 ? areaM2 : null;
+  } catch (_) {
+    return null;
+  }
+}
+
+function syncIrrigationAreaFieldFromPlot(force = false) {
+  if (!dom.irrigationAreaInput) {
+    return null;
+  }
+  const plotAreaM2 = getCurrentPlotAreaM2();
+  if (!plotAreaM2) {
+    setStatus("Dibuja o selecciona un lote para usar su area en el calculo de riego.");
+    return null;
+  }
+  if (force || !String(dom.irrigationAreaInput.value || "").trim()) {
+    dom.irrigationAreaInput.value = String(Math.round(plotAreaM2));
+  }
+  setStatus(`Area del lote cargada para riego: ${formatIrrigationNumber(plotAreaM2, 0)} m².`);
+  return plotAreaM2;
+}
+
+function buildIrrigationFlowAnalysis() {
+  const context = getCurrentAgronomyTarget();
+  const systemId = dom.irrigationSystemSelect?.value || "goteo";
+  const systemLabel = systemId === "aspersion" ? "Aspersion" : "Goteo";
+  const emitterCount = Math.max(0, readIrrigationInputNumber(dom.irrigationEmitterCount, 0) || 0);
+  const emitterFlowLh = Math.max(0, readIrrigationInputNumber(dom.irrigationEmitterFlow, 0) || 0);
+  const emitterCapacityLh = emitterCount > 0 && emitterFlowLh > 0 ? emitterCount * emitterFlowLh : null;
+  const etcMm = Math.max(0, readIrrigationInputNumber(dom.irrigationEtcInput, 0) || 0);
+  const rainMm = Math.max(0, readIrrigationInputNumber(dom.irrigationRainInput, 0) || 0);
+  const hasManualArea = String(dom.irrigationAreaInput?.value || "").trim().length > 0;
+  const areaM2 = hasManualArea
+    ? Math.max(0, readIrrigationInputNumber(dom.irrigationAreaInput, 0) || 0)
+    : (getCurrentPlotAreaM2() || 0);
+  const hours = Math.max(0, readIrrigationInputNumber(dom.irrigationHoursInput, 0) || 0);
+  const netLayerMm = etcMm > 0 ? Math.max(etcMm - rainMm, 0) : null;
+  const demandVolumeL = Number.isFinite(netLayerMm) && areaM2 > 0 ? netLayerMm * areaM2 : null;
+  const designFlowLh = demandVolumeL && hours > 0 ? demandVolumeL / hours : null;
+  const measuredVolumeL = Math.max(0, readIrrigationInputNumber(dom.irrigationMeasuredVolumeInput, 0) || 0);
+  const measuredSeconds = Math.max(0, readIrrigationInputNumber(dom.irrigationMeasuredSecondsInput, 0) || 0);
+  const measuredFlowLh = measuredVolumeL > 0 && measuredSeconds > 0 ? measuredVolumeL * 3600 / measuredSeconds : null;
+  const referenceFlowLh = designFlowLh || emitterCapacityLh || null;
+  const referenceLabel = designFlowLh ? "Demanda del cultivo" : emitterCapacityLh ? "Capacidad del sistema" : null;
+  const systemCoversDemand = emitterCapacityLh && designFlowLh ? emitterCapacityLh / Math.max(designFlowLh, 0.001) : null;
+  const measuredVsReference = measuredFlowLh && referenceFlowLh ? measuredFlowLh / Math.max(referenceFlowLh, 0.001) : null;
+  let balanceLabel = "Sin balance";
+  let balanceTone = "low";
+  if (Number.isFinite(measuredVsReference)) {
+    if (measuredVsReference < 0.9) {
+      balanceLabel = "Caudal por debajo";
+      balanceTone = "high";
+    } else if (measuredVsReference > 1.1) {
+      balanceLabel = "Caudal por encima";
+      balanceTone = "mid";
+    } else {
+      balanceLabel = "Caudal en rango";
+      balanceTone = "low";
+    }
+  } else if (Number.isFinite(systemCoversDemand)) {
+    if (systemCoversDemand < 0.95) {
+      balanceLabel = "Sistema insuficiente";
+      balanceTone = "high";
+    } else if (systemCoversDemand > 1.2) {
+      balanceLabel = "Sistema holgado";
+      balanceTone = "mid";
+    } else {
+      balanceLabel = "Sistema equilibrado";
+      balanceTone = "low";
+    }
+  }
+  const recommendation = Number.isFinite(measuredVsReference)
+    ? measuredVsReference < 0.9
+      ? "El aforo real esta por debajo de la referencia. Revisa presion, obstruccion, fugas o tiempo efectivo de riego."
+      : measuredVsReference > 1.1
+        ? "El aforo real supera la referencia. Ajusta valvulas, turnos o emisores para evitar sobreaplicacion."
+        : "El aforo real esta dentro del rango esperado. La red puede operar con este ajuste como referencia."
+    : Number.isFinite(systemCoversDemand)
+      ? systemCoversDemand < 0.95
+        ? "La red no cubre la demanda estimada del cultivo. Debes ampliar tiempo, emisores o caudal unitario."
+        : systemCoversDemand > 1.2
+          ? "La capacidad del sistema supera la demanda. Puedes repartir turnos o reducir presion para ganar eficiencia."
+          : "La capacidad del sistema y la demanda del cultivo estan bien alineadas para el turno evaluado."
+      : "Completa al menos una ruta de calculo para obtener una recomendacion operativa.";
+
+  return {
+    context,
+    systemId,
+    systemLabel,
+    emitterCount,
+    emitterFlowLh,
+    emitterCapacityLh,
+    etcMm,
+    rainMm,
+    netLayerMm,
+    areaM2: areaM2 > 0 ? areaM2 : null,
+    hours,
+    demandVolumeL,
+    designFlowLh,
+    measuredVolumeL,
+    measuredSeconds,
+    measuredFlowLh,
+    referenceFlowLh,
+    referenceLabel,
+    systemCoversDemand,
+    measuredVsReference,
+    balanceLabel,
+    balanceTone,
+    recommendation,
+  };
+}
+
+function renderIrrigationFlowVisual(result = null) {
+  if (!dom.irrigationFlowVisual) {
+    return;
+  }
+  if (!result) {
+    resetVisualPanel(dom.irrigationFlowVisual, "Aqui aparecera la comparacion entre sistema, cultivo y caudal medido.");
+    return;
+  }
+
+  const bars = [
+    {
+      label: "Sistema",
+      value: result.emitterCapacityLh,
+      text: formatFlowLh(result.emitterCapacityLh),
+    },
+    {
+      label: "Cultivo",
+      value: result.designFlowLh,
+      text: formatFlowLh(result.designFlowLh),
+    },
+    {
+      label: "Aforo",
+      value: result.measuredFlowLh,
+      text: formatFlowLh(result.measuredFlowLh),
+    },
+  ].filter((item) => Number.isFinite(item.value));
+
+  if (!bars.length) {
+    resetVisualPanel(dom.irrigationFlowVisual, "Ingresa emisores, ETc o aforo para comparar el caudal de riego.");
+    return;
+  }
+
+  const maxFlow = Math.max(...bars.map((item) => item.value), 1);
+  dom.irrigationFlowVisual.classList.remove("empty-state");
+  dom.irrigationFlowVisual.classList.add("has-data");
+  setHtmlIfChanged(dom.irrigationFlowVisual, `
+    <div class="agronomy-visual-head">
+      <div>
+        <p class="section-kicker">Caudal de riego</p>
+        <h4>Balance entre sistema, cultivo y aforo</h4>
+      </div>
+      <span class="agronomy-visual-pill tone-${result.balanceTone}">${result.balanceLabel}</span>
+    </div>
+    <div class="agronomy-tag-row">
+      <span class="agronomy-visual-pill">${result.systemLabel}</span>
+      ${result.areaM2 ? `<span class="agronomy-visual-pill">${formatIrrigationNumber(result.areaM2, 0)} m²</span>` : ""}
+      ${Number.isFinite(result.netLayerMm) ? `<span class="agronomy-visual-pill">${formatIrrigationNumber(result.netLayerMm, 1)} mm netos</span>` : ""}
+      ${result.hours > 0 ? `<span class="agronomy-visual-pill">${formatIrrigationNumber(result.hours, 1)} h</span>` : ""}
+    </div>
+    <div class="agronomy-bar-grid">
+      ${bars.map((item) => `
+        <article class="agronomy-bar-card">
+          <div class="agronomy-bar-head">
+            <span>${item.label}</span>
+            <strong>${item.text}</strong>
+          </div>
+          <div class="agronomy-bar-track">
+            <i style="width: ${Math.max(10, Math.round(item.value / maxFlow * 100))}%"></i>
+          </div>
+          <p>${formatFlowLs(item.value)}</p>
+        </article>
+      `).join("")}
+    </div>
+    <p class="agronomy-visual-copy">${result.recommendation} 1 mm sobre 1 m² equivale a 1 litro aplicado.</p>
+  `);
+}
+
 function getHydroFeatureTone(kind = "") {
   if (kind === "rio") {
     return { stroke: "#2d7eb5", fill: "#98d6f2" };
@@ -12454,6 +12702,107 @@ function clearHydroNetworkAnalysis() {
   renderWorkflowGuide();
   updateMapSummary();
   setStatus(`Red hidrica limpiada para ${getCurrentAgronomyScopeLabel()}.`);
+}
+
+function runIrrigationFlowAnalysis(silent = false) {
+  const result = buildIrrigationFlowAnalysis();
+  state.agronomyOutputs.irrigationFlow = result;
+  state.agronomyFocus = "hydroNetwork";
+
+  const cards = [
+    {
+      label: "Capacidad del sistema",
+      value: formatFlowLh(result.emitterCapacityLh),
+      copy: result.emitterCount > 0 && result.emitterFlowLh > 0
+        ? `${formatIrrigationNumber(result.emitterCount, 0)} emisores a ${formatIrrigationNumber(result.emitterFlowLh, 1)} L/h.`
+        : "Ingresa numero de emisores y caudal unitario.",
+    },
+    {
+      label: "Demanda del cultivo",
+      value: formatFlowLh(result.designFlowLh),
+      copy: Number.isFinite(result.designFlowLh)
+        ? `${formatIrrigationNumber(result.netLayerMm, 1)} mm netos sobre ${formatIrrigationNumber(result.areaM2, 0)} m² en ${formatIrrigationNumber(result.hours, 1)} h.`
+        : "Completa ETc, lluvia, area y tiempo de riego.",
+      highlight: true,
+    },
+    {
+      label: "Aforo actual",
+      value: formatFlowLh(result.measuredFlowLh),
+      copy: Number.isFinite(result.measuredFlowLh)
+        ? `${formatIrrigationNumber(result.measuredVolumeL, 1)} L medidos en ${formatIrrigationNumber(result.measuredSeconds, 0)} s.`
+        : "Mide volumen y tiempo con balde y cronometro.",
+    },
+    {
+      label: "Balance",
+      value: result.balanceLabel,
+      copy: result.referenceLabel
+        ? `Comparado contra ${result.referenceLabel.toLowerCase()}.`
+        : "Falta una referencia para comparar el aforo.",
+    },
+    {
+      label: "Lamina neta",
+      value: Number.isFinite(result.netLayerMm) ? `${formatIrrigationNumber(result.netLayerMm, 1)} mm` : "Sin dato",
+      copy: Number.isFinite(result.netLayerMm)
+        ? `ETc ${formatIrrigationNumber(result.etcMm, 1)} mm menos lluvia ${formatIrrigationNumber(result.rainMm, 1)} mm.`
+        : "Usa la formula ETc - lluvia efectiva.",
+    },
+    {
+      label: "Area usada",
+      value: result.areaM2 ? `${formatIrrigationNumber(result.areaM2, 0)} m²` : "Sin area",
+      copy: result.areaM2
+        ? result.context.scopeType === "plot"
+          ? `Tomada desde ${result.context.scopeLabel}.`
+          : `Ingresada manualmente para ${result.context.scopeLabel}.`
+        : "Usa el lote activo o escribe el area manual.",
+    },
+  ];
+
+  paintMetricGrid(dom.irrigationFlowResults, cards);
+  renderIrrigationFlowVisual(result);
+  renderWorkflowGuide();
+  updateMapSummary();
+
+  if (!silent) {
+    const statusBits = [];
+    if (Number.isFinite(result.designFlowLh)) {
+      statusBits.push(`diseno ${formatFlowLh(result.designFlowLh)}`);
+    }
+    if (Number.isFinite(result.emitterCapacityLh)) {
+      statusBits.push(`sistema ${formatFlowLh(result.emitterCapacityLh)}`);
+    }
+    if (Number.isFinite(result.measuredFlowLh)) {
+      statusBits.push(`aforo ${formatFlowLh(result.measuredFlowLh)}`);
+    }
+    setStatus(`Caudal de riego listo${statusBits.length ? `: ${statusBits.join(" - ")}` : "."}`);
+  }
+
+  return result;
+}
+
+function clearIrrigationFlowAnalysis() {
+  state.agronomyOutputs.irrigationFlow = null;
+  resetMetricGrid(dom.irrigationFlowResults, "Calcula capacidad, caudal de diseno y aforo real del riego.");
+  resetVisualPanel(dom.irrigationFlowVisual, "Aqui aparecera la comparacion entre sistema, cultivo y caudal medido.");
+  [
+    dom.irrigationEmitterCount,
+    dom.irrigationEmitterFlow,
+    dom.irrigationEtcInput,
+    dom.irrigationRainInput,
+    dom.irrigationAreaInput,
+    dom.irrigationHoursInput,
+    dom.irrigationMeasuredVolumeInput,
+    dom.irrigationMeasuredSecondsInput,
+  ].forEach((input) => {
+    if (input) {
+      input.value = "";
+    }
+  });
+  if (dom.irrigationSystemSelect) {
+    dom.irrigationSystemSelect.value = "goteo";
+  }
+  renderWorkflowGuide();
+  updateMapSummary();
+  setStatus("Calculo de caudal de riego limpiado.");
 }
 
 function getAreaThermalProfile(areaId = state.agronomyAreaId) {

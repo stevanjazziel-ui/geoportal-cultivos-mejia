@@ -2494,6 +2494,40 @@ button {
   gap: 12px;
 }
 
+.irrigation-calc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.irrigation-calc-card {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid rgba(47, 61, 50, 0.09);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.irrigation-calc-card h4 {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 1rem;
+  line-height: 1.15;
+}
+
+.irrigation-calc-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+  font-size: 0.84rem;
+}
+
+.irrigation-calc-toolbar {
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
 .planning-variable-matrix {
   display: flex;
   flex-direction: column;

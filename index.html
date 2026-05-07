@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="geoportal-version" content="20260506-4">
+  <meta name="geoportal-version" content="20260507-1">
   <title>Centro de Decisiones | Mejia y Quevedo</title>
   <meta
     name="description"
@@ -32,7 +32,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260506-4">
+  <link rel="stylesheet" href="./styles.css?v=20260507-1">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -150,7 +150,7 @@
         </div>
         <div class="user-pill">
           <span class="status-dot"></span>
-            Usuario publico | v20260506-4
+            Usuario publico | v20260507-1
           </div>
       </div>
     </header>
@@ -526,13 +526,92 @@
                 <button id="runHydroNetworkBtn" class="secondary-button" type="button">Leer red hidrica</button>
               </div>
               <p class="module-copy">
-                Grafica rios, acequias y quebradas para riego, drenaje y resguardo.
+                Grafica rios, acequias y quebradas y calcula caudal de riego para diseno o verificacion operativa.
               </p>
               <div id="hydroNetworkResults" class="metrics-grid empty-state">
                 Ejecuta el modulo para ver red, cercania y prioridad.
               </div>
               <div id="hydroNetworkVisual" class="agronomy-visual empty-state">
                 Aqui veras rios, acequias, quebradas y su prioridad operativa.
+              </div>
+              <div class="irrigation-calc-grid">
+                <article class="irrigation-calc-card">
+                  <div>
+                    <p class="module-kicker">Caudal por emisores</p>
+                    <h4>Capacidad del sistema</h4>
+                    <p>Para goteo o aspersion con emisores de caudal uniforme.</p>
+                  </div>
+                  <div class="planning-toolbar irrigation-calc-toolbar">
+                    <label class="field compact">
+                      <span>Sistema</span>
+                      <select id="irrigationSystemSelect">
+                        <option value="goteo">Riego por goteo</option>
+                        <option value="aspersion">Riego por aspersion</option>
+                      </select>
+                    </label>
+                    <label class="field compact">
+                      <span>Emisores / aspersores</span>
+                      <input id="irrigationEmitterCount" type="number" min="1" step="1" placeholder="500">
+                    </label>
+                    <label class="field compact">
+                      <span>Caudal unitario (L/h)</span>
+                      <input id="irrigationEmitterFlow" type="number" min="0" step="0.1" placeholder="4">
+                    </label>
+                  </div>
+                </article>
+                <article class="irrigation-calc-card">
+                  <div>
+                    <p class="module-kicker">Necesidad del cultivo</p>
+                    <h4>Caudal de diseno</h4>
+                    <p>Usa ETc, lluvia efectiva, area y tiempo total de riego.</p>
+                  </div>
+                  <div class="planning-toolbar irrigation-calc-toolbar">
+                    <label class="field compact">
+                      <span>ETc (mm)</span>
+                      <input id="irrigationEtcInput" type="number" min="0" step="0.1" placeholder="5.5">
+                    </label>
+                    <label class="field compact">
+                      <span>Lluvia efectiva (mm)</span>
+                      <input id="irrigationRainInput" type="number" min="0" step="0.1" placeholder="1.2">
+                    </label>
+                    <label class="field compact">
+                      <span>Area (m²)</span>
+                      <input id="irrigationAreaInput" type="number" min="1" step="1" placeholder="2400">
+                    </label>
+                    <label class="field compact">
+                      <span>Tiempo de riego (h)</span>
+                      <input id="irrigationHoursInput" type="number" min="0.1" step="0.1" placeholder="8">
+                    </label>
+                  </div>
+                </article>
+                <article class="irrigation-calc-card">
+                  <div>
+                    <p class="module-kicker">Aforo real</p>
+                    <h4>Medicion actual</h4>
+                    <p>Mide con balde y cronometro para contrastar el caudal real.</p>
+                  </div>
+                  <div class="planning-toolbar irrigation-calc-toolbar">
+                    <label class="field compact">
+                      <span>Volumen medido (L)</span>
+                      <input id="irrigationMeasuredVolumeInput" type="number" min="0" step="0.1" placeholder="10">
+                    </label>
+                    <label class="field compact">
+                      <span>Tiempo medido (s)</span>
+                      <input id="irrigationMeasuredSecondsInput" type="number" min="1" step="1" placeholder="18">
+                    </label>
+                  </div>
+                </article>
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="runIrrigationFlowBtn" class="secondary-button" type="button">Calcular caudal</button>
+                <button id="useIrrigationAreaBtn" class="ghost-button" type="button">Usar lote activo</button>
+                <button id="clearIrrigationFlowBtn" class="ghost-button" type="button">Limpiar calculo</button>
+              </div>
+              <div id="irrigationFlowResults" class="metrics-grid empty-state">
+                Calcula capacidad, caudal de diseno y aforo real del riego.
+              </div>
+              <div id="irrigationFlowVisual" class="agronomy-visual empty-state">
+                Aqui aparecera la comparacion entre sistema, cultivo y caudal medido.
               </div>
               <div class="action-row analysis-actions">
                 <button id="focusHydroNetworkBtn" class="secondary-button" type="button">Centrar red</button>
@@ -1417,6 +1496,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260506-4" defer></script>
+  <script src="./app.js?v=20260507-1" defer></script>
 </body>
 </html>
