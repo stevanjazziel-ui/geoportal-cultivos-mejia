@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260507-1";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260507-2";
 
 const layerCatalog = [
   {
@@ -5800,7 +5800,13 @@ function bindUI() {
     setModulePendingState(dom.hydroNetworkResults, "Leyendo rios, acequias y quebradas...", [
       { target: dom.hydroNetworkVisual, message: "Preparando red, prioridad y franjas de proteccion..." },
     ]);
-    return runModuleAction(dom.runHydroNetworkBtn, "Leyendo red...", () => runHydroNetworkAnalysis());
+    const task = runModuleAction(dom.runHydroNetworkBtn, "Leyendo red...", () => runHydroNetworkAnalysis());
+    window.setTimeout(() => {
+      if (state.entryRoute === "agronomia" && !dom.hydroNetworkResults?.classList.contains("has-data")) {
+        runHydroNetworkAnalysis(true);
+      }
+    }, 220);
+    return task;
   });
   dom.focusHydroNetworkBtn?.addEventListener("click", focusHydroNetworkStudy);
   dom.clearHydroNetworkBtn?.addEventListener("click", clearHydroNetworkAnalysis);
@@ -6766,6 +6772,11 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   }
   clearPlanningModuleFocus();
   updateMapSummary();
+  window.setTimeout(() => {
+    if (state.entryRoute === "agronomia" && !dom.hydroNetworkResults?.classList.contains("has-data")) {
+      runHydroNetworkAnalysis(true);
+    }
+  }, 220);
   if (state.pendingEntryAction === "operations") {
     state.pendingEntryAction = null;
     window.setTimeout(() => {
@@ -12394,13 +12405,42 @@ function getHydroPriorityLabel(distanceKm = 0, irrigationValue = 50, kind = "") 
   return "Prioridad baja";
 }
 
+function getHydroSourceFeaturesForArea(groupId, areaId = state.agronomyAreaId) {
+  const sourceFeatures = Array.isArray(geoSources[groupId]?.features)
+    ? geoSources[groupId].features.filter((feature) => !!feature?.geometry)
+    : [];
+  const scoped = getAgronomyAreaFeatures(sourceFeatures, areaId);
+  if (scoped.length) {
+    return scoped;
+  }
+
+  const territoryMatches = sourceFeatures.filter((feature) => {
+    const territoryId = String(feature.properties?.territoryId || "").trim().toLowerCase();
+    return territoryId && territoryId === String(areaId || "").trim().toLowerCase();
+  });
+  if (territoryMatches.length) {
+    return territoryMatches;
+  }
+
+  const areaFeature = getAgronomyAreaFeature(areaId);
+  const areaAnchor = areaFeature?.geometry ? turf.centroid(areaFeature) : null;
+  if (!areaAnchor) {
+    return sourceFeatures.slice(0, 4);
+  }
+
+  return sourceFeatures
+    .slice()
+    .sort((left, right) => distanceToFeatureKm(areaAnchor, left) - distanceToFeatureKm(areaAnchor, right))
+    .slice(0, 4);
+}
+
 function buildHydroNetworkAnalysis() {
   const context = getCurrentAgronomyTarget();
   const anchor = turf.centroid(context.feature);
   const groups = [
-    { id: "rios", kind: "rio", label: "Rios", features: getAgronomyAreaFeatures(geoSources.rios?.features, state.agronomyAreaId) },
-    { id: "acequias", kind: "acequia", label: "Acequias", features: getAgronomyAreaFeatures(geoSources.acequias?.features, state.agronomyAreaId) },
-    { id: "quebradas", kind: "quebrada", label: "Quebradas", features: getAgronomyAreaFeatures(geoSources.quebradas?.features, state.agronomyAreaId) },
+    { id: "rios", kind: "rio", label: "Rios", features: getHydroSourceFeaturesForArea("rios", state.agronomyAreaId) },
+    { id: "acequias", kind: "acequia", label: "Acequias", features: getHydroSourceFeaturesForArea("acequias", state.agronomyAreaId) },
+    { id: "quebradas", kind: "quebrada", label: "Quebradas", features: getHydroSourceFeaturesForArea("quebradas", state.agronomyAreaId) },
   ];
 
   const items = groups.flatMap((group) => group.features.map((feature, index) => {
@@ -12617,6 +12657,25 @@ function clearHydroNetworkOverlay() {
   });
 }
 
+function ensureHydroBaseLayersVisible() {
+  if (!dom.layersTree) {
+    return;
+  }
+
+  let changed = false;
+  ["rios", "acequias", "quebradas"].forEach((layerId) => {
+    const input = dom.layersTree.querySelector(`input[data-layer="${layerId}"]`);
+    if (input && !input.checked) {
+      input.checked = true;
+      changed = true;
+    }
+  });
+
+  if (changed) {
+    updateLayerVisibility();
+  }
+}
+
 async function runHydroNetworkAnalysis(silent = false) {
   try {
     const result = buildHydroNetworkAnalysis();
@@ -12657,11 +12716,20 @@ async function runHydroNetworkAnalysis(silent = false) {
     ];
     paintMetricGrid(dom.hydroNetworkResults, cards);
     renderHydroNetworkVisual(result);
-    renderHydroNetworkOverlay(result);
+    ensureHydroBaseLayersVisible();
+    if (mapState.map) {
+      refreshVisibleGeoLayers(["rios", "acequias", "quebradas"]);
+    }
+    try {
+      renderHydroNetworkOverlay(result);
+    } catch (overlayError) {
+      console.warn("No se pudo dibujar la red hidrica sobre el mapa, pero el resumen si fue calculado.", overlayError);
+    }
     renderWorkflowGuide();
     updateMapSummary();
     if (!silent) {
       setStatus(`Red hidrica lista para ${result.context.scopeLabel}: ${result.summary.totalCount} elementos y ${result.summary.totalLengthKm.toFixed(1)} km.`);
+      focusHydroNetworkStudy();
     }
     return result;
   } catch (error) {
@@ -29478,6 +29546,9 @@ function renderInamhiVisual(result = null) {
 }
 
 function paintMetricGrid(target, cards) {
+  if (!target) {
+    return;
+  }
   target.classList.remove("empty-state");
   target.classList.add("has-data");
   setHtmlIfChanged(target, cards
@@ -29494,6 +29565,9 @@ function paintMetricGrid(target, cards) {
 }
 
 function resetMetricGrid(target, message) {
+  if (!target) {
+    return;
+  }
   target.classList.remove("has-data");
   target.classList.add("empty-state");
   setTextIfChanged(target, message);
