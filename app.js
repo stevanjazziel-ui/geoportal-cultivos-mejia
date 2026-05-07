@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260507-3";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260507-4";
 
 const layerCatalog = [
   {
@@ -12216,6 +12216,14 @@ function syncIrrigationAreaFieldFromPlot(force = false) {
 
 function buildIrrigationFlowAnalysis() {
   const context = getCurrentAgronomyTarget();
+  let hydroAnalysis = state.agronomyOutputs.hydroNetwork || null;
+  if (!hydroAnalysis) {
+    try {
+      hydroAnalysis = buildHydroNetworkAnalysis();
+    } catch (_) {
+      hydroAnalysis = null;
+    }
+  }
   const systemId = dom.irrigationSystemSelect?.value || "goteo";
   const systemLabel = systemId === "aspersion" ? "Aspersion" : "Goteo";
   const emitterCount = Math.max(0, readIrrigationInputNumber(dom.irrigationEmitterCount, 0) || 0);
@@ -12238,6 +12246,36 @@ function buildIrrigationFlowAnalysis() {
   const referenceLabel = designFlowLh ? "Demanda del cultivo" : emitterCapacityLh ? "Capacidad del sistema" : null;
   const systemCoversDemand = emitterCapacityLh && designFlowLh ? emitterCapacityLh / Math.max(designFlowLh, 0.001) : null;
   const measuredVsReference = measuredFlowLh && referenceFlowLh ? measuredFlowLh / Math.max(referenceFlowLh, 0.001) : null;
+  const supplyCandidates = Array.isArray(hydroAnalysis?.ranked) ? hydroAnalysis.ranked.slice() : [];
+  const preferredSupply = supplyCandidates
+    .slice()
+    .sort((left, right) => {
+      const leftPriority = left.kind === "riegoOficial" ? 0 : left.kind === "acequia" ? 1 : left.kind === "rio" ? 2 : 3;
+      const rightPriority = right.kind === "riegoOficial" ? 0 : right.kind === "acequia" ? 1 : right.kind === "rio" ? 2 : 3;
+      if (leftPriority !== rightPriority) {
+        return leftPriority - rightPriority;
+      }
+      return left.distanceKm - right.distanceKm;
+    })[0] || null;
+  const supplyDistanceKm = Number.isFinite(preferredSupply?.distanceKm) ? preferredSupply.distanceKm : null;
+  const supplyWaterLabel = Number.isFinite(supplyDistanceKm) ? getHydroDistanceLabel(supplyDistanceKm) : "Sin red";
+  const soilAptitudeLabel = hydroAnalysis?.summary?.soilAptitudeLabel || "Sin aptitud IGM";
+  const coverLabel = hydroAnalysis?.summary?.coverLabel || "Sin cobertura MAATE";
+  const supplyScore = clamp(
+    (preferredSupply ? (preferredSupply.kind === "riegoOficial" ? 34 : preferredSupply.kind === "acequia" ? 28 : preferredSupply.kind === "rio" ? 22 : 14) : 0)
+    + (preferredSupply ? preferredSupply.irrigationValue * 0.42 : 0)
+    + (Number.isFinite(supplyDistanceKm) ? Math.max(0, 34 - supplyDistanceKm * 68) : 0)
+    + (soilAptitudeLabel === "Alta" ? 10 : soilAptitudeLabel === "Condicionada" ? 5 : 0)
+    + (/proteccion/i.test(coverLabel) ? -6 : 5),
+    8,
+    98
+  );
+  const supplyPriorityLabel = supplyScore >= 74
+    ? "Abastecimiento alto"
+    : supplyScore >= 52
+      ? "Abastecimiento medio"
+      : "Abastecimiento condicionado";
+  const supplyTone = supplyScore >= 74 ? "low" : supplyScore >= 52 ? "mid" : "high";
   let balanceLabel = "Sin balance";
   let balanceTone = "low";
   if (Number.isFinite(measuredVsReference)) {
@@ -12276,9 +12314,17 @@ function buildIrrigationFlowAnalysis() {
           ? "La capacidad del sistema supera la demanda. Puedes repartir turnos o reducir presion para ganar eficiencia."
           : "La capacidad del sistema y la demanda del cultivo estan bien alineadas para el turno evaluado."
       : "Completa al menos una ruta de calculo para obtener una recomendacion operativa.";
+  const supplyRecommendation = preferredSupply
+    ? supplyPriorityLabel === "Abastecimiento alto"
+      ? `La referencia de ${preferredSupply.kindLabel.toLowerCase()} (${preferredSupply.label}) respalda el lote con ${supplyWaterLabel.toLowerCase()}.`
+      : supplyPriorityLabel === "Abastecimiento medio"
+        ? `El lote tiene soporte desde ${preferredSupply.kindLabel.toLowerCase()} (${preferredSupply.label}), pero conviene vigilar turnos y continuidad del riego.`
+        : `El respaldo hidrico es condicionado desde ${preferredSupply.kindLabel.toLowerCase()} (${preferredSupply.label}). Conviene reforzar almacenamiento, turnos o reserva.`
+    : "No hay una referencia hidrica cercana dentro del ambito actual para respaldar este calculo.";
 
   return {
     context,
+    hydroAnalysis,
     systemId,
     systemLabel,
     emitterCount,
@@ -12298,9 +12344,23 @@ function buildIrrigationFlowAnalysis() {
     referenceLabel,
     systemCoversDemand,
     measuredVsReference,
+    supplyFeatureLabel: preferredSupply?.label || "Sin referencia hidrica",
+    supplyKindLabel: preferredSupply?.kindLabel || "Sin red",
+    supplyDistanceKm,
+    supplyWaterLabel,
+    supplyPriorityLabel,
+    supplyTone,
+    supplyScore,
+    supplySourceBlend: hydroAnalysis?.summary?.sourceBlend || "Red referencial",
+    supplySoilLabel: hydroAnalysis?.summary?.dominantSoilLabel || soilAptitudeLabel,
+    supplySoilAptitude: soilAptitudeLabel,
+    supplyCoverLabel: coverLabel,
+    officialIrrigationCount: hydroAnalysis?.summary?.officialIrrigationCount || 0,
+    officialIrrigationKm: hydroAnalysis?.summary?.officialIrrigationKm || 0,
     balanceLabel,
     balanceTone,
     recommendation,
+    supplyRecommendation,
   };
 }
 
@@ -12352,6 +12412,13 @@ function renderIrrigationFlowVisual(result = null) {
       ${result.areaM2 ? `<span class="agronomy-visual-pill">${formatIrrigationNumber(result.areaM2, 0)} m²</span>` : ""}
       ${Number.isFinite(result.netLayerMm) ? `<span class="agronomy-visual-pill">${formatIrrigationNumber(result.netLayerMm, 1)} mm netos</span>` : ""}
       ${result.hours > 0 ? `<span class="agronomy-visual-pill">${formatIrrigationNumber(result.hours, 1)} h</span>` : ""}
+      <span class="agronomy-visual-pill tone-${result.supplyTone}">${result.supplyPriorityLabel}</span>
+    </div>
+    <div class="official-source-tags">
+      <span>${result.supplyFeatureLabel}</span>
+      <span>${result.supplySourceBlend}</span>
+      <span>${result.supplySoilAptitude}</span>
+      <span>${result.supplyCoverLabel}</span>
     </div>
     <div class="agronomy-bar-grid">
       ${bars.map((item) => `
@@ -12368,6 +12435,84 @@ function renderIrrigationFlowVisual(result = null) {
       `).join("")}
     </div>
     <p class="agronomy-visual-copy">${result.recommendation} 1 mm sobre 1 m² equivale a 1 litro aplicado.</p>
+  `);
+}
+
+function renderIrrigationFlowVisual(result = null) {
+  if (!dom.irrigationFlowVisual) {
+    return;
+  }
+  if (!result) {
+    resetVisualPanel(dom.irrigationFlowVisual, "Aqui aparecera la comparacion entre sistema, cultivo y caudal medido.");
+    return;
+  }
+
+  const bars = [
+    {
+      label: "Sistema",
+      value: result.emitterCapacityLh,
+      text: formatFlowLh(result.emitterCapacityLh),
+    },
+    {
+      label: "Cultivo",
+      value: result.designFlowLh,
+      text: formatFlowLh(result.designFlowLh),
+    },
+    {
+      label: "Aforo",
+      value: result.measuredFlowLh,
+      text: formatFlowLh(result.measuredFlowLh),
+    },
+  ].filter((item) => Number.isFinite(item.value));
+
+  if (!bars.length) {
+    resetVisualPanel(dom.irrigationFlowVisual, "Ingresa emisores, ETc o aforo para comparar el caudal de riego.");
+    return;
+  }
+
+  const maxFlow = Math.max(...bars.map((item) => item.value), 1);
+  const areaTag = result.areaM2 ? `<span class="agronomy-visual-pill">${formatIrrigationNumber(result.areaM2, 0)} m²</span>` : "";
+  const netTag = Number.isFinite(result.netLayerMm) ? `<span class="agronomy-visual-pill">${formatIrrigationNumber(result.netLayerMm, 1)} mm netos</span>` : "";
+  const hourTag = result.hours > 0 ? `<span class="agronomy-visual-pill">${formatIrrigationNumber(result.hours, 1)} h</span>` : "";
+
+  dom.irrigationFlowVisual.classList.remove("empty-state");
+  dom.irrigationFlowVisual.classList.add("has-data");
+  setHtmlIfChanged(dom.irrigationFlowVisual, `
+    <div class="agronomy-visual-head">
+      <div>
+        <p class="section-kicker">Caudal de riego</p>
+        <h4>Balance entre sistema, cultivo y aforo</h4>
+      </div>
+      <span class="agronomy-visual-pill tone-${result.balanceTone}">${result.balanceLabel}</span>
+    </div>
+    <div class="agronomy-tag-row">
+      <span class="agronomy-visual-pill">${result.systemLabel}</span>
+      ${areaTag}
+      ${netTag}
+      ${hourTag}
+      <span class="agronomy-visual-pill tone-${result.supplyTone}">${result.supplyPriorityLabel}</span>
+    </div>
+    <div class="official-source-tags">
+      <span>${result.supplyFeatureLabel}</span>
+      <span>${result.supplySourceBlend}</span>
+      <span>${result.supplySoilAptitude}</span>
+      <span>${result.supplyCoverLabel}</span>
+    </div>
+    <div class="agronomy-bar-grid">
+      ${bars.map((item) => `
+        <article class="agronomy-bar-card">
+          <div class="agronomy-bar-head">
+            <span>${item.label}</span>
+            <strong>${item.text}</strong>
+          </div>
+          <div class="agronomy-bar-track">
+            <i style="width: ${Math.max(10, Math.round(item.value / maxFlow * 100))}%"></i>
+          </div>
+          <p>${formatFlowLs(item.value)}</p>
+        </article>
+      `).join("")}
+    </div>
+    <p class="agronomy-visual-copy">${result.recommendation} ${result.supplyRecommendation} 1 mm sobre 1 m² equivale a 1 litro aplicado.</p>
   `);
 }
 
@@ -12853,6 +12998,15 @@ function runIrrigationFlowAnalysis(silent = false) {
   const result = buildIrrigationFlowAnalysis();
   state.agronomyOutputs.irrigationFlow = result;
   state.agronomyFocus = "hydroNetwork";
+  if (result.hydroAnalysis && !state.agronomyOutputs.hydroNetwork) {
+    state.agronomyOutputs.hydroNetwork = result.hydroAnalysis;
+    ensureHydroBaseLayersVisible();
+    try {
+      renderHydroNetworkOverlay(result.hydroAnalysis);
+    } catch (_) {
+      // El calculo de caudal no debe romperse si el overlay falla.
+    }
+  }
 
   const cards = [
     {
@@ -12883,6 +13037,11 @@ function runIrrigationFlowAnalysis(silent = false) {
       copy: result.referenceLabel
         ? `Comparado contra ${result.referenceLabel.toLowerCase()}.`
         : "Falta una referencia para comparar el aforo.",
+    },
+    {
+      label: "Abastecimiento",
+      value: result.supplyPriorityLabel,
+      copy: `${result.supplyFeatureLabel} a ${Number.isFinite(result.supplyDistanceKm) ? formatDistanceKm(result.supplyDistanceKm) : "distancia no disponible"} con soporte ${result.supplySourceBlend}.`,
     },
     {
       label: "Lamina neta",
@@ -12918,6 +13077,7 @@ function runIrrigationFlowAnalysis(silent = false) {
     if (Number.isFinite(result.measuredFlowLh)) {
       statusBits.push(`aforo ${formatFlowLh(result.measuredFlowLh)}`);
     }
+    statusBits.push(result.supplyPriorityLabel.toLowerCase());
     setStatus(`Caudal de riego listo${statusBits.length ? `: ${statusBits.join(" - ")}` : "."}`);
   }
 
