@@ -1,0 +1,8 @@
+{
+"type": "FeatureCollection",
+"name": "ESTACION_PLUVIOMETRICA_P",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+"features": [
+{ "type": "Feature", "properties": { "fcode": "VA002", "descripcion": "ESTACION DONDE SE REALIZAN MEDICIONES Y OBSERVACIONES PUNTUALES DE PRECIPITACION", "cdi": "M248", "nam": "DOS HERMANAS", "na2": "S/I", "ppa": 1970.9, "pm_ene": 330.0, "pm_feb": 359.3, "pm_mar": 464.5, "pm_abr": 357.8, "pm_may": 183.0, "pm_jun": 54.1, "pm_jul": 22.1, "pm_ago": 15.5, "pm_sep": 12.8, "pm_oct": 18.9, "pm_nov": 36.8, "pm_dic": 116.1, "acp": 1970.9 }, "geometry": { "type": "Point", "coordinates": [ -79.565475917998711, -1.08428470866246 ] } }
+]
+}

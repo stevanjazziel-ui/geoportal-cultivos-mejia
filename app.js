@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260507-5";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260511-1";
 
 const layerCatalog = [
   {
@@ -19,21 +19,6 @@ const layerCatalog = [
         id: "vias",
         title: "Vias de acceso",
         description: "Conectividad vial principal para entrada a lotes y logistica de cosecha.",
-      },
-      {
-        id: "rios",
-        title: "Rios y drenajes mayores",
-        description: "Cauces principales para lectura de abastecimiento, drenaje y proteccion de riberas.",
-      },
-      {
-        id: "acequias",
-        title: "Acequias y canales de riego",
-        description: "Infraestructura de distribucion de agua para operacion agricola.",
-      },
-      {
-        id: "quebradas",
-        title: "Quebradas y escorrentias",
-        description: "Frentes de drenaje, escorrentia y contencion preventiva.",
       },
     ],
   },
@@ -76,19 +61,49 @@ const layerCatalog = [
     group: "Fuentes oficiales IEDG",
     items: [
       {
+        id: "microcuencasIGM",
+        title: "Microcuencas IGM",
+        description: "Unidades hidrologicas oficiales para leer drenaje, aporte y respuesta local del agua.",
+      },
+      {
+        id: "subcuencasIGM",
+        title: "Subcuencas IGM",
+        description: "Estructura hidrica oficial para escala intermedia de gestion y resguardo.",
+      },
+      {
+        id: "cuencasIGM",
+        title: "Cuencas IGM",
+        description: "Marco hidrografico oficial para ubicar el ambito dentro del sistema mayor.",
+      },
+      {
+        id: "cuerposAguaIGM",
+        title: "Cuerpos de agua IGM",
+        description: "Superficies oficiales de agua para contraste directo con la imagen satelital.",
+      },
+      {
+        id: "estacionesPluvioIGM",
+        title: "Estaciones pluvio IGM",
+        description: "Puntos oficiales de precipitacion para soporte hidrologico y operativo.",
+      },
+      {
+        id: "zonasHidrologicasIGM",
+        title: "Zonas hidrologicas IGM",
+        description: "Zonas homogeneas oficiales para relieve, precipitacion y permeabilidad.",
+      },
+      {
         id: "riegoEstatal",
-        title: "Sistema de riego estatal",
-        description: "Referencia oficial MAG para corredores de riego y soporte parcelario.",
+        title: "Riego estatal referencial",
+        description: "Apoyo portal basado en MAG / IEDG mientras integramos la capa oficial completa.",
       },
       {
         id: "suelosIGM",
-        title: "Suelos y geomorfologia IGM",
-        description: "Unidades sinteticas inspiradas en IGM 1:25 000 para aptitud y restriccion.",
+        title: "Suelos y geomorfologia de apoyo",
+        description: "Apoyo sintetico del portal para aptitud y restriccion, separado de la hidrologia oficial.",
       },
       {
         id: "coberturaMAATE",
-        title: "Cobertura MAATE",
-        description: "Cobertura y uso del suelo para ambiente, vegetacion y transicion territorial.",
+        title: "Cobertura MAATE de apoyo",
+        description: "Apoyo visual del portal para ambiente, vegetacion y transicion territorial.",
       },
       {
         id: "redVialEstatal",
@@ -125,31 +140,31 @@ const layerCatalog = [
 ];
 
 const routeDefaultLayerIds = {
-  agronomia: ["lotes", "estaciones", "rios", "acequias", "quebradas"],
+  agronomia: ["lotes", "estaciones"],
   planificacion: ["manchaUrbana", "equipamientos", "hidrozonas"],
 };
 
 const officialSourceCatalog = {
   agronomia: {
-    title: "Fuentes oficiales para agua, suelo y riego",
-    copy: "Integra MAATE, MAG e IGM para leer rios, quebradas, riego estatal, suelos y cobertura de la tierra.",
-    layerIds: ["rios", "acequias", "quebradas", "riegoEstatal", "suelosIGM", "coberturaMAATE"],
+    title: "Fuentes oficiales para estructura hidrica",
+    copy: "Integra IGM para leer microcuencas, subcuencas, cuerpos de agua, estaciones pluviometricas y zonas hidrologicas oficiales.",
+    layerIds: ["microcuencasIGM", "subcuencasIGM", "cuencasIGM", "cuerposAguaIGM", "estacionesPluvioIGM", "zonasHidrologicasIGM"],
     sources: [
       {
-        id: "maate",
-        label: "MAATE mapa interactivo",
-        theme: "Hidrografia, agua y cobertura",
+        id: "igmClimaHidrologia",
+        label: "IGM clima e hidrologia",
+        theme: "Cuencas, microcuencas y estaciones",
         year: "portal oficial",
-        link: "http://ide.ambiente.gob.ec/mapainteractivo/",
-        use: "Rios, quebradas, agua y cobertura como base de proteccion, drenaje y restriccion.",
+        link: "http://www.geoportaligm.gob.ec/proyecto_nacional/",
+        use: "Base oficial para drenaje, precipitacion, unidades hidricas y lectura por ambito.",
       },
       {
-        id: "magRiego",
-        label: "MAG sistema de riego estatal",
-        theme: "Riego e infraestructura",
-        year: "2012",
-        link: "https://iedg.presidencia.gob.ec/servicios/descargas/",
-        use: "Corredores de riego y referencia para distribucion parcelaria.",
+        id: "igmSistemasProductivos",
+        label: "IGM sistemas productivos",
+        theme: "Cuerpos de agua",
+        year: "portal oficial",
+        link: "http://www.geoportaligm.gob.ec/proyecto_nacional/",
+        use: "Superficies oficiales de agua para validar cercania, resguardo y contraste satelital.",
       },
       {
         id: "igmTerritorio",
@@ -157,7 +172,7 @@ const officialSourceCatalog = {
         theme: "Suelos, geomorfologia, clima e hidrologia",
         year: "portal oficial",
         link: "http://www.geoportaligm.gob.ec/proyecto_nacional/",
-        use: "Aptitud agroclimatica, relieve, restricciones y soporte de campo.",
+        use: "Soporte oficial para aptitud, relieve, drenaje y lectura integral del territorio.",
       },
       {
         id: "magOrto",
@@ -223,6 +238,73 @@ const officialSourceCatalog = {
         use: "Soporte tecnico para aptitud, restriccion y decisiones de implantacion.",
       },
     ],
+  },
+};
+
+const officialHydroLayerIds = ["microcuencasIGM", "subcuencasIGM", "cuencasIGM", "cuerposAguaIGM", "estacionesPluvioIGM", "zonasHidrologicasIGM"];
+const officialHydroVisibleLayerIds = ["microcuencasIGM", "subcuencasIGM", "cuerposAguaIGM", "estacionesPluvioIGM"];
+const officialHydroFileCatalog = {
+  mejia: {
+    territoryId: "mejia",
+    microcuencasIGM: "./public-data/official-hydro/mejia_microcuencas.geojson",
+    subcuencasIGM: "./public-data/official-hydro/mejia_subcuencas.geojson",
+    cuencasIGM: "./public-data/official-hydro/mejia_cuencas.geojson",
+    cuerposAguaIGM: "./public-data/official-hydro/mejia_cuerpos_agua.geojson",
+    estacionesPluvioIGM: "./public-data/official-hydro/mejia_estaciones_pluvio.geojson",
+    zonasHidrologicasIGM: "./public-data/official-hydro/mejia_zonas_hidrologicas.geojson",
+  },
+  quevedo: {
+    territoryId: "quevedo",
+    microcuencasIGM: "./public-data/official-hydro/quevedo_microcuencas.geojson",
+    subcuencasIGM: "./public-data/official-hydro/quevedo_subcuencas.geojson",
+    cuencasIGM: "./public-data/official-hydro/quevedo_cuencas.geojson",
+    cuerposAguaIGM: "./public-data/official-hydro/quevedo_cuerpos_agua.geojson",
+    estacionesPluvioIGM: "./public-data/official-hydro/quevedo_estaciones_pluvio.geojson",
+  },
+};
+
+const officialHydroLayerMeta = {
+  microcuencasIGM: {
+    kind: "microcuenca",
+    label: "Microcuenca",
+    source: "IGM clima e hidrologia",
+    protectionM: 36,
+    irrigationValue: 78,
+  },
+  subcuencasIGM: {
+    kind: "subcuenca",
+    label: "Subcuenca",
+    source: "IGM clima e hidrologia",
+    protectionM: 48,
+    irrigationValue: 70,
+  },
+  cuencasIGM: {
+    kind: "cuenca",
+    label: "Cuenca",
+    source: "IGM clima e hidrologia",
+    protectionM: 60,
+    irrigationValue: 62,
+  },
+  cuerposAguaIGM: {
+    kind: "cuerpoAgua",
+    label: "Cuerpo de agua",
+    source: "IGM sistemas productivos",
+    protectionM: 28,
+    irrigationValue: 88,
+  },
+  estacionesPluvioIGM: {
+    kind: "estacionPluvio",
+    label: "Estacion pluvio",
+    source: "IGM clima e hidrologia",
+    protectionM: 12,
+    irrigationValue: 58,
+  },
+  zonasHidrologicasIGM: {
+    kind: "zonaHidrologica",
+    label: "Zona hidrologica",
+    source: "IGM clima e hidrologia",
+    protectionM: 24,
+    irrigationValue: 66,
   },
 };
 
@@ -2347,6 +2429,40 @@ const layerStyles = {
     fillOpacity: 0.14,
     dashArray: "5 6",
   },
+  microcuencasIGM: {
+    color: "#20737c",
+    weight: 1.2,
+    fillColor: "#7fc4ce",
+    fillOpacity: 0.1,
+  },
+  subcuencasIGM: {
+    color: "#2c8a8c",
+    weight: 1.5,
+    fillColor: "#9bd7db",
+    fillOpacity: 0.08,
+    dashArray: "8 6",
+  },
+  cuencasIGM: {
+    color: "#4c7c9a",
+    weight: 1.7,
+    fillColor: "#b5d0e3",
+    fillOpacity: 0.05,
+    dashArray: "11 7",
+  },
+  cuerposAguaIGM: {
+    color: "#1f6aa7",
+    weight: 1.4,
+    fillColor: "#7ec5ff",
+    fillOpacity: 0.24,
+  },
+  estacionesPluvioIGM: {},
+  zonasHidrologicasIGM: {
+    color: "#799b61",
+    weight: 1.1,
+    fillColor: "#c9e0a9",
+    fillOpacity: 0.08,
+    dashArray: "4 6",
+  },
   redVialEstatal: {
     color: "#8c5b38",
     weight: 3.4,
@@ -3377,6 +3493,8 @@ const state = {
   riskData: null,
   riskHighlightId: null,
   fieldEvidenceCatalog: null,
+  officialHydroCatalog: null,
+  officialHydroPromise: null,
   fieldEvidenceData: null,
   fieldEvidenceHighlightId: null,
   fieldEvidenceHighlightType: "sector",
@@ -4079,7 +4197,7 @@ function resetAgronomySelectionState() {
   resetMetricGrid(dom.climateResults, "Ejecuta el modulo para cargar indicadores climaticos.");
   resetMetricGrid(dom.inamhiResults, "Ejecuta el modulo para cargar estaciones INAMHI de referencia.");
   resetMetricGrid(dom.inamhiLiveResults, "Ejecuta la lectura en vivo para ver temperatura, humedad, lluvia y viento de la red activa.");
-  resetMetricGrid(dom.hydroNetworkResults, "Ejecuta el modulo para medir kilometros de red hidrica, cercania al lote y prioridades de manejo.");
+  resetMetricGrid(dom.hydroNetworkResults, "Ejecuta el modulo para leer microcuencas, cuerpos de agua, estaciones y prioridad hidrica del ambito.");
   resetMetricGrid(dom.irrigationFlowResults, "Calcula capacidad, caudal de diseno y aforo real del riego.");
   resetMetricGrid(dom.agroSuitabilityResults, "Ejecuta el modulo para ver aptitud por cultivo, lotes compatibles y alertas de manejo.");
   resetMetricGrid(dom.gpsResults, "Activa el modulo para seguir un dispositivo terrestre o aereo, un feed local o un recorrido demo sobre el mapa.");
@@ -4088,7 +4206,7 @@ function resetAgronomySelectionState() {
   resetVisualPanel(dom.climateVisual, "Aqui apareceran la lectura visual de lluvia, humedad, temperatura y estres termico.");
   resetVisualPanel(dom.inamhiVisual, "Aqui apareceran la lectura visual de lluvia historica, ventana humeda/seca y cobertura temporal de las estaciones.");
   resetVisualPanel(dom.inamhiLiveVisual, "Aqui apareceran la lectura operativa en tiempo real, la ultima actualizacion y el estado de las estaciones activas.");
-  resetVisualPanel(dom.hydroNetworkVisual, "Aqui apareceran la mezcla entre rios, acequias y quebradas, la distancia al agua y la prioridad operativa del ambito.");
+  resetVisualPanel(dom.hydroNetworkVisual, "Aqui apareceran microcuencas, cuerpos de agua y estaciones oficiales con su prioridad hidrica sobre el ambito.");
   resetVisualPanel(dom.irrigationFlowVisual, "Aqui aparecera la comparacion entre sistema, cultivo y caudal medido.");
   resetVisualPanel(dom.agroSuitabilityVisual, "Aqui apareceran el ranking de lotes, la ventana termica-hidrica y la recomendacion agroclimatica.");
   resetVisualPanel(dom.gpsVisual, "Aqui apareceran la trayectoria, velocidad, altura, precision y estado operativo del seguimiento GPS.");
@@ -4196,7 +4314,7 @@ async function setAgronomyArea(areaId = state.agronomyAreaId, options = {}) {
 
   if (mapState.map) {
     renderStudyAreaLayer();
-    refreshVisibleGeoLayers(["parroquias", "vias", "rios", "acequias", "quebradas", "lotes", "estaciones"]);
+    refreshVisibleGeoLayers(["parroquias", "vias", "lotes", "estaciones", ...officialHydroLayerIds]);
     if (options.fit !== false) {
       fitAgronomyArea();
     }
@@ -5171,7 +5289,7 @@ const workflowGuideCatalog = {
     steps: [
       { id: "scene", title: "Elegir zona y escena", pending: "Selecciona ambito e imagen satelital." },
       { id: "diagnosis", title: "Diagnosticar el lote", pending: "Usa lote demo o dibuja un poligono." },
-      { id: "water", title: "Leer agua productiva", pending: "Activa rios, acequias y quebradas del ambito." },
+      { id: "water", title: "Leer agua productiva", pending: "Activa microcuencas, cuerpos de agua y estaciones oficiales del ambito." },
       { id: "climate", title: "Cruzar clima y cultivo", pending: "Activa clima, INAMHI o aptitud agroclimatica." },
       { id: "operations", title: "Validar operacion", pending: "Activa GPS, dron o feed operativo." },
     ],
@@ -5526,6 +5644,9 @@ function bootstrapApp() {
   renderAnalysisSummary();
   renderCompareSummary();
   filterSentinelImages();
+  loadOfficialHydroCatalog().catch((error) => {
+    console.warn("No se pudo precargar la hidrologia oficial local.", error);
+  });
   hydratePlanning3dManifest();
   setTerritorialArea(state.territorialAreaId, { rerun: false, reload3d: false, silent: true });
   applyRouteFromUrl();
@@ -5797,8 +5918,8 @@ function bindUI() {
     return runModuleAction(dom.runInamhiLiveBtn, "Leyendo en vivo...", () => runInamhiLiveAnalysis());
   });
   dom.runHydroNetworkBtn?.addEventListener("click", () => {
-    setModulePendingState(dom.hydroNetworkResults, "Leyendo rios, acequias y quebradas...", [
-      { target: dom.hydroNetworkVisual, message: "Preparando red, prioridad y franjas de proteccion..." },
+    setModulePendingState(dom.hydroNetworkResults, "Leyendo microcuencas, cuerpos de agua y estaciones...", [
+      { target: dom.hydroNetworkVisual, message: "Preparando estructura hidrologica oficial, prioridad y franjas de proteccion..." },
     ]);
     const task = runModuleAction(dom.runHydroNetworkBtn, "Leyendo red...", () => runHydroNetworkAnalysis());
     window.setTimeout(() => {
@@ -6733,7 +6854,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   clearFieldEvidenceOverlay();
   clearAiGeoOverlay();
   renderStudyAreaLayer();
-  refreshVisibleGeoLayers(["parroquias", "vias", "rios", "acequias", "quebradas", "lotes", "estaciones"]);
+  refreshVisibleGeoLayers(["parroquias", "vias", "lotes", "estaciones", ...officialHydroVisibleLayerIds]);
   if (state.currentPlot) {
     renderCurrentPlotLayer();
   } else {
@@ -7842,9 +7963,9 @@ function renderOfficialDataModule(route = state.entryRoute || "agronomia") {
           copy: `Lectura oficial aplicada sobre ${summary.scopeLabel}.`,
         },
         {
-          label: "Trazos de agua y riego",
-          value: `${summary.lineCount}`,
-          copy: "Rios, acequias, quebradas y corredores de riego visibles.",
+          label: "Estructura hidrica",
+          value: `${summary.totalFeatures}`,
+          copy: "Microcuencas, cuerpos de agua, estaciones y soportes oficiales visibles.",
           highlight: true,
         },
         {
@@ -8471,12 +8592,17 @@ function addGeoLayer(layerId) {
 }
 
 function getGeoLayerSource(layerId) {
+  if (officialHydroLayerIds.includes(layerId) && !state.officialHydroCatalog && !state.officialHydroPromise) {
+    loadOfficialHydroCatalog().catch((error) => {
+      console.warn(`No se pudo cargar la capa oficial ${layerId}.`, error);
+    });
+  }
   const geojson = geoSources[layerId];
   if (!geojson) {
     return null;
   }
 
-  const agronomyScopedLayers = ["parroquias", "vias", "rios", "acequias", "quebradas", "canales", "lotes", "estaciones", "riegoEstatal", "suelosIGM", "coberturaMAATE"];
+  const agronomyScopedLayers = ["parroquias", "vias", "lotes", "estaciones", "riegoEstatal", "suelosIGM", "coberturaMAATE", ...officialHydroLayerIds];
   const planningScopedLayers = ["manchaUrbana", "equipamientos", "hidrozonas", "redVialEstatal", "saludPublica", "educacionPublica", "serviciosSociales", "presenciaInstitucional", "aptitudIGM"];
 
   if (agronomyScopedLayers.includes(layerId)) {
@@ -8523,6 +8649,24 @@ function buildLayerDescription(layerId, properties = {}) {
   }
   if (layerId === "coberturaMAATE") {
     return `${properties.coverClass || "Cobertura"} segun ${properties.source || "MAATE"}. ${properties.summary || "Capa de ambiente y uso de la tierra."}`;
+  }
+  if (layerId === "microcuencasIGM") {
+    return `${properties.name || "Microcuenca"} dentro de ${properties.subcuencaName || "subcuenca sin nombre"} y ${properties.cuencaName || "cuenca sin nombre"}. ${properties.summary || ""}`.trim();
+  }
+  if (layerId === "subcuencasIGM") {
+    return `${properties.name || "Subcuenca"} con soporte oficial IGM para drenaje intermedio. ${properties.summary || ""}`.trim();
+  }
+  if (layerId === "cuencasIGM") {
+    return `${properties.name || "Cuenca"} del sistema hidrografico mayor. ${properties.summary || ""}`.trim();
+  }
+  if (layerId === "cuerposAguaIGM") {
+    return `${properties.name || "Cuerpo de agua"} con ${Number.isFinite(Number(properties.areaHa)) ? `${formatIrrigationNumber(Number(properties.areaHa), 1)} ha` : "area sin dato"}. ${properties.summary || ""}`.trim();
+  }
+  if (layerId === "estacionesPluvioIGM") {
+    return `${properties.name || "Estacion"}${properties.cdi ? ` (${properties.cdi})` : ""} con precipitacion media anual ${Number.isFinite(Number(properties.annualRainMm)) ? `${formatIrrigationNumber(Number(properties.annualRainMm), 1)} mm` : "sin dato"}. ${properties.summary || ""}`.trim();
+  }
+  if (layerId === "zonasHidrologicasIGM") {
+    return `${properties.name || "Zona hidrologica"} con relieve ${properties.Relieve || "sin dato"} y permeabilidad ${properties.Permeabili || "sin dato"}. ${properties.summary || ""}`.trim();
   }
   if (layerId === "redVialEstatal") {
     return `${properties.roadClass || "Corredor vial"} de ${properties.source || "MTOP"}. ${properties.summary || "Base oficial para conectividad y geocercas."}`;
@@ -8608,6 +8752,15 @@ function getPointMarkerStyle(layerId, feature = null) {
       color: "#1f6a50",
       fillColor: "#69bb8f",
       fillOpacity: 0.94,
+    };
+  }
+  if (layerId === "estacionesPluvioIGM") {
+    return {
+      radius: 7,
+      weight: 2,
+      color: "#225a9b",
+      fillColor: "#8bd1ff",
+      fillOpacity: 0.95,
     };
   }
 
@@ -8836,6 +8989,202 @@ async function fetchJson(url, options = {}) {
     throw new Error(`La solicitud devolvio ${response.status}.`);
   }
   return response.json();
+}
+
+function cleanOfficialHydroText(value, fallback = "") {
+  const text = String(value || "").replace(/\s+/g, " ").trim();
+  return text || fallback;
+}
+
+function getOfficialHydroAreaHa(feature) {
+  const raw = Number(feature?.properties?.areaHa ?? feature?.properties?.SHAPE_Area);
+  if (Number.isFinite(raw) && raw > 0) {
+    return raw > 5000 ? raw / 10000 : raw;
+  }
+  if (!feature?.geometry) {
+    return null;
+  }
+  const geometryType = feature.geometry.type;
+  if (geometryType === "Polygon" || geometryType === "MultiPolygon") {
+    try {
+      return turf.area(feature) / 10000;
+    } catch (_) {
+      return null;
+    }
+  }
+  return null;
+}
+
+function getOfficialHydroFeatureDisplayMetric(item) {
+  if (Number.isFinite(item?.areaHa) && item.areaHa > 0) {
+    return `${formatIrrigationNumber(item.areaHa, item.areaHa >= 100 ? 0 : 1)} ha`;
+  }
+  if (Number.isFinite(item?.annualRainMm) && item.annualRainMm > 0) {
+    return `${formatIrrigationNumber(item.annualRainMm, 0)} mm/anio`;
+  }
+  if (Number.isFinite(item?.lengthKm) && item.lengthKm > 0) {
+    return `${formatIrrigationNumber(item.lengthKm, item.lengthKm >= 10 ? 1 : 2)} km`;
+  }
+  return "Sin medida";
+}
+
+function buildOfficialHydroFeatureName(layerId, properties = {}, areaId = state.agronomyAreaId, index = 0) {
+  if (layerId === "microcuencasIGM") {
+    return cleanOfficialHydroText(properties.mch_nam, `Microcuenca ${index + 1}`);
+  }
+  if (layerId === "subcuencasIGM") {
+    return cleanOfficialHydroText(properties.sch_nam, `Subcuenca ${index + 1}`);
+  }
+  if (layerId === "cuencasIGM") {
+    return cleanOfficialHydroText(properties.cuh_nam, `Cuenca ${index + 1}`);
+  }
+  if (layerId === "cuerposAguaIGM") {
+    const areaLabel = cleanOfficialHydroText(getAgronomyAreaProfile(areaId)?.scopeLabel || areaId || "ambito");
+    return `Cuerpo de agua ${areaLabel} ${index + 1}`;
+  }
+  if (layerId === "estacionesPluvioIGM") {
+    return cleanOfficialHydroText(properties.nam, properties.cdi || `Estacion ${index + 1}`);
+  }
+  if (layerId === "zonasHidrologicasIGM") {
+    return `Zona ${cleanOfficialHydroText(properties.ZONAS_HIDR, index + 1)}`;
+  }
+  return `Elemento hidrico ${index + 1}`;
+}
+
+function buildOfficialHydroFeatureSummary(layerId, properties = {}, areaId = state.agronomyAreaId, areaHa = null) {
+  const cuenca = cleanOfficialHydroText(properties.cuh_nam);
+  const subcuenca = cleanOfficialHydroText(properties.sch_nam);
+  const microcuenca = cleanOfficialHydroText(properties.mch_nam);
+  if (layerId === "microcuencasIGM") {
+    return `${microcuenca || "Microcuenca"} dentro de ${subcuenca || "subcuenca sin nombre"} y ${cuenca || "cuenca sin nombre"}.`;
+  }
+  if (layerId === "subcuencasIGM") {
+    return `${subcuenca || "Subcuenca"} integrada a ${cuenca || "cuenca mayor"} para lectura intermedia de drenaje y aporte.`;
+  }
+  if (layerId === "cuencasIGM") {
+    return `${cuenca || "Cuenca"} oficial para ubicar ${cleanOfficialHydroText(getAgronomyAreaProfile(areaId)?.scopeLabel || areaId)} dentro del sistema hidrografico mayor.`;
+  }
+  if (layerId === "cuerposAguaIGM") {
+    const areaLabel = Number.isFinite(areaHa) ? `${formatIrrigationNumber(areaHa, areaHa >= 100 ? 0 : 1)} ha` : "area no disponible";
+    return `Superficie oficial de agua con ${areaLabel}, util para contraste directo con la imagen satelital y resguardo del lote.`;
+  }
+  if (layerId === "estacionesPluvioIGM") {
+    return `Estacion oficial ${cleanOfficialHydroText(properties.cdi, "sin codigo")} con precipitacion media anual ${formatIrrigationNumber(Number(properties.ppa) || 0, 1)} mm.`;
+  }
+  if (layerId === "zonasHidrologicasIGM") {
+    return `${cleanOfficialHydroText(properties.Relieve, "Relieve sin dato")} con precipitacion ${cleanOfficialHydroText(properties.Precip_mm, "sin dato")} y ${cleanOfficialHydroText(properties.Permeabili, "permeabilidad sin dato")}.`;
+  }
+  return "Elemento hidrico oficial integrado para lectura espacial del ambito.";
+}
+
+function getOfficialHydroIrrigationValue(layerId, properties = {}, areaHa = null) {
+  const meta = officialHydroLayerMeta[layerId] || {};
+  const base = Number(meta.irrigationValue || 60);
+  if (layerId === "estacionesPluvioIGM") {
+    const ppa = Number(properties.ppa);
+    return Number.isFinite(ppa)
+      ? clamp(Math.round(38 + ppa / 32), 44, 88)
+      : base;
+  }
+  if (layerId === "zonasHidrologicasIGM") {
+    const permeability = cleanOfficialHydroText(properties.Permeabili).toLowerCase();
+    const relief = cleanOfficialHydroText(properties.Relieve).toLowerCase();
+    return clamp(
+      base
+      + (/muy permeable/.test(permeability) ? 10 : /semi impermeable/.test(permeability) ? -4 : 2)
+      + (/suave|moderado/.test(relief) ? 4 : /extremadamente/.test(relief) ? -6 : 0),
+      46,
+      86
+    );
+  }
+  if (layerId === "cuerposAguaIGM" && Number.isFinite(areaHa)) {
+    return clamp(Math.round(base + Math.min(areaHa, 140) * 0.08), 64, 96);
+  }
+  return base;
+}
+
+function normalizeOfficialHydroCollection(layerId, payload, areaId) {
+  const features = Array.isArray(payload?.features) ? payload.features : [];
+  const meta = officialHydroLayerMeta[layerId] || {};
+  return {
+    type: "FeatureCollection",
+    features: features
+      .filter((feature) => !!feature?.geometry)
+      .map((feature, index) => {
+        const cloned = cloneFeature(feature);
+        const areaHa = getOfficialHydroAreaHa(cloned);
+        const properties = cloned.properties || {};
+        const annualRainMm = Number(properties.ppa);
+        const name = buildOfficialHydroFeatureName(layerId, properties, areaId, index);
+        cloned.properties = {
+          ...properties,
+          territoryId: areaId,
+          name,
+          source: meta.source || "IGM / IEDG",
+          officialHydroKind: meta.kind || "hidrografia",
+          kindLabel: meta.label || "Hidrografia oficial",
+          protectionM: Number(properties.protectionM || meta.protectionM || 18),
+          irrigationValue: getOfficialHydroIrrigationValue(layerId, properties, areaHa),
+          areaHa: Number.isFinite(areaHa) ? Number(areaHa.toFixed(1)) : null,
+          annualRainMm: Number.isFinite(annualRainMm) ? Number(annualRainMm.toFixed(1)) : null,
+          cuencaName: cleanOfficialHydroText(properties.cuh_nam),
+          subcuencaName: cleanOfficialHydroText(properties.sch_nam),
+          microcuencaName: cleanOfficialHydroText(properties.mch_nam),
+          summary: buildOfficialHydroFeatureSummary(layerId, properties, areaId, areaHa),
+        };
+        return cloned;
+      }),
+  };
+}
+
+function materializeOfficialHydroSources(catalog) {
+  const mergedSources = {};
+  officialHydroLayerIds.forEach((layerId) => {
+    mergedSources[layerId] = {
+      type: "FeatureCollection",
+      features: Object.values(catalog || {}).flatMap((areaCatalog) =>
+        Array.isArray(areaCatalog?.[layerId]?.features)
+          ? areaCatalog[layerId].features.map(cloneFeature)
+          : []
+      ),
+    };
+  });
+  Object.assign(geoSources, mergedSources);
+}
+
+async function loadOfficialHydroCatalog(force = false) {
+  if (state.officialHydroCatalog && !force) {
+    return state.officialHydroCatalog;
+  }
+  if (state.officialHydroPromise && !force) {
+    return state.officialHydroPromise;
+  }
+
+  state.officialHydroPromise = (async () => {
+    const catalog = {};
+    for (const [areaId, files] of Object.entries(officialHydroFileCatalog)) {
+      catalog[areaId] = { territoryId: areaId };
+      for (const [layerId, url] of Object.entries(files)) {
+        const payload = await fetchJson(url);
+        catalog[areaId][layerId] = normalizeOfficialHydroCollection(layerId, payload, areaId);
+      }
+    }
+
+    materializeOfficialHydroSources(catalog);
+    state.officialHydroCatalog = catalog;
+    state.officialData.agronomia = buildOfficialDataSummary("agronomia");
+    if (state.entryRoute === "agronomia") {
+      renderOfficialDataModule("agronomia");
+      if (mapState.map) {
+        refreshVisibleGeoLayers(officialHydroLayerIds);
+      }
+    }
+    return catalog;
+  })().finally(() => {
+    state.officialHydroPromise = null;
+  });
+
+  return state.officialHydroPromise;
 }
 
 function mapStacScene(feature) {
@@ -12250,8 +12599,8 @@ function buildIrrigationFlowAnalysis() {
   const preferredSupply = supplyCandidates
     .slice()
     .sort((left, right) => {
-      const leftPriority = left.kind === "riegoOficial" ? 0 : left.kind === "acequia" ? 1 : left.kind === "rio" ? 2 : 3;
-      const rightPriority = right.kind === "riegoOficial" ? 0 : right.kind === "acequia" ? 1 : right.kind === "rio" ? 2 : 3;
+      const leftPriority = getHydroSupplyRank(left.kind);
+      const rightPriority = getHydroSupplyRank(right.kind);
       if (leftPriority !== rightPriority) {
         return leftPriority - rightPriority;
       }
@@ -12261,12 +12610,16 @@ function buildIrrigationFlowAnalysis() {
   const supplyWaterLabel = Number.isFinite(supplyDistanceKm) ? getHydroDistanceLabel(supplyDistanceKm) : "Sin red";
   const soilAptitudeLabel = hydroAnalysis?.summary?.soilAptitudeLabel || "Sin aptitud IGM";
   const coverLabel = hydroAnalysis?.summary?.coverLabel || "Sin cobertura MAATE";
+  const supplyBase = preferredSupply
+    ? Math.max(14, 36 - getHydroSupplyRank(preferredSupply.kind) * 4)
+    : 0;
   const supplyScore = clamp(
-    (preferredSupply ? (preferredSupply.kind === "riegoOficial" ? 34 : preferredSupply.kind === "acequia" ? 28 : preferredSupply.kind === "rio" ? 22 : 14) : 0)
+    supplyBase
     + (preferredSupply ? preferredSupply.irrigationValue * 0.42 : 0)
     + (Number.isFinite(supplyDistanceKm) ? Math.max(0, 34 - supplyDistanceKm * 68) : 0)
     + (soilAptitudeLabel === "Alta" ? 10 : soilAptitudeLabel === "Condicionada" ? 5 : 0)
-    + (/proteccion/i.test(coverLabel) ? -6 : 5),
+    + (/proteccion/i.test(coverLabel) ? -6 : 5)
+    + (Number.isFinite(hydroAnalysis?.summary?.meanPpaMm) ? Math.min(6, hydroAnalysis.summary.meanPpaMm / 400) : 0),
     8,
     98
   );
@@ -12351,12 +12704,12 @@ function buildIrrigationFlowAnalysis() {
     supplyPriorityLabel,
     supplyTone,
     supplyScore,
-    supplySourceBlend: hydroAnalysis?.summary?.sourceBlend || "Red referencial",
+    supplySourceBlend: hydroAnalysis?.summary?.sourceBlend || "IGM / IEDG",
     supplySoilLabel: hydroAnalysis?.summary?.dominantSoilLabel || soilAptitudeLabel,
     supplySoilAptitude: soilAptitudeLabel,
     supplyCoverLabel: coverLabel,
-    officialIrrigationCount: hydroAnalysis?.summary?.officialIrrigationCount || 0,
-    officialIrrigationKm: hydroAnalysis?.summary?.officialIrrigationKm || 0,
+    officialIrrigationCount: hydroAnalysis?.summary?.waterBodyCount || 0,
+    officialIrrigationKm: hydroAnalysis?.summary?.waterBodyAreaHa || 0,
     balanceLabel,
     balanceTone,
     recommendation,
@@ -12517,6 +12870,24 @@ function renderIrrigationFlowVisual(result = null) {
 }
 
 function getHydroFeatureTone(kind = "") {
+  if (kind === "cuerpoAgua") {
+    return { stroke: "#1f6aa7", fill: "#84c7ff" };
+  }
+  if (kind === "microcuenca") {
+    return { stroke: "#2b7f88", fill: "#9cd6db" };
+  }
+  if (kind === "subcuenca") {
+    return { stroke: "#338f8f", fill: "#b0e0e0" };
+  }
+  if (kind === "cuenca") {
+    return { stroke: "#4c7c9a", fill: "#c2dced" };
+  }
+  if (kind === "estacionPluvio") {
+    return { stroke: "#225a9b", fill: "#8bd1ff" };
+  }
+  if (kind === "zonaHidrologica") {
+    return { stroke: "#799b61", fill: "#d3e4b4" };
+  }
   if (kind === "rio") {
     return { stroke: "#2d7eb5", fill: "#98d6f2" };
   }
@@ -12543,7 +12914,22 @@ function getHydroDistanceLabel(distanceKm = 0) {
 }
 
 function getHydroPriorityLabel(distanceKm = 0, irrigationValue = 50, kind = "") {
-  const weighted = irrigationValue - distanceKm * 36 + (kind === "acequia" ? 8 : kind === "rio" ? 4 : 0);
+  const kindBoost = kind === "cuerpoAgua"
+    ? 18
+    : kind === "microcuenca"
+      ? 12
+      : kind === "subcuenca"
+        ? 8
+        : kind === "estacionPluvio"
+          ? 7
+          : kind === "zonaHidrologica"
+            ? 5
+            : kind === "acequia"
+              ? 8
+              : kind === "rio"
+                ? 4
+                : 0;
+  const weighted = irrigationValue - distanceKm * 32 + kindBoost;
   if (weighted >= 70) {
     return "Prioridad alta";
   }
@@ -12551,6 +12937,37 @@ function getHydroPriorityLabel(distanceKm = 0, irrigationValue = 50, kind = "") 
     return "Prioridad media";
   }
   return "Prioridad baja";
+}
+
+function getHydroSupplyRank(kind = "") {
+  if (kind === "cuerpoAgua") {
+    return 0;
+  }
+  if (kind === "microcuenca") {
+    return 1;
+  }
+  if (kind === "subcuenca") {
+    return 2;
+  }
+  if (kind === "cuenca") {
+    return 3;
+  }
+  if (kind === "estacionPluvio") {
+    return 4;
+  }
+  if (kind === "zonaHidrologica") {
+    return 5;
+  }
+  if (kind === "riegoOficial") {
+    return 6;
+  }
+  if (kind === "acequia") {
+    return 7;
+  }
+  if (kind === "rio") {
+    return 8;
+  }
+  return 9;
 }
 
 function getHydroSourceFeaturesForArea(groupId, areaId = state.agronomyAreaId) {
@@ -12592,12 +13009,28 @@ function getAgronomyContextFeatures(features, targetFeature, areaId = state.agro
 }
 
 function buildOfficialHydroContext(context) {
-  const irrigationFeatures = getAgronomyContextFeatures(geoSources.riegoEstatal?.features, context.feature, state.agronomyAreaId).map(cloneFeature);
+  const microcuencaFeatures = getAgronomyContextFeatures(geoSources.microcuencasIGM?.features, context.feature, state.agronomyAreaId).map(cloneFeature);
+  const subcuencaFeatures = getAgronomyContextFeatures(geoSources.subcuencasIGM?.features, context.feature, state.agronomyAreaId).map(cloneFeature);
+  const cuencaFeatures = getAgronomyContextFeatures(geoSources.cuencasIGM?.features, context.feature, state.agronomyAreaId).map(cloneFeature);
+  const waterBodyFeatures = getAgronomyContextFeatures(geoSources.cuerposAguaIGM?.features, context.feature, state.agronomyAreaId).map(cloneFeature);
+  const stationFeatures = getAgronomyContextFeatures(geoSources.estacionesPluvioIGM?.features, context.feature, state.agronomyAreaId).map(cloneFeature);
+  const zoneFeatures = getAgronomyContextFeatures(geoSources.zonasHidrologicasIGM?.features, context.feature, state.agronomyAreaId).map(cloneFeature);
+  const irrigationSupportFeatures = getAgronomyContextFeatures(geoSources.riegoEstatal?.features, context.feature, state.agronomyAreaId).map(cloneFeature);
   const soilFeatures = getAgronomyContextFeatures(geoSources.suelosIGM?.features, context.feature, state.agronomyAreaId).map(cloneFeature);
   const coverFeatures = getAgronomyContextFeatures(geoSources.coberturaMAATE?.features, context.feature, state.agronomyAreaId).map(cloneFeature);
   const sourceLabels = [];
-  if (irrigationFeatures.length) {
-    sourceLabels.push("MAG / IEDG");
+  if (
+    microcuencaFeatures.length
+    || subcuencaFeatures.length
+    || cuencaFeatures.length
+    || waterBodyFeatures.length
+    || stationFeatures.length
+    || zoneFeatures.length
+  ) {
+    sourceLabels.push("IGM / IEDG");
+  }
+  if (irrigationSupportFeatures.length) {
+    sourceLabels.push("MAG / IEDG (apoyo)");
   }
   if (soilFeatures.length) {
     sourceLabels.push("IGM 1:25 000");
@@ -12605,25 +13038,50 @@ function buildOfficialHydroContext(context) {
   if (coverFeatures.length) {
     sourceLabels.push("MAATE / IEDG");
   }
-  const irrigationLengthKm = irrigationFeatures.reduce((sum, feature) => {
+  const irrigationSupportLengthKm = irrigationSupportFeatures.reduce((sum, feature) => {
     try {
       return sum + turf.length(feature, { units: "kilometers" });
     } catch (_) {
       return sum;
     }
   }, 0);
+  const waterBodyAreaHa = waterBodyFeatures.reduce((sum, feature) => {
+    const areaHa = Number(feature.properties?.areaHa);
+    if (Number.isFinite(areaHa) && areaHa > 0) {
+      return sum + areaHa;
+    }
+    try {
+      return sum + turf.area(feature) / 10000;
+    } catch (_) {
+      return sum;
+    }
+  }, 0);
+  const annualRainValues = stationFeatures
+    .map((feature) => Number(feature.properties?.annualRainMm ?? feature.properties?.ppa))
+    .filter((value) => Number.isFinite(value) && value > 0);
+  const meanPpaMm = annualRainValues.length
+    ? annualRainValues.reduce((sum, value) => sum + value, 0) / annualRainValues.length
+    : null;
   const leadSoil = soilFeatures[0]?.properties || {};
   const leadCover = coverFeatures[0]?.properties || {};
   return {
-    irrigationFeatures,
+    microcuencaFeatures,
+    subcuencaFeatures,
+    cuencaFeatures,
+    waterBodyFeatures,
+    stationFeatures,
+    zoneFeatures,
+    irrigationSupportFeatures,
     soilFeatures,
     coverFeatures,
-    irrigationLengthKm: Number(irrigationLengthKm.toFixed(2)),
+    irrigationSupportLengthKm: Number(irrigationSupportLengthKm.toFixed(2)),
+    waterBodyAreaHa: Number(waterBodyAreaHa.toFixed(1)),
+    meanPpaMm: Number.isFinite(meanPpaMm) ? Number(meanPpaMm.toFixed(1)) : null,
     soilLabel: leadSoil.soilClass || "Sin suelo IGM",
     soilAptitude: leadSoil.aptitude || "Sin aptitud IGM",
     coverLabel: leadCover.coverClass || "Sin cobertura MAATE",
     sourceLabels,
-    sourceBlend: sourceLabels.join(" + ") || "Red referencial",
+    sourceBlend: sourceLabels.join(" + ") || "IGM / IEDG",
   };
 }
 
@@ -12632,30 +13090,52 @@ function buildHydroNetworkAnalysis() {
   const anchor = turf.centroid(context.feature);
   const officialContext = buildOfficialHydroContext(context);
   const groups = [
-    { id: "rios", kind: "rio", label: "Rios", features: getHydroSourceFeaturesForArea("rios", state.agronomyAreaId) },
-    { id: "acequias", kind: "acequia", label: "Acequias", features: getHydroSourceFeaturesForArea("acequias", state.agronomyAreaId) },
-    { id: "quebradas", kind: "quebrada", label: "Quebradas", features: getHydroSourceFeaturesForArea("quebradas", state.agronomyAreaId) },
-    { id: "riego-estatal", kind: "riegoOficial", label: "Riego estatal", features: officialContext.irrigationFeatures },
+    { id: "cuerposAguaIGM", kind: "cuerpoAgua", label: "Cuerpos de agua", features: officialContext.waterBodyFeatures },
+    { id: "microcuencasIGM", kind: "microcuenca", label: "Microcuencas", features: officialContext.microcuencaFeatures },
+    { id: "subcuencasIGM", kind: "subcuenca", label: "Subcuencas", features: officialContext.subcuencaFeatures },
+    { id: "cuencasIGM", kind: "cuenca", label: "Cuencas", features: officialContext.cuencaFeatures },
+    { id: "estacionesPluvioIGM", kind: "estacionPluvio", label: "Estaciones pluvio", features: officialContext.stationFeatures },
   ];
 
   const items = groups.flatMap((group) => group.features.map((feature, index) => {
     const cloned = cloneFeature(feature);
-    const lengthKm = Number(turf.length(cloned, { units: "kilometers" }).toFixed(2));
+    const geometryType = cloned.geometry?.type || "";
+    let lengthKm = null;
+    if (geometryType === "LineString" || geometryType === "MultiLineString") {
+      try {
+        lengthKm = Number(turf.length(cloned, { units: "kilometers" }).toFixed(2));
+      } catch (_) {
+        lengthKm = null;
+      }
+    }
+    const areaHa = Number.isFinite(Number(cloned.properties?.areaHa))
+      ? Number(cloned.properties?.areaHa)
+      : getOfficialHydroAreaHa(cloned);
+    const annualRainMm = Number(cloned.properties?.annualRainMm ?? cloned.properties?.ppa);
     const distanceKm = Number(distanceToFeatureKm(anchor, cloned).toFixed(3));
-    const protectionM = Number(cloned.properties?.protectionM || (group.kind === "rio" ? 40 : group.kind === "acequia" ? 18 : group.kind === "riegoOficial" ? 22 : 24));
-    const irrigationValue = Number(cloned.properties?.irrigationValue || (group.kind === "acequia" ? 84 : group.kind === "rio" ? 72 : group.kind === "riegoOficial" ? 88 : 48));
+    const protectionM = Number(cloned.properties?.protectionM || officialHydroLayerMeta[group.id]?.protectionM || 24);
+    const irrigationValue = Number(cloned.properties?.irrigationValue || officialHydroLayerMeta[group.id]?.irrigationValue || 56);
     const priorityLabel = getHydroPriorityLabel(distanceKm, irrigationValue, group.kind);
     const tone = priorityLabel === "Prioridad alta" ? "high" : priorityLabel === "Prioridad media" ? "mid" : "low";
+    const displayMetric = getOfficialHydroFeatureDisplayMetric({
+      areaHa,
+      annualRainMm,
+      lengthKm,
+    });
     return {
       id: cloned.id || cloned.properties?.name || `${group.id}-${index + 1}`,
       kind: group.kind,
       kindLabel: group.label,
       label: cloned.properties?.name || `${group.label} ${index + 1}`,
-      sourceLabel: cloned.properties?.source || (group.kind === "riegoOficial" ? "MAG / IEDG" : "Referencia hidrica"),
-      summary: cloned.properties?.summary || `Elemento ${group.label.toLowerCase()} integrado para lectura hidrica del ambito.`,
+      sourceLabel: cloned.properties?.source || "IGM / IEDG",
+      summary: cloned.properties?.summary || `Elemento ${group.label.toLowerCase()} integrado para lectura hidrologica oficial del ambito.`,
       feature: cloned,
+      geometryType,
       distanceKm,
       lengthKm,
+      areaHa: Number.isFinite(areaHa) ? Number(areaHa.toFixed(1)) : null,
+      annualRainMm: Number.isFinite(annualRainMm) ? Number(annualRainMm.toFixed(1)) : null,
+      displayMetric,
       protectionM,
       irrigationValue,
       priorityLabel,
@@ -12677,10 +13157,31 @@ function buildHydroNetworkAnalysis() {
     }));
 
   const topItems = ranked.slice(0, 6);
-  const totalLengthKm = ranked.reduce((sum, item) => sum + item.lengthKm, 0);
-  const protectedAreaHa = ranked.reduce((sum, item) => {
+  const totalLengthKm = ranked.reduce((sum, item) => sum + (Number.isFinite(item.lengthKm) ? item.lengthKm : 0), 0);
+  const bufferFeatures = topItems
+    .filter((item) => item.kind === "cuerpoAgua")
+    .map((item) => {
+      try {
+        const buffered = turf.buffer(item.feature, item.protectionM / 1000, { units: "kilometers" });
+        buffered.properties = {
+          ...buffered.properties,
+          hydroFeatureId: item.id,
+          name: item.label,
+          kind: item.kind,
+          kindLabel: item.kindLabel,
+          priorityLabel: item.priorityLabel,
+          protectionM: item.protectionM,
+          summary: item.summary,
+        };
+        return buffered;
+      } catch (_) {
+        return null;
+      }
+    })
+    .filter(Boolean);
+  const protectedAreaHa = bufferFeatures.reduce((sum, feature) => {
     try {
-      return sum + (turf.area(turf.buffer(item.feature, item.protectionM / 1000, { units: "kilometers" })) / 10000);
+      return sum + turf.area(feature) / 10000;
     } catch (_) {
       return sum;
     }
@@ -12688,9 +13189,12 @@ function buildHydroNetworkAnalysis() {
   const nearest = ranked[0] || null;
   const summary = {
     totalCount: ranked.length,
-    riverCount: ranked.filter((item) => item.kind === "rio").length,
-    acequiaCount: ranked.filter((item) => item.kind === "acequia").length,
-    quebradaCount: ranked.filter((item) => item.kind === "quebrada").length,
+    microcuencaCount: ranked.filter((item) => item.kind === "microcuenca").length,
+    subcuencaCount: ranked.filter((item) => item.kind === "subcuenca").length,
+    cuencaCount: ranked.filter((item) => item.kind === "cuenca").length,
+    waterBodyCount: ranked.filter((item) => item.kind === "cuerpoAgua").length,
+    stationCount: ranked.filter((item) => item.kind === "estacionPluvio").length,
+    zoneCount: officialContext.zoneFeatures.length,
     totalLengthKm: Number(totalLengthKm.toFixed(1)),
     protectedAreaHa: Number(protectedAreaHa.toFixed(1)),
     nearestDistanceKm: nearest?.distanceKm || 0,
@@ -12698,8 +13202,8 @@ function buildHydroNetworkAnalysis() {
     dominantKindLabel: topItems[0]?.kindLabel || "Sin red",
     priorityCount: ranked.filter((item) => item.priorityLabel === "Prioridad alta").length,
     nearestName: nearest?.label || "Sin referencia",
-    officialIrrigationCount: officialContext.irrigationFeatures.length,
-    officialIrrigationKm: officialContext.irrigationLengthKm,
+    waterBodyAreaHa: officialContext.waterBodyAreaHa,
+    meanPpaMm: officialContext.meanPpaMm,
     officialSourceCount: officialContext.sourceLabels.length,
     sourceBlend: officialContext.sourceBlend,
     dominantSoilLabel: officialContext.soilLabel,
@@ -12707,26 +13211,7 @@ function buildHydroNetworkAnalysis() {
     coverLabel: officialContext.coverLabel,
   };
 
-  const bufferFeatures = topItems.map((item) => {
-    try {
-      const buffered = turf.buffer(item.feature, item.protectionM / 1000, { units: "kilometers" });
-      buffered.properties = {
-        ...buffered.properties,
-        hydroFeatureId: item.id,
-        name: item.label,
-        kind: item.kind,
-        kindLabel: item.kindLabel,
-        priorityLabel: item.priorityLabel,
-        protectionM: item.protectionM,
-        summary: item.summary,
-      };
-      return buffered;
-    } catch (_) {
-      return null;
-    }
-  }).filter(Boolean);
-
-  const lineCollection = {
+  const featureCollection = {
     type: "FeatureCollection",
     features: ranked.map((item) => ({
       ...item.feature,
@@ -12739,6 +13224,9 @@ function buildHydroNetworkAnalysis() {
         priorityLabel: item.priorityLabel,
         distanceKm: item.distanceKm,
         lengthKm: item.lengthKm,
+        areaHa: item.areaHa,
+        annualRainMm: item.annualRainMm,
+        displayMetric: item.displayMetric,
         protectionM: item.protectionM,
         irrigationValue: item.irrigationValue,
         summary: item.summary,
@@ -12753,7 +13241,7 @@ function buildHydroNetworkAnalysis() {
     ranked,
     focusItems: topItems,
     summary,
-    lineCollection,
+    featureCollection,
     bufferCollection: {
       type: "FeatureCollection",
       features: bufferFeatures,
@@ -12766,25 +13254,26 @@ function renderHydroNetworkVisual(result = null) {
     return;
   }
   if (!result?.ranked?.length) {
-    resetVisualPanel(dom.hydroNetworkVisual, "Aqui veras rios, acequias, quebradas y su prioridad operativa.");
+    resetVisualPanel(dom.hydroNetworkVisual, "Aqui veras microcuencas, cuerpos de agua y estaciones oficiales priorizadas para el ambito.");
     return;
   }
 
-  const maxLength = Math.max(...result.ranked.map((item) => item.lengthKm), 0.1);
+  const maxStrength = Math.max(...result.focusItems.map((item) => item.irrigationValue || 0), 1);
   dom.hydroNetworkVisual.classList.remove("empty-state");
   dom.hydroNetworkVisual.classList.add("has-data");
   setHtmlIfChanged(dom.hydroNetworkVisual, `
     <div class="agronomy-visual-head">
       <div>
         <p class="section-kicker">Hidrologia operativa con base oficial</p>
-        <h4>Rios, acequias, quebradas y riego estatal del ambito</h4>
+        <h4>Microcuencas, cuerpos de agua y estaciones oficiales del ambito</h4>
       </div>
       <span class="agronomy-visual-pill tone-${result.summary.priorityCount ? "mid" : "low"}">${result.summary.waterLabel}</span>
     </div>
     <div class="agronomy-tag-row">
       <span class="agronomy-visual-pill">${result.context.scopeLabel}</span>
-      <span class="agronomy-visual-pill">${result.summary.totalLengthKm.toFixed(1)} km</span>
-      <span class="agronomy-visual-pill">${result.summary.protectedAreaHa.toFixed(1)} ha protegidas</span>
+      <span class="agronomy-visual-pill">${result.summary.waterBodyAreaHa.toFixed(1)} ha agua</span>
+      <span class="agronomy-visual-pill">${result.summary.meanPpaMm ? `${formatIrrigationNumber(result.summary.meanPpaMm, 0)} mm/anio` : "Sin lluvia media"}</span>
+      <span class="agronomy-visual-pill">${result.summary.stationCount} estaciones</span>
       <span class="agronomy-visual-pill">${result.summary.priorityCount} prioridades altas</span>
       <span class="agronomy-visual-pill">${result.summary.officialSourceCount} fuentes oficiales</span>
     </div>
@@ -12799,22 +13288,22 @@ function renderHydroNetworkVisual(result = null) {
         <article class="gps-device-card">
           <strong>${item.label}</strong>
           <p>${item.kindLabel} - ${item.priorityLabel}</p>
-          <p>${item.lengthKm.toFixed(2)} km - ${formatDistanceKm(item.distanceKm)} del lote/ambito</p>
+          <p>${item.displayMetric} - ${formatDistanceKm(item.distanceKm)} del lote/ambito</p>
           <p>${item.sourceLabel}</p>
           <div class="agronomy-bar-track">
-            <i style="width: ${Math.max(10, Math.round(item.lengthKm / maxLength * 100))}%"></i>
+            <i style="width: ${Math.max(10, Math.round(item.irrigationValue / maxStrength * 100))}%"></i>
           </div>
           <p>${item.summary}</p>
         </article>
       `).join("")}
     </div>
-    <p class="agronomy-visual-copy">${result.summary.dominantKindLabel} dominante. Referencia mas cercana: ${result.summary.nearestName} a ${formatDistanceKm(result.summary.nearestDistanceKm)}. Soporte oficial activo: ${result.summary.sourceBlend}.</p>
+    <p class="agronomy-visual-copy">${result.summary.dominantKindLabel} dominante. Referencia mas cercana: ${result.summary.nearestName} a ${formatDistanceKm(result.summary.nearestDistanceKm)}. Agua superficial oficial: ${formatIrrigationNumber(result.summary.waterBodyAreaHa, 1)} ha con soporte ${result.summary.sourceBlend}.</p>
   `);
 }
 
 function renderHydroNetworkOverlay(result = state.agronomyOutputs.hydroNetwork) {
   clearHydroNetworkOverlay();
-  if (!mapState.map || !result?.lineCollection?.features?.length || state.entryRoute !== "agronomia") {
+  if (!mapState.map || !result?.featureCollection?.features?.length || state.entryRoute !== "agronomia") {
     return;
   }
 
@@ -12838,19 +13327,48 @@ function renderHydroNetworkOverlay(result = state.agronomyOutputs.hydroNetwork) 
     }).addTo(mapState.map);
   }
 
-  mapState.hydroNetworkLayer = L.geoJSON(result.lineCollection, {
+  mapState.hydroNetworkLayer = L.geoJSON(result.featureCollection, {
     style: (feature) => {
       const palette = getHydroFeatureTone(feature.properties?.kind);
+      const kind = feature.properties?.kind;
       return {
         color: palette.stroke,
-        weight: feature.properties?.priorityLabel === "Prioridad alta" ? 3.8 : 2.6,
-        opacity: 0.92,
-        dashArray: feature.properties?.kind === "quebrada" ? "9 7" : null,
+        weight: kind === "cuenca"
+          ? 1.8
+          : kind === "subcuenca"
+            ? 1.5
+            : kind === "microcuenca"
+              ? 1.3
+              : kind === "cuerpoAgua"
+                ? 1.4
+                : 1.1,
+        opacity: kind === "cuerpoAgua" ? 0.96 : 0.88,
+        fillColor: palette.fill,
+        fillOpacity: kind === "cuerpoAgua"
+          ? 0.26
+          : kind === "microcuenca"
+            ? 0.12
+            : kind === "subcuenca"
+              ? 0.08
+              : kind === "cuenca"
+                ? 0.05
+                : 0.06,
+        dashArray: kind === "cuenca" ? "11 7" : kind === "subcuenca" ? "8 6" : kind === "zonaHidrologica" ? "4 6" : null,
       };
+    },
+    pointToLayer: (feature, latlng) => {
+      const palette = getHydroFeatureTone(feature.properties?.kind);
+      return L.circleMarker(latlng, {
+        radius: feature.properties?.kind === "estacionPluvio" ? 6.5 : 5,
+        color: palette.stroke,
+        weight: 1.4,
+        fillColor: palette.fill,
+        fillOpacity: 0.9,
+      });
     },
     onEachFeature: (feature, layer) => {
       layer.bindPopup(
-        `<h3 class="popup-title">${feature.properties?.name || "Red hidrica"}</h3><p class="popup-copy">${feature.properties?.kindLabel || "Elemento"} · ${feature.properties?.priorityLabel || "Prioridad"} · ${formatDistanceKm(feature.properties?.distanceKm || 0)} del ambito. ${feature.properties?.summary || ""}</p>`
+        `<h3 class="popup-title">${feature.properties?.name || "Hidrologia oficial"}</h3><p class="popup-copy">${feature.properties?.kindLabel || "Elemento"} · ${feature.properties?.priorityLabel || "Prioridad"} · ${feature.properties?.displayMetric || "Sin medida"} · ${formatDistanceKm(feature.properties?.distanceKm || 0)} del ambito. ${feature.properties?.summary || ""}</p>`
       );
     },
   }).addTo(mapState.map);
@@ -12874,7 +13392,7 @@ function ensureHydroBaseLayersVisible() {
     return;
   }
 
-  const hydroLayerIds = ["rios", "acequias", "quebradas", "riegoEstatal", "suelosIGM", "coberturaMAATE"];
+  const hydroLayerIds = [...officialHydroVisibleLayerIds, "suelosIGM", "coberturaMAATE"];
   setLayerSelectionForIds(hydroLayerIds, true, "agronomia");
 
   let changed = false;
@@ -12893,14 +13411,15 @@ function ensureHydroBaseLayersVisible() {
 
 async function runHydroNetworkAnalysis(silent = false) {
   try {
+    await loadOfficialHydroCatalog();
     const result = buildHydroNetworkAnalysis();
     state.agronomyOutputs.hydroNetwork = result;
     state.agronomyFocus = "hydroNetwork";
     const cards = [
       {
-        label: "Red total",
-        value: `${result.summary.totalLengthKm.toFixed(1)} km`,
-        copy: `${result.summary.totalCount} elementos hidricos en ${result.context.scopeLabel}.`,
+        label: "Estructura oficial",
+        value: `${result.summary.totalCount}`,
+        copy: `${result.summary.officialSourceCount} fuentes activas para ${result.context.scopeLabel}.`,
       },
       {
         label: "Referencia mas cercana",
@@ -12909,36 +13428,43 @@ async function runHydroNetworkAnalysis(silent = false) {
         highlight: true,
       },
       {
-        label: "Rios",
-        value: `${result.summary.riverCount}`,
-        copy: "Cauces principales para proteccion y disponibilidad.",
+        label: "Microcuencas",
+        value: `${result.summary.microcuencaCount}`,
+        copy: "Respuesta local del drenaje y aporte del ambito.",
       },
       {
-        label: "Acequias",
-        value: `${result.summary.acequiaCount}`,
-        copy: "Infraestructura de riego y distribucion del ambito.",
+        label: "Subcuencas",
+        value: `${result.summary.subcuencaCount}`,
+        copy: "Estructura intermedia para gestion y proteccion.",
       },
       {
-        label: "Quebradas",
-        value: `${result.summary.quebradaCount}`,
-        copy: "Drenajes naturales con posible restriccion o desborde.",
+        label: "Cuerpos de agua",
+        value: `${result.summary.waterBodyCount}`,
+        copy: `${formatIrrigationNumber(result.summary.waterBodyAreaHa, 1)} ha oficiales para contraste satelital.`,
       },
       {
-        label: "Riego estatal",
-        value: `${result.summary.officialIrrigationCount}`,
-        copy: `${result.summary.officialIrrigationKm.toFixed(1)} km oficiales MAG / IEDG visibles sobre ${result.context.scopeLabel}.`,
+        label: "Estaciones pluvio",
+        value: `${result.summary.stationCount}`,
+        copy: Number.isFinite(result.summary.meanPpaMm)
+          ? `Lluvia media de ${formatIrrigationNumber(result.summary.meanPpaMm, 0)} mm/anio.`
+          : "Sin lluvia media disponible en estaciones oficiales del ambito.",
       },
       {
         label: "Proteccion sugerida",
         value: `${result.summary.protectedAreaHa.toFixed(1)} ha`,
         copy: `${result.summary.priorityCount} prioridades altas con suelo ${result.summary.soilAptitudeLabel.toLowerCase()} y cobertura ${result.summary.coverLabel.toLowerCase()}.`,
       },
+      {
+        label: "Zona hidrologica",
+        value: `${result.summary.zoneCount}`,
+        copy: `Contexto hidrologico oficial con ${result.summary.dominantSoilLabel.toLowerCase()}.`,
+      },
     ];
     paintMetricGrid(dom.hydroNetworkResults, cards);
     renderHydroNetworkVisual(result);
     ensureHydroBaseLayersVisible();
     if (mapState.map) {
-      refreshVisibleGeoLayers(["rios", "acequias", "quebradas"]);
+      refreshVisibleGeoLayers(officialHydroVisibleLayerIds);
     }
     try {
       renderHydroNetworkOverlay(result);
@@ -12950,7 +13476,7 @@ async function runHydroNetworkAnalysis(silent = false) {
     state.officialData.agronomia = buildOfficialDataSummary("agronomia");
     renderOfficialDataModule("agronomia");
     if (!silent) {
-      setStatus(`Red hidrica oficial lista para ${result.context.scopeLabel}: ${result.summary.totalCount} elementos, ${result.summary.totalLengthKm.toFixed(1)} km y soporte ${result.summary.sourceBlend}.`);
+      setStatus(`Red hidrica oficial lista para ${result.context.scopeLabel}: ${result.summary.totalCount} elementos, ${formatIrrigationNumber(result.summary.waterBodyAreaHa, 1)} ha de agua superficial y soporte ${result.summary.sourceBlend}.`);
       focusHydroNetworkStudy();
     }
     return result;
@@ -12987,14 +13513,15 @@ function focusHydroNetworkStudy() {
 function clearHydroNetworkAnalysis() {
   state.agronomyOutputs.hydroNetwork = null;
   clearHydroNetworkOverlay();
-  resetMetricGrid(dom.hydroNetworkResults, "Ejecuta el modulo para ver red, cercania y prioridad.");
-  resetVisualPanel(dom.hydroNetworkVisual, "Aqui veras rios, acequias, quebradas y su prioridad operativa.");
+  resetMetricGrid(dom.hydroNetworkResults, "Ejecuta el modulo para leer microcuencas, cuerpos de agua, estaciones y prioridad hidrica del ambito.");
+  resetVisualPanel(dom.hydroNetworkVisual, "Aqui veras microcuencas, cuerpos de agua y estaciones oficiales priorizadas para el ambito.");
   renderWorkflowGuide();
   updateMapSummary();
   setStatus(`Red hidrica limpiada para ${getCurrentAgronomyScopeLabel()}.`);
 }
 
-function runIrrigationFlowAnalysis(silent = false) {
+async function runIrrigationFlowAnalysis(silent = false) {
+  await loadOfficialHydroCatalog();
   const result = buildIrrigationFlowAnalysis();
   state.agronomyOutputs.irrigationFlow = result;
   state.agronomyFocus = "hydroNetwork";
