@@ -3862,6 +3862,74 @@ button {
   color: rgba(31, 42, 34, 0.78);
 }
 
+.plot-tools {
+  display: grid;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.plot-tools-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.plot-tools-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(31, 42, 34, 0.62);
+}
+
+.plot-tools-state {
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--leaf-deep);
+}
+
+.plot-tools-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.plot-tool-button {
+  border: 1px solid rgba(47, 61, 50, 0.1);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--ink);
+  font-weight: 800;
+  font-size: 0.76rem;
+  line-height: 1;
+  box-shadow: 0 10px 22px rgba(24, 40, 30, 0.08);
+  transition: background 180ms ease, color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.plot-tool-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.plot-tool-button:disabled {
+  opacity: 0.52;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.plot-tool-button-primary {
+  color: #f9f6f1;
+  background: linear-gradient(135deg, var(--leaf-deep), var(--leaf));
+  border-color: rgba(31, 93, 71, 0.12);
+  box-shadow: 0 12px 24px rgba(31, 93, 71, 0.18);
+}
+
+.plot-tool-button-ghost {
+  background: rgba(252, 253, 249, 0.58);
+  color: var(--muted);
+}
+
 .map-badges {
   display: flex;
   flex-wrap: wrap;
@@ -5677,6 +5745,16 @@ button {
     max-width: min(260px, calc(100% - 28px));
   }
 
+  .plot-tools-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .plot-tool-button {
+    justify-content: center;
+    text-align: center;
+  }
+
   .planning-candidate-head {
     flex-direction: column;
   }
@@ -5722,6 +5800,10 @@ button {
   }
 
   .planning-command-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .plot-tools-actions {
     grid-template-columns: 1fr;
   }
 }

@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260511-1";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260511-2";
 
 const layerCatalog = [
   {
@@ -3567,6 +3567,8 @@ const mapState = {
   baseLayers: {},
   activeBaseLayer: null,
   controlGroup: null,
+  drawControl: null,
+  drawPolygonHandler: null,
   lotLayer: null,
   sentinelLayer: null,
   sceneExactLayer: null,
@@ -5385,6 +5387,11 @@ function cacheDom() {
   dom.mapTitle = document.querySelector("#mapTitle");
   dom.mapBadges = document.querySelector("#mapBadges");
   dom.mapSubtitle = document.querySelector("#mapSubtitle");
+  dom.plotTools = document.querySelector("#plotTools");
+  dom.plotToolsState = document.querySelector("#plotToolsState");
+  dom.startPlotDrawBtn = document.querySelector("#startPlotDrawBtn");
+  dom.useMapDemoPlotBtn = document.querySelector("#useMapDemoPlotBtn");
+  dom.clearMapPlotBtn = document.querySelector("#clearMapPlotBtn");
   dom.overlayIndex = document.querySelector("#overlayIndex");
   dom.overlayPlot = document.querySelector("#overlayPlot");
   dom.overlayMode = document.querySelector("#overlayMode");
@@ -5689,6 +5696,59 @@ function queueMapLayoutRefresh() {
     }, delay);
     mapState.layoutRefreshTimers.push(timerId);
   });
+}
+
+function shouldShowPlotTools(route = state.entryRoute || "agronomia") {
+  return !isPlanningRoute(route) && !isEvidenceRoute(route);
+}
+
+function syncPlotToolsState(route = state.entryRoute || "agronomia") {
+  const showTools = shouldShowPlotTools(route);
+  dom.plotTools?.classList.toggle("hidden", !showTools);
+
+  if (!showTools) {
+    return;
+  }
+
+  const hasPlot = !!state.currentPlot;
+  if (dom.plotToolsState) {
+    dom.plotToolsState.textContent = hasPlot ? state.currentPlotLabel : "Sin poligono";
+  }
+  if (dom.startPlotDrawBtn) {
+    dom.startPlotDrawBtn.disabled = !(mapState.map && mapState.drawPolygonHandler);
+  }
+  if (dom.useMapDemoPlotBtn) {
+    dom.useMapDemoPlotBtn.disabled = !mapState.map;
+  }
+  if (dom.clearMapPlotBtn) {
+    dom.clearMapPlotBtn.disabled = !hasPlot;
+  }
+}
+
+function closeSidebarForMapTask() {
+  if (!dom.sidebar) {
+    return;
+  }
+  if (typeof window !== "undefined" && window.innerWidth <= 980) {
+    dom.sidebar.classList.remove("open");
+    queueMapLayoutRefresh();
+  }
+}
+
+function startPlotDrawingFromOverlay() {
+  if (!mapState.map || !mapState.drawPolygonHandler) {
+    setStatus("El mapa aun se esta preparando para dibujar el lote.");
+    return;
+  }
+
+  closeSidebarForMapTask();
+  try {
+    mapState.drawPolygonHandler.enable();
+    setStatus("Dibuja el poligono sobre el mapa y cierra el lote tocando el primer punto.");
+  } catch (error) {
+    console.warn("No se pudo iniciar el dibujo del lote.", error);
+    setStatus("No pudimos abrir el dibujo del lote. Intenta otra vez en unos segundos.");
+  }
 }
 
 function bindUI() {
@@ -6005,6 +6065,9 @@ function bindUI() {
   dom.stopGpsTrackingBtn?.addEventListener("click", () => stopGpsTracking());
   dom.runWizardNextBtn?.addEventListener("click", runWizardNextStep);
   dom.runWizardPlanBtn?.addEventListener("click", runWizardPlan);
+  dom.startPlotDrawBtn?.addEventListener("click", startPlotDrawingFromOverlay);
+  dom.useMapDemoPlotBtn?.addEventListener("click", useWizardDemoPlot);
+  dom.clearMapPlotBtn?.addEventListener("click", () => clearCurrentPlot(true));
   dom.useDemoPlotBtn?.addEventListener("click", useWizardDemoPlot);
   dom.resetWizardBtn?.addEventListener("click", () => resetWizardAssistant());
   dom.runPlanningBtn.addEventListener("click", () => {
@@ -7834,6 +7897,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   renderSidebarDock(route);
   collapseModuleCardsForRoute(route);
   applyModuleSearchFilter();
+  syncPlotToolsState(route);
   syncSatelliteLayerToggle();
   syncEsriResolutionButtons();
   syncSatelliteSuperResolution();
@@ -8352,6 +8416,17 @@ function initializeMap() {
   mapState.controlGroup = new L.FeatureGroup();
   mapState.map.addLayer(mapState.controlGroup);
 
+  const polygonDrawOptions = {
+    allowIntersection: false,
+    showArea: true,
+    shapeOptions: {
+      color: "#cb9440",
+      weight: 2,
+      fillColor: "#cb9440",
+      fillOpacity: 0.22,
+    },
+  };
+
   const drawControl = new L.Control.Draw({
     position: "bottomright",
     edit: {
@@ -8365,20 +8440,14 @@ function initializeMap() {
       circle: false,
       circlemarker: false,
       marker: false,
-      polygon: {
-        allowIntersection: false,
-        showArea: true,
-        shapeOptions: {
-          color: "#cb9440",
-          weight: 2,
-          fillColor: "#cb9440",
-          fillOpacity: 0.22,
-        },
-      },
+      polygon: polygonDrawOptions,
     },
   });
 
+  mapState.drawControl = drawControl;
   mapState.map.addControl(drawControl);
+  mapState.drawPolygonHandler = new L.Draw.Polygon(mapState.map, polygonDrawOptions);
+  syncPlotToolsState();
 
   mapState.map.on(L.Draw.Event.CREATED, (event) => {
     mapState.controlGroup.clearLayers();
@@ -11484,6 +11553,7 @@ function setCurrentPlot(feature, label) {
   state.currentPlotLabel = label;
   state.analysisData = null;
   dom.overlayPlot.textContent = label;
+  syncPlotToolsState();
   renderSentinelSourceStatus();
   renderAnalysisStatus();
 
@@ -11543,6 +11613,7 @@ function clearCurrentPlot(triggerRefresh = false) {
   state.agronomyOutputs.dem = null;
   state.agronomyOutputs.climate = null;
   dom.overlayPlot.textContent = state.currentPlotLabel;
+  syncPlotToolsState();
   renderSentinelSourceStatus();
   renderAnalysisStatus();
 
@@ -29959,6 +30030,7 @@ function resetWizardAssistant(mode = state.activeWizard) {
 }
 
 function useWizardDemoPlot() {
+  closeSidebarForMapTask();
   ensureWizardPlotContext({ forceDemo: true });
   renderWizardAssistantState();
   setStatus(`Lote demo ${state.currentPlotLabel} activado para el asistente.`);
