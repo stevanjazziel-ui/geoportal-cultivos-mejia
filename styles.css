@@ -682,6 +682,14 @@ button {
   --sidebar-width: clamp(560px, 40vw, 820px);
 }
 
+.app-shell[data-route="gps"] {
+  --sidebar-width: clamp(360px, 27vw, 460px);
+}
+
+.app-shell[data-route="gps"][data-active-tab="modulos"] {
+  --sidebar-width: clamp(430px, 32vw, 560px);
+}
+
 .sidebar {
   position: relative;
   height: 100%;

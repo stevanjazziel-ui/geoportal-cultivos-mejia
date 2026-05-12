@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260512-3";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260512-4";
 
 const layerCatalog = [
   {
@@ -141,8 +141,21 @@ const layerCatalog = [
 
 const routeDefaultLayerIds = {
   agronomia: ["lotes", "estaciones"],
+  gps: ["vias", "lotes", "estaciones"],
   planificacion: ["manchaUrbana", "equipamientos", "hidrozonas"],
 };
+
+const gpsRouteVisibleModuleCardIds = new Set([
+  "workflowGuideCard",
+  "gpsCard",
+  "executiveDashboardCard",
+  "reportCenterCard",
+  "alertCenterCard",
+  "projectRegistryCard",
+  "decisionLogCard",
+  "accessRolesCard",
+  "apiCenterCard",
+]);
 
 const officialSourceCatalog = {
   agronomia: {
@@ -3554,6 +3567,7 @@ const state = {
   pendingEntryAction: null,
   layerSelections: {
     agronomia: null,
+    gps: null,
     planificacion: null,
   },
   agronomyFocus: "imagery",
@@ -4299,9 +4313,11 @@ function syncAgronomyAreaUi() {
 
   state.sentinelQueryScopeLabel = getCurrentAgronomyScopeLabel();
 
-  if (state.entryRoute === "agronomia") {
+  if (isAgronomyLikeRoute()) {
     if (dom.sidebarSubtitle) {
-      dom.sidebarSubtitle.textContent = `Escena, lote, agua, clima y GPS sobre ${getAgronomyAreaProfile().scopeLabel}.`;
+      dom.sidebarSubtitle.textContent = isGpsRoute()
+        ? `Seguimiento, corredor, replay y alertas sobre ${getAgronomyAreaProfile().scopeLabel}.`
+        : `Escena, lote, agua, clima y GPS sobre ${getAgronomyAreaProfile().scopeLabel}.`;
     }
   }
 }
@@ -5373,6 +5389,26 @@ const workflowGuideCatalog = {
       { id: "agronomy-gps", label: "Ver GPS", tone: "ghost" },
     ],
   },
+  gps: {
+    badge: "Ruta operativa",
+    title: "Secuencia corta para seguir, vigilar y registrar",
+    defaultCopy: "Conexion, corredor, replay, alertas y reporte en una sola vista.",
+    steps: [
+      { id: "signal", title: "Conectar senal", pending: "Activa GPS del navegador, feed o emisor externo." },
+      { id: "corridor", title: "Cargar corredor", pending: "Sube KML o GeoJSON para vigilar la ruta esperada." },
+      { id: "tracking", title: "Seguir recorrido", pending: "Lee posiciones y valida velocidad, precision y estado." },
+      { id: "replay", title: "Reproducir trayectoria", pending: "Revisa hitos, desvíos y secuencia temporal." },
+      { id: "alerts", title: "Registrar alertas", pending: "Guarda salidas del corredor y bitacora operativa." },
+    ],
+    actions: [
+      { id: "gps-track", label: "Abrir seguimiento", tone: "secondary" },
+      { id: "gps-sender", label: "Conectar emisor", tone: "ghost" },
+      { id: "gps-corridor", label: "Cargar corredor", tone: "ghost" },
+      { id: "gps-replay", label: "Abrir replay", tone: "ghost" },
+      { id: "gps-alerts", label: "Ver alertas", tone: "ghost" },
+      { id: "gps-dashboard", label: "Dashboard", tone: "ghost" },
+    ],
+  },
   planificacion: {
     badge: "Ruta sugerida",
     title: "Secuencia corta para decidir y validar",
@@ -6006,7 +6042,7 @@ function saveUserProfileFromForm() {
 }
 
 function shouldShowPlotTools(route = state.entryRoute || "agronomia") {
-  return !isPlanningRoute(route) && !isEvidenceRoute(route);
+  return route === "agronomia";
 }
 
 function syncPlotToolsState(route = state.entryRoute || "agronomia") {
@@ -6068,8 +6104,8 @@ function bindUI() {
     enterPublicView("planificacion");
   });
   dom.openOperationsBtn?.addEventListener("click", () => {
-    state.pendingEntryAction = "operations";
-    enterPublicView("agronomia");
+    state.pendingEntryAction = null;
+    enterPublicView("gps");
   });
   dom.openFieldEvidenceBtn?.addEventListener("click", () => enterPublicView("evidencia"));
   dom.sidebarToggle.addEventListener("click", () => {
@@ -7169,12 +7205,20 @@ function isPlanningRoute(route = state.entryRoute || "agronomia") {
   return route === "planificacion";
 }
 
+function isGpsRoute(route = state.entryRoute || "agronomia") {
+  return route === "gps";
+}
+
 function isEvidenceRoute(route = state.entryRoute || "agronomia") {
   return false;
 }
 
 function isTerritorialRoute(route = state.entryRoute || "agronomia") {
   return isPlanningRoute(route);
+}
+
+function isAgronomyLikeRoute(route = state.entryRoute || "agronomia") {
+  return route === "agronomia" || route === "gps";
 }
 
 function enterPublicView(route = state.entryRoute || "agronomia") {
@@ -7195,11 +7239,11 @@ function applyRouteFromUrl() {
   const routeParam = params.get("route");
   const tabParam = params.get("tab");
   const viewerParam = params.get("viewer");
-  state.pendingEntryAction = routeParam === "operacion" ? "operations" : null;
+  state.pendingEntryAction = null;
   const route = routeParam === "planificacion"
     ? "planificacion"
-    : routeParam === "operacion"
-      ? "agronomia"
+    : routeParam === "operacion" || routeParam === "gps"
+      ? "gps"
     : routeParam === "evidencia"
       ? "planificacion"
       : routeParam === "agronomia"
@@ -7277,6 +7321,48 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     return;
   }
 
+  if (isGpsRoute(route)) {
+    state.pendingEntryAction = null;
+    closePlanning3dViewer(true);
+    clearPlanningOverlay();
+    clearFodaCameOverlay();
+    clearLandChangeOverlay();
+    clearHydrologyOverlay();
+    clearMobilityOverlay();
+    clearRiskOverlay();
+    clearFieldEvidenceOverlay();
+    clearAiGeoOverlay();
+    renderStudyAreaLayer();
+    refreshVisibleGeoLayers(["parroquias", "vias", "lotes", "estaciones"]);
+    prepareGpsTrackingMapContext({ silent: true });
+    if (state.agronomyOutputs.gps) {
+      renderGpsTrackingOverlay(state.agronomyOutputs.gps);
+    } else if (state.gpsTracking.geofence) {
+      renderGpsGeofenceOverlay();
+    } else {
+      fitAgronomyArea();
+    }
+    setActiveTab("modulos");
+    state.moduleFilterId = "tracking";
+    renderModuleActionHub(route);
+    applyModuleSearchFilter({ preserveActive: true });
+    if (dom.sidebarTitle) {
+      dom.sidebarTitle.textContent = "Centro GPS operativo";
+    }
+    if (dom.sidebarSubtitle) {
+      dom.sidebarSubtitle.textContent = `Seguimiento, corredor, replay y alertas sobre ${getAgronomyAreaProfile().scopeLabel}.`;
+    }
+    if (dom.overlayMode) {
+      dom.overlayMode.textContent = "Operacion";
+    }
+    clearPlanningModuleFocus();
+    updateMapSummary();
+    window.setTimeout(() => {
+      activateOperationsEntryUi();
+    }, 120);
+    return;
+  }
+
   setActiveTab("modulos");
   closePlanning3dViewer(true);
   clearPlanningOverlay();
@@ -7332,12 +7418,6 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
       runHydroNetworkAnalysis(true);
     }
   }, 220);
-  if (state.pendingEntryAction === "operations") {
-    state.pendingEntryAction = null;
-    window.setTimeout(() => {
-      activateOperationsEntryUi();
-    }, 120);
-  }
 }
 
 function clearAgronomyMapContext() {
@@ -7435,18 +7515,17 @@ function focusPlanningCommandCard() {
 }
 
 function activateOperationsEntryUi() {
+  if (!isGpsRoute()) {
+    enterPublicView("gps");
+    return;
+  }
   openSidebarWorkingPanel("modulos");
-  state.moduleFilterId = "operations";
+  state.moduleFilterId = "tracking";
   renderModuleActionHub();
   applyModuleSearchFilter({ preserveActive: true });
-  if (state.activeWizard !== "Monitoreo") {
-    state.activeWizard = "Monitoreo";
-    setTextIfChanged(dom.overlayMode, state.activeWizard);
-    renderWizardAssistantState();
-    refreshActiveAnalysis({ silent: true });
-  }
+  setTextIfChanged(dom.overlayMode, "Operacion");
   focusGpsModuleCard();
-  setStatus("Seguimiento operativo listo para GPS, corredor KML y emision externa.");
+  setStatus("Centro GPS listo para seguimiento, corredor KML, replay y emision externa.");
 }
 
 function getRouteModuleCards() {
@@ -7515,12 +7594,40 @@ function getModuleSearchableText(card) {
 }
 
 function getModuleRouteLabel(route = state.entryRoute || "agronomia") {
+  if (isGpsRoute(route)) {
+    return "seguimiento GPS";
+  }
   return isPlanningRoute(route)
     ? "planificacion territorial"
     : "agronomia";
 }
 
 function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
+  if (isGpsRoute(route)) {
+    return {
+      kicker: "Centro GPS",
+      title: "Abre seguimiento, corredor, replay y alertas sin mezclarte con agronomia",
+      copy: "Solo lo operativo: emision, geocerca, telemetria, bitacora y reporte en una misma ruta.",
+      actions: [
+        { id: "gps-track", label: "Seguimiento", copy: "Dispositivo activo y feed", tone: "primary" },
+        { id: "gps-sender", label: "Emisor", copy: "Celular, dron o Satloc", tone: "accent" },
+        { id: "gps-corridor", label: "Corredor", copy: "KML y GeoJSON", tone: "neutral" },
+        { id: "gps-replay", label: "Replay", copy: "Trayectoria y hitos", tone: "neutral" },
+        { id: "gps-alerts", label: "Alertas", copy: "Desvios y registro", tone: "neutral" },
+        { id: "gps-reports", label: "Reportes", copy: "Exporte y lectura", tone: "neutral" },
+        { id: "gps-projects", label: "Proyectos", copy: "Guardar sesion", tone: "neutral" },
+        { id: "gps-dashboard", label: "Dashboard", copy: "Control ejecutivo", tone: "neutral" },
+      ],
+      filters: [
+        { id: "all", label: "Todo" },
+        { id: "tracking", label: "Seguimiento" },
+        { id: "alerts", label: "Alertas" },
+        { id: "records", label: "Bitacora" },
+        { id: "management", label: "Gestion" },
+      ],
+    };
+  }
+
   if (isPlanningRoute(route)) {
     return {
       kicker: "Copiloto inteligente",
@@ -7602,7 +7709,18 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
     product: new Set(["executiveDashboardCard", "reportCenterCard", "scenarioLabCard", "timeSeriesCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard"]),
   };
 
-  const filters = isPlanningRoute(route) ? planningFilters : agronomyFilters;
+  const gpsFilters = {
+    tracking: new Set(["gpsCard"]),
+    alerts: new Set(["gpsCard", "alertCenterCard", "decisionLogCard"]),
+    records: new Set(["reportCenterCard", "projectRegistryCard", "decisionLogCard"]),
+    management: new Set(["executiveDashboardCard", "reportCenterCard", "projectRegistryCard", "accessRolesCard", "apiCenterCard"]),
+  };
+
+  const filters = isPlanningRoute(route)
+    ? planningFilters
+    : isGpsRoute(route)
+      ? gpsFilters
+      : agronomyFilters;
   const filterSet = filters[filterId];
   return filterSet ? filterSet.has(cardId) : true;
 }
@@ -7641,6 +7759,20 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
       reportCenterCard: true,
       scenarioLabCard: true,
       timeSeriesCard: true,
+      alertCenterCard: false,
+      projectRegistryCard: true,
+      decisionLogCard: true,
+      accessRolesCard: true,
+      apiCenterCard: true,
+    };
+  }
+
+  if (isGpsRoute(route)) {
+    return {
+      workflowGuideCard: false,
+      gpsCard: false,
+      executiveDashboardCard: false,
+      reportCenterCard: true,
       alertCenterCard: false,
       projectRegistryCard: true,
       decisionLogCard: true,
@@ -7921,7 +8053,56 @@ function clearPlanningModuleFocus() {
 function getWorkflowGuideModel(route = state.entryRoute || "agronomia") {
   const profile = isPlanningRoute(route)
     ? workflowGuideCatalog.planificacion
-    : workflowGuideCatalog.agronomia;
+    : isGpsRoute(route)
+      ? workflowGuideCatalog.gps
+      : workflowGuideCatalog.agronomia;
+
+  if (isGpsRoute(route)) {
+    const areaProfile = getAgronomyAreaProfile();
+    const activeResult = state.agronomyOutputs.gps;
+    const activeDevice = activeResult?.activeDevice || state.gpsTracking.lastDeviceSnapshot || null;
+    const geofence = state.gpsTracking.geofence || null;
+    const geofenceEvents = Array.isArray(state.gpsTracking.geofenceEvents) ? state.gpsTracking.geofenceEvents : [];
+    const replayReady = Array.isArray(activeResult?.trackSamples) && activeResult.trackSamples.length >= 2;
+    const summaryCopy = activeDevice
+      ? `${activeDevice.label} esta en seguimiento sobre ${areaProfile.scopeLabel}. ${geofence ? `Corredor ${geofence.label} activo.` : "Carga un corredor para vigilar salidas."}`
+      : geofence
+        ? `Corredor ${geofence.label} listo sobre ${areaProfile.scopeLabel}. Falta conectar una senal GPS.`
+        : `${profile.defaultCopy} El ambito activo es ${areaProfile.scopeLabel}.`;
+    return {
+      ...profile,
+      copy: summaryCopy,
+      steps: [
+        {
+          ...profile.steps[0],
+          tone: activeDevice ? "ready" : "pending",
+          stateLabel: activeDevice ? `${activeDevice.label} | ${activeDevice.deviceType || "GPS"} activo` : profile.steps[0].pending,
+        },
+        {
+          ...profile.steps[1],
+          tone: geofence ? "ready" : "pending",
+          stateLabel: geofence ? `${geofence.label} | tolerancia ${formatGpsDistanceMeters(geofence.toleranceM)}` : profile.steps[1].pending,
+        },
+        {
+          ...profile.steps[2],
+          tone: activeResult?.summary?.deviceCount ? "live" : "pending",
+          stateLabel: activeResult?.summary?.deviceCount
+            ? `${activeResult.summary.deviceCount} dispositivo(s) | ${activeResult.summary.activeSignalAge || "senal activa"}`
+            : profile.steps[2].pending,
+        },
+        {
+          ...profile.steps[3],
+          tone: replayReady ? "available" : "pending",
+          stateLabel: replayReady ? `${activeResult.trackSamples.length} hitos listos para reproducir` : profile.steps[3].pending,
+        },
+        {
+          ...profile.steps[4],
+          tone: geofenceEvents.length ? "ready" : "pending",
+          stateLabel: geofenceEvents.length ? `${geofenceEvents.length} evento(s) registrados` : profile.steps[4].pending,
+        },
+      ],
+    };
+  }
 
   if (isPlanningRoute(route)) {
     const areaProfile = getTerritorialAreaProfile();
@@ -8085,6 +8266,20 @@ function openSidebarWorkingPanel(tabId = "modulos") {
 }
 
 function getSidebarDockConfig(route = state.entryRoute || "agronomia") {
+  if (isGpsRoute(route)) {
+    return {
+      title: "Atajos GPS",
+      subtitle: "Seguimiento, corredor, replay y alertas sin salir del centro operativo.",
+      actions: [
+        { id: "gps-track", label: "Seguimiento" },
+        { id: "gps-corridor", label: "Corredor" },
+        { id: "gps-replay", label: "Replay" },
+        { id: "gps-alerts", label: "Alertas" },
+        { id: "gps-reports", label: "Reportes" },
+      ],
+    };
+  }
+
   if (isPlanningRoute(route)) {
     return {
       title: "Atajos inteligentes",
@@ -8181,9 +8376,57 @@ function runWorkflowGuideAction(actionId) {
       setStatus("Aptitud agroclimatica lista para contrastar lotes y cultivo objetivo.");
       return;
     case "agronomy-gps":
+      enterPublicView("gps");
+      return;
+    case "gps-track":
       openSidebarWorkingPanel("modulos");
       focusGpsModuleCard();
-      setStatus("Modulo GPS listo para seguimiento de celular, dron, avioneta o feed externo.");
+      setStatus("Centro GPS listo para seguimiento en vivo, lectura del feed y telemetria operativa.");
+      return;
+    case "gps-sender":
+      openSidebarWorkingPanel("modulos");
+      focusGpsModuleCard();
+      openGpsSenderModal();
+      setStatus("Comparte el emisor GPS o conecta Satloc G4 desde esta ruta dedicada.");
+      return;
+    case "gps-corridor":
+      openSidebarWorkingPanel("modulos");
+      focusGpsModuleCard();
+      if (state.gpsTracking.geofence) {
+        focusGpsGeofenceStudy();
+        setStatus("Corredor GPS centrado para validar desvíos sobre el mapa.");
+      } else {
+        setStatus("Sube un archivo KML o GeoJSON para vigilar el corredor operativo.");
+      }
+      return;
+    case "gps-replay":
+      openSidebarWorkingPanel("modulos");
+      focusGpsModuleCard();
+      renderGpsReplayPanel();
+      setStatus("Replay GPS listo para revisar hitos, secuencia y salidas del corredor.");
+      return;
+    case "gps-alerts":
+      openSidebarWorkingPanel("modulos");
+      focusGpsModuleCard();
+      renderAlertCenterCard();
+      setStatus("Alertas GPS y bitacora de corredor listas para revision.");
+      return;
+    case "gps-reports":
+      openSidebarWorkingPanel("modulos");
+      focusModuleCard(dom.reportCenterCard);
+      renderReportCenterCard?.();
+      setStatus("Centro de reportes listo para exportar lectura operativa y trayectoria.");
+      return;
+    case "gps-projects":
+      openSidebarWorkingPanel("modulos");
+      focusModuleCard(dom.projectRegistryCard);
+      setStatus("Registro de proyectos listo para guardar la sesion operativa actual.");
+      return;
+    case "gps-dashboard":
+      openSidebarWorkingPanel("modulos");
+      focusModuleCard(dom.executiveDashboardCard);
+      renderProductSuite();
+      setStatus("Dashboard operativo listo para resumir seguimiento, alertas y control.");
       return;
     case "planning-ops":
       openSidebarWorkingPanel("modulos");
@@ -8244,6 +8487,7 @@ function runWorkflowGuideAction(actionId) {
 
 function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   const isPlanning = isPlanningRoute(route);
+  const isGps = isGpsRoute(route);
   const isEvidence = isEvidenceRoute(route);
   const isTerritorial = isPlanning || isEvidence;
   if (state.moduleSearchRoute !== route) {
@@ -8256,35 +8500,56 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
     dom.appShell.dataset.route = route;
   }
   if (dom.tabImageryBtn) {
-    dom.tabImageryBtn.classList.toggle("hidden", isTerritorial);
+    dom.tabImageryBtn.classList.toggle("hidden", isTerritorial || isGps);
     dom.tabImageryBtn.textContent = "Imagenes";
   }
   if (dom.tabModulesBtn) {
-    dom.tabModulesBtn.textContent = "Copiloto";
+    dom.tabModulesBtn.textContent = isGps ? "GPS" : "Copiloto";
+  }
+  if (dom.moduleSearchInput) {
+    dom.moduleSearchInput.placeholder = isGps
+      ? "Buscar seguimiento, corredor, replay o alertas"
+      : isPlanning
+        ? "Buscar aptitud, agua, riesgo, FODA o 3D"
+        : "Buscar GPS, agua, riesgo, FODA, 3D o clima";
+  }
+  if (dom.toggleSatelliteLayersBtn) {
+    dom.toggleSatelliteLayersBtn.classList.toggle("hidden", isGps);
+  }
+  if (dom.toggleSatelliteSuperResolutionBtn) {
+    dom.toggleSatelliteSuperResolutionBtn.classList.toggle("hidden", isGps);
   }
   if (dom.modulesSectionKicker) {
-    dom.modulesSectionKicker.textContent = isPlanning
+    dom.modulesSectionKicker.textContent = isGps
+      ? "Centro operativo"
+      : isPlanning
       ? "Modulo inteligente"
       : isEvidence
         ? "Soporte territorial"
         : "Modulo inteligente";
   }
   if (dom.modulesSectionTitle) {
-    dom.modulesSectionTitle.textContent = isPlanning
+    dom.modulesSectionTitle.textContent = isGps
+      ? "Centro GPS operativo"
+      : isPlanning
       ? "Modulo territorial inteligente"
       : isEvidence
         ? "Evidencia territorial"
         : "Modulo agronomico inteligente";
   }
   if (dom.modulesSectionCopy) {
-    dom.modulesSectionCopy.textContent = isPlanning
+    dom.modulesSectionCopy.textContent = isGps
+      ? `Seguimiento en vivo, corredor, replay, alertas y reporte sobre ${getAgronomyAreaProfile().scopeLabel}.`
+      : isPlanning
       ? "Copiloto, oficiales, aptitud, agua, riesgo, estrategia y 3D en una sola ruta."
       : isEvidence
         ? "Ruta dedicada a quebradas, estaciones, areas sensibles, memoria historica y soporte tecnico de campo para volver mas precisa la lectura territorial."
         : `Escena, agua, oficiales, clima, cultivo y GPS para ${getAgronomyAreaProfile().scopeLabel}.`;
   }
   if (dom.modeFooterPill) {
-    dom.modeFooterPill.textContent = isPlanning
+    dom.modeFooterPill.textContent = isGps
+      ? "Operacion GPS"
+      : isPlanning
       ? "Territorio inteligente"
       : isEvidence
         ? "Evidencia territorial"
@@ -8302,13 +8567,19 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   }
   if (Array.isArray(dom.globalModuleCards)) {
     dom.globalModuleCards.forEach((card) => {
-      card.classList.remove("hidden");
+      card.classList.toggle("hidden", isGps ? !gpsRouteVisibleModuleCardIds.has(card.id) : false);
     });
   }
   if (Array.isArray(dom.agronomyModuleCards)) {
     dom.agronomyModuleCards.forEach((card) => {
-      card.classList.toggle("hidden", isTerritorial);
+      card.classList.toggle("hidden", isTerritorial || (isGps && card.id !== "gpsCard"));
     });
+  }
+  if (dom.workflowGuideCard) {
+    dom.workflowGuideCard.classList.toggle("hidden", false);
+  }
+  if (dom.officialDataCard) {
+    dom.officialDataCard.classList.toggle("hidden", isGps);
   }
   applyLayerSelectionForRoute(route);
   if (mapState.map) {
@@ -8993,7 +9264,13 @@ function renderLayerTree() {
 }
 
 function getLayerSelectionRouteKey(route = state.entryRoute || "agronomia") {
-  return isPlanningRoute(route) || isEvidenceRoute(route) ? "planificacion" : "agronomia";
+  if (isPlanningRoute(route) || isEvidenceRoute(route)) {
+    return "planificacion";
+  }
+  if (isGpsRoute(route)) {
+    return "gps";
+  }
+  return "agronomia";
 }
 
 function getDefaultCheckedLayerIds(route = state.entryRoute || "agronomia") {
@@ -15704,7 +15981,7 @@ function renderGpsGeofenceOverlay() {
   });
 
   const geofence = state.gpsTracking.geofence;
-  if (!geofence || state.entryRoute !== "agronomia") {
+  if (!geofence || !isAgronomyLikeRoute()) {
     return;
   }
 
@@ -16111,7 +16388,7 @@ function renderGpsTrackingOverlay(result = state.agronomyOutputs.gps) {
     }
   });
 
-  if (!result?.activeDevice || state.entryRoute !== "agronomia") {
+  if (!result?.activeDevice || !isAgronomyLikeRoute()) {
     return;
   }
 
@@ -16380,7 +16657,7 @@ function renderGpsTrackingOverlay(result = state.agronomyOutputs.gps) {
     }
   });
 
-  if (!result?.activeDevice || state.entryRoute !== "agronomia") {
+  if (!result?.activeDevice || !isAgronomyLikeRoute()) {
     return;
   }
 
@@ -16528,7 +16805,7 @@ function prepareGpsTrackingMapContext(options = {}) {
     ...options,
   };
 
-  if (state.entryRoute !== "agronomia") {
+  if (!isAgronomyLikeRoute()) {
     return;
   }
 
@@ -32887,6 +33164,21 @@ function updateMapSummary(force = false) {
     return;
   }
 
+  if (isGpsRoute()) {
+    const geofenceSummary = state.gpsTracking.geofence?.summary || null;
+    const geofenceLabel = state.gpsTracking.geofence?.label || geofenceSummary?.label || "Corredor activo";
+    setTextIfChanged(dom.overlayIndex, "GPS");
+    setTextIfChanged(dom.mapTitle, geofenceSummary ? "Centro GPS listo para vigilar corredor" : "Centro GPS operativo listo");
+    setTextIfChanged(
+      dom.mapSubtitle,
+      geofenceSummary
+        ? `${geofenceLabel} listo. Conecta un emisor o usa el demo para validar salidas y reingresos.`
+        : `Conecta un emisor, carga un KML o GeoJSON, o lanza el demo operativo sobre ${getAgronomyAreaProfile().scopeLabel}.`
+    );
+    renderMapBadges();
+    return;
+  }
+
   const aiGeo = state.aiGeoData;
   if (aiGeo?.mode === "agronomia") {
     setTextIfChanged(dom.overlayIndex, "IA");
@@ -33182,6 +33474,36 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
     return;
   }
 
+  if (isGpsRoute() && !(isGpsTrackingActive() || state.agronomyOutputs.gps)) {
+    const geofenceSummary = state.gpsTracking.geofence?.summary || null;
+    const badges = [
+      {
+        tone: "analysis",
+        label: "GPS operativo",
+      },
+      {
+        tone: "neutral",
+        label: "Base Esri",
+      },
+      {
+        tone: "muted",
+        label: "Sin Sentinel",
+      },
+      {
+        tone: geofenceSummary ? "neutral" : "muted",
+        label: geofenceSummary ? "Corredor listo" : "Sin corredor",
+      },
+      {
+        tone: "neutral",
+        label: getAgronomyAreaProfile().scopeLabel,
+      },
+    ];
+    setHtmlIfChanged(dom.mapBadges, badges
+      .map((badge) => `<span class="map-badge ${badge.tone}">${badge.label}</span>`)
+      .join(""));
+    return;
+  }
+
   if (isGpsTrackingActive() || state.agronomyOutputs.gps) {
     const activeDevice = state.agronomyOutputs.gps?.activeDevice || state.gpsTracking.lastDeviceSnapshot;
     const geofenceSummary = state.gpsTracking.geofence?.summary || null;
@@ -33373,7 +33695,7 @@ function setBaseLayer(baseId, initial = false, options = {}) {
     skipSceneRender: false,
     ...options,
   };
-  const gpsBaseLocked = state.entryRoute === "agronomia" && isGpsTrackingActive();
+  const gpsBaseLocked = isAgronomyLikeRoute() && isGpsTrackingActive();
   const requestedBaseId = gpsBaseLocked ? "satellite" : baseId;
   let resolvedBaseId = mapState.baseLayers[requestedBaseId] ? requestedBaseId : "satellite";
   let nextLayer = mapState.baseLayers[resolvedBaseId];
