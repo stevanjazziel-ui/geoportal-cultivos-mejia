@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-<meta name="geoportal-version" content="20260512-1">
+<meta name="geoportal-version" content="20260512-2">
   <title>Centro de Decisiones | Mejia y Quevedo</title>
   <meta
     name="description"
@@ -32,7 +32,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260512-1">
+  <link rel="stylesheet" href="./styles.css?v=20260512-2">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -148,10 +148,22 @@
             IA detalle ON
           </button>
         </div>
-        <div class="user-pill">
+        <div class="user-pill user-pill-extended">
           <span class="status-dot"></span>
-            Usuario publico | v20260512-1
+          <div class="user-pill-copy">
+            <strong id="userNameLabel">Usuario publico</strong>
+            <span id="userVersionLabel">v20260512-2</span>
           </div>
+          <label class="user-role-field" for="userRoleSelect">
+            <span>Rol</span>
+            <select id="userRoleSelect" class="user-role-select">
+              <option value="administrador">Administrador</option>
+              <option value="tecnico" selected>Tecnico</option>
+              <option value="visualizador">Visualizador</option>
+              <option value="cliente">Cliente</option>
+            </select>
+          </label>
+        </div>
       </div>
     </header>
 
@@ -1257,6 +1269,200 @@
                 <button id="clearAiGeoBtn" class="ghost-button" type="button">Limpiar IA</button>
               </div>
             </article>
+
+            <article id="executiveDashboardCard" class="module-card product-card" data-module-track="global">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Direccion ejecutiva</p>
+                  <h3>Dashboard gerencial</h3>
+                </div>
+                <button id="refreshExecutiveDashboardBtn" class="secondary-button" type="button">Actualizar tablero</button>
+              </div>
+              <p class="module-copy">
+                Resume semaforos, prioridades, alertas y madurez operativa para alcalde, tecnico, empresa o productor.
+              </p>
+              <div id="executiveDashboardBoard" class="decision-board empty-state">
+                Cuando existan estudios activos, aqui aparecera la lectura ejecutiva consolidada.
+              </div>
+            </article>
+
+            <article id="reportCenterCard" class="module-card product-card" data-module-track="global">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Salida ejecutiva</p>
+                  <h3>Reportes automaticos</h3>
+                </div>
+              </div>
+              <p class="module-copy">
+                Genera un informe ejecutivo con mapa, interpretacion, conclusion y recomendacion para compartir o imprimir.
+              </p>
+              <div class="action-row analysis-actions">
+                <button id="openExecutiveReportBtn" class="secondary-button" type="button">Abrir informe</button>
+                <button id="printExecutiveReportBtn" class="ghost-button" type="button">Imprimir / PDF</button>
+                <button id="downloadExecutiveHtmlBtn" class="ghost-button" type="button">HTML</button>
+                <button id="downloadExecutiveJsonBtn" class="ghost-button" type="button" data-requires-role="tecnico">JSON</button>
+              </div>
+              <div id="reportCenterBoard" class="territorial-export-panel empty-state">
+                El reporte se arma solo cuando ya existen resultados del frente activo.
+              </div>
+            </article>
+
+            <article id="scenarioLabCard" class="module-card product-card" data-module-track="global">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Comparador</p>
+                  <h3>Escenarios y alternativas</h3>
+                </div>
+                <button id="refreshScenarioLabBtn" class="secondary-button" type="button">Comparar ahora</button>
+              </div>
+              <p class="module-copy">
+                Contrasta escenarios territoriales o cultivos alternativos para saber que cambia antes de decidir.
+              </p>
+              <div id="scenarioLabBoard" class="scenario-compare empty-state">
+                Ejecuta aptitud, agua, huella, riesgo o cultivo para abrir el comparador inteligente.
+              </div>
+            </article>
+
+            <article id="timeSeriesCard" class="module-card product-card" data-module-track="global">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Evolucion</p>
+                  <h3>Series temporales reales</h3>
+                </div>
+                <button id="refreshTimeSeriesBtn" class="secondary-button" type="button">Actualizar serie</button>
+              </div>
+              <p class="module-copy">
+                Ordena la evolucion de escenas, lluvia, agua, huella o fenologia en una linea de tiempo accionable.
+              </p>
+              <div id="timeSeriesBoard" class="hydrology-timeline empty-state">
+                Cuando haya resultados disponibles, aqui se activara la serie temporal del frente actual.
+              </div>
+            </article>
+
+            <article id="alertCenterCard" class="module-card product-card" data-module-track="global">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Monitoreo automatico</p>
+                  <h3>Centro de alertas</h3>
+                </div>
+                <button id="refreshAlertCenterBtn" class="secondary-button" type="button">Actualizar alertas</button>
+              </div>
+              <p class="module-copy">
+                Junta deficit hidrico, desvio GPS, estres del cultivo, cobertura critica y tensiones territoriales.
+              </p>
+              <div id="alertCenterBoard" class="territorial-alerts-panel empty-state">
+                Aqui aparecera el consolidado automatico de alertas por severidad y frente operativo.
+              </div>
+            </article>
+
+            <article id="projectRegistryCard" class="module-card product-card" data-module-track="global">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Memoria de trabajo</p>
+                  <h3>Proyectos guardados</h3>
+                </div>
+              </div>
+              <p class="module-copy">
+                Guarda la corrida con nombre, responsable, parametros y resumen para retomarla despues.
+              </p>
+              <div class="planning-toolbar project-toolbar">
+                <label class="field compact">
+                  <span>Proyecto</span>
+                  <input id="projectNameInput" type="text" placeholder="Ej. Riego Machachi mayo">
+                </label>
+                <label class="field compact">
+                  <span>Responsable</span>
+                  <input id="projectOwnerInput" type="text" placeholder="Equipo tecnico">
+                </label>
+                <label class="field compact project-note-field">
+                  <span>Nota breve</span>
+                  <input id="projectNoteInput" type="text" placeholder="Objetivo o decision principal">
+                </label>
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="saveProjectBtn" class="secondary-button" type="button" data-requires-role="tecnico">Guardar proyecto</button>
+                <button id="refreshProjectsBtn" class="ghost-button" type="button">Actualizar lista</button>
+                <button id="exportProjectSnapshotBtn" class="ghost-button" type="button" data-requires-role="tecnico">Exportar snapshot</button>
+              </div>
+              <div id="projectRegistrySummary" class="metrics-grid empty-state">
+                Aun no hay proyectos guardados para esta ruta.
+              </div>
+              <div id="projectRegistryList" class="territorial-sector-sheets empty-state">
+                Aqui aparecera la cartera de proyectos, estudios y corridas guardadas.
+              </div>
+            </article>
+
+            <article id="decisionLogCard" class="module-card product-card" data-module-track="global">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Trazabilidad</p>
+                  <h3>Bitacora de decisiones</h3>
+                </div>
+              </div>
+              <p class="module-copy">
+                Registra por que se eligio un lote, una zona, una estrategia o una ruta operativa.
+              </p>
+              <div class="action-row analysis-actions">
+                <button id="addDecisionLogBtn" class="secondary-button" type="button" data-requires-role="tecnico">Registrar decision</button>
+                <button id="exportDecisionLogBtn" class="ghost-button" type="button">Exportar bitacora</button>
+                <button id="clearDecisionLogBtn" class="ghost-button" type="button" data-requires-role="administrador">Vaciar bitacora</button>
+              </div>
+              <div id="decisionLogBoard" class="territorial-alerts-panel empty-state">
+                La bitacora se llenara con decisiones manuales y con hitos importantes de las corridas.
+              </div>
+            </article>
+
+            <article id="accessRolesCard" class="module-card product-card" data-module-track="global">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Gobernanza</p>
+                  <h3>Usuarios y roles</h3>
+                </div>
+              </div>
+              <p class="module-copy">
+                Cambia el perfil operativo para mostrar permisos, acciones sugeridas y nivel de edicion disponible.
+              </p>
+              <div class="planning-toolbar">
+                <label class="field compact">
+                  <span>Nombre visible</span>
+                  <input id="userNameInput" type="text" placeholder="Usuario publico">
+                </label>
+                <label class="field compact">
+                  <span>Rol activo</span>
+                  <select id="roleCardSelect">
+                    <option value="administrador">Administrador</option>
+                    <option value="tecnico">Tecnico</option>
+                    <option value="visualizador">Visualizador</option>
+                    <option value="cliente">Cliente</option>
+                  </select>
+                </label>
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="saveUserProfileBtn" class="secondary-button" type="button">Aplicar perfil</button>
+              </div>
+              <div id="accessRolesBoard" class="decision-board empty-state">
+                Aqui aparecera la matriz de permisos, responsabilidades y alcances del perfil activo.
+              </div>
+            </article>
+
+            <article id="apiCenterCard" class="module-card product-card" data-module-track="global">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Integracion</p>
+                  <h3>Centro API</h3>
+                </div>
+                <button id="refreshApiCenterBtn" class="secondary-button" type="button">Ver manifest</button>
+              </div>
+              <p class="module-copy">
+                Expone los endpoints disponibles para integrar dashboard, GPS, proyectos, reportes y lecturas del geoportal.
+              </p>
+              <div class="action-row analysis-actions">
+                <button id="downloadApiManifestBtn" class="ghost-button" type="button" data-requires-role="tecnico">Descargar manifest</button>
+              </div>
+              <div id="apiCenterBoard" class="territorial-export-panel empty-state">
+                Aqui aparecera el estado del backend y el catalogo de endpoints disponibles.
+              </div>
+            </article>
           </section>
         </div>
 
@@ -1542,6 +1748,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260512-1" defer></script>
+  <script src="./app.js?v=20260512-2" defer></script>
 </body>
 </html>

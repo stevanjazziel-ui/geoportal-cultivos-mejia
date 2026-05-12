@@ -49,7 +49,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -410,6 +411,51 @@ button {
   font-weight: 600;
   background: rgba(255, 255, 255, 0.74);
   border: 1px solid rgba(57, 73, 66, 0.1);
+}
+
+.user-pill-extended {
+  gap: 12px;
+  padding-right: 14px;
+}
+
+.user-pill-copy {
+  display: grid;
+  gap: 2px;
+}
+
+.user-pill-copy strong,
+.user-pill-copy span {
+  line-height: 1.1;
+}
+
+.user-pill-copy span {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.user-role-field {
+  display: grid;
+  gap: 4px;
+  min-width: 124px;
+}
+
+.user-role-field span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.user-role-select {
+  min-width: 124px;
+  padding: 7px 30px 7px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(57, 73, 66, 0.12);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .status-dot {
@@ -2941,6 +2987,22 @@ button {
   gap: 10px;
 }
 
+.product-card .analysis-actions {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+}
+
+.product-card .analysis-actions > * {
+  width: 100%;
+}
+
+.project-toolbar {
+  align-items: end;
+}
+
+.project-note-field {
+  grid-column: span 2;
+}
+
 .planning-card .analysis-actions > * {
   width: 100%;
 }
@@ -3227,6 +3289,13 @@ button {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.project-registry-list,
+.decision-log-list,
+.api-endpoint-list {
+  display: grid;
+  gap: 12px;
 }
 
 .territorial-alerts-panel {
@@ -5834,6 +5903,10 @@ button {
     grid-template-columns: 1fr;
   }
 
+  .project-note-field {
+    grid-column: auto;
+  }
+
   .module-action-hub,
   .module-browser-toolbar,
   .workflow-guide-card,
@@ -5990,6 +6063,19 @@ button {
 
   .decision-score-stack {
     justify-items: start;
+  }
+
+  .user-pill-extended {
+    width: 100%;
+    justify-content: space-between;
+    align-items: start;
+    flex-wrap: wrap;
+  }
+
+  .user-role-field,
+  .user-role-select {
+    width: 100%;
+    min-width: 0;
   }
 
   .gps-replay-head {

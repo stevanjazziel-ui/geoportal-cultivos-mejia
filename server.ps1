@@ -43,6 +43,9 @@ $Planning3dPhotoRoot = "E:\FOTOS MACHACHI"
 $AgronomyInamhiLiveFeedPath = Join-Path $Root "data\inamhi_live_feed.json"
 $AgronomyGpsLiveFeedPath = Join-Path $Root "data\gps_live_feed.json"
 $AgronomyGpsGeofenceEventsPath = Join-Path $Root "data\gps_geofence_events.json"
+$PlatformProjectsPath = Join-Path $Root "data\platform_projects.json"
+$PlatformDecisionLogPath = Join-Path $Root "data\platform_decision_log.json"
+$PlatformUsersPath = Join-Path $Root "data\platform_users.json"
 $AgronomyGpsLiveMemory = $null
 $AgronomyGpsGeofenceMemory = $null
 $AgronomyRealtimeStations = @(
@@ -1787,6 +1790,218 @@ function Get-AgronomyGpsGeofenceEventsPayload($Body) {
   }
 }
 
+function Get-PlatformProjectsPayload($Body) {
+  $limit = [Math]::Min([Math]::Max([int](Convert-ToInvariantDouble $(if ($Body -and $Body.PSObject.Properties.Name -contains "limit") { $Body.limit } else { 48 }) 48), 1), 120)
+  $targetRoute = if ($Body -and $Body.PSObject.Properties.Name -contains "route" -and -not [string]::IsNullOrWhiteSpace([string]$Body.route)) { [string]$Body.route } else { "" }
+  $feed = Read-LiveJsonFile $PlatformProjectsPath
+  $projects = @()
+
+  if ($feed -and $feed.projects) {
+    $projects = @(
+      foreach ($entry in @($feed.projects)) {
+        if (-not $entry) {
+          continue
+        }
+        $route = if ($entry.PSObject.Properties.Name -contains "route" -and -not [string]::IsNullOrWhiteSpace([string]$entry.route)) {
+          [string]$entry.route
+        } else {
+          "agronomia"
+        }
+        if (-not [string]::IsNullOrWhiteSpace($targetRoute) -and $route -ne $targetRoute) {
+          continue
+        }
+        [pscustomobject]@{
+          id = if ($entry.id) { [string]$entry.id } else { "project-$([DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds())" }
+          name = if ($entry.name) { [string]$entry.name } else { "Proyecto" }
+          owner = if ($entry.owner) { [string]$entry.owner } else { "Usuario publico" }
+          note = if ($entry.note) { [string]$entry.note } else { "" }
+          route = $route
+          savedAt = if ($entry.savedAt) { [string]$entry.savedAt } else { (Get-Date).ToString("o") }
+          roleId = if ($entry.roleId) { [string]$entry.roleId } else { "tecnico" }
+          scopeLabel = if ($entry.scopeLabel) { [string]$entry.scopeLabel } else { "" }
+          dashboard = $entry.dashboard
+          completedModules = $entry.completedModules
+          settings = $entry.settings
+          currentPlot = $entry.currentPlot
+          currentPlotLabel = if ($entry.currentPlotLabel) { [string]$entry.currentPlotLabel } else { "Sin seleccionar" }
+        }
+      }
+    )
+  }
+
+  $ordered = @(
+    $projects |
+      Sort-Object { [datetime]$_.savedAt } -Descending |
+      Select-Object -First $limit
+  )
+
+  return @{
+    ok = $true
+    fetchedAt = if ($feed -and $feed.fetchedAt) { [string]$feed.fetchedAt } else { (Get-Date).ToString("o") }
+    route = $targetRoute
+    projectCount = $ordered.Count
+    projects = $ordered
+  }
+}
+
+function Save-PlatformProjects($Body) {
+  $projects = @()
+  if ($Body -and $Body.PSObject.Properties.Name -contains "projects" -and $Body.projects) {
+    $projects = @($Body.projects)
+  }
+  $payload = [ordered]@{
+    fetchedAt = (Get-Date).ToString("o")
+    projects = $projects
+  }
+  Ensure-ParentDirectory $PlatformProjectsPath
+  $payload | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $PlatformProjectsPath -Encoding UTF8
+  return @{
+    ok = $true
+    fetchedAt = $payload.fetchedAt
+    projectCount = $projects.Count
+    projects = $projects
+    message = "Proyectos de plataforma almacenados."
+  }
+}
+
+function Get-PlatformDecisionLogPayload($Body) {
+  $limit = [Math]::Min([Math]::Max([int](Convert-ToInvariantDouble $(if ($Body -and $Body.PSObject.Properties.Name -contains "limit") { $Body.limit } else { 60 }) 60), 1), 120)
+  $feed = Read-LiveJsonFile $PlatformDecisionLogPath
+  $entries = @()
+  if ($feed -and $feed.entries) {
+    $entries = @(
+      $feed.entries |
+        Sort-Object { [datetime]$_.timestamp } -Descending |
+        Select-Object -First $limit
+    )
+  }
+  return @{
+    ok = $true
+    fetchedAt = if ($feed -and $feed.fetchedAt) { [string]$feed.fetchedAt } else { (Get-Date).ToString("o") }
+    entryCount = $entries.Count
+    entries = $entries
+  }
+}
+
+function Save-PlatformDecisionLog($Body) {
+  $entries = @()
+  if ($Body -and $Body.PSObject.Properties.Name -contains "entries" -and $Body.entries) {
+    $entries = @($Body.entries)
+  }
+  $payload = [ordered]@{
+    fetchedAt = (Get-Date).ToString("o")
+    entries = @(
+      $entries |
+        Sort-Object { [datetime]$_.timestamp } -Descending |
+        Select-Object -First 120
+    )
+  }
+  Ensure-ParentDirectory $PlatformDecisionLogPath
+  $payload | ConvertTo-Json -Depth 10 | Set-Content -LiteralPath $PlatformDecisionLogPath -Encoding UTF8
+  return @{
+    ok = $true
+    fetchedAt = $payload.fetchedAt
+    entryCount = $payload.entries.Count
+    entries = $payload.entries | Select-Object -First 20
+    message = "Bitacora de decisiones almacenada."
+  }
+}
+
+function Get-PlatformUsersPayload($Body) {
+  $limit = [Math]::Min([Math]::Max([int](Convert-ToInvariantDouble $(if ($Body -and $Body.PSObject.Properties.Name -contains "limit") { $Body.limit } else { 24 }) 24), 1), 60)
+  $feed = Read-LiveJsonFile $PlatformUsersPath
+  $users = @()
+  if ($feed -and $feed.users) {
+    $users = @(
+      $feed.users |
+        Sort-Object { [datetime]$_.savedAt } -Descending |
+        Select-Object -First $limit
+    )
+  }
+  return @{
+    ok = $true
+    fetchedAt = if ($feed -and $feed.fetchedAt) { [string]$feed.fetchedAt } else { (Get-Date).ToString("o") }
+    userCount = $users.Count
+    users = $users
+  }
+}
+
+function Save-PlatformUserProfile($Body) {
+  $user = if ($Body -and $Body.PSObject.Properties.Name -contains "user") { $Body.user } else { $Body }
+  if (-not $user) {
+    return @{
+      ok = $false
+      error = "No se recibio un perfil de usuario valido."
+    }
+  }
+  $currentFeed = Read-LiveJsonFile $PlatformUsersPath
+  $currentUsers = @()
+  if ($currentFeed -and $currentFeed.users) {
+    $currentUsers = @($currentFeed.users)
+  }
+  $name = if ($user.PSObject.Properties.Name -contains "name" -and -not [string]::IsNullOrWhiteSpace([string]$user.name)) { [string]$user.name } else { "Usuario publico" }
+  $roleId = if ($user.PSObject.Properties.Name -contains "roleId" -and -not [string]::IsNullOrWhiteSpace([string]$user.roleId)) { [string]$user.roleId } else { "tecnico" }
+  $record = [pscustomobject]@{
+    name = $name
+    roleId = $roleId
+    savedAt = (Get-Date).ToString("o")
+  }
+  $users = @($record)
+  foreach ($entry in $currentUsers) {
+    if (-not $entry) {
+      continue
+    }
+    if ([string]::Equals([string]$entry.name, $name, [System.StringComparison]::OrdinalIgnoreCase)) {
+      continue
+    }
+    $users += $entry
+  }
+  $users = @(
+    $users |
+      Sort-Object { [datetime]$_.savedAt } -Descending |
+      Select-Object -First 40
+  )
+  $payload = [ordered]@{
+    fetchedAt = (Get-Date).ToString("o")
+    users = $users
+  }
+  Ensure-ParentDirectory $PlatformUsersPath
+  $payload | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $PlatformUsersPath -Encoding UTF8
+  return @{
+    ok = $true
+    fetchedAt = $payload.fetchedAt
+    userCount = $users.Count
+    users = $users
+    message = "Perfil de usuario almacenado."
+  }
+}
+
+function Get-PlatformManifestPayload() {
+  return @{
+    ok = $true
+    backendAvailable = $true
+    baseUrl = "http://127.0.0.1:$Port"
+    bindAddress = $BindAddress
+    port = $Port
+    generatedAt = (Get-Date).ToString("o")
+    endpoints = @(
+      @{ path = "/api/health"; method = "GET"; use = "Estado del backend" },
+      @{ path = "/api/stac/search"; method = "POST"; use = "Busqueda STAC" },
+      @{ path = "/api/indices/analyze"; method = "POST"; use = "Analisis de indices" },
+      @{ path = "/api/agronomy/inamhi-live"; method = "POST"; use = "Meteorologia en vivo" },
+      @{ path = "/api/agronomy/gps/live"; method = "POST"; use = "GPS y telemetria" },
+      @{ path = "/api/agronomy/gps/ingest"; method = "POST"; use = "Ingesta GPS externa" },
+      @{ path = "/api/agronomy/gps/geofence/events"; method = "POST"; use = "Persistencia de eventos de corredor" },
+      @{ path = "/api/agronomy/gps/geofence/log"; method = "POST"; use = "Consulta de bitacora GPS" },
+      @{ path = "/api/platform/projects"; method = "POST"; use = "Proyectos guardados" },
+      @{ path = "/api/platform/decision-log"; method = "POST"; use = "Bitacora de decisiones" },
+      @{ path = "/api/platform/users"; method = "POST"; use = "Usuarios y roles" },
+      @{ path = "/api/platform/manifest"; method = "GET"; use = "Manifest de integracion" },
+      @{ path = "/api/planning/3d/manifest"; method = "GET"; use = "Disponibilidad 3D" }
+    )
+  }
+}
+
 function Get-AgronomyLiveWeatherBase([string]$AreaId) {
   switch ($AreaId) {
     "machachi" {
@@ -2371,6 +2586,48 @@ try {
       if ($request.Path -eq "/api/agronomy/gps/geofence/log" -and $request.Method -eq "POST") {
         $body = if ([string]::IsNullOrWhiteSpace($request.Body)) { @{} } else { $request.Body | ConvertFrom-Json }
         $result = Get-AgronomyGpsGeofenceEventsPayload $body
+        Write-Json $stream 200 $result
+        continue
+      }
+      if ($request.Path -eq "/api/platform/projects" -and $request.Method -eq "POST") {
+        $body = if ([string]::IsNullOrWhiteSpace($request.Body)) { @{} } else { $request.Body | ConvertFrom-Json }
+        if ($body.action -eq "replace") {
+          $result = Save-PlatformProjects $body
+          Write-Json $stream 200 $result
+        } else {
+          $result = Get-PlatformProjectsPayload $body
+          Write-Json $stream 200 $result
+        }
+        continue
+      }
+      if ($request.Path -eq "/api/platform/decision-log" -and $request.Method -eq "POST") {
+        $body = if ([string]::IsNullOrWhiteSpace($request.Body)) { @{} } else { $request.Body | ConvertFrom-Json }
+        if ($body.action -eq "replace") {
+          $result = Save-PlatformDecisionLog $body
+          Write-Json $stream 200 $result
+        } else {
+          $result = Get-PlatformDecisionLogPayload $body
+          Write-Json $stream 200 $result
+        }
+        continue
+      }
+      if ($request.Path -eq "/api/platform/users" -and $request.Method -eq "POST") {
+        $body = if ([string]::IsNullOrWhiteSpace($request.Body)) { @{} } else { $request.Body | ConvertFrom-Json }
+        if ($body.action -eq "save" -or $body.action -eq "replace") {
+          $result = Save-PlatformUserProfile $body
+          if ($result.ok) {
+            Write-Json $stream 200 $result
+          } else {
+            Write-Json $stream 400 $result
+          }
+        } else {
+          $result = Get-PlatformUsersPayload $body
+          Write-Json $stream 200 $result
+        }
+        continue
+      }
+      if ($request.Path -eq "/api/platform/manifest") {
+        $result = Get-PlatformManifestPayload
         Write-Json $stream 200 $result
         continue
       }

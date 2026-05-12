@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260512-1";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260512-2";
 
 const layerCatalog = [
   {
@@ -823,6 +823,10 @@ const backendService = {
   gpsLivePath: "/api/agronomy/gps/live",
   gpsGeofenceEventsPath: "/api/agronomy/gps/geofence/events",
   gpsGeofenceLogPath: "/api/agronomy/gps/geofence/log",
+  platformProjectsPath: "/api/platform/projects",
+  platformDecisionLogPath: "/api/platform/decision-log",
+  platformUsersPath: "/api/platform/users",
+  platformManifestPath: "/api/platform/manifest",
   localIpPath: "/api/network/local-ip",
   defaultOrigins: ["http://127.0.0.1:8765", "http://localhost:8765"],
 };
@@ -846,6 +850,37 @@ const gpsRelayService = {
 const gpsGeofenceStoragePrefix = "geoportal-gps-geofence-events-v1";
 
 const gpsRelaySessionStorageKey = "geoportal.gpsRelay.sessionId";
+
+const projectStorageKey = "geoportal.projects.v1";
+const decisionLogStorageKey = "geoportal.decisionLog.v1";
+const userProfileStorageKey = "geoportal.userProfile.v1";
+
+const roleCatalog = {
+  administrador: {
+    id: "administrador",
+    label: "Administrador",
+    summary: "Control total del sistema, exportes, bitacora, API y gestion de cartera.",
+    permissions: ["export", "save-project", "delete-project", "decision-log", "api", "role-admin"],
+  },
+  tecnico: {
+    id: "tecnico",
+    label: "Tecnico",
+    summary: "Puede ejecutar estudios, guardar proyectos, exportar y registrar decisiones.",
+    permissions: ["export", "save-project", "decision-log", "api"],
+  },
+  visualizador: {
+    id: "visualizador",
+    label: "Visualizador",
+    summary: "Consulta mapas, dashboard, alertas y reportes sin editar ni guardar.",
+    permissions: ["view-report"],
+  },
+  cliente: {
+    id: "cliente",
+    label: "Cliente",
+    summary: "Revisa resultados ejecutivos, escenarios y prioridades sin tocar la configuracion tecnica.",
+    permissions: ["view-report"],
+  },
+};
 
 const agronomyMapZoomLimits = {
   satellite: 22,
@@ -3524,6 +3559,17 @@ const state = {
     planificacion: null,
   },
   territorialOpsData: null,
+  userProfile: {
+    name: "Usuario publico",
+    roleId: "tecnico",
+  },
+  platformData: {
+    projects: [],
+    activeProjectId: null,
+    decisionLog: [],
+    manifest: null,
+    users: [],
+  },
   gpsTracking: {
     mode: "idle",
     watchId: null,
@@ -5394,6 +5440,9 @@ function cacheDom() {
   dom.mapTitle = document.querySelector("#mapTitle");
   dom.mapBadges = document.querySelector("#mapBadges");
   dom.mapSubtitle = document.querySelector("#mapSubtitle");
+  dom.userNameLabel = document.querySelector("#userNameLabel");
+  dom.userVersionLabel = document.querySelector("#userVersionLabel");
+  dom.userRoleSelect = document.querySelector("#userRoleSelect");
   dom.plotTools = document.querySelector("#plotTools");
   dom.plotToolsState = document.querySelector("#plotToolsState");
   dom.startPlotDrawBtn = document.querySelector("#startPlotDrawBtn");
@@ -5462,6 +5511,47 @@ function cacheDom() {
   dom.clearTerritorialOpsBtn = document.querySelector("#clearTerritorialOpsBtn");
   dom.territorialOpsResults = document.querySelector("#territorialOpsResults");
   dom.territorialOpsBoard = document.querySelector("#territorialOpsBoard");
+  dom.executiveDashboardCard = document.querySelector("#executiveDashboardCard");
+  dom.refreshExecutiveDashboardBtn = document.querySelector("#refreshExecutiveDashboardBtn");
+  dom.executiveDashboardBoard = document.querySelector("#executiveDashboardBoard");
+  dom.reportCenterCard = document.querySelector("#reportCenterCard");
+  dom.openExecutiveReportBtn = document.querySelector("#openExecutiveReportBtn");
+  dom.printExecutiveReportBtn = document.querySelector("#printExecutiveReportBtn");
+  dom.downloadExecutiveHtmlBtn = document.querySelector("#downloadExecutiveHtmlBtn");
+  dom.downloadExecutiveJsonBtn = document.querySelector("#downloadExecutiveJsonBtn");
+  dom.reportCenterBoard = document.querySelector("#reportCenterBoard");
+  dom.scenarioLabCard = document.querySelector("#scenarioLabCard");
+  dom.refreshScenarioLabBtn = document.querySelector("#refreshScenarioLabBtn");
+  dom.scenarioLabBoard = document.querySelector("#scenarioLabBoard");
+  dom.timeSeriesCard = document.querySelector("#timeSeriesCard");
+  dom.refreshTimeSeriesBtn = document.querySelector("#refreshTimeSeriesBtn");
+  dom.timeSeriesBoard = document.querySelector("#timeSeriesBoard");
+  dom.alertCenterCard = document.querySelector("#alertCenterCard");
+  dom.refreshAlertCenterBtn = document.querySelector("#refreshAlertCenterBtn");
+  dom.alertCenterBoard = document.querySelector("#alertCenterBoard");
+  dom.projectRegistryCard = document.querySelector("#projectRegistryCard");
+  dom.projectNameInput = document.querySelector("#projectNameInput");
+  dom.projectOwnerInput = document.querySelector("#projectOwnerInput");
+  dom.projectNoteInput = document.querySelector("#projectNoteInput");
+  dom.saveProjectBtn = document.querySelector("#saveProjectBtn");
+  dom.refreshProjectsBtn = document.querySelector("#refreshProjectsBtn");
+  dom.exportProjectSnapshotBtn = document.querySelector("#exportProjectSnapshotBtn");
+  dom.projectRegistrySummary = document.querySelector("#projectRegistrySummary");
+  dom.projectRegistryList = document.querySelector("#projectRegistryList");
+  dom.decisionLogCard = document.querySelector("#decisionLogCard");
+  dom.addDecisionLogBtn = document.querySelector("#addDecisionLogBtn");
+  dom.exportDecisionLogBtn = document.querySelector("#exportDecisionLogBtn");
+  dom.clearDecisionLogBtn = document.querySelector("#clearDecisionLogBtn");
+  dom.decisionLogBoard = document.querySelector("#decisionLogBoard");
+  dom.accessRolesCard = document.querySelector("#accessRolesCard");
+  dom.userNameInput = document.querySelector("#userNameInput");
+  dom.roleCardSelect = document.querySelector("#roleCardSelect");
+  dom.saveUserProfileBtn = document.querySelector("#saveUserProfileBtn");
+  dom.accessRolesBoard = document.querySelector("#accessRolesBoard");
+  dom.apiCenterCard = document.querySelector("#apiCenterCard");
+  dom.refreshApiCenterBtn = document.querySelector("#refreshApiCenterBtn");
+  dom.downloadApiManifestBtn = document.querySelector("#downloadApiManifestBtn");
+  dom.apiCenterBoard = document.querySelector("#apiCenterBoard");
   dom.runPlanningBtn = document.querySelector("#runPlanningBtn");
   dom.focusPlanningBtn = document.querySelector("#focusPlanningBtn");
   dom.clearPlanningBtn = document.querySelector("#clearPlanningBtn");
@@ -5579,6 +5669,7 @@ function cacheDom() {
   dom.fieldEvidenceCard = document.querySelector("#fieldEvidenceCard");
   dom.planningModuleCards = Array.from(document.querySelectorAll('[data-module-track="planificacion"]'));
   dom.evidenceModuleCards = Array.from(document.querySelectorAll('[data-module-track="evidencia"]'));
+  dom.globalModuleCards = Array.from(document.querySelectorAll('[data-module-track="global"]'));
   dom.planning3dAvailability = document.querySelector("#planning3dAvailability");
   dom.openPlanning3dBtn = document.querySelector("#openPlanning3dBtn");
   dom.reloadPlanning3dBtn = document.querySelector("#reloadPlanning3dBtn");
@@ -5647,9 +5738,11 @@ function cacheDom() {
 function bootstrapApp() {
   setDefaultDates();
   setPlanning3dSunDefaults();
+  loadUserProfileFromStorage();
   applyPlanning3dAreaProfile(planning3dState.areaId);
   decorateModuleCards();
   bindUI();
+  syncUserProfileUi();
   syncAgronomyAreaUi();
   ensureSelectedIndex();
   updateSensorControls();
@@ -5657,6 +5750,7 @@ function bootstrapApp() {
   renderIndexButtons();
   renderWizardAssistantState();
   renderPlanningModule();
+  renderProductSuite();
   renderModuleQuickNav();
   renderSidebarDock();
   renderPlanning3dPanel();
@@ -5666,6 +5760,18 @@ function bootstrapApp() {
   renderAnalysisSummary();
   renderCompareSummary();
   filterSentinelImages();
+  loadPlatformProjects().catch((error) => {
+    console.warn("No se pudo cargar la cartera de proyectos.", error);
+  });
+  loadDecisionLog().catch((error) => {
+    console.warn("No se pudo cargar la bitacora de decisiones.", error);
+  });
+  loadPlatformUsers().catch((error) => {
+    console.warn("No se pudo cargar la cartera de usuarios.", error);
+  });
+  loadPlatformManifest().catch((error) => {
+    console.warn("No se pudo cargar el manifest de API.", error);
+  });
   loadOfficialHydroCatalog().catch((error) => {
     console.warn("No se pudo precargar la hidrologia oficial local.", error);
   });
@@ -5711,6 +5817,176 @@ function queueMapLayoutRefresh() {
     }, delay);
     mapState.layoutRefreshTimers.push(timerId);
   });
+}
+
+function readLocalStorageJson(key, fallbackValue) {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return fallbackValue;
+  }
+  try {
+    const raw = window.localStorage.getItem(key);
+    if (!raw) {
+      return fallbackValue;
+    }
+    return JSON.parse(raw);
+  } catch (error) {
+    return fallbackValue;
+  }
+}
+
+function writeLocalStorageJson(key, value) {
+  if (typeof window === "undefined" || !window.localStorage) {
+    return false;
+  }
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+function getRoleRank(roleId = state.userProfile?.roleId || "tecnico") {
+  const order = {
+    cliente: 1,
+    visualizador: 2,
+    tecnico: 3,
+    administrador: 4,
+  };
+  return order[roleId] || order.tecnico;
+}
+
+function getRoleProfile(roleId = state.userProfile?.roleId || "tecnico") {
+  return roleCatalog[roleId] || roleCatalog.tecnico;
+}
+
+function canAccessRole(requiredRoleId = "tecnico", roleId = state.userProfile?.roleId || "tecnico") {
+  return getRoleRank(roleId) >= getRoleRank(requiredRoleId);
+}
+
+function loadUserProfileFromStorage() {
+  const stored = readLocalStorageJson(userProfileStorageKey, null);
+  if (stored && typeof stored === "object") {
+    state.userProfile = {
+      name: String(stored.name || state.userProfile.name || "Usuario publico"),
+      roleId: roleCatalog[stored.roleId] ? stored.roleId : (state.userProfile.roleId || "tecnico"),
+    };
+  }
+}
+
+function updateUserProfile(partial = {}, options = {}) {
+  state.userProfile = {
+    ...state.userProfile,
+    ...partial,
+  };
+  if (!roleCatalog[state.userProfile.roleId]) {
+    state.userProfile.roleId = "tecnico";
+  }
+  if (!state.userProfile.name || !String(state.userProfile.name).trim()) {
+    state.userProfile.name = "Usuario publico";
+  }
+  syncUserProfileUi(options.syncInputs !== false);
+  renderProductSuite();
+  if (!options.skipPersist) {
+    persistUserProfile().catch(() => {
+      // El respaldo local ya quedo guardado.
+    });
+  }
+}
+
+function syncUserProfileUi(syncInputs = true) {
+  if (dom.userNameLabel) {
+    setTextIfChanged(dom.userNameLabel, state.userProfile.name);
+  }
+  if (dom.userVersionLabel) {
+    setTextIfChanged(dom.userVersionLabel, `v${APP_VERSION}`);
+  }
+  if (dom.userRoleSelect) {
+    setValueIfChanged(dom.userRoleSelect, state.userProfile.roleId);
+  }
+  if (syncInputs) {
+    if (dom.userNameInput) {
+      setValueIfChanged(dom.userNameInput, state.userProfile.name);
+    }
+    if (dom.roleCardSelect) {
+      setValueIfChanged(dom.roleCardSelect, state.userProfile.roleId);
+    }
+  }
+
+  document.querySelectorAll("[data-requires-role]").forEach((node) => {
+    const requiredRoleId = node.getAttribute("data-requires-role") || "tecnico";
+    const enabled = canAccessRole(requiredRoleId);
+    if ("disabled" in node) {
+      node.disabled = !enabled;
+    }
+    node.classList.toggle("is-role-disabled", !enabled);
+    node.title = enabled
+      ? ""
+      : `Disponible desde el rol ${getRoleProfile(requiredRoleId).label}.`;
+  });
+}
+
+async function persistUserProfile() {
+  writeLocalStorageJson(userProfileStorageKey, state.userProfile);
+  const currentUsers = Array.isArray(state.platformData.users) ? state.platformData.users : [];
+  const nextUser = {
+    name: state.userProfile.name,
+    roleId: state.userProfile.roleId,
+    savedAt: new Date().toISOString(),
+  };
+  state.platformData.users = [nextUser, ...currentUsers.filter((entry) => String(entry.name || "").trim().toLowerCase() !== nextUser.name.trim().toLowerCase())].slice(0, 24);
+  renderAccessRolesCard();
+  const backend = await detectBackend(!state.backendAvailable);
+  if (!backend.available) {
+    return;
+  }
+  await fetchJson(`${backend.url}${backendService.platformUsersPath}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "save",
+      user: state.userProfile,
+    }),
+  });
+}
+
+async function loadPlatformUsers(force = false) {
+  state.platformData.users = [{
+    name: state.userProfile.name,
+    roleId: state.userProfile.roleId,
+    savedAt: new Date().toISOString(),
+  }];
+  renderAccessRolesCard();
+  const backend = await detectBackend(force || !state.backendAvailable);
+  if (!backend.available) {
+    return state.platformData.users;
+  }
+  try {
+    const payload = await fetchJson(`${backend.url}${backendService.platformUsersPath}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "list", limit: 24 }),
+    });
+    if (Array.isArray(payload.users) && payload.users.length) {
+      state.platformData.users = payload.users.map((user) => ({
+        name: String(user.name || "Usuario"),
+        roleId: roleCatalog[user.roleId] ? user.roleId : "tecnico",
+        savedAt: user.savedAt || new Date().toISOString(),
+      }));
+      renderAccessRolesCard();
+    }
+  } catch (error) {
+    // El perfil local ya mantiene esta capa operativa.
+  }
+  return state.platformData.users;
+}
+
+function saveUserProfileFromForm() {
+  updateUserProfile({
+    name: dom.userNameInput?.value || dom.userNameLabel?.textContent || "Usuario publico",
+    roleId: dom.roleCardSelect?.value || dom.userRoleSelect?.value || "tecnico",
+  });
+  setStatus(`Perfil ${getRoleProfile().label.toLowerCase()} aplicado para ${state.userProfile.name}.`);
 }
 
 function shouldShowPlotTools(route = state.entryRoute || "agronomia") {
@@ -5818,6 +6094,29 @@ function bindUI() {
   dom.expandVisibleModulesBtn?.addEventListener("click", handleExpandVisibleModules);
   dom.collapseVisibleModulesBtn?.addEventListener("click", handleCollapseVisibleModules);
   document.querySelector('.tab-panel[data-panel="modulos"]')?.addEventListener("click", handleModuleCardToggleInteraction);
+  dom.refreshExecutiveDashboardBtn?.addEventListener("click", renderExecutiveDashboardCard);
+  dom.openExecutiveReportBtn?.addEventListener("click", () => openExecutiveReport());
+  dom.printExecutiveReportBtn?.addEventListener("click", () => openExecutiveReport({ autoPrint: true }));
+  dom.downloadExecutiveHtmlBtn?.addEventListener("click", downloadExecutiveReportHtml);
+  dom.downloadExecutiveJsonBtn?.addEventListener("click", downloadExecutiveReportJson);
+  dom.refreshScenarioLabBtn?.addEventListener("click", renderScenarioLabCard);
+  dom.scenarioLabBoard?.addEventListener("click", handleScenarioLabInteraction);
+  dom.refreshTimeSeriesBtn?.addEventListener("click", renderTimeSeriesCard);
+  dom.refreshAlertCenterBtn?.addEventListener("click", renderAlertCenterCard);
+  dom.saveProjectBtn?.addEventListener("click", saveCurrentProject);
+  dom.refreshProjectsBtn?.addEventListener("click", () => loadPlatformProjects(true));
+  dom.exportProjectSnapshotBtn?.addEventListener("click", exportActiveProjectSnapshot);
+  dom.projectRegistryList?.addEventListener("click", handleProjectRegistryInteraction);
+  dom.addDecisionLogBtn?.addEventListener("click", addManualDecisionLogEntry);
+  dom.exportDecisionLogBtn?.addEventListener("click", exportDecisionLog);
+  dom.clearDecisionLogBtn?.addEventListener("click", clearDecisionLog);
+  dom.decisionLogBoard?.addEventListener("click", handleDecisionLogInteraction);
+  dom.saveUserProfileBtn?.addEventListener("click", saveUserProfileFromForm);
+  dom.userRoleSelect?.addEventListener("change", () => updateUserProfile({ roleId: dom.userRoleSelect.value || "tecnico" }));
+  dom.roleCardSelect?.addEventListener("change", () => updateUserProfile({ roleId: dom.roleCardSelect.value || "tecnico" }, { skipPersist: true, syncInputs: true }));
+  dom.userNameInput?.addEventListener("change", () => updateUserProfile({ name: dom.userNameInput.value || "Usuario publico" }, { skipPersist: true, syncInputs: true }));
+  dom.refreshApiCenterBtn?.addEventListener("click", () => loadPlatformManifest(true));
+  dom.downloadApiManifestBtn?.addEventListener("click", downloadApiManifest);
 
   if (dom.sensorSelect) {
     dom.sensorSelect.addEventListener("change", () => {
@@ -7169,6 +7468,15 @@ function getModuleCardLabel(card) {
     planning3dCard: "Visor 3D",
     wizardCard: "Asistente",
     aiGeoCard: "IA",
+    executiveDashboardCard: "Dashboard",
+    reportCenterCard: "Reportes",
+    scenarioLabCard: "Escenarios+",
+    timeSeriesCard: "Series",
+    alertCenterCard: "Alertas IA",
+    projectRegistryCard: "Proyectos",
+    decisionLogCard: "Bitacora",
+    accessRolesCard: "Roles",
+    apiCenterCard: "API",
   };
   if (card?.id && shortLabels[card.id]) {
     return shortLabels[card.id];
@@ -7211,6 +7519,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
         { id: "planning-water", label: "Agua", copy: "Oferta y resiliencia", tone: "neutral" },
         { id: "planning-strategy", label: "FODA + CAME", copy: "Diagnostico y accion", tone: "neutral" },
         { id: "planning-3d", label: "Visor 3D", copy: "Volumen y sombra", tone: "accent" },
+        { id: "suite-dashboard", label: "Dashboard", copy: "Reporte y control", tone: "neutral" },
       ],
       filters: [
         { id: "all", label: "Todo" },
@@ -7220,6 +7529,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
         { id: "growth", label: "Huella + movilidad" },
         { id: "strategy", label: "Estrategia" },
         { id: "validation", label: "3D" },
+        { id: "product", label: "Gestion" },
       ],
     };
   }
@@ -7236,6 +7546,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
       { id: "agronomy-suitability", label: "Cultivo", copy: "Aptitud agroclimatica", tone: "neutral" },
       { id: "agronomy-gps", label: "GPS", copy: "Seguimiento y corredor", tone: "accent" },
       { id: "agronomy-assistant", label: "Asistente", copy: "Plan guiado por etapa", tone: "neutral" },
+      { id: "suite-dashboard", label: "Dashboard", copy: "Reporte y control", tone: "neutral" },
     ],
     filters: [
       { id: "all", label: "Todo" },
@@ -7245,6 +7556,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
       { id: "climate", label: "Clima + cultivo" },
       { id: "operations", label: "GPS" },
       { id: "assistant", label: "Asistente + IA" },
+      { id: "product", label: "Gestion" },
     ],
   };
 }
@@ -7261,6 +7573,7 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
     growth: new Set(["mobilityCard", "landChangeCard", "territorialScenarioCard"]),
     strategy: new Set(["fodaCameCard", "territorialDecisionCard", "territorialAlertsCard", "aiGeoCard"]),
     validation: new Set(["planning3dCard"]),
+    product: new Set(["executiveDashboardCard", "reportCenterCard", "scenarioLabCard", "timeSeriesCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard"]),
   };
 
   const agronomyFilters = {
@@ -7270,6 +7583,7 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
     climate: new Set(["climateCard", "inamhiCard", "agroSuitabilityCard"]),
     operations: new Set(["gpsCard"]),
     assistant: new Set(["wizardCard", "aiGeoCard"]),
+    product: new Set(["executiveDashboardCard", "reportCenterCard", "scenarioLabCard", "timeSeriesCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard"]),
   };
 
   const filters = isPlanningRoute(route) ? planningFilters : agronomyFilters;
@@ -7307,6 +7621,15 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
       territorialAlertsCard: true,
       planning3dCard: true,
       aiGeoCard: true,
+      executiveDashboardCard: false,
+      reportCenterCard: true,
+      scenarioLabCard: true,
+      timeSeriesCard: true,
+      alertCenterCard: false,
+      projectRegistryCard: true,
+      decisionLogCard: true,
+      accessRolesCard: true,
+      apiCenterCard: true,
     };
   }
 
@@ -7322,6 +7645,15 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
     agroSuitabilityCard: true,
     wizardCard: true,
     aiGeoCard: true,
+    executiveDashboardCard: false,
+    reportCenterCard: true,
+    scenarioLabCard: true,
+    timeSeriesCard: true,
+    alertCenterCard: false,
+    projectRegistryCard: true,
+    decisionLogCard: true,
+    accessRolesCard: true,
+    apiCenterCard: true,
   };
 }
 
@@ -7883,6 +8215,12 @@ function runWorkflowGuideAction(actionId) {
       openSidebarWorkingPanel("modulos");
       dom.openPlanning3dBtn?.click();
       return;
+    case "suite-dashboard":
+      openSidebarWorkingPanel("modulos");
+      focusModuleCard(dom.executiveDashboardCard);
+      renderProductSuite();
+      setStatus("Dashboard ejecutivo listo para revisar prioridades, alertas, reportes y trazabilidad.");
+      return;
     default:
       break;
   }
@@ -7946,6 +8284,11 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
       card.classList.toggle("hidden", !isEvidence);
     });
   }
+  if (Array.isArray(dom.globalModuleCards)) {
+    dom.globalModuleCards.forEach((card) => {
+      card.classList.remove("hidden");
+    });
+  }
   if (Array.isArray(dom.agronomyModuleCards)) {
     dom.agronomyModuleCards.forEach((card) => {
       card.classList.toggle("hidden", isTerritorial);
@@ -7965,6 +8308,8 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   syncSatelliteLayerToggle();
   syncEsriResolutionButtons();
   syncSatelliteSuperResolution();
+  syncUserProfileUi();
+  renderProductSuite();
 }
 
 function getOfficialRouteKey(route = state.entryRoute || "agronomia") {
@@ -27952,6 +28297,1302 @@ function openTerritorialReport(options = {}) {
   window.setTimeout(() => window.URL.revokeObjectURL(url), 1200);
 }
 
+function buildExecutiveAlertList() {
+  const alerts = [];
+  if (isTerritorialRoute()) {
+    buildTerritorialAlerts().forEach((alert) => {
+      alerts.push({
+        id: `territorial-${alert.id}`,
+        module: alert.module,
+        title: alert.title,
+        copy: alert.copy,
+        tone: alert.tone || "watch",
+      });
+    });
+  }
+
+  const agroDecision = state.agronomyOutputs.agroDecision;
+  if (agroDecision?.bestLot) {
+    if (agroDecision.bestLot.score < 58) {
+      alerts.push({
+        id: `agro-fit-${agroDecision.bestLot.id}`,
+        module: "Agronomia",
+        title: "Cultivo con prioridad baja",
+        copy: `${agroDecision.cropProfile.label} no conviene como primera apuesta en ${agroDecision.bestLot.label} sin corregir agua, pendiente o microclima.`,
+        tone: "critical",
+      });
+    }
+    if (agroDecision.bestLot.waterDistanceKm > 0.8) {
+      alerts.push({
+        id: `agro-water-${agroDecision.bestLot.id}`,
+        module: "Agua",
+        title: "Soporte hidrico condicionado",
+        copy: `${agroDecision.bestLot.label} esta a ${formatDistanceKm(agroDecision.bestLot.waterDistanceKm)} de la referencia hidrica prioritaria.`,
+        tone: "watch",
+      });
+    }
+  }
+
+  const flow = state.agronomyOutputs.irrigationFlow;
+  if (flow?.balanceTone === "high" || /bajo|deficit|condicionado/i.test(flow?.balanceLabel || "")) {
+    alerts.push({
+      id: `flow-${flow.generatedAt || "current"}`,
+      module: "Riego",
+      title: "Balance de riego tensionado",
+      copy: flow.headline || flow.recommendation || "El caudal actual pide ajuste frente a la necesidad del cultivo.",
+      tone: /condicionado|deficit|bajo/i.test(flow.balanceLabel || "") ? "critical" : "watch",
+    });
+  }
+
+  (state.gpsTracking.geofenceEvents || []).slice(0, 5).forEach((eventItem) => {
+    alerts.push({
+      id: eventItem.id || `gps-${eventItem.timestamp}`,
+      module: "GPS",
+      title: eventItem.title || "Evento de corredor GPS",
+      copy: eventItem.copy || "El dispositivo se salio o regreso al corredor operativo.",
+      tone: eventItem.kind === "outside" || /fuera/i.test(eventItem.title || "") ? "critical" : "watch",
+    });
+  });
+
+  return alerts.slice(0, 12);
+}
+
+function buildExecutiveDashboardSnapshot() {
+  const route = state.entryRoute || "agronomia";
+  const role = getRoleProfile();
+  const alerts = buildExecutiveAlertList();
+  const backendLabel = state.backendAvailable ? "Backend activo" : "Solo navegador";
+
+  if (isTerritorialRoute(route)) {
+    const area = getTerritorialAreaProfile();
+    const planning = state.planningData;
+    const ops = state.territorialOpsData;
+    const risk = state.riskData;
+    const hydrology = state.hydrologyData;
+    const decision = buildTerritorialDecisionSnapshot();
+    const score = decision?.overallScore || ops?.overallScore || planning?.summary?.meanScore || 0;
+    const headline = decision?.headline || `Panel territorial listo para ${area.scopeLabel}`;
+    const copy = decision?.copy || "Cruza aptitud, cobertura, riesgo, agua y soporte oficial para decidir donde intervenir primero.";
+    const items = [
+      {
+        label: "Semaforo",
+        value: score ? `${score}/100` : "Sin corrida",
+        tone: score >= 75 ? "low" : score >= 55 ? "mid" : "high",
+        copy,
+      },
+      {
+        label: "Candidatos",
+        value: `${planning?.candidates?.length || 0}`,
+        tone: (planning?.candidates?.length || 0) > 0 ? "low" : "mid",
+        copy: planning ? `${planning.program.longLabel} en ${area.scopeLabel}.` : "Corre aptitud para activar suelo candidato.",
+      },
+      {
+        label: "Cobertura critica",
+        value: ops?.weakestService ? `${ops.weakestService.shortLabel} ${ops.weakestService.coveragePct}%` : "Sin lectura",
+        tone: ops?.weakestService?.coveragePct >= 70 ? "low" : ops?.weakestService ? "mid" : "pending",
+        copy: ops?.actionHeadline || "Movilidad y servicios quedaran resumidos aqui.",
+      },
+      {
+        label: "Riesgo y agua",
+        value: hydrology ? `${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3` : (risk?.summary?.criticalAreaHa ? `${formatLandChangeHa(risk.summary.criticalAreaHa)} ha` : "Pendiente"),
+        tone: hydrology?.summary?.balanceHm3 >= 0 ? "low" : hydrology ? "high" : (risk ? "mid" : "pending"),
+        copy: hydrology ? hydrology.summary.headline : (risk?.summary?.headline || "Ejecuta agua o riesgo para cerrar la lectura."),
+      },
+      {
+        label: "Alertas",
+        value: `${alerts.length}`,
+        tone: alerts.length >= 5 ? "high" : alerts.length >= 2 ? "mid" : "low",
+        copy: `${backendLabel} y ${role.label.toLowerCase()} listo para seguimiento y reporte.`,
+      },
+    ];
+    return { route, role, headline, copy, score, items, alerts };
+  }
+
+  const area = getAgronomyAreaProfile();
+  const decision = state.agronomyOutputs.agroDecision;
+  const hydro = state.agronomyOutputs.hydroNetwork;
+  const gps = state.agronomyOutputs.gps;
+  const climate = state.agronomyOutputs.climate || state.agronomyOutputs.inamhiLive || state.agronomyOutputs.inamhi;
+  const score = decision?.bestLot?.score || 0;
+  const headline = decision?.headline || `Panel agronomico listo para ${area.scopeLabel}`;
+  const copy = decision?.nextStep || "Ordena escena, agua, clima, cultivo y operacion con una sola lectura ejecutiva.";
+  const items = [
+    {
+      label: "Cultivo",
+      value: decision ? `${decision.cropProfile.label} ${score}/100` : "Sin corrida",
+      tone: score >= 78 ? "low" : score >= 58 ? "mid" : "high",
+      copy: decision ? `${decision.bestLot.label} lidera la corrida.` : "Corre aptitud agroclimatica para priorizar lotes.",
+    },
+    {
+      label: "Agua",
+      value: hydro?.summary?.waterLabel || decision?.irrigationBalanceLabel || "Sin lectura",
+      tone: hydro ? "low" : decision?.irrigationTone || "pending",
+      copy: hydro?.summary?.headline || "La red hidrica oficial y el caudal de riego se reflejaran aqui.",
+    },
+    {
+      label: "Clima",
+      value: climate ? `${Number(climate.maxTemp || climate.temperatureC || 0).toFixed(1)} C` : "Pendiente",
+      tone: climate ? "low" : "pending",
+      copy: climate ? `Lluvia ${Number(climate.rainfall || climate.precip1hMm || 0).toFixed(1)} mm y soporte operativo activo.` : "Corre clima o estaciones para completar la lectura.",
+    },
+    {
+      label: "GPS",
+      value: gps?.activeDevice ? gps.activeDevice.label : "Sin equipo",
+      tone: gps?.activeDevice ? "low" : "pending",
+      copy: gps?.activeDevice ? `${gps.totalDevices || 1} dispositivos, ${state.gpsTracking.geofenceEvents?.length || 0} eventos de corredor.` : "Activa GPS o feed para monitoreo en tiempo real.",
+    },
+    {
+      label: "Alertas",
+      value: `${alerts.length}`,
+      tone: alerts.length >= 4 ? "high" : alerts.length >= 2 ? "mid" : "low",
+      copy: `${backendLabel} y ${role.label.toLowerCase()} listo para decision operativa.`,
+    },
+  ];
+  return { route, role, headline, copy, score, items, alerts };
+}
+
+function renderExecutiveDashboardCard() {
+  if (!dom.executiveDashboardBoard) {
+    return;
+  }
+  const snapshot = buildExecutiveDashboardSnapshot();
+  dom.executiveDashboardBoard.classList.remove("empty-state");
+  dom.executiveDashboardBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.executiveDashboardBoard, `
+    <article class="decision-hero tone-${snapshot.score >= 75 ? "low" : snapshot.score >= 55 ? "mid" : "high"}">
+      <div>
+        <p class="section-kicker">Dashboard ${escapeHtmlContent(snapshot.route)}</p>
+        <h4>${escapeHtmlContent(snapshot.headline)}</h4>
+        <p>${escapeHtmlContent(snapshot.copy)}</p>
+      </div>
+      <div class="decision-score-stack">
+        <strong>${snapshot.score ? `${snapshot.score}/100` : snapshot.role.label}</strong>
+        <span>${escapeHtmlContent(snapshot.role.label)}</span>
+      </div>
+    </article>
+    <div class="decision-grid">
+      ${snapshot.items.map((item) => `
+        <article class="decision-card tone-${item.tone}">
+          <p class="candidate-rank">${escapeHtmlContent(item.label)}</p>
+          <h5>${escapeHtmlContent(item.value)}</h5>
+          <p>${escapeHtmlContent(item.copy)}</p>
+        </article>
+      `).join("")}
+    </div>
+    <div class="decision-list compact">
+      ${(snapshot.alerts.length ? snapshot.alerts.slice(0, 3) : [{
+        title: "Sin alertas criticas",
+        copy: "Todavia no hay alertas integradas que obliguen a frenar o corregir la ruta activa.",
+      }]).map((item) => `
+        <article>
+          <strong>${escapeHtmlContent(item.title)}</strong>
+          <p>${escapeHtmlContent(item.copy)}</p>
+        </article>
+      `).join("")}
+    </div>
+  `);
+}
+
+function buildAgroScenarioMatrix() {
+  const originalCropId = state.agroSuitabilityCropId;
+  const scenarios = Object.keys(agroSuitabilityCropCatalog).map((cropId) => {
+    state.agroSuitabilityCropId = cropId;
+    const analysis = buildAgroSuitabilityAnalysis();
+    return {
+      cropId,
+      cropLabel: analysis.cropProfile.label,
+      meanScore: analysis.summary.meanScore,
+      bestLotLabel: analysis.summary.bestLotLabel,
+      bestScore: analysis.summary.bestScore,
+      nearestWaterKm: analysis.summary.nearestWaterKm,
+      recommendation: analysis.lots[0]?.recommendation || analysis.cropProfile.recommendation,
+      tone: getAgroSuitabilityTone(analysis.summary.meanScore),
+    };
+  }).sort((left, right) => right.meanScore - left.meanScore);
+  state.agroSuitabilityCropId = originalCropId;
+  return scenarios;
+}
+
+function buildScenarioLabSnapshot() {
+  if (isTerritorialRoute()) {
+    const planningScenario = getPlanningScenario(state.planningGrowthScenarioId);
+    const landScenario = getLandChangeScenarioProfile(state.landChangeScenarioId);
+    const hydroScenario = getHydrologyClimateProfile(state.hydrologyClimateId);
+    return {
+      route: "planificacion",
+      headline: "Escenarios territoriales",
+      cards: [
+        {
+          id: planningScenario.id,
+          module: "planning",
+          title: planningScenario.label,
+          metric: state.planningData ? `${state.planningData.candidates.length} candidatos` : "Aptitud",
+          copy: planningScenario.copy || "Escenario de aptitud urbana.",
+          tone: planningScenario.id === state.planningGrowthScenarioId ? "low" : "base",
+        },
+        {
+          id: landScenario.id,
+          module: "landChange",
+          title: landScenario.label,
+          metric: state.landChangeData ? `${formatLandChangeHa(state.landChangeData.summary.transformedHa)} ha` : "Huella",
+          copy: landScenario.copy || "Presion sobre suelo rural.",
+          tone: landScenario.id === state.landChangeScenarioId ? "mid" : "base",
+        },
+        {
+          id: hydroScenario.id,
+          module: "hydrology",
+          title: hydroScenario.label,
+          metric: state.hydrologyData ? `${state.hydrologyData.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(state.hydrologyData.summary.balanceHm3)} hm3` : "Agua",
+          copy: hydroScenario.copy || "Balance y resiliencia hidrica.",
+          tone: hydroScenario.id === state.hydrologyClimateId ? "low" : "base",
+        },
+      ],
+    };
+  }
+
+  const scenarios = buildAgroScenarioMatrix().slice(0, 4);
+  return {
+    route: "agronomia",
+    headline: "Cultivos y escenarios operativos",
+    cards: scenarios.map((scenario) => ({
+      id: scenario.cropId,
+      module: "agroCrop",
+      title: scenario.cropLabel,
+      metric: `${scenario.meanScore}/100`,
+      copy: `${scenario.bestLotLabel} como lote lider y ${formatDistanceKm(scenario.nearestWaterKm)} al agua. ${scenario.recommendation}`,
+      tone: scenario.tone,
+    })),
+  };
+}
+
+function renderScenarioLabCard() {
+  if (!dom.scenarioLabBoard) {
+    return;
+  }
+  const snapshot = buildScenarioLabSnapshot();
+  dom.scenarioLabBoard.classList.remove("empty-state");
+  dom.scenarioLabBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.scenarioLabBoard, `
+    <div class="hydrology-timeline-head">
+      <div>
+        <p class="section-kicker">Laboratorio de comparacion</p>
+        <h4>${escapeHtmlContent(snapshot.headline)}</h4>
+      </div>
+      <p>${snapshot.route === "planificacion" ? "Pulsa una tarjeta para cambiar el escenario activo." : "Pulsa una tarjeta para cambiar el cultivo objetivo."}</p>
+    </div>
+    <div class="hydrology-timeline-grid">
+      ${snapshot.cards.map((item) => `
+        <article class="hydrology-timeline-card ${item.tone === "low" || item.tone === "mid" || item.tone === "high" ? "active" : ""}" data-scenario-module="${escapeHtmlContent(item.module)}" data-scenario-id="${escapeHtmlContent(item.id)}">
+          <div class="hydrology-timeline-card-head">
+            <h5>${escapeHtmlContent(item.title)}</h5>
+            <span>${escapeHtmlContent(item.metric)}</span>
+          </div>
+          <p class="hydrology-timeline-copy">${escapeHtmlContent(item.copy)}</p>
+        </article>
+      `).join("")}
+    </div>
+  `);
+}
+
+function handleScenarioLabInteraction(event) {
+  const card = event.target.closest("[data-scenario-module][data-scenario-id]");
+  if (!card || !dom.scenarioLabBoard?.contains(card)) {
+    return;
+  }
+  const module = card.getAttribute("data-scenario-module");
+  const scenarioId = card.getAttribute("data-scenario-id");
+  if (module === "agroCrop") {
+    state.agroSuitabilityCropId = scenarioId;
+    if (dom.agroSuitabilityCropSelect) {
+      dom.agroSuitabilityCropSelect.value = scenarioId;
+    }
+    runAgroSuitabilityAnalysis(true);
+    focusModuleCard(dom.agroSuitabilityCard);
+    setStatus(`Comparador agroclimatico ajustado a ${agroSuitabilityCropCatalog[scenarioId]?.label || "cultivo"} como objetivo.`);
+    return;
+  }
+
+  handleTerritorialScenarioCompareInteraction({
+    target: {
+      closest() {
+        return {
+          dataset: {
+            compareModule: module,
+            compareId: scenarioId,
+          },
+        };
+      },
+    },
+  });
+}
+
+function getAgroPhenologyStages(cropProfile = agroSuitabilityCropCatalog[state.agroSuitabilityCropId]) {
+  const generic = [
+    { label: "Siembra", value: "Semana 0-2", copy: "Ajusta humedad inicial y uniformidad." },
+    { label: "Desarrollo", value: "Semana 3-7", copy: "Vigila vigor, maleza y lamina de riego." },
+    { label: "Pico productivo", value: "Semana 8-12", copy: "Controla estres y soporte hidrico." },
+    { label: "Cosecha", value: "Semana 13+", copy: "Cierra seguimiento y registra rendimiento." },
+  ];
+  if (!cropProfile) {
+    return generic;
+  }
+  return generic.map((stage, index) => ({
+    ...stage,
+    copy: `${cropProfile.label}: ${stage.copy}`,
+    emphasis: index === 1 || index === 2,
+  }));
+}
+
+function buildTimeSeriesSnapshot() {
+  if (isTerritorialRoute()) {
+    const timeline = [];
+    if (state.landChangeData?.timeline?.length) {
+      state.landChangeData.timeline.forEach((item) => {
+        timeline.push({
+          title: item.label,
+          metric: `${formatLandChangeHa(item.transformedHa || 0)} ha`,
+          copy: item.copy || "Transformacion territorial.",
+        });
+      });
+    }
+    if (state.hydrologyData?.timeline?.length) {
+      state.hydrologyData.timeline.forEach((item) => {
+        timeline.push({
+          title: item.label,
+          metric: `${item.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(item.balanceHm3 || 0)} hm3`,
+          copy: item.copy || "Balance hidrico.",
+        });
+      });
+    }
+    return {
+      title: "Serie territorial",
+      copy: "Huella urbana, seguridad hidrica y escenarios del territorio en secuencia.",
+      items: timeline.slice(0, 8),
+    };
+  }
+
+  const sceneItems = (state.filteredImages || []).slice(0, 4).map((image) => ({
+    title: image.date,
+    metric: `${image.title || image.sensorId}`,
+    copy: `${Math.round(Number(image.cloud || 0))}% nubes y ${state.selectedIndex} como lectura visible.`,
+  }));
+  const phenologyItems = getAgroPhenologyStages().map((stage) => ({
+    title: stage.label,
+    metric: stage.value,
+    copy: stage.copy,
+  }));
+  return {
+    title: "Serie agroclimatica",
+    copy: "Escenas disponibles, clima y calendario fenologico del cultivo objetivo.",
+    items: [...sceneItems, ...phenologyItems].slice(0, 8),
+  };
+}
+
+function renderTimeSeriesCard() {
+  if (!dom.timeSeriesBoard) {
+    return;
+  }
+  const snapshot = buildTimeSeriesSnapshot();
+  if (!snapshot.items.length) {
+    resetVisualPanel(dom.timeSeriesBoard, "Cuando haya resultados disponibles, aqui se activara la serie temporal del frente actual.");
+    return;
+  }
+  dom.timeSeriesBoard.classList.remove("empty-state");
+  dom.timeSeriesBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.timeSeriesBoard, `
+    <div class="hydrology-timeline-head">
+      <div>
+        <p class="section-kicker">Serie temporal</p>
+        <h4>${escapeHtmlContent(snapshot.title)}</h4>
+      </div>
+      <p>${escapeHtmlContent(snapshot.copy)}</p>
+    </div>
+    <div class="hydrology-timeline-grid">
+      ${snapshot.items.map((item) => `
+        <article class="hydrology-timeline-card active">
+          <div class="hydrology-timeline-card-head">
+            <h5>${escapeHtmlContent(item.title)}</h5>
+            <span>${escapeHtmlContent(item.metric)}</span>
+          </div>
+          <p class="hydrology-timeline-copy">${escapeHtmlContent(item.copy)}</p>
+        </article>
+      `).join("")}
+    </div>
+  `);
+}
+
+function renderAlertCenterCard() {
+  if (!dom.alertCenterBoard) {
+    return;
+  }
+  const alerts = buildExecutiveAlertList();
+  if (!alerts.length) {
+    resetVisualPanel(dom.alertCenterBoard, "Aqui aparecera el consolidado automatico de alertas por severidad y frente operativo.");
+    return;
+  }
+  dom.alertCenterBoard.classList.remove("empty-state");
+  dom.alertCenterBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.alertCenterBoard, alerts.map((alert) => `
+    <article class="territorial-alert tone-${escapeHtmlContent(alert.tone || "watch")}">
+      <div class="territorial-alert-head">
+        <div>
+          <p class="candidate-rank">${escapeHtmlContent(alert.module)}</p>
+          <h4>${escapeHtmlContent(alert.title)}</h4>
+        </div>
+        <span class="scenario-chip tone-${alert.tone === "critical" ? "low" : alert.tone === "watch" ? "mid" : "high"}">${escapeHtmlContent(alert.tone || "watch")}</span>
+      </div>
+      <p class="territorial-readout-copy">${escapeHtmlContent(alert.copy)}</p>
+    </article>
+  `).join(""));
+}
+
+function buildExecutiveReportJson() {
+  const route = state.entryRoute || "agronomia";
+  if (isTerritorialRoute(route)) {
+    return {
+      generatedAt: new Date().toISOString(),
+      route,
+      user: state.userProfile,
+      dashboard: buildExecutiveDashboardSnapshot(),
+      alerts: buildExecutiveAlertList(),
+      territory: buildTerritorialJsonExport(),
+    };
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    route,
+    user: state.userProfile,
+    dashboard: buildExecutiveDashboardSnapshot(),
+    alerts: buildExecutiveAlertList(),
+    agronomia: {
+      area: getAgronomyAreaProfile(),
+      scene: getSelectedImage() || null,
+      hydroNetwork: state.agronomyOutputs.hydroNetwork,
+      irrigationFlow: state.agronomyOutputs.irrigationFlow,
+      agroSuitability: state.agronomyOutputs.agroSuitability,
+      agroDecision: state.agronomyOutputs.agroDecision,
+      climate: state.agronomyOutputs.climate,
+      inamhi: state.agronomyOutputs.inamhi,
+      inamhiLive: state.agronomyOutputs.inamhiLive,
+      gps: state.agronomyOutputs.gps,
+      geofenceSummary: state.gpsTracking.geofence?.summary || null,
+      officialData: state.officialData.agronomia,
+    },
+  };
+}
+
+function buildAgronomyReportHtml(options = {}) {
+  const dashboard = buildExecutiveDashboardSnapshot();
+  const alerts = buildExecutiveAlertList();
+  const decision = state.agronomyOutputs.agroDecision;
+  const flow = state.agronomyOutputs.irrigationFlow;
+  const hydro = state.agronomyOutputs.hydroNetwork;
+  const gps = state.agronomyOutputs.gps;
+  const cropLabel = decision?.cropProfile?.label || "Sin cultivo";
+  return `<!doctype html>
+  <html lang="es">
+    <head>
+      <meta charset="utf-8">
+      <title>Informe agronomico ${escapeHtmlContent(getAgronomyAreaProfile().scopeLabel)}</title>
+      <style>
+        body { font-family: Arial, sans-serif; margin: 28px; color: #243129; }
+        h1, h2, h3 { margin: 0 0 12px; }
+        p { line-height: 1.55; }
+        .kicker { text-transform: uppercase; letter-spacing: 0.08em; font-size: 12px; color: #2f7f5f; margin-bottom: 8px; }
+        .grid { display: grid; gap: 14px; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); margin: 18px 0 26px; }
+        .card { border: 1px solid #d8ddd5; border-radius: 14px; padding: 16px; background: #fbfaf7; }
+        .metric { font-size: 28px; font-weight: 700; margin: 8px 0; }
+        .toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 18px; }
+        .toolbar button { border: 1px solid #d8ddd5; background: #fff; color: #243129; border-radius: 999px; padding: 10px 16px; font-weight: 700; cursor: pointer; }
+        @media print { .screen-only { display: none !important; } body { margin: 18px; } }
+      </style>
+    </head>
+    <body>
+      <p class="kicker">Agronomia y campo</p>
+      <h1>Informe ejecutivo agronomico</h1>
+      <p>Generado el ${escapeHtmlContent(new Date().toLocaleString("es-EC"))} sobre ${escapeHtmlContent(getAgronomyAreaProfile().scopeLabel)}.</p>
+      <div class="toolbar screen-only"><button type="button" onclick="window.print()">Imprimir o guardar como PDF</button></div>
+      <section>
+        <p class="kicker">Dashboard</p>
+        <h2>${escapeHtmlContent(dashboard.headline)}</h2>
+        <p>${escapeHtmlContent(dashboard.copy)}</p>
+        <div class="grid">
+          ${dashboard.items.map((item) => `
+            <article class="card">
+              <p class="kicker">${escapeHtmlContent(item.label)}</p>
+              <div class="metric">${escapeHtmlContent(item.value)}</div>
+              <p>${escapeHtmlContent(item.copy)}</p>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+      <section>
+        <p class="kicker">Cultivo y agua</p>
+        <h2>${escapeHtmlContent(cropLabel)}</h2>
+        <p>${escapeHtmlContent(decision?.headline || "Aun no existe una recomendacion agroclimatica activa.")}</p>
+        <div class="grid">
+          <article class="card">
+            <p class="kicker">Lote lider</p>
+            <div class="metric">${escapeHtmlContent(decision?.bestLot?.label || "Sin lote")}</div>
+            <p>${escapeHtmlContent(decision?.nextStep || "Ejecuta la aptitud por cultivo para completar el informe.")}</p>
+          </article>
+          <article class="card">
+            <p class="kicker">Caudal de riego</p>
+            <div class="metric">${escapeHtmlContent(flow?.balanceLabel || "Pendiente")}</div>
+            <p>${escapeHtmlContent(flow?.recommendation || "Corre el calculo de caudal para contrastar diseno, cultivo y aforo.")}</p>
+          </article>
+          <article class="card">
+            <p class="kicker">Soporte hidrico</p>
+            <div class="metric">${escapeHtmlContent(hydro?.summary?.waterLabel || "Sin red")}</div>
+            <p>${escapeHtmlContent(hydro?.summary?.headline || "La red hidrica oficial activa aparecera aqui.")}</p>
+          </article>
+          <article class="card">
+            <p class="kicker">Operacion GPS</p>
+            <div class="metric">${escapeHtmlContent(gps?.activeDevice?.label || "Sin equipo")}</div>
+            <p>${escapeHtmlContent(gps?.summary?.headline || "Activa GPS para monitoreo y corredor operativo.")}</p>
+          </article>
+        </div>
+      </section>
+      <section>
+        <p class="kicker">Alertas</p>
+        <h2>Seguimiento prioritario</h2>
+        <div class="grid">
+          ${(alerts.length ? alerts : [{ title: "Sin alertas criticas", copy: "No hay alertas activas en el frente agronomico." }]).map((alert) => `
+            <article class="card">
+              <p class="kicker">${escapeHtmlContent(alert.module || "General")}</p>
+              <h3>${escapeHtmlContent(alert.title)}</h3>
+              <p>${escapeHtmlContent(alert.copy)}</p>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+      ${options.autoPrint ? `<script>window.addEventListener("load",()=>window.setTimeout(()=>window.print(),260));</script>` : ""}
+    </body>
+  </html>`;
+}
+
+function buildExecutiveReportHtml(options = {}) {
+  return isTerritorialRoute()
+    ? buildTerritorialReportHtml(options)
+    : buildAgronomyReportHtml(options);
+}
+
+function openExecutiveReport(options = {}) {
+  if (isTerritorialRoute()) {
+    openTerritorialReport(options);
+    return;
+  }
+  const html = buildExecutiveReportHtml(options);
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = window.URL.createObjectURL(blob);
+  window.open(url, "_blank", "noopener");
+  window.setTimeout(() => window.URL.revokeObjectURL(url), 1200);
+}
+
+function downloadExecutiveReportHtml() {
+  const slug = isTerritorialRoute() ? getTerritorialExportSlug() : getCurrentAgronomyScopeLabel().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/gi, "_").toLowerCase();
+  downloadTerritorialFile(`${slug}_reporte_ejecutivo_${formatDateInput(new Date())}.html`, buildExecutiveReportHtml(), "text/html;charset=utf-8");
+}
+
+function downloadExecutiveReportJson() {
+  const slug = isTerritorialRoute() ? getTerritorialExportSlug() : getCurrentAgronomyScopeLabel().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/gi, "_").toLowerCase();
+  downloadTerritorialFile(`${slug}_reporte_ejecutivo_${formatDateInput(new Date())}.json`, JSON.stringify(buildExecutiveReportJson(), null, 2), "application/json;charset=utf-8");
+}
+
+function renderReportCenterCard() {
+  if (!dom.reportCenterBoard) {
+    return;
+  }
+  const hasData = isTerritorialRoute()
+    ? Boolean(state.planningData || state.landChangeData || state.hydrologyData || state.fodaCameData || state.aiGeoData?.mode === "territorial")
+    : Boolean(state.agronomyOutputs.agroSuitability || state.agronomyOutputs.hydroNetwork || state.agronomyOutputs.gps || state.agronomyOutputs.climate || state.agronomyOutputs.inamhi || state.agronomyOutputs.inamhiLive);
+  if (!hasData) {
+    resetVisualPanel(dom.reportCenterBoard, "El reporte se arma solo cuando ya existen resultados del frente activo.");
+    return;
+  }
+  const dashboard = buildExecutiveDashboardSnapshot();
+  setHtmlIfChanged(dom.reportCenterBoard, `
+    <article class="territorial-export-card">
+      <div class="territorial-export-head">
+        <div>
+          <p class="section-kicker">Listo para compartir</p>
+          <h4>${escapeHtmlContent(dashboard.headline)}</h4>
+        </div>
+        <span class="planning-pill emphasis">${isTerritorialRoute() ? "Territorial" : "Agronomico"}</span>
+      </div>
+      <p class="territorial-readout-copy">${escapeHtmlContent(dashboard.copy)}</p>
+      <div class="territorial-export-pills">
+        <span class="planning-pill emphasis">${buildExecutiveAlertList().length} alertas</span>
+        <span class="planning-pill emphasis">${state.platformData.projects.length} proyectos</span>
+        <span class="planning-pill emphasis">${state.platformData.decisionLog.length} registros</span>
+      </div>
+    </article>
+  `);
+  dom.reportCenterBoard.classList.remove("empty-state");
+  dom.reportCenterBoard.classList.add("has-data");
+}
+
+function buildProjectSnapshot() {
+  const route = state.entryRoute || "agronomia";
+  const name = (dom.projectNameInput?.value || "").trim() || `${isTerritorialRoute(route) ? "Territorio" : "Agronomia"} ${formatDateInput(new Date())}`;
+  const owner = (dom.projectOwnerInput?.value || state.userProfile.name || "Usuario publico").trim();
+  const note = (dom.projectNoteInput?.value || "").trim();
+  const summary = buildExecutiveDashboardSnapshot();
+  return {
+    id: state.platformData.activeProjectId || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `project-${Date.now()}`),
+    name,
+    owner,
+    note,
+    route,
+    savedAt: new Date().toISOString(),
+    roleId: state.userProfile.roleId,
+    scopeLabel: isTerritorialRoute(route) ? getTerritorialAreaProfile().scopeLabel : getCurrentAgronomyScopeLabel(),
+    dashboard: summary,
+    completedModules: {
+      planning: !!state.planningData,
+      mobility: !!state.mobilityData,
+      risk: !!state.riskData,
+      hydrology: !!state.hydrologyData,
+      landChange: !!state.landChangeData,
+      foda: !!state.fodaCameData,
+      aiGeo: !!state.aiGeoData,
+      hydro: !!state.agronomyOutputs.hydroNetwork,
+      irrigation: !!state.agronomyOutputs.irrigationFlow,
+      climate: !!state.agronomyOutputs.climate,
+      inamhi: !!state.agronomyOutputs.inamhi || !!state.agronomyOutputs.inamhiLive,
+      suitability: !!state.agronomyOutputs.agroSuitability,
+    },
+    settings: {
+      activeSensorId: state.activeSensorId,
+      agronomyAreaId: state.agronomyAreaId,
+      selectedIndex: state.selectedIndex,
+      territorialAreaId: state.territorialAreaId,
+      planningUseId: state.planningUseId,
+      planningImageryId: state.planningImageryId,
+      planningHorizonId: state.planningHorizonId,
+      planningGrowthScenarioId: state.planningGrowthScenarioId,
+      landChangePeriodId: state.landChangePeriodId,
+      landChangeScenarioId: state.landChangeScenarioId,
+      landChangeLensId: state.landChangeLensId,
+      hydrologyClimateId: state.hydrologyClimateId,
+      hydrologyHorizonId: state.hydrologyHorizonId,
+      hydrologyDemandId: state.hydrologyDemandId,
+      agroSuitabilityCropId: state.agroSuitabilityCropId,
+    },
+    currentPlot: state.currentPlot ? cloneFeature(state.currentPlot) : null,
+    currentPlotLabel: state.currentPlotLabel,
+  };
+}
+
+function normalizeProjectRecord(project = {}) {
+  return {
+    id: String(project.id || `project-${Date.now()}`),
+    name: String(project.name || "Proyecto"),
+    owner: String(project.owner || "Usuario publico"),
+    note: String(project.note || ""),
+    route: project.route === "planificacion" ? "planificacion" : "agronomia",
+    savedAt: project.savedAt || new Date().toISOString(),
+    roleId: roleCatalog[project.roleId] ? project.roleId : "tecnico",
+    scopeLabel: String(project.scopeLabel || ""),
+    dashboard: project.dashboard || null,
+    completedModules: project.completedModules || {},
+    settings: project.settings || {},
+    currentPlot: project.currentPlot || null,
+    currentPlotLabel: project.currentPlotLabel || "Sin seleccionar",
+  };
+}
+
+async function loadPlatformProjects(force = false) {
+  const localProjects = readLocalStorageJson(projectStorageKey, []);
+  state.platformData.projects = Array.isArray(localProjects) ? localProjects.map(normalizeProjectRecord) : [];
+  renderProjectRegistryCard();
+  const backend = await detectBackend(force || !state.backendAvailable);
+  if (!backend.available) {
+    return state.platformData.projects;
+  }
+  try {
+    const payload = await fetchJson(`${backend.url}${backendService.platformProjectsPath}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "list", route: state.entryRoute }),
+    });
+    if (Array.isArray(payload.projects)) {
+      state.platformData.projects = payload.projects.map(normalizeProjectRecord);
+      writeLocalStorageJson(projectStorageKey, state.platformData.projects);
+      renderProjectRegistryCard();
+    }
+  } catch (error) {
+    // El respaldo local sigue activo.
+  }
+  return state.platformData.projects;
+}
+
+function renderProjectRegistryCard() {
+  if (!dom.projectRegistrySummary || !dom.projectRegistryList) {
+    return;
+  }
+  const projects = state.platformData.projects || [];
+  if (!projects.length) {
+    resetMetricGrid(dom.projectRegistrySummary, "Aun no hay proyectos guardados para esta ruta.");
+    resetVisualPanel(dom.projectRegistryList, "Aqui aparecera la cartera de proyectos, estudios y corridas guardadas.");
+    return;
+  }
+
+  paintMetricGrid(dom.projectRegistrySummary, [
+    { label: "Proyectos", value: `${projects.length}`, copy: "Corridas guardadas y listas para reabrir." },
+    { label: "Ultima actualizacion", value: new Date(projects[0].savedAt).toLocaleDateString("es-EC"), copy: projects[0].name, highlight: true },
+    { label: "Ruta activa", value: isTerritorialRoute() ? "Territorio" : "Agronomia", copy: "La lista puede mezclar frentes guardados." },
+  ]);
+
+  dom.projectRegistryList.classList.remove("empty-state");
+  dom.projectRegistryList.classList.add("has-data");
+  setHtmlIfChanged(dom.projectRegistryList, projects.map((project) => `
+    <article class="territorial-sector-sheet tone-${project.route === "planificacion" ? "mid" : "low"}">
+      <div class="territorial-sector-head">
+        <div>
+          <p class="candidate-rank">${escapeHtmlContent(project.owner)} · ${escapeHtmlContent(project.route)}</p>
+          <h4>${escapeHtmlContent(project.name)}</h4>
+        </div>
+        <span class="planning-pill emphasis">${escapeHtmlContent(project.scopeLabel || "Sin ambito")}</span>
+      </div>
+      <p class="territorial-readout-copy">${escapeHtmlContent(project.note || project.dashboard?.copy || "Proyecto listo para retomarse.")}</p>
+      <div class="territorial-export-pills">
+        <span class="planning-pill emphasis">${new Date(project.savedAt).toLocaleDateString("es-EC")}</span>
+        <span class="planning-pill emphasis">${escapeHtmlContent(project.roleId)}</span>
+      </div>
+      <div class="action-row analysis-actions">
+        <button class="secondary-button" type="button" data-project-action="load" data-project-id="${escapeHtmlContent(project.id)}">Abrir</button>
+        <button class="ghost-button" type="button" data-project-action="export" data-project-id="${escapeHtmlContent(project.id)}">Exportar</button>
+        <button class="ghost-button" type="button" data-project-action="delete" data-project-id="${escapeHtmlContent(project.id)}" data-requires-role="tecnico">Eliminar</button>
+      </div>
+    </article>
+  `).join(""));
+  syncUserProfileUi(false);
+}
+
+async function persistProjectCollection(projects = state.platformData.projects) {
+  writeLocalStorageJson(projectStorageKey, projects);
+  const backend = await detectBackend(!state.backendAvailable);
+  if (!backend.available) {
+    return;
+  }
+  await fetchJson(`${backend.url}${backendService.platformProjectsPath}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "replace", projects }),
+  });
+}
+
+async function saveCurrentProject() {
+  if (!canAccessRole("tecnico")) {
+    setStatus("Este perfil solo puede consultar. Cambia a tecnico o administrador para guardar proyectos.");
+    return;
+  }
+  const snapshot = normalizeProjectRecord(buildProjectSnapshot());
+  const projects = [...(state.platformData.projects || []).filter((item) => item.id !== snapshot.id)];
+  projects.unshift(snapshot);
+  state.platformData.projects = projects.slice(0, 32);
+  state.platformData.activeProjectId = snapshot.id;
+  renderProjectRegistryCard();
+  await persistProjectCollection();
+  recordDecisionLogEntry({
+    title: `Proyecto guardado: ${snapshot.name}`,
+    copy: `${snapshot.scopeLabel || "Sin ambito"} · ${snapshot.owner}.`,
+    module: "Proyecto",
+    route: snapshot.route,
+  }, { persist: true, silentStatus: true });
+  setStatus(`Proyecto ${snapshot.name} guardado para ${snapshot.scopeLabel || "la ruta activa"}.`);
+}
+
+async function applyProjectSnapshot(project) {
+  const snapshot = normalizeProjectRecord(project);
+  state.platformData.activeProjectId = snapshot.id;
+  state.activeSensorId = snapshot.settings.activeSensorId || state.activeSensorId;
+  state.agronomyAreaId = snapshot.settings.agronomyAreaId || state.agronomyAreaId;
+  state.selectedIndex = snapshot.settings.selectedIndex || state.selectedIndex;
+  state.territorialAreaId = snapshot.settings.territorialAreaId || state.territorialAreaId;
+  state.planningUseId = snapshot.settings.planningUseId || state.planningUseId;
+  state.planningImageryId = snapshot.settings.planningImageryId || state.planningImageryId;
+  state.planningHorizonId = snapshot.settings.planningHorizonId || state.planningHorizonId;
+  state.planningGrowthScenarioId = snapshot.settings.planningGrowthScenarioId || state.planningGrowthScenarioId;
+  state.landChangePeriodId = snapshot.settings.landChangePeriodId || state.landChangePeriodId;
+  state.landChangeScenarioId = snapshot.settings.landChangeScenarioId || state.landChangeScenarioId;
+  state.landChangeLensId = snapshot.settings.landChangeLensId || state.landChangeLensId;
+  state.hydrologyClimateId = snapshot.settings.hydrologyClimateId || state.hydrologyClimateId;
+  state.hydrologyHorizonId = snapshot.settings.hydrologyHorizonId || state.hydrologyHorizonId;
+  state.hydrologyDemandId = snapshot.settings.hydrologyDemandId || state.hydrologyDemandId;
+  state.agroSuitabilityCropId = snapshot.settings.agroSuitabilityCropId || state.agroSuitabilityCropId;
+  if (snapshot.currentPlot?.geometry) {
+    state.currentPlot = cloneFeature(snapshot.currentPlot);
+    state.currentPlotLabel = snapshot.currentPlotLabel || "Lote recuperado";
+  } else {
+    state.currentPlot = null;
+    state.currentPlotLabel = "Sin seleccionar";
+  }
+  syncAgronomyAreaUi();
+  syncTerritorialAreaSelects();
+  ensureSelectedIndex();
+  applyEntryRoute(snapshot.route);
+  if (state.currentPlot) {
+    renderCurrentPlotLayer(true);
+  } else {
+    clearCurrentPlot(false);
+  }
+  await replayProjectSnapshot(snapshot);
+  renderProjectRegistryCard();
+  setStatus(`Proyecto ${snapshot.name} restaurado para ${snapshot.scopeLabel || "la ruta activa"}.`);
+}
+
+async function replayProjectSnapshot(snapshot) {
+  if (snapshot.route === "planificacion") {
+    if (snapshot.completedModules.planning) { await runPlanningAnalysis(true); }
+    if (snapshot.completedModules.mobility) { await runMobilityAnalysis(true); }
+    if (snapshot.completedModules.risk) { await runRiskAnalysis(true); }
+    if (snapshot.completedModules.hydrology) { await runHydrologyAnalysis(true); }
+    if (snapshot.completedModules.landChange) { await runLandChangeAnalysis(true); }
+    if (snapshot.completedModules.foda) { await runFodaCameAnalysis(true); }
+    if (snapshot.completedModules.aiGeo) { await runAiGeoAnalysis(true); }
+    return;
+  }
+  if (snapshot.completedModules.hydro) { await runHydroNetworkAnalysis(true); }
+  if (snapshot.completedModules.climate) { runClimateAnalysis(true); }
+  if (snapshot.completedModules.inamhi) { await runInamhiAnalysis(true); }
+  if (snapshot.completedModules.suitability) { await runAgroSuitabilityAnalysis(true); }
+  if (snapshot.completedModules.irrigation) { await runIrrigationFlowAnalysis(true); }
+  if (snapshot.completedModules.aiGeo) { await runAiGeoAnalysis(true); }
+}
+
+function handleProjectRegistryInteraction(event) {
+  const button = event.target.closest("[data-project-action][data-project-id]");
+  if (!button || !dom.projectRegistryList?.contains(button)) {
+    return;
+  }
+  const project = (state.platformData.projects || []).find((item) => item.id === button.dataset.projectId);
+  if (!project) {
+    return;
+  }
+  const action = button.dataset.projectAction;
+  if (action === "load") {
+    applyProjectSnapshot(project);
+    return;
+  }
+  if (action === "export") {
+    downloadTerritorialFile(`${project.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/gi, "_").toLowerCase()}_${formatDateInput(new Date(project.savedAt))}.json`, JSON.stringify(project, null, 2), "application/json;charset=utf-8");
+    return;
+  }
+  if (action === "delete") {
+    if (!canAccessRole("tecnico")) {
+      setStatus("Este perfil no puede eliminar proyectos guardados.");
+      return;
+    }
+    state.platformData.projects = (state.platformData.projects || []).filter((item) => item.id !== project.id);
+    if (state.platformData.activeProjectId === project.id) {
+      state.platformData.activeProjectId = null;
+    }
+    renderProjectRegistryCard();
+    persistProjectCollection().catch(() => {
+      // Ya quedo al menos en localStorage.
+    });
+    setStatus(`Proyecto ${project.name} eliminado de la cartera local.`);
+  }
+}
+
+function exportActiveProjectSnapshot() {
+  const activeProject = state.platformData.projects.find((item) => item.id === state.platformData.activeProjectId) || buildProjectSnapshot();
+  downloadTerritorialFile(`${activeProject.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/gi, "_").toLowerCase()}_${formatDateInput(new Date())}.json`, JSON.stringify(activeProject, null, 2), "application/json;charset=utf-8");
+}
+
+function normalizeDecisionLogEntry(entry = {}) {
+  return {
+    id: String(entry.id || `decision-${Date.now()}`),
+    title: String(entry.title || "Decision registrada"),
+    copy: String(entry.copy || "Sin detalle adicional."),
+    module: String(entry.module || "General"),
+    route: entry.route === "planificacion" ? "planificacion" : "agronomia",
+    timestamp: entry.timestamp || new Date().toISOString(),
+    focusAction: entry.focusAction || null,
+  };
+}
+
+async function loadDecisionLog(force = false) {
+  const localItems = readLocalStorageJson(decisionLogStorageKey, []);
+  state.platformData.decisionLog = Array.isArray(localItems) ? localItems.map(normalizeDecisionLogEntry) : [];
+  renderDecisionLogCard();
+  const backend = await detectBackend(force || !state.backendAvailable);
+  if (!backend.available) {
+    return state.platformData.decisionLog;
+  }
+  try {
+    const payload = await fetchJson(`${backend.url}${backendService.platformDecisionLogPath}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "list", limit: 60 }),
+    });
+    if (Array.isArray(payload.entries)) {
+      state.platformData.decisionLog = payload.entries.map(normalizeDecisionLogEntry);
+      writeLocalStorageJson(decisionLogStorageKey, state.platformData.decisionLog);
+      renderDecisionLogCard();
+    }
+  } catch (error) {
+    // El respaldo local sigue activo.
+  }
+  return state.platformData.decisionLog;
+}
+
+async function persistDecisionLog() {
+  writeLocalStorageJson(decisionLogStorageKey, state.platformData.decisionLog);
+  const backend = await detectBackend(!state.backendAvailable);
+  if (!backend.available) {
+    return;
+  }
+  await fetchJson(`${backend.url}${backendService.platformDecisionLogPath}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "replace", entries: state.platformData.decisionLog }),
+  });
+}
+
+function recordDecisionLogEntry(entry = {}, options = {}) {
+  const nextEntry = normalizeDecisionLogEntry({
+    ...entry,
+    id: entry.id || `decision-${Date.now()}-${Math.round(Math.random() * 1000)}`,
+    route: entry.route || state.entryRoute,
+    timestamp: entry.timestamp || new Date().toISOString(),
+  });
+  state.platformData.decisionLog = [nextEntry, ...(state.platformData.decisionLog || [])].slice(0, 80);
+  renderDecisionLogCard();
+  if (options.persist !== false) {
+    persistDecisionLog().catch(() => {
+      // El respaldo local ya quedo listo.
+    });
+  }
+  if (!options.silentStatus) {
+    setStatus(nextEntry.title);
+  }
+  return nextEntry;
+}
+
+function buildCurrentDecisionLogSeed() {
+  if (isTerritorialRoute()) {
+    const dashboard = buildExecutiveDashboardSnapshot();
+    return {
+      title: `Decision territorial sobre ${getTerritorialAreaProfile().scopeLabel}`,
+      copy: dashboard.headline,
+      module: "Territorio",
+      focusAction: "planning-ops",
+      route: "planificacion",
+    };
+  }
+  const dashboard = buildExecutiveDashboardSnapshot();
+  return {
+    title: `Decision agronomica sobre ${getCurrentAgronomyScopeLabel()}`,
+    copy: dashboard.headline,
+    module: "Agronomia",
+    focusAction: "agronomy-suitability",
+    route: "agronomia",
+  };
+}
+
+function addManualDecisionLogEntry() {
+  if (!canAccessRole("tecnico")) {
+    setStatus("Este perfil no puede registrar decisiones en la bitacora.");
+    return;
+  }
+  recordDecisionLogEntry(buildCurrentDecisionLogSeed(), { persist: true, silentStatus: true });
+  setStatus("Bitacora actualizada con la decision actual del frente de trabajo.");
+}
+
+function renderDecisionLogCard() {
+  if (!dom.decisionLogBoard) {
+    return;
+  }
+  const entries = state.platformData.decisionLog || [];
+  if (!entries.length) {
+    resetVisualPanel(dom.decisionLogBoard, "La bitacora se llenara con decisiones manuales y con hitos importantes de las corridas.");
+    return;
+  }
+  dom.decisionLogBoard.classList.remove("empty-state");
+  dom.decisionLogBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.decisionLogBoard, entries.slice(0, 8).map((entry) => `
+    <article class="territorial-alert tone-base">
+      <div class="territorial-alert-head">
+        <div>
+          <p class="candidate-rank">${escapeHtmlContent(entry.module)} · ${escapeHtmlContent(new Date(entry.timestamp).toLocaleString("es-EC"))}</p>
+          <h4>${escapeHtmlContent(entry.title)}</h4>
+        </div>
+        ${entry.focusAction ? `<button class="ghost-button" type="button" data-decision-action="${escapeHtmlContent(entry.focusAction)}">Abrir</button>` : ""}
+      </div>
+      <p class="territorial-readout-copy">${escapeHtmlContent(entry.copy)}</p>
+    </article>
+  `).join(""));
+}
+
+function handleDecisionLogInteraction(event) {
+  const button = event.target.closest("[data-decision-action]");
+  if (!button || !dom.decisionLogBoard?.contains(button)) {
+    return;
+  }
+  runWorkflowGuideAction(button.dataset.decisionAction);
+}
+
+function exportDecisionLog() {
+  downloadTerritorialFile(`bitacora_decisiones_${formatDateInput(new Date())}.json`, JSON.stringify(state.platformData.decisionLog || [], null, 2), "application/json;charset=utf-8");
+}
+
+function clearDecisionLog() {
+  if (!canAccessRole("administrador")) {
+    setStatus("Solo el perfil administrador puede vaciar la bitacora.");
+    return;
+  }
+  state.platformData.decisionLog = [];
+  renderDecisionLogCard();
+  persistDecisionLog().catch(() => {
+    // El respaldo local ya quedo limpio.
+  });
+  setStatus("Bitacora de decisiones vaciada.");
+}
+
+function buildLocalPlatformManifest() {
+  return {
+    version: APP_VERSION,
+    backendAvailable: state.backendAvailable,
+    baseUrl: state.backendUrl || null,
+    endpoints: [
+      { path: backendService.healthPath, method: "GET", use: "Estado del backend" },
+      { path: backendService.searchPath, method: "POST", use: "Busqueda STAC" },
+      { path: backendService.analysisPath, method: "POST", use: "Analisis de indices" },
+      { path: backendService.inamhiLivePath, method: "POST", use: "Meteorologia en vivo" },
+      { path: backendService.gpsLivePath, method: "POST", use: "GPS y telemetria" },
+      { path: backendService.gpsGeofenceEventsPath, method: "POST", use: "Persistencia de eventos de corredor" },
+      { path: backendService.gpsGeofenceLogPath, method: "POST", use: "Consulta de bitacora GPS" },
+      { path: backendService.platformProjectsPath, method: "POST", use: "Proyectos guardados" },
+      { path: backendService.platformDecisionLogPath, method: "POST", use: "Bitacora de decisiones" },
+      { path: backendService.platformUsersPath, method: "POST", use: "Perfil de usuario local" },
+      { path: backendService.platformManifestPath, method: "GET", use: "Manifest de integracion" },
+      { path: "/api/planning/3d/manifest", method: "GET", use: "Disponibilidad 3D" },
+    ],
+  };
+}
+
+async function loadPlatformManifest(force = false) {
+  const localManifest = buildLocalPlatformManifest();
+  state.platformData.manifest = localManifest;
+  renderApiCenterCard();
+  const backend = await detectBackend(force || !state.backendAvailable);
+  if (!backend.available) {
+    return localManifest;
+  }
+  try {
+    const payload = await fetchJson(`${backend.url}${backendService.platformManifestPath}`);
+    state.platformData.manifest = payload;
+    renderApiCenterCard();
+    return payload;
+  } catch (error) {
+    renderApiCenterCard();
+    return localManifest;
+  }
+}
+
+function renderApiCenterCard() {
+  if (!dom.apiCenterBoard) {
+    return;
+  }
+  const manifest = state.platformData.manifest || buildLocalPlatformManifest();
+  dom.apiCenterBoard.classList.remove("empty-state");
+  dom.apiCenterBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.apiCenterBoard, `
+    <article class="territorial-export-card">
+      <div class="territorial-export-head">
+        <div>
+          <p class="section-kicker">Estado de integracion</p>
+          <h4>${manifest.backendAvailable ? "Backend disponible" : "Manifest local disponible"}</h4>
+        </div>
+        <span class="planning-pill emphasis">${(manifest.endpoints || []).length} endpoints</span>
+      </div>
+      <p class="territorial-readout-copy">
+        ${manifest.baseUrl ? `Base activa: ${escapeHtmlContent(manifest.baseUrl)}` : "Sin backend local: se mantiene el manifest de referencia para integraciones."}
+      </p>
+      <div class="decision-list compact">
+        ${(manifest.endpoints || []).slice(0, 8).map((endpoint) => `
+          <article>
+            <strong>${escapeHtmlContent(endpoint.method)} ${escapeHtmlContent(endpoint.path)}</strong>
+            <p>${escapeHtmlContent(endpoint.use || "")}</p>
+          </article>
+        `).join("")}
+      </div>
+    </article>
+  `);
+}
+
+function downloadApiManifest() {
+  downloadTerritorialFile(`geoportal_api_manifest_${APP_VERSION}.json`, JSON.stringify(state.platformData.manifest || buildLocalPlatformManifest(), null, 2), "application/json;charset=utf-8");
+}
+
+function renderAccessRolesCard() {
+  if (!dom.accessRolesBoard) {
+    return;
+  }
+  const role = getRoleProfile();
+  const items = [
+    { label: "Reportes", value: canAccessRole("cliente") ? "Disponible" : "Restringido", tone: canAccessRole("cliente") ? "low" : "high", copy: "Informes ejecutivos y semaforos para compartir." },
+    { label: "Proyectos", value: canAccessRole("tecnico") ? "Edicion habilitada" : "Solo lectura", tone: canAccessRole("tecnico") ? "low" : "mid", copy: "Guardar, recuperar o exportar snapshots de trabajo." },
+    { label: "Bitacora", value: canAccessRole("tecnico") ? "Registro activo" : "Consulta", tone: canAccessRole("tecnico") ? "low" : "mid", copy: "Trazabilidad de decisiones y acciones tomadas." },
+    { label: "API", value: canAccessRole("tecnico") ? "Manifest visible" : "Consulta limitada", tone: canAccessRole("tecnico") ? "low" : "mid", copy: "Integracion con otros sistemas y consumo de endpoints." },
+  ];
+  dom.accessRolesBoard.classList.remove("empty-state");
+  dom.accessRolesBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.accessRolesBoard, `
+    <article class="decision-hero tone-${role.id === "administrador" ? "low" : role.id === "tecnico" ? "mid" : "base"}">
+      <div>
+        <p class="section-kicker">Perfil activo</p>
+        <h4>${escapeHtmlContent(role.label)} · ${escapeHtmlContent(state.userProfile.name)}</h4>
+        <p>${escapeHtmlContent(role.summary)}</p>
+      </div>
+      <div class="decision-score-stack">
+        <strong>${role.permissions.length}</strong>
+        <span>permisos clave</span>
+      </div>
+    </article>
+    <div class="decision-grid">
+      ${items.map((item) => `
+        <article class="decision-card tone-${item.tone}">
+          <p class="candidate-rank">${escapeHtmlContent(item.label)}</p>
+          <h5>${escapeHtmlContent(item.value)}</h5>
+          <p>${escapeHtmlContent(item.copy)}</p>
+        </article>
+      `).join("")}
+    </div>
+  `);
+}
+
+function renderProjectRegistryCard() {
+  if (!dom.projectRegistrySummary || !dom.projectRegistryList) {
+    return;
+  }
+  const projects = state.platformData.projects || [];
+  if (!projects.length) {
+    resetMetricGrid(dom.projectRegistrySummary, "Aun no hay proyectos guardados para esta ruta.");
+    resetVisualPanel(dom.projectRegistryList, "Aqui aparecera la cartera de proyectos, estudios y corridas guardadas.");
+    return;
+  }
+
+  paintMetricGrid(dom.projectRegistrySummary, [
+    { label: "Proyectos", value: `${projects.length}`, copy: "Corridas guardadas y listas para reabrir." },
+    { label: "Ultima actualizacion", value: new Date(projects[0].savedAt).toLocaleDateString("es-EC"), copy: projects[0].name, highlight: true },
+    { label: "Ruta activa", value: isTerritorialRoute() ? "Territorio" : "Agronomia", copy: "La lista puede mezclar frentes guardados." },
+  ]);
+
+  dom.projectRegistryList.classList.remove("empty-state");
+  dom.projectRegistryList.classList.add("has-data");
+  setHtmlIfChanged(dom.projectRegistryList, projects.map((project) => `
+    <article class="territorial-sector-sheet tone-${project.route === "planificacion" ? "mid" : "low"}">
+      <div class="territorial-sector-head">
+        <div>
+          <p class="candidate-rank">${escapeHtmlContent(project.owner)} | ${escapeHtmlContent(project.route)}</p>
+          <h4>${escapeHtmlContent(project.name)}</h4>
+        </div>
+        <span class="planning-pill emphasis">${escapeHtmlContent(project.scopeLabel || "Sin ambito")}</span>
+      </div>
+      <p class="territorial-readout-copy">${escapeHtmlContent(project.note || project.dashboard?.copy || "Proyecto listo para retomarse.")}</p>
+      <div class="territorial-export-pills">
+        <span class="planning-pill emphasis">${new Date(project.savedAt).toLocaleDateString("es-EC")}</span>
+        <span class="planning-pill emphasis">${escapeHtmlContent(getRoleProfile(project.roleId).label)}</span>
+      </div>
+      <div class="action-row analysis-actions">
+        <button class="secondary-button" type="button" data-project-action="load" data-project-id="${escapeHtmlContent(project.id)}">Abrir</button>
+        <button class="ghost-button" type="button" data-project-action="export" data-project-id="${escapeHtmlContent(project.id)}">Exportar</button>
+        <button class="ghost-button" type="button" data-project-action="delete" data-project-id="${escapeHtmlContent(project.id)}" data-requires-role="tecnico">Eliminar</button>
+      </div>
+    </article>
+  `).join(""));
+  syncUserProfileUi(false);
+}
+
+function renderDecisionLogCard() {
+  if (!dom.decisionLogBoard) {
+    return;
+  }
+  const entries = state.platformData.decisionLog || [];
+  if (!entries.length) {
+    resetVisualPanel(dom.decisionLogBoard, "La bitacora se llenara con decisiones manuales y con hitos importantes de las corridas.");
+    return;
+  }
+  dom.decisionLogBoard.classList.remove("empty-state");
+  dom.decisionLogBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.decisionLogBoard, entries.slice(0, 8).map((entry) => `
+    <article class="territorial-alert tone-base">
+      <div class="territorial-alert-head">
+        <div>
+          <p class="candidate-rank">${escapeHtmlContent(entry.module)} | ${escapeHtmlContent(new Date(entry.timestamp).toLocaleString("es-EC"))}</p>
+          <h4>${escapeHtmlContent(entry.title)}</h4>
+        </div>
+        ${entry.focusAction ? `<button class="ghost-button" type="button" data-decision-action="${escapeHtmlContent(entry.focusAction)}">Abrir</button>` : ""}
+      </div>
+      <p class="territorial-readout-copy">${escapeHtmlContent(entry.copy)}</p>
+    </article>
+  `).join(""));
+}
+
+function renderAccessRolesCard() {
+  if (!dom.accessRolesBoard) {
+    return;
+  }
+  const role = getRoleProfile();
+  const users = Array.isArray(state.platformData.users) && state.platformData.users.length
+    ? state.platformData.users
+    : [{ name: state.userProfile.name, roleId: state.userProfile.roleId, savedAt: new Date().toISOString() }];
+  const latestUser = users[0];
+  const items = [
+    { label: "Reportes", value: canAccessRole("cliente") ? "Disponible" : "Restringido", tone: canAccessRole("cliente") ? "low" : "high", copy: "Informes ejecutivos y semaforos para compartir." },
+    { label: "Proyectos", value: canAccessRole("tecnico") ? "Edicion habilitada" : "Solo lectura", tone: canAccessRole("tecnico") ? "low" : "mid", copy: "Guardar, recuperar o exportar snapshots de trabajo." },
+    { label: "Bitacora", value: canAccessRole("tecnico") ? "Registro activo" : "Consulta", tone: canAccessRole("tecnico") ? "low" : "mid", copy: "Trazabilidad de decisiones y acciones tomadas." },
+    { label: "API", value: canAccessRole("tecnico") ? "Manifest visible" : "Consulta limitada", tone: canAccessRole("tecnico") ? "low" : "mid", copy: "Integracion con otros sistemas y consumo de endpoints." },
+    { label: "Usuarios", value: `${users.length}`, tone: users.length > 1 ? "low" : "base", copy: `Ultimo ajuste ${new Date(latestUser.savedAt).toLocaleDateString("es-EC")}.` },
+  ];
+  dom.accessRolesBoard.classList.remove("empty-state");
+  dom.accessRolesBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.accessRolesBoard, `
+    <article class="decision-hero tone-${role.id === "administrador" ? "low" : role.id === "tecnico" ? "mid" : "base"}">
+      <div>
+        <p class="section-kicker">Perfil activo</p>
+        <h4>${escapeHtmlContent(role.label)} | ${escapeHtmlContent(state.userProfile.name)}</h4>
+        <p>${escapeHtmlContent(role.summary)}</p>
+      </div>
+      <div class="decision-score-stack">
+        <strong>${role.permissions.length}</strong>
+        <span>permisos clave</span>
+      </div>
+    </article>
+    <div class="territorial-export-pills">
+      ${users.slice(0, 6).map((user) => `
+        <span class="planning-pill emphasis">${escapeHtmlContent(user.name)} - ${escapeHtmlContent(getRoleProfile(user.roleId).label)}</span>
+      `).join("")}
+    </div>
+    <div class="decision-grid">
+      ${items.map((item) => `
+        <article class="decision-card tone-${item.tone}">
+          <p class="candidate-rank">${escapeHtmlContent(item.label)}</p>
+          <h5>${escapeHtmlContent(item.value)}</h5>
+          <p>${escapeHtmlContent(item.copy)}</p>
+        </article>
+      `).join("")}
+    </div>
+  `);
+}
+
+function renderProductSuite() {
+  renderExecutiveDashboardCard();
+  renderReportCenterCard();
+  renderScenarioLabCard();
+  renderTimeSeriesCard();
+  renderAlertCenterCard();
+  renderProjectRegistryCard();
+  renderDecisionLogCard();
+  renderAccessRolesCard();
+  renderApiCenterCard();
+}
+
 function computePlanningGrowthScore(program, horizon, scenario, nearestUrban, nearestRoad, insideUrban) {
   const urbanDistance = nearestUrban.distanceKm;
   const growthRate = Number(nearestUrban.feature?.properties?.growthRate) || 0.62;
@@ -31086,6 +32727,7 @@ function updateMapSummary(force = false) {
   }
 
   renderWorkflowGuide();
+  renderProductSuite();
 
   if (isTerritorialRoute()) {
     const planning = state.planningData;
