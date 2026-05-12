@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260512-2";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260512-3";
 
 const layerCatalog = [
   {
@@ -147,8 +147,8 @@ const routeDefaultLayerIds = {
 const officialSourceCatalog = {
   agronomia: {
     title: "Fuentes oficiales para estructura hidrica",
-    copy: "Integra IGM para leer microcuencas, subcuencas, cuerpos de agua, estaciones pluviometricas y zonas hidrologicas oficiales.",
-    layerIds: ["microcuencasIGM", "subcuencasIGM", "cuencasIGM", "cuerposAguaIGM", "estacionesPluvioIGM", "zonasHidrologicasIGM"],
+    copy: "Integra IGM para microcuencas, subcuencas, cuerpos de agua, estaciones pluviometricas y zonas hidrologicas. Suma corredores de riego MAG / IEDG como apoyo lineal visible.",
+    layerIds: ["microcuencasIGM", "subcuencasIGM", "cuencasIGM", "cuerposAguaIGM", "estacionesPluvioIGM", "zonasHidrologicasIGM", "riegoEstatal"],
     sources: [
       {
         id: "igmClimaHidrologia",
@@ -173,6 +173,14 @@ const officialSourceCatalog = {
         year: "portal oficial",
         link: "http://www.geoportaligm.gob.ec/proyecto_nacional/",
         use: "Soporte oficial para aptitud, relieve, drenaje y lectura integral del territorio.",
+      },
+      {
+        id: "magRiego",
+        label: "MAG riego estatal",
+        theme: "Corredores de riego",
+        year: "2012",
+        link: "https://iedg.presidencia.gob.ec/servicios/descargas/",
+        use: "Apoyo lineal para contrastar riego parcelario mientras se integra una capa oficial mas detallada de cauces.",
       },
       {
         id: "magOrto",
@@ -242,7 +250,8 @@ const officialSourceCatalog = {
 };
 
 const officialHydroLayerIds = ["microcuencasIGM", "subcuencasIGM", "cuencasIGM", "cuerposAguaIGM", "estacionesPluvioIGM", "zonasHidrologicasIGM"];
-const officialHydroVisibleLayerIds = ["microcuencasIGM", "subcuencasIGM", "cuerposAguaIGM", "estacionesPluvioIGM"];
+const officialHydroVisibleLayerIds = ["microcuencasIGM", "subcuencasIGM", "cuerposAguaIGM", "estacionesPluvioIGM", "zonasHidrologicasIGM"];
+const hydroSupportLayerIds = ["riegoEstatal", "suelosIGM", "coberturaMAATE"];
 const officialHydroFileCatalog = {
   mejia: {
     territoryId: "mejia",
@@ -305,6 +314,13 @@ const officialHydroLayerMeta = {
     source: "IGM clima e hidrologia",
     protectionM: 24,
     irrigationValue: 66,
+  },
+  riegoEstatal: {
+    kind: "riegoOficial",
+    label: "Riego estatal",
+    source: "MAG / IEDG",
+    protectionM: 18,
+    irrigationValue: 76,
   },
 };
 
@@ -4252,7 +4268,7 @@ function resetAgronomySelectionState() {
   resetMetricGrid(dom.climateResults, "Ejecuta el modulo para cargar indicadores climaticos.");
   resetMetricGrid(dom.inamhiResults, "Ejecuta el modulo para cargar estaciones INAMHI de referencia.");
   resetMetricGrid(dom.inamhiLiveResults, "Ejecuta la lectura en vivo para ver temperatura, humedad, lluvia y viento de la red activa.");
-  resetMetricGrid(dom.hydroNetworkResults, "Ejecuta el modulo para leer microcuencas, cuerpos de agua, estaciones y prioridad hidrica del ambito.");
+  resetMetricGrid(dom.hydroNetworkResults, "Ejecuta el modulo para leer estructura hidrica oficial, riego de apoyo y prioridad hidrica del ambito.");
   resetMetricGrid(dom.irrigationFlowResults, "Calcula capacidad, caudal de diseno y aforo real del riego.");
   resetMetricGrid(dom.agroSuitabilityResults, "Ejecuta el modulo para ver aptitud por cultivo, lotes compatibles y alertas de manejo.");
   resetMetricGrid(dom.gpsResults, "Activa el modulo para seguir un dispositivo terrestre o aereo, un feed local o un recorrido demo sobre el mapa.");
@@ -4261,7 +4277,7 @@ function resetAgronomySelectionState() {
   resetVisualPanel(dom.climateVisual, "Aqui apareceran la lectura visual de lluvia, humedad, temperatura y estres termico.");
   resetVisualPanel(dom.inamhiVisual, "Aqui apareceran la lectura visual de lluvia historica, ventana humeda/seca y cobertura temporal de las estaciones.");
   resetVisualPanel(dom.inamhiLiveVisual, "Aqui apareceran la lectura operativa en tiempo real, la ultima actualizacion y el estado de las estaciones activas.");
-  resetVisualPanel(dom.hydroNetworkVisual, "Aqui apareceran microcuencas, cuerpos de agua y estaciones oficiales con su prioridad hidrica sobre el ambito.");
+  resetVisualPanel(dom.hydroNetworkVisual, "Aqui aparecera la estructura hidrica oficial, el riego de apoyo y las estaciones con su prioridad hidrica sobre el ambito.");
   resetVisualPanel(dom.irrigationFlowVisual, "Aqui aparecera la comparacion entre sistema, cultivo y caudal medido.");
   resetVisualPanel(dom.agroSuitabilityVisual, "Aqui apareceran el ranking de lotes, la ventana termica-hidrica y la recomendacion agroclimatica.");
   resetVisualPanel(dom.gpsVisual, "Aqui apareceran la trayectoria, velocidad, altura, precision y estado operativo del seguimiento GPS.");
@@ -5344,7 +5360,7 @@ const workflowGuideCatalog = {
     steps: [
       { id: "scene", title: "Elegir zona y escena", pending: "Selecciona ambito e imagen satelital." },
       { id: "diagnosis", title: "Diagnosticar el lote", pending: "Usa lote demo o dibuja un poligono." },
-      { id: "water", title: "Leer agua productiva", pending: "Activa microcuencas, cuerpos de agua y estaciones oficiales del ambito." },
+      { id: "water", title: "Leer agua productiva", pending: "Activa estructura hidrica oficial, riego de apoyo y estaciones del ambito." },
       { id: "climate", title: "Cruzar clima y cultivo", pending: "Activa clima, INAMHI o aptitud agroclimatica." },
       { id: "operations", title: "Validar operacion", pending: "Activa GPS, dron o feed operativo." },
     ],
@@ -6293,8 +6309,8 @@ function bindUI() {
     return runModuleAction(dom.runInamhiLiveBtn, "Leyendo en vivo...", () => runInamhiLiveAnalysis());
   });
   dom.runHydroNetworkBtn?.addEventListener("click", () => {
-    setModulePendingState(dom.hydroNetworkResults, "Leyendo microcuencas, cuerpos de agua y estaciones...", [
-      { target: dom.hydroNetworkVisual, message: "Preparando estructura hidrologica oficial, prioridad y franjas de proteccion..." },
+    setModulePendingState(dom.hydroNetworkResults, "Leyendo estructura hidrica y riego de apoyo...", [
+      { target: dom.hydroNetworkVisual, message: "Preparando estructura hidrologica oficial, riego de apoyo, prioridad y franjas de proteccion..." },
     ]);
     const task = runModuleAction(dom.runHydroNetworkBtn, "Leyendo red...", () => runHydroNetworkAnalysis());
     window.setTimeout(() => {
@@ -8428,7 +8444,7 @@ function renderOfficialDataModule(route = state.entryRoute || "agronomia") {
         {
           label: "Fuentes oficiales",
           value: `${summary.sourceCount}`,
-          copy: "MAATE, MAG e IGM activadas para la ruta agricola.",
+          copy: "IGM y MAG / IEDG activadas para la ruta hidrica.",
         },
         {
           label: "Capas activas",
@@ -8438,7 +8454,7 @@ function renderOfficialDataModule(route = state.entryRoute || "agronomia") {
         {
           label: "Estructura hidrica",
           value: `${summary.totalFeatures}`,
-          copy: "Microcuencas, cuerpos de agua, estaciones y soportes oficiales visibles.",
+          copy: "Microcuencas, cuerpos de agua, estaciones, zonas y riego de apoyo visibles.",
           highlight: true,
         },
         {
@@ -13396,6 +13412,8 @@ function getHydroDistanceLabel(distanceKm = 0) {
 function getHydroPriorityLabel(distanceKm = 0, irrigationValue = 50, kind = "") {
   const kindBoost = kind === "cuerpoAgua"
     ? 18
+    : kind === "riegoOficial"
+      ? 11
     : kind === "microcuenca"
       ? 12
       : kind === "subcuenca"
@@ -13571,10 +13589,12 @@ function buildHydroNetworkAnalysis() {
   const officialContext = buildOfficialHydroContext(context);
   const groups = [
     { id: "cuerposAguaIGM", kind: "cuerpoAgua", label: "Cuerpos de agua", features: officialContext.waterBodyFeatures },
+    { id: "riegoEstatal", kind: "riegoOficial", label: "Riego estatal", features: officialContext.irrigationSupportFeatures },
     { id: "microcuencasIGM", kind: "microcuenca", label: "Microcuencas", features: officialContext.microcuencaFeatures },
     { id: "subcuencasIGM", kind: "subcuenca", label: "Subcuencas", features: officialContext.subcuencaFeatures },
     { id: "cuencasIGM", kind: "cuenca", label: "Cuencas", features: officialContext.cuencaFeatures },
     { id: "estacionesPluvioIGM", kind: "estacionPluvio", label: "Estaciones pluvio", features: officialContext.stationFeatures },
+    { id: "zonasHidrologicasIGM", kind: "zonaHidrologica", label: "Zonas hidrologicas", features: officialContext.zoneFeatures },
   ];
 
   const items = groups.flatMap((group) => group.features.map((feature, index) => {
@@ -13673,6 +13693,7 @@ function buildHydroNetworkAnalysis() {
     subcuencaCount: ranked.filter((item) => item.kind === "subcuenca").length,
     cuencaCount: ranked.filter((item) => item.kind === "cuenca").length,
     waterBodyCount: ranked.filter((item) => item.kind === "cuerpoAgua").length,
+    irrigationSupportCount: ranked.filter((item) => item.kind === "riegoOficial").length,
     stationCount: ranked.filter((item) => item.kind === "estacionPluvio").length,
     zoneCount: officialContext.zoneFeatures.length,
     totalLengthKm: Number(totalLengthKm.toFixed(1)),
@@ -13683,6 +13704,7 @@ function buildHydroNetworkAnalysis() {
     priorityCount: ranked.filter((item) => item.priorityLabel === "Prioridad alta").length,
     nearestName: nearest?.label || "Sin referencia",
     waterBodyAreaHa: officialContext.waterBodyAreaHa,
+    irrigationSupportLengthKm: officialContext.irrigationSupportLengthKm,
     meanPpaMm: officialContext.meanPpaMm,
     officialSourceCount: officialContext.sourceLabels.length,
     sourceBlend: officialContext.sourceBlend,
@@ -13734,24 +13756,31 @@ function renderHydroNetworkVisual(result = null) {
     return;
   }
   if (!result?.ranked?.length) {
-    resetVisualPanel(dom.hydroNetworkVisual, "Aqui veras microcuencas, cuerpos de agua y estaciones oficiales priorizadas para el ambito.");
+    resetVisualPanel(dom.hydroNetworkVisual, "Aqui veras estructura hidrica oficial, riego de apoyo y estaciones priorizadas para el ambito.");
     return;
   }
 
   const maxStrength = Math.max(...result.focusItems.map((item) => item.irrigationValue || 0), 1);
+  const lineSupportLabel = result.summary.irrigationSupportCount
+    ? `${formatIrrigationNumber(result.summary.irrigationSupportLengthKm, result.summary.irrigationSupportLengthKm >= 10 ? 1 : 2)} km riego apoyo`
+    : "Sin linea oficial de riego";
+  const exactAxisNote = result.summary.irrigationSupportCount
+    ? "Los corredores lineales visibles vienen del apoyo MAG / IEDG y se cruzan con la estructura hidrica oficial cargada."
+    : "El paquete oficial local no trae ejes lineales exactos de rios, acequias o quebradas; por eso esta vista prioriza microcuencas, cuerpos de agua y estaciones.";
   dom.hydroNetworkVisual.classList.remove("empty-state");
   dom.hydroNetworkVisual.classList.add("has-data");
   setHtmlIfChanged(dom.hydroNetworkVisual, `
     <div class="agronomy-visual-head">
       <div>
         <p class="section-kicker">Hidrologia operativa con base oficial</p>
-        <h4>Microcuencas, cuerpos de agua y estaciones oficiales del ambito</h4>
+        <h4>Estructura hidrica oficial y riego de apoyo del ambito</h4>
       </div>
       <span class="agronomy-visual-pill tone-${result.summary.priorityCount ? "mid" : "low"}">${result.summary.waterLabel}</span>
     </div>
     <div class="agronomy-tag-row">
       <span class="agronomy-visual-pill">${result.context.scopeLabel}</span>
       <span class="agronomy-visual-pill">${result.summary.waterBodyAreaHa.toFixed(1)} ha agua</span>
+      <span class="agronomy-visual-pill">${lineSupportLabel}</span>
       <span class="agronomy-visual-pill">${result.summary.meanPpaMm ? `${formatIrrigationNumber(result.summary.meanPpaMm, 0)} mm/anio` : "Sin lluvia media"}</span>
       <span class="agronomy-visual-pill">${result.summary.stationCount} estaciones</span>
       <span class="agronomy-visual-pill">${result.summary.priorityCount} prioridades altas</span>
@@ -13777,7 +13806,7 @@ function renderHydroNetworkVisual(result = null) {
         </article>
       `).join("")}
     </div>
-    <p class="agronomy-visual-copy">${result.summary.dominantKindLabel} dominante. Referencia mas cercana: ${result.summary.nearestName} a ${formatDistanceKm(result.summary.nearestDistanceKm)}. Agua superficial oficial: ${formatIrrigationNumber(result.summary.waterBodyAreaHa, 1)} ha con soporte ${result.summary.sourceBlend}.</p>
+    <p class="agronomy-visual-copy">${result.summary.dominantKindLabel} dominante. Referencia mas cercana: ${result.summary.nearestName} a ${formatDistanceKm(result.summary.nearestDistanceKm)}. Agua superficial oficial: ${formatIrrigationNumber(result.summary.waterBodyAreaHa, 1)} ha con soporte ${result.summary.sourceBlend}. ${exactAxisNote}</p>
   `);
 }
 
@@ -13821,8 +13850,10 @@ function renderHydroNetworkOverlay(result = state.agronomyOutputs.hydroNetwork) 
               ? 1.3
               : kind === "cuerpoAgua"
                 ? 1.4
-                : 1.1,
-        opacity: kind === "cuerpoAgua" ? 0.96 : 0.88,
+                : kind === "riegoOficial"
+                  ? 2.3
+                  : 1.1,
+        opacity: kind === "cuerpoAgua" ? 0.96 : kind === "riegoOficial" ? 0.94 : 0.88,
         fillColor: palette.fill,
         fillOpacity: kind === "cuerpoAgua"
           ? 0.26
@@ -13832,8 +13863,18 @@ function renderHydroNetworkOverlay(result = state.agronomyOutputs.hydroNetwork) 
               ? 0.08
               : kind === "cuenca"
                 ? 0.05
-                : 0.06,
-        dashArray: kind === "cuenca" ? "11 7" : kind === "subcuenca" ? "8 6" : kind === "zonaHidrologica" ? "4 6" : null,
+                : kind === "riegoOficial"
+                  ? 0.02
+                  : 0.06,
+        dashArray: kind === "cuenca"
+          ? "11 7"
+          : kind === "subcuenca"
+            ? "8 6"
+            : kind === "zonaHidrologica"
+              ? "4 6"
+              : kind === "riegoOficial"
+                ? "12 6"
+                : null,
       };
     },
     pointToLayer: (feature, latlng) => {
@@ -13872,7 +13913,7 @@ function ensureHydroBaseLayersVisible() {
     return;
   }
 
-  const hydroLayerIds = [...officialHydroVisibleLayerIds, "suelosIGM", "coberturaMAATE"];
+  const hydroLayerIds = [...officialHydroVisibleLayerIds, ...hydroSupportLayerIds];
   setLayerSelectionForIds(hydroLayerIds, true, "agronomia");
 
   let changed = false;
@@ -13913,9 +13954,11 @@ async function runHydroNetworkAnalysis(silent = false) {
         copy: "Respuesta local del drenaje y aporte del ambito.",
       },
       {
-        label: "Subcuencas",
-        value: `${result.summary.subcuencaCount}`,
-        copy: "Estructura intermedia para gestion y proteccion.",
+        label: "Riego de apoyo",
+        value: `${result.summary.irrigationSupportCount}`,
+        copy: result.summary.irrigationSupportCount
+          ? `${formatIrrigationNumber(result.summary.irrigationSupportLengthKm, result.summary.irrigationSupportLengthKm >= 10 ? 1 : 2)} km MAG / IEDG visibles.`
+          : "Sin apoyo lineal de riego en el paquete local del ambito.",
       },
       {
         label: "Cuerpos de agua",
@@ -13935,7 +13978,7 @@ async function runHydroNetworkAnalysis(silent = false) {
         copy: `${result.summary.priorityCount} prioridades altas con suelo ${result.summary.soilAptitudeLabel.toLowerCase()} y cobertura ${result.summary.coverLabel.toLowerCase()}.`,
       },
       {
-        label: "Zona hidrologica",
+        label: "Zonas hidrologicas",
         value: `${result.summary.zoneCount}`,
         copy: `Contexto hidrologico oficial con ${result.summary.dominantSoilLabel.toLowerCase()}.`,
       },
@@ -13956,7 +13999,7 @@ async function runHydroNetworkAnalysis(silent = false) {
     state.officialData.agronomia = buildOfficialDataSummary("agronomia");
     renderOfficialDataModule("agronomia");
     if (!silent) {
-      setStatus(`Red hidrica oficial lista para ${result.context.scopeLabel}: ${result.summary.totalCount} elementos, ${formatIrrigationNumber(result.summary.waterBodyAreaHa, 1)} ha de agua superficial y soporte ${result.summary.sourceBlend}.`);
+      setStatus(`Estructura hidrica oficial lista para ${result.context.scopeLabel}: ${result.summary.totalCount} elementos, ${formatIrrigationNumber(result.summary.waterBodyAreaHa, 1)} ha de agua superficial y ${formatIrrigationNumber(result.summary.irrigationSupportLengthKm, result.summary.irrigationSupportLengthKm >= 10 ? 1 : 2)} km de riego de apoyo.`);
       focusHydroNetworkStudy();
     }
     return result;
@@ -13993,8 +14036,8 @@ function focusHydroNetworkStudy() {
 function clearHydroNetworkAnalysis() {
   state.agronomyOutputs.hydroNetwork = null;
   clearHydroNetworkOverlay();
-  resetMetricGrid(dom.hydroNetworkResults, "Ejecuta el modulo para leer microcuencas, cuerpos de agua, estaciones y prioridad hidrica del ambito.");
-  resetVisualPanel(dom.hydroNetworkVisual, "Aqui veras microcuencas, cuerpos de agua y estaciones oficiales priorizadas para el ambito.");
+  resetMetricGrid(dom.hydroNetworkResults, "Ejecuta el modulo para leer estructura hidrica oficial, riego de apoyo y prioridad hidrica del ambito.");
+  resetVisualPanel(dom.hydroNetworkVisual, "Aqui veras estructura hidrica oficial, riego de apoyo y estaciones priorizadas para el ambito.");
   renderWorkflowGuide();
   updateMapSummary();
   setStatus(`Red hidrica limpiada para ${getCurrentAgronomyScopeLabel()}.`);
@@ -32876,7 +32919,7 @@ function updateMapSummary(force = false) {
     setTextIfChanged(
       dom.mapSubtitle,
       agronomyOfficial
-        ? `${agronomyOfficial.activeLayerCount} capas activas, ${agronomyOfficial.lineCount} trazos de agua/riego y ${agronomyOfficial.areaCount} superficies oficiales visibles.`
+        ? `${agronomyOfficial.activeLayerCount} capas activas, ${agronomyOfficial.areaCount} superficies hidricas, ${agronomyOfficial.pointCount} estaciones y ${agronomyOfficial.lineCount} apoyos lineales visibles.`
         : `Abre Imagenes o usa un lote demo sobre ${getAgronomyAreaProfile().scopeLabel}.`
     );
     return;
