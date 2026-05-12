@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260511-3";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260512-1";
 
 const layerCatalog = [
   {
@@ -3516,12 +3516,14 @@ const state = {
     hydroNetwork: null,
     irrigationFlow: null,
     agroSuitability: null,
+    agroDecision: null,
     gps: null,
   },
   officialData: {
     agronomia: null,
     planificacion: null,
   },
+  territorialOpsData: null,
   gpsTracking: {
     mode: "idle",
     watchId: null,
@@ -3537,6 +3539,10 @@ const state = {
     activeDeviceId: null,
     devices: [],
     track: [],
+    trackSamples: [],
+    replayIndex: 0,
+    replayPlaying: false,
+    replayTimerId: null,
     accuracyM: null,
     lastDeviceSnapshot: null,
     geofence: null,
@@ -3580,6 +3586,7 @@ const mapState = {
   hydroNetworkBufferLayer: null,
   agroSuitabilityLayer: null,
   agroSuitabilityHotspotLayer: null,
+  gpsReplayLayer: null,
   planningLayer: null,
   planningCandidatesLayer: null,
   planningCoverageLayer: null,
@@ -5420,12 +5427,14 @@ function cacheDom() {
   dom.focusAgroSuitabilityBtn = document.querySelector("#focusAgroSuitabilityBtn");
   dom.clearAgroSuitabilityBtn = document.querySelector("#clearAgroSuitabilityBtn");
   dom.agroSuitabilityCropSelect = document.querySelector("#agroSuitabilityCropSelect");
+  dom.agroSuitabilityBoard = document.querySelector("#agroSuitabilityBoard");
   dom.startGpsBrowserBtn = document.querySelector("#startGpsBrowserBtn");
   dom.startGpsFeedBtn = document.querySelector("#startGpsFeedBtn");
   dom.openGpsBridgeBtn = document.querySelector("#openGpsBridgeBtn");
   dom.openSatlocBridgeBtn = document.querySelector("#openSatlocBridgeBtn");
   dom.startGpsDemoBtn = document.querySelector("#startGpsDemoBtn");
   dom.stopGpsTrackingBtn = document.querySelector("#stopGpsTrackingBtn");
+  dom.gpsReplayPanel = document.querySelector("#gpsReplayPanel");
   dom.gpsGeofenceFileInput = document.querySelector("#gpsGeofenceFileInput");
   dom.openGpsGeofenceBtn = document.querySelector("#openGpsGeofenceBtn");
   dom.focusGpsGeofenceBtn = document.querySelector("#focusGpsGeofenceBtn");
@@ -5447,6 +5456,12 @@ function cacheDom() {
   dom.planningQuickWaterBtn = document.querySelector("#planningQuickWaterBtn");
   dom.planningQuickStrategyBtn = document.querySelector("#planningQuickStrategyBtn");
   dom.planningQuick3dBtn = document.querySelector("#planningQuick3dBtn");
+  dom.territorialOpsCard = document.querySelector("#territorialOpsCard");
+  dom.runTerritorialOpsBtn = document.querySelector("#runTerritorialOpsBtn");
+  dom.focusTerritorialOpsBtn = document.querySelector("#focusTerritorialOpsBtn");
+  dom.clearTerritorialOpsBtn = document.querySelector("#clearTerritorialOpsBtn");
+  dom.territorialOpsResults = document.querySelector("#territorialOpsResults");
+  dom.territorialOpsBoard = document.querySelector("#territorialOpsBoard");
   dom.runPlanningBtn = document.querySelector("#runPlanningBtn");
   dom.focusPlanningBtn = document.querySelector("#focusPlanningBtn");
   dom.clearPlanningBtn = document.querySelector("#clearPlanningBtn");
@@ -5791,6 +5806,7 @@ function bindUI() {
   dom.territorialSectorSheets?.addEventListener("click", handleTerritorialSectorSheetsInteraction);
   dom.territorialExportPanel?.addEventListener("click", handleTerritorialExportInteraction);
   dom.territorialAlertsPanel?.addEventListener("click", handleTerritorialAlertInteraction);
+  dom.territorialOpsBoard?.addEventListener("click", handleTerritorialOpsInteraction);
   dom.wizardModes?.addEventListener("click", handleWizardModeInteraction);
   dom.wizardSteps?.addEventListener("click", handleWizardStepInteraction);
   dom.workflowGuideActions?.addEventListener("click", handleWorkflowGuideAction);
@@ -6038,6 +6054,8 @@ function bindUI() {
     ]);
     return runModuleAction(dom.startGpsFeedBtn, "Leyendo feed...", () => startGpsFeedTracking());
   });
+  dom.gpsReplayPanel?.addEventListener("click", handleGpsReplayAction);
+  dom.gpsReplayPanel?.addEventListener("input", handleGpsReplayAction);
   dom.openGpsBridgeBtn?.addEventListener("click", () => openGpsBridgePage());
   dom.openSatlocBridgeBtn?.addEventListener("click", () => openSatlocBridgePage());
   dom.planningQuickAptitudeBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-aptitude"));
@@ -6146,6 +6164,14 @@ function bindUI() {
   });
   dom.focusRiskBtn?.addEventListener("click", focusRiskStudy);
   dom.clearRiskBtn?.addEventListener("click", clearRiskAnalysis);
+  dom.runTerritorialOpsBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.territorialOpsResults, "Consolidando aptitud, movilidad, riesgo, agua y oficiales en una sola lectura operativa...", [
+      { target: dom.territorialOpsBoard, message: "Armando el tablero territorial con semaforo, prioridades y acciones inmediatas..." },
+    ]);
+    return runModuleAction(dom.runTerritorialOpsBtn, "Construyendo tablero...", () => runTerritorialOpsAnalysis());
+  });
+  dom.focusTerritorialOpsBtn?.addEventListener("click", focusTerritorialOpsStudy);
+  dom.clearTerritorialOpsBtn?.addEventListener("click", clearTerritorialOpsAnalysis);
   dom.runFieldEvidenceBtn?.addEventListener("click", () => {
     setModulePendingState(dom.fieldEvidenceResults, "Reuniendo evidencia de campo, estaciones y memoria territorial...", [
       { target: dom.fieldEvidenceInventory, message: "Resumiendo catalogo maestro, fuentes y objetos geograficos disponibles..." },
@@ -6623,6 +6649,36 @@ function handleTerritorialAlertInteraction(event) {
   }
   if (button.dataset.aiGeoFocusId) {
     focusAiGeoFeature(button.dataset.aiGeoFocusId);
+  }
+}
+
+function handleTerritorialOpsInteraction(event) {
+  const button = event.target.closest("[data-candidate-id], [data-hydrology-sector-id], [data-mobility-sector-id], [data-risk-sector-id], [data-territorial-ops-action]");
+  if (!button || !dom.territorialOpsBoard?.contains(button)) {
+    return;
+  }
+
+  if (button.dataset.candidateId) {
+    focusPlanningCandidate(button.dataset.candidateId);
+    return;
+  }
+  if (button.dataset.mobilitySectorId) {
+    focusMobilitySector(button.dataset.mobilitySectorId);
+    return;
+  }
+  if (button.dataset.riskSectorId) {
+    focusRiskSector(button.dataset.riskSectorId);
+    return;
+  }
+  if (button.dataset.hydrologySectorId) {
+    focusHydrologySector(button.dataset.hydrologySectorId);
+    return;
+  }
+  if (button.dataset.territorialOpsAction === "service-gap") {
+    focusModuleCard(document.getElementById("planningResultsCard"));
+    if (mapState.planningCoverageLayer?.getBounds?.()?.isValid?.()) {
+      mapState.map?.fitBounds(mapState.planningCoverageLayer.getBounds(), { padding: [42, 42], maxZoom: 13 });
+    }
   }
 }
 
@@ -7144,10 +7200,11 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
   if (isPlanningRoute(route)) {
     return {
       kicker: "Copiloto inteligente",
-      title: "Elige una decision y el sistema acomoda el trabajo",
-      copy: "Suelo, oficiales, riesgo, agua, movilidad, estrategia y 3D sin navegar una lista interminable.",
+      title: "Abre un frente territorial y el sistema acomoda el tablero",
+      copy: "Operaciones, suelo, oficiales, riesgo, agua, movilidad, estrategia y 3D con menos ruido y mas lectura accionable.",
       actions: [
-        { id: "planning-aptitude", label: "Aptitud", copy: "Suelo y candidatos", tone: "primary" },
+        { id: "planning-ops", label: "Operaciones", copy: "Movilidad, riesgo y servicios", tone: "primary" },
+        { id: "planning-aptitude", label: "Aptitud", copy: "Suelo y candidatos", tone: "neutral" },
         { id: "planning-risk", label: "Riesgo", copy: "Restriccion y contencion", tone: "neutral" },
         { id: "planning-mobility", label: "Movilidad", copy: "Cobertura y tiempos", tone: "neutral" },
         { id: "planning-official", label: "Oficiales", copy: "Vialidad y servicios", tone: "neutral" },
@@ -7198,7 +7255,7 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
   }
 
   const planningFilters = {
-    core: new Set(["planningCommandCard", "planningCard", "planningResultsCard"]),
+    core: new Set(["planningCommandCard", "territorialOpsCard", "planningCard", "planningResultsCard"]),
     official: new Set(["officialDataCard"]),
     risk: new Set(["riskCard", "hydrologyCard", "territorialReadoutCard"]),
     growth: new Set(["mobilityCard", "landChangeCard", "territorialScenarioCard"]),
@@ -7236,6 +7293,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
       workflowGuideCard: true,
       officialDataCard: true,
       planningCommandCard: false,
+      territorialOpsCard: false,
       planningCard: true,
       planningResultsCard: true,
       territorialScenarioCard: true,
@@ -7778,6 +7836,12 @@ function runWorkflowGuideAction(actionId) {
       openSidebarWorkingPanel("modulos");
       focusGpsModuleCard();
       setStatus("Modulo GPS listo para seguimiento de celular, dron, avioneta o feed externo.");
+      return;
+    case "planning-ops":
+      openSidebarWorkingPanel("modulos");
+      dom.runTerritorialOpsBtn?.click();
+      focusModuleCard(dom.territorialOpsCard);
+      setStatus("Centro territorial listo para leer movilidad, riesgo, servicios y prioridad operativa en una sola vista.");
       return;
     case "planning-aptitude":
       openSidebarWorkingPanel("modulos");
@@ -13954,6 +14018,126 @@ function renderAgroSuitabilityVisual(result = null) {
   `);
 }
 
+function buildAgroDecisionSnapshot(result = state.agronomyOutputs.agroSuitability) {
+  if (!result?.lots?.length) {
+    return null;
+  }
+
+  const bestLot = result.lots[0];
+  const hydro = state.agronomyOutputs.hydroNetwork;
+  const flow = state.agronomyOutputs.irrigationFlow;
+  const climate = state.agronomyOutputs.climate || state.agronomyOutputs.inamhiLive || state.agronomyOutputs.inamhi || null;
+  const official = state.officialData.agronomia;
+  const irrigationBalanceLabel = flow?.balanceLabel || (bestLot.waterDistanceKm <= 0.35 ? "Soporte cercano" : bestLot.waterDistanceKm <= 0.8 ? "Soporte medio" : "Soporte condicionado");
+  const irrigationTone = /alto|equilibr|cercano|optimo/i.test(irrigationBalanceLabel) || bestLot.score >= 78
+    ? "low"
+    : /medio|ajust|vigil/i.test(irrigationBalanceLabel) || bestLot.score >= 58
+      ? "mid"
+      : "high";
+  const heatRisk = Number(climate?.maxTemp || bestLot.maxTempC || 0) >= Number(result.cropProfile.maxTempC || 0) + 2 ? "Presion termica" : "Ventana estable";
+  const moistureRisk = Number(climate?.soilMoisture || bestLot.moisture || 0) < Number(result.cropProfile.minMoisturePct || 0) ? "Humedad corta" : "Humedad funcional";
+  const headline = bestLot.score >= 78
+    ? `${result.cropProfile.label} ya tiene una ventana clara para priorizar ${bestLot.label}.`
+    : bestLot.score >= 58
+      ? `${result.cropProfile.label} es viable con ajustes de agua y manejo en ${bestLot.label}.`
+      : `${result.cropProfile.label} no conviene como primera apuesta sin corregir agua, pendiente o microclima.`;
+  const actions = [
+    {
+      label: "Prioridad de siembra",
+      tone: bestLot.tone,
+      value: bestLot.fitLabel,
+      copy: `${bestLot.label} lidera con ${bestLot.score}/100 y ${result.summary.compatibleLots} lotes utiles en total.`,
+    },
+    {
+      label: "Agua y riego",
+      tone: irrigationTone,
+      value: irrigationBalanceLabel,
+      copy: flow
+        ? `${flow.headline || "Caudal y abastecimiento contrastados"} sobre ${flow.hydroAnalysis?.summary?.waterLabel || "la red activa"}.`
+        : `${formatDistanceKm(bestLot.waterDistanceKm)} a la referencia hidrica mas cercana con soporte ${hydro?.summary?.waterLabel || "base"}.`,
+    },
+    {
+      label: "Clima",
+      tone: /Presion|corta/.test(`${heatRisk} ${moistureRisk}`) ? "mid" : "low",
+      value: `${bestLot.meanTempC.toFixed(1)} C`,
+      copy: `${heatRisk} y ${moistureRisk} con lluvia media ${result.summary.meanRainfallMm.toFixed(1)} mm.`,
+    },
+    {
+      label: "Soporte oficial",
+      tone: official?.activeLayerCount ? "low" : "mid",
+      value: official?.activeLayerCount ? `${official.activeLayerCount} capas` : "Base local",
+      copy: official?.activeLayerCount
+        ? `${official.sourceCount} fuentes oficiales activas para riego, suelo, agua y contexto productivo.`
+        : "Todavia puedes reforzar la corrida activando fuentes oficiales del ambito.",
+    },
+  ];
+
+  const recommendationLines = [
+    bestLot.recommendation,
+    flow?.recommendation || null,
+    bestLot.slope > result.cropProfile.maxSlopePct
+      ? "Conviene manejar pendiente antes de escalar la implantacion."
+      : "La pendiente se mantiene en rango operativo para el cultivo objetivo.",
+  ].filter(Boolean);
+
+  return {
+    headline,
+    bestLot,
+    cropProfile: result.cropProfile,
+    irrigationTone,
+    irrigationBalanceLabel,
+    actions,
+    recommendationLines,
+    nextStep: bestLot.score >= 78
+      ? "Pasa a agua y GPS para programar riego, seguimiento y verificación de campo."
+      : "Pasa a agua, clima y lote para corregir antes de sembrar o cambiar de cultivo.",
+  };
+}
+
+function renderAgroSuitabilityBoard(snapshot = state.agronomyOutputs.agroDecision || buildAgroDecisionSnapshot()) {
+  if (!dom.agroSuitabilityBoard) {
+    return;
+  }
+  if (!snapshot?.bestLot) {
+    resetVisualPanel(dom.agroSuitabilityBoard, "Aqui apareceran la recomendacion operativa, el manejo sugerido y la prioridad del cultivo objetivo.");
+    return;
+  }
+
+  dom.agroSuitabilityBoard.classList.remove("empty-state");
+  dom.agroSuitabilityBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.agroSuitabilityBoard, `
+    <article class="decision-hero tone-${snapshot.bestLot.tone}">
+      <div>
+        <p class="section-kicker">Recomendacion por cultivo</p>
+        <h4>${snapshot.headline}</h4>
+        <p>${snapshot.nextStep}</p>
+      </div>
+      <div class="decision-score-stack">
+        <strong>${snapshot.bestLot.score}/100</strong>
+        <span>${snapshot.bestLot.label}</span>
+      </div>
+    </article>
+    <div class="decision-grid">
+      ${snapshot.actions.map((item) => `
+        <article class="decision-card tone-${item.tone}">
+          <p class="candidate-rank">${item.label}</p>
+          <h5>${item.value}</h5>
+          <p>${item.copy}</p>
+        </article>
+      `).join("")}
+    </div>
+    <div class="decision-chip-row">
+      <span class="planning-pill emphasis">${snapshot.cropProfile.label}</span>
+      <span class="planning-pill emphasis">${snapshot.bestLot.fitLabel}</span>
+      <span class="planning-pill emphasis">${formatDistanceKm(snapshot.bestLot.waterDistanceKm)} al agua</span>
+      <span class="planning-pill emphasis">${snapshot.bestLot.moisture}% humedad</span>
+    </div>
+    <div class="decision-list">
+      ${snapshot.recommendationLines.map((item) => `<article><strong>Accion</strong><p>${item}</p></article>`).join("")}
+    </div>
+  `);
+}
+
 function renderAgroSuitabilityOverlay(result = state.agronomyOutputs.agroSuitability) {
   clearAgroSuitabilityOverlay();
   if (!mapState.map || !result?.surface?.features?.length || state.entryRoute !== "agronomia") {
@@ -14012,6 +14196,7 @@ async function runAgroSuitabilityAnalysis(silent = false) {
   try {
     const result = buildAgroSuitabilityAnalysis();
     state.agronomyOutputs.agroSuitability = result;
+    state.agronomyOutputs.agroDecision = buildAgroDecisionSnapshot(result);
     state.agronomyFocus = "agroSuitability";
     const cards = [
       {
@@ -14048,6 +14233,7 @@ async function runAgroSuitabilityAnalysis(silent = false) {
     ];
     paintMetricGrid(dom.agroSuitabilityResults, cards);
     renderAgroSuitabilityVisual(result);
+    renderAgroSuitabilityBoard(state.agronomyOutputs.agroDecision);
     renderAgroSuitabilityOverlay(result);
     renderWorkflowGuide();
     updateMapSummary();
@@ -14058,9 +14244,11 @@ async function runAgroSuitabilityAnalysis(silent = false) {
   } catch (error) {
     console.warn("Fallo la aptitud agroclimatica.", error);
     state.agronomyOutputs.agroSuitability = null;
+    state.agronomyOutputs.agroDecision = null;
     clearAgroSuitabilityOverlay();
     resetMetricGrid(dom.agroSuitabilityResults, "No se pudo calcular la aptitud por cultivo para el ambito actual.");
     resetVisualPanel(dom.agroSuitabilityVisual, "No se pudo construir el ranking de lotes y la recomendacion agroclimatica.");
+    resetVisualPanel(dom.agroSuitabilityBoard, "No se pudo construir la recomendacion operativa de cultivo en esta corrida.");
     renderWorkflowGuide();
     updateMapSummary();
     if (!silent) {
@@ -14087,9 +14275,11 @@ function focusAgroSuitabilityStudy() {
 
 function clearAgroSuitabilityAnalysis() {
   state.agronomyOutputs.agroSuitability = null;
+  state.agronomyOutputs.agroDecision = null;
   clearAgroSuitabilityOverlay();
   resetMetricGrid(dom.agroSuitabilityResults, "Ejecuta el modulo para ver aptitud por cultivo, lotes compatibles y alertas de manejo.");
   resetVisualPanel(dom.agroSuitabilityVisual, "Aqui apareceran el ranking de lotes, la ventana termica-hidrica y la recomendacion agroclimatica.");
+  resetVisualPanel(dom.agroSuitabilityBoard, "Aqui apareceran la recomendacion operativa, el manejo sugerido y la prioridad del cultivo objetivo.");
   renderWorkflowGuide();
   updateMapSummary();
   setStatus(`Aptitud agroclimatica limpiada para ${getCurrentAgronomyScopeLabel()}.`);
@@ -14326,6 +14516,177 @@ function appendGpsTrackPoint(device) {
   }
 
   state.gpsTracking.track = track.slice(-180);
+
+  const samples = Array.isArray(state.gpsTracking.trackSamples) ? [...state.gpsTracking.trackSamples] : [];
+  samples.push({
+    id: device.id,
+    label: device.label,
+    deviceType: device.deviceType,
+    lon: Number(device.lon),
+    lat: Number(device.lat),
+    speedKmh: Number(device.speedKmh || 0),
+    headingDeg: Number(device.headingDeg || 0),
+    accuracyM: Number(device.accuracyM || 0),
+    altitudeM: Number.isFinite(Number(device.altitudeM)) ? Number(device.altitudeM) : null,
+    batteryPct: Number(device.batteryPct || 0),
+    flightStatus: device.flightStatus || device.statusLabel || null,
+    timestamp: device.timestamp || new Date().toISOString(),
+  });
+  state.gpsTracking.trackSamples = samples.slice(-360);
+  state.gpsTracking.replayIndex = Math.max(0, state.gpsTracking.trackSamples.length - 1);
+}
+
+function getGpsReplaySamples() {
+  return Array.isArray(state.gpsTracking.trackSamples) ? state.gpsTracking.trackSamples : [];
+}
+
+function getGpsReplayActiveSample() {
+  const samples = getGpsReplaySamples();
+  if (!samples.length) {
+    return null;
+  }
+  const index = clamp(Number(state.gpsTracking.replayIndex || 0), 0, samples.length - 1);
+  return samples[index] || null;
+}
+
+function stopGpsReplay() {
+  if (state.gpsTracking.replayTimerId != null) {
+    window.clearInterval(state.gpsTracking.replayTimerId);
+  }
+  state.gpsTracking.replayTimerId = null;
+  state.gpsTracking.replayPlaying = false;
+}
+
+function setGpsReplayIndex(index = 0) {
+  const samples = getGpsReplaySamples();
+  if (!samples.length) {
+    state.gpsTracking.replayIndex = 0;
+    renderGpsReplayPanel();
+    renderGpsTrackingOverlay(state.agronomyOutputs.gps);
+    return;
+  }
+  state.gpsTracking.replayIndex = clamp(Number(index) || 0, 0, samples.length - 1);
+  renderGpsReplayPanel();
+  renderGpsTrackingOverlay(state.agronomyOutputs.gps);
+}
+
+function startGpsReplay() {
+  const samples = getGpsReplaySamples();
+  if (samples.length < 2) {
+    renderGpsReplayPanel();
+    return;
+  }
+  stopGpsReplay();
+  state.gpsTracking.replayPlaying = true;
+  state.gpsTracking.replayTimerId = window.setInterval(() => {
+    const nextIndex = Number(state.gpsTracking.replayIndex || 0) + 1;
+    if (nextIndex >= samples.length) {
+      stopGpsReplay();
+      setGpsReplayIndex(samples.length - 1);
+      return;
+    }
+    state.gpsTracking.replayIndex = nextIndex;
+    renderGpsReplayPanel();
+    renderGpsTrackingOverlay(state.agronomyOutputs.gps);
+  }, 850);
+  renderGpsReplayPanel();
+}
+
+function pauseGpsReplay() {
+  stopGpsReplay();
+  renderGpsReplayPanel();
+}
+
+function resetGpsReplay() {
+  stopGpsReplay();
+  state.gpsTracking.replayIndex = 0;
+  renderGpsReplayPanel();
+  renderGpsTrackingOverlay(state.agronomyOutputs.gps);
+}
+
+function handleGpsReplayAction(event) {
+  const actionButton = event.target.closest("[data-gps-replay-action]");
+  if (actionButton && dom.gpsReplayPanel?.contains(actionButton)) {
+    const action = actionButton.dataset.gpsReplayAction;
+    if (action === "play") {
+      startGpsReplay();
+    } else if (action === "pause") {
+      pauseGpsReplay();
+    } else if (action === "reset") {
+      resetGpsReplay();
+    }
+    return;
+  }
+
+  const slider = event.target.closest?.("[data-gps-replay-slider]");
+  if (slider && dom.gpsReplayPanel?.contains(slider)) {
+    stopGpsReplay();
+    setGpsReplayIndex(Number(slider.value || 0));
+  }
+}
+
+function renderGpsReplayPanel(result = state.agronomyOutputs.gps) {
+  if (!dom.gpsReplayPanel) {
+    return;
+  }
+  const samples = getGpsReplaySamples();
+  if (!result?.activeDevice || samples.length < 2) {
+    resetVisualPanel(dom.gpsReplayPanel, "Aqui podras reproducir el recorrido, revisar hitos y detectar desvios en secuencia.");
+    return;
+  }
+
+  const activeSample = getGpsReplayActiveSample() || samples[samples.length - 1];
+  const replayIndex = clamp(Number(state.gpsTracking.replayIndex || 0), 0, samples.length - 1);
+  const activeFenceState = state.gpsTracking.geofence && result.activeDevice
+    ? state.gpsTracking.geofenceDeviceStates?.[result.activeDevice.id] || null
+    : null;
+  const recentEvents = (state.gpsTracking.geofenceEvents || []).slice(0, 3);
+
+  dom.gpsReplayPanel.classList.remove("empty-state");
+  dom.gpsReplayPanel.classList.add("has-data");
+  setHtmlIfChanged(dom.gpsReplayPanel, `
+    <div class="gps-replay-head">
+      <div>
+        <p class="section-kicker">Replay operativo</p>
+        <h4>Reproduce el recorrido y revisa desvíos</h4>
+      </div>
+      <span class="agronomy-visual-pill tone-${state.gpsTracking.replayPlaying ? "low" : "mid"}">${samples.length} puntos</span>
+    </div>
+    <div class="gps-replay-controls">
+      <button class="secondary-button" type="button" data-gps-replay-action="play">${state.gpsTracking.replayPlaying ? "Reproduciendo..." : "Reproducir"}</button>
+      <button class="ghost-button" type="button" data-gps-replay-action="pause">Pausar</button>
+      <button class="ghost-button" type="button" data-gps-replay-action="reset">Reiniciar</button>
+    </div>
+    <label class="gps-replay-range">
+      <span>Punto ${replayIndex + 1} de ${samples.length}</span>
+      <input type="range" min="0" max="${samples.length - 1}" step="1" value="${replayIndex}" data-gps-replay-slider>
+    </label>
+    <div class="decision-grid compact">
+      <article class="decision-card tone-base">
+        <p class="candidate-rank">Dispositivo</p>
+        <h5>${activeSample.label || result.activeDevice.label}</h5>
+        <p>${activeSample.deviceType || result.activeDevice.deviceType || "GPS"} · ${Number(activeSample.speedKmh || 0).toFixed(1)} km/h</p>
+      </article>
+      <article class="decision-card tone-${activeFenceState?.inside === false ? "high" : "low"}">
+        <p class="candidate-rank">Corredor</p>
+        <h5>${activeFenceState ? (activeFenceState.inside ? "Dentro" : "Fuera") : "Sin corredor"}</h5>
+        <p>${activeFenceState ? `Ultima separacion ${formatGpsDistanceMeters(activeFenceState.outsideByM || activeFenceState.distanceM)}` : "Carga un KML o GeoJSON para contrastar la ruta."}</p>
+      </article>
+      <article class="decision-card tone-base">
+        <p class="candidate-rank">Marca temporal</p>
+        <h5>${formatGpsSignalAge(activeSample.timestamp)}</h5>
+        <p>${activeSample.timestamp ? new Date(activeSample.timestamp).toLocaleString("es-EC") : "Sin fecha"}</p>
+      </article>
+    </div>
+    <div class="decision-list compact">
+      ${recentEvents.length ? recentEvents.map((eventItem) => `
+        <article>
+          <strong>${eventItem.kind === "warning" ? "Alerta" : "Recuperacion"}</strong>
+          <p>${eventItem.title}. ${eventItem.copy}</p>
+        </article>
+      `).join("") : `<article><strong>Sin alertas recientes</strong><p>La bitacora de corredor aparecera aqui cuando el GPS salga o vuelva a la ruta vigilada.</p></article>`}
+    </div>
+  `);
 }
 
 function getGpsGeofenceToleranceM() {
@@ -15146,6 +15507,7 @@ function applyGpsTrackingSnapshot(payload, options = {}) {
     refreshGpsGeofenceState([]);
     resetMetricGrid(dom.gpsResults, "No hay dispositivos GPS visibles para el ambito activo.");
     resetVisualPanel(dom.gpsVisual, "No hay dispositivos GPS disponibles para construir la lectura operativa.");
+    resetVisualPanel(dom.gpsReplayPanel, "No hay suficientes posiciones para reproducir un recorrido operativo.");
     renderGpsTrackingOverlay(null);
     updateMapSummary();
     return null;
@@ -15158,6 +15520,8 @@ function applyGpsTrackingSnapshot(payload, options = {}) {
 
   if (options.resetTrack) {
     state.gpsTracking.track = [];
+    state.gpsTracking.trackSamples = [];
+    state.gpsTracking.replayIndex = 0;
   }
   if (!options.skipTrack) {
     appendGpsTrackPoint(activeDevice);
@@ -15196,6 +15560,7 @@ function applyGpsTrackingSnapshot(payload, options = {}) {
   state.agronomyOutputs.gps = result;
   renderGpsTrackingResults(result);
   renderGpsTrackingVisual(result);
+  renderGpsReplayPanel(result);
   renderGpsTrackingOverlay(result);
   renderWorkflowGuide();
   updateMapSummary();
@@ -15620,7 +15985,7 @@ function renderGpsTrackingOverlay(result = state.agronomyOutputs.gps) {
 
   renderGpsGeofenceOverlay();
 
-  ["gpsDeviceLayer", "gpsTrackLayer", "gpsAccuracyLayer", "gpsHomeLayer"].forEach((layerName) => {
+  ["gpsDeviceLayer", "gpsTrackLayer", "gpsAccuracyLayer", "gpsHomeLayer", "gpsReplayLayer"].forEach((layerName) => {
     if (mapState[layerName]) {
       mapState.map.removeLayer(mapState[layerName]);
       mapState[layerName] = null;
@@ -15712,8 +16077,34 @@ function renderGpsTrackingOverlay(result = state.agronomyOutputs.gps) {
     }).addTo(mapState.map);
   }
 
+  const replaySample = getGpsReplayActiveSample();
+  if (replaySample && Number.isFinite(Number(replaySample.lat)) && Number.isFinite(Number(replaySample.lon))) {
+    mapState.gpsReplayLayer = L.geoJSON(pointFeature("Replay GPS", [Number(replaySample.lon), Number(replaySample.lat)], {
+      ...replaySample,
+    }), {
+      pointToLayer(feature, latlng) {
+        return L.circleMarker(latlng, {
+          radius: 10,
+          color: "#fff8ef",
+          weight: 2,
+          fillColor: "#8c5c3c",
+          fillOpacity: 0.96,
+        });
+      },
+      onEachFeature(feature, layer) {
+        layer.bindPopup(`
+          <strong>${feature.properties.label || "Replay"}</strong><br>
+          Punto reproducido<br>
+          Velocidad: ${Number(feature.properties.speedKmh || 0).toFixed(1)} km/h<br>
+          Senal: ${formatGpsSignalAge(feature.properties.timestamp)}
+        `);
+      },
+    }).addTo(mapState.map);
+  }
+
   mapState.gpsDeviceLayer?.bringToFront?.();
   mapState.gpsFenceAlertLayer?.bringToFront?.();
+  mapState.gpsReplayLayer?.bringToFront?.();
 }
 
 function isGpsTrackingActive() {
@@ -15783,6 +16174,7 @@ function stopGpsTracking(options = {}) {
   if (state.gpsTracking.demoTimerId != null) {
     window.clearInterval(state.gpsTracking.demoTimerId);
   }
+  stopGpsReplay();
   if (state.gpsTracking.relayClient?.end) {
     try {
       state.gpsTracking.relayClient.end(true);
@@ -15813,6 +16205,10 @@ function stopGpsTracking(options = {}) {
     activeDeviceId: null,
     devices: [],
     track: [],
+    trackSamples: [],
+    replayIndex: 0,
+    replayPlaying: false,
+    replayTimerId: null,
     accuracyM: null,
     lastDeviceSnapshot: null,
     geofence: preservedGeofence,
@@ -15831,6 +16227,7 @@ function stopGpsTracking(options = {}) {
   if (!settings.preservePanels) {
     resetMetricGrid(dom.gpsResults, "Activa el modulo para seguir un dispositivo terrestre o aereo, un feed local o un recorrido demo sobre el mapa.");
     resetVisualPanel(dom.gpsVisual, "Aqui apareceran la trayectoria, velocidad, altura, precision y estado operativo del seguimiento GPS.");
+    resetVisualPanel(dom.gpsReplayPanel, "Aqui podras reproducir el recorrido, revisar hitos y detectar desvios en secuencia.");
   }
 
   if (!settings.silent) {
@@ -20354,6 +20751,7 @@ function renderPlanningModule() {
   const imageryProfile = getPlanningImageryProfile();
   const areaProfile = getTerritorialAreaProfile();
   renderAiGeoModule();
+  renderTerritorialOpsModule();
   renderPlanningVariableMatrix();
   renderFodaCameModule();
   renderMobilityModule();
@@ -20416,6 +20814,12 @@ function renderPlanningModule() {
   }
   if (dom.clearMobilityBtn) {
     dom.clearMobilityBtn.disabled = !state.mobilityData;
+  }
+  if (dom.focusTerritorialOpsBtn) {
+    dom.focusTerritorialOpsBtn.disabled = !state.territorialOpsData;
+  }
+  if (dom.clearTerritorialOpsBtn) {
+    dom.clearTerritorialOpsBtn.disabled = !state.territorialOpsData;
   }
   if (dom.focusRiskBtn) {
     dom.focusRiskBtn.disabled = !(state.riskData?.prioritySectors?.length);
@@ -26830,6 +27234,262 @@ function buildTerritorialAlerts() {
   return alerts.slice(0, 8);
 }
 
+function buildTerritorialOpsAnalysis() {
+  const planning = state.planningData;
+  const mobility = state.mobilityData;
+  const risk = state.riskData;
+  const hydrology = state.hydrologyData;
+  const official = state.officialData.planificacion;
+  const decision = buildTerritorialDecisionSnapshot();
+  const alerts = buildTerritorialAlerts();
+
+  if (!planning && !mobility && !risk && !hydrology && !official?.activeLayerCount && !decision) {
+    return null;
+  }
+
+  const context = planning?.context || mobility?.context || risk?.context || hydrology?.context || getCurrentTerritorialTarget();
+  const weakestService = planning?.serviceCoverage?.items?.slice?.().sort((left, right) => left.coveragePct - right.coveragePct)[0] || null;
+  const primaryCandidate = planning?.candidates?.[0] || null;
+  const mobilitySector = mobility?.prioritySectors?.[0] || null;
+  const riskSector = risk?.prioritySectors?.[0] || null;
+  const hydrologySector = hydrology?.prioritySectors?.[0] || null;
+  const overallScore = Math.round(clamp(
+    (planning?.summary?.meanScore || 0) * 0.28
+    + (mobility?.summary?.meanScore || 0) * 0.18
+    + (100 - (risk?.summary?.meanScore || 0)) * 0.18
+    + (hydrology?.summary?.meanResilience || 0) * 0.16
+    + (planning?.serviceCoverage?.overallCoverage || 0) * 0.12
+    + ((official?.activeLayerCount || 0) ? clamp(42 + official.activeLayerCount * 4, 42, 92) : 38) * 0.08,
+    0,
+    100
+  ));
+  const overallSignal = getTerritorialSignalState(overallScore);
+  const actionHeadline = overallSignal.tone === "good"
+    ? "Listo para consolidar"
+    : overallSignal.tone === "watch"
+      ? "Listo con condicionantes"
+      : "Pide contencion inmediata";
+
+  const modules = [
+    planning ? {
+      label: "Aptitud",
+      tone: getPlanningScoreTone(planning.summary.meanScore),
+      value: `${planning.summary.meanScore}/100`,
+      copy: `${planning.candidates.length} candidatos, ${planning.serviceCoverage.overallCoverage}% de cobertura y restriccion ${planning.restrictions.headline.toLowerCase()}.`,
+    } : null,
+    mobility ? {
+      label: "Movilidad",
+      tone: mobility.summary.meanScore >= 70 ? "low" : mobility.summary.meanScore >= 55 ? "mid" : "high",
+      value: `${mobility.summary.meanTravelMinutes} min`,
+      copy: `${mobility.summary.coverageLabel} con ${mobility.prioritySectors.length} sectores de correccion.`,
+    } : null,
+    risk ? {
+      label: "Riesgo",
+      tone: risk.summary.meanScore >= 74 ? "high" : risk.summary.meanScore >= 58 ? "mid" : "low",
+      value: `${risk.summary.riskLabel}`,
+      copy: `${risk.prioritySectors.length} sectores criticos y ${risk.summary.criticalAreaHa.toFixed(1)} ha bajo presion.`,
+    } : null,
+    hydrology ? {
+      label: "Agua",
+      tone: hydrology.summary.balanceHm3 >= 0 ? "low" : hydrology.summary.meanResilience >= 58 ? "mid" : "high",
+      value: `${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3`,
+      copy: `${hydrology.summary.criticalSectorLabel} como frente hidrico principal.`,
+    } : null,
+    official?.activeLayerCount ? {
+      label: "Oficiales",
+      tone: "low",
+      value: `${official.activeLayerCount} capas`,
+      copy: `${official.sourceCount} fuentes, ${official.pointCount} servicios y ${official.lineCount + official.areaCount} referencias utiles.`,
+    } : null,
+  ].filter(Boolean);
+
+  const actions = [
+    primaryCandidate ? {
+      title: "Primer candidato",
+      tone: getPlanningScoreTone(primaryCandidate.score),
+      value: primaryCandidate.title,
+      copy: `${primaryCandidate.score}/100 · ${primaryCandidate.summary}`,
+      actionAttr: `data-candidate-id="${primaryCandidate.id}"`,
+    } : null,
+    weakestService ? {
+      title: "Brecha principal",
+      tone: weakestService.coveragePct >= 70 ? "low" : weakestService.coveragePct >= 50 ? "mid" : "high",
+      value: weakestService.shortLabel,
+      copy: `${weakestService.coveragePct}% de cobertura y ${weakestService.unservedPopulationEst} personas potencialmente fuera del radio funcional.`,
+      actionAttr: `data-territorial-ops-action="service-gap"`,
+    } : null,
+    mobilitySector ? {
+      title: "Acceso a corregir",
+      tone: mobilitySector.tone,
+      value: mobilitySector.name,
+      copy: `${mobilitySector.score}/100 · ${mobilitySector.summary}`,
+      actionAttr: `data-mobility-sector-id="${mobilitySector.id}"`,
+    } : null,
+    riskSector ? {
+      title: "Contencion prioritaria",
+      tone: riskSector.tone,
+      value: riskSector.name,
+      copy: `${riskSector.riskLabel} · ${riskSector.summary}`,
+      actionAttr: `data-risk-sector-id="${riskSector.id}"`,
+    } : null,
+    hydrologySector ? {
+      title: "Frente hidrico",
+      tone: hydrologySector.balanceHm3 >= 0 ? "low" : "high",
+      value: hydrologySector.name,
+      copy: `${hydrologySector.balanceLabel} · ${hydrologySector.summary}`,
+      actionAttr: `data-hydrology-sector-id="${hydrologySector.id}"`,
+    } : null,
+  ].filter(Boolean);
+
+  return {
+    context,
+    overallScore,
+    overallSignal,
+    actionHeadline,
+    decision,
+    alerts,
+    modules,
+    actions,
+    headline: decision?.headline || overallSignal.label,
+    copy: decision?.copy || `${context.scopeLabel} combina cobertura, riesgo y servicios con soporte oficial para ordenar la intervencion.`,
+    weakestService,
+    primaryCandidate,
+    mobilitySector,
+    riskSector,
+    hydrologySector,
+  };
+}
+
+function renderTerritorialOpsModule() {
+  if (!dom.territorialOpsResults || !dom.territorialOpsBoard) {
+    return;
+  }
+  const analysis = state.territorialOpsData;
+  if (!analysis) {
+    resetMetricGrid(dom.territorialOpsResults, "Ejecuta el tablero para ver prioridad integrada, cobertura critica y sectores donde intervenir primero.");
+    resetVisualPanel(dom.territorialOpsBoard, "Aqui apareceran la lectura ejecutiva, el semaforo de operacion y las acciones recomendadas por sector.");
+    return;
+  }
+
+  const cards = [
+    {
+      label: "Indice operativo",
+      value: `${analysis.overallScore}/100`,
+      copy: `${analysis.actionHeadline} para ${analysis.context.scopeLabel}.`,
+      highlight: true,
+    },
+    {
+      label: "Cobertura mas debil",
+      value: analysis.weakestService ? `${analysis.weakestService.shortLabel} ${analysis.weakestService.coveragePct}%` : "Sin dato",
+      copy: analysis.weakestService ? `${analysis.weakestService.unservedPopulationEst} personas estimadas fuera de cobertura funcional.` : "Activa planeamiento para estimar deficit de servicio.",
+    },
+    {
+      label: "Alertas activas",
+      value: `${analysis.alerts.length}`,
+      copy: analysis.alerts.length ? `${analysis.alerts[0].module}: ${analysis.alerts[0].title}` : "Sin alertas dominantes en esta corrida.",
+    },
+    {
+      label: "Soporte oficial",
+      value: `${analysis.modules.find((item) => item.label === "Oficiales")?.value || "Base local"}`,
+      copy: analysis.modules.find((item) => item.label === "Oficiales")?.copy || "Activa las fuentes oficiales para endurecer la lectura territorial.",
+    },
+  ];
+  paintMetricGrid(dom.territorialOpsResults, cards);
+
+  dom.territorialOpsBoard.classList.remove("empty-state");
+  dom.territorialOpsBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.territorialOpsBoard, `
+    <article class="decision-hero tone-${analysis.overallSignal.tone === "good" ? "low" : analysis.overallSignal.tone === "watch" ? "mid" : "high"}">
+      <div>
+        <p class="section-kicker">Tablero territorial</p>
+        <h4>${analysis.headline}</h4>
+        <p>${analysis.copy}</p>
+      </div>
+      <div class="decision-score-stack">
+        <strong>${analysis.overallScore}/100</strong>
+        <span>${analysis.actionHeadline}</span>
+      </div>
+    </article>
+    <div class="decision-grid">
+      ${analysis.modules.map((item) => `
+        <article class="decision-card tone-${item.tone}">
+          <p class="candidate-rank">${item.label}</p>
+          <h5>${item.value}</h5>
+          <p>${item.copy}</p>
+        </article>
+      `).join("")}
+    </div>
+    <div class="decision-list">
+      ${analysis.actions.map((item) => `
+        <article class="decision-action-card">
+          <div>
+            <strong>${item.title}</strong>
+            <p>${item.value}</p>
+            <p>${item.copy}</p>
+          </div>
+          <button class="ghost-button" type="button" ${item.actionAttr}>Ver</button>
+        </article>
+      `).join("")}
+    </div>
+  `);
+}
+
+async function runTerritorialOpsAnalysis(silent = false) {
+  try {
+    await runOfficialDataAnalysis(true);
+    await runPlanningAnalysis(true);
+    await runMobilityAnalysis(true);
+    await runRiskAnalysis(true);
+    await runHydrologyAnalysis(true);
+    const analysis = buildTerritorialOpsAnalysis();
+    state.territorialOpsData = analysis;
+    state.territorialFocus = "ops";
+    renderTerritorialOpsModule();
+    renderPlanningModule();
+    updateMapSummary();
+    if (!silent && analysis) {
+      setStatus(`Tablero territorial listo para ${analysis.context.scopeLabel}: ${analysis.actionHeadline.toLowerCase()} con ${analysis.alerts.length} alertas visibles.`);
+    }
+    return analysis;
+  } catch (error) {
+    console.warn("Fallo el tablero territorial.", error);
+    state.territorialOpsData = null;
+    resetMetricGrid(dom.territorialOpsResults, "No se pudo consolidar el tablero territorial en esta corrida.");
+    resetVisualPanel(dom.territorialOpsBoard, "No se pudo construir la lectura ejecutiva de movilidad, riesgo, agua y servicios.");
+    if (!silent) {
+      setStatus(`Tablero territorial: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    updateMapSummary();
+    return null;
+  }
+}
+
+function clearTerritorialOpsAnalysis() {
+  state.territorialOpsData = null;
+  renderTerritorialOpsModule();
+  renderPlanningModule();
+  updateMapSummary();
+  setStatus(`Tablero territorial limpiado para ${getTerritorialAreaProfile().scopeLabel}.`);
+}
+
+function focusTerritorialOpsStudy() {
+  state.territorialFocus = "ops";
+  renderTerritorialOpsModule();
+  renderPlanningModule();
+  updateMapSummary();
+  if (!mapState.map) {
+    return;
+  }
+  const bounds = mapState.planningLayer?.getBounds?.()
+    || mapState.mobilityLayer?.getBounds?.()
+    || mapState.riskLayer?.getBounds?.()
+    || mapState.hydrologyLayer?.getBounds?.()
+    || L.geoJSON(getCurrentTerritorialTarget().feature).getBounds();
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 12 });
+  }
+}
+
 function renderTerritorialAlertsPanel() {
   if (!dom.territorialAlertsPanel) {
     return;
@@ -30434,6 +31094,7 @@ function updateMapSummary(force = false) {
     const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
     const officialData = state.officialData.planificacion?.activeLayerCount ? state.officialData.planificacion : null;
+    const territorialOps = state.territorialOpsData;
     const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
     const landChangePeriod = landChange?.period || getLandChangePeriodProfile();
     const landChangeScenario = landChange?.scenario || getLandChangeScenarioProfile();
@@ -30446,9 +31107,17 @@ function updateMapSummary(force = false) {
     const showLandChange = state.territorialFocus === "landChange" && landChange;
     const showHydrology = state.territorialFocus === "hydrology" && hydrology;
     const showOfficial = state.territorialFocus === "official" && officialData;
+    const showOps = state.territorialFocus === "ops" && territorialOps;
     setTextIfChanged(dom.overlayIndex, planning ? "Aptitud" : imageryProfile.shortLabel);
     renderMapBadges();
-    if (showAiGeo) {
+    if (showOps) {
+      setTextIfChanged(dom.overlayIndex, "Ops");
+      setTextIfChanged(dom.mapTitle, `Tablero territorial sobre ${territorialOps.context.scopeLabel}`);
+      setTextIfChanged(
+        dom.mapSubtitle,
+        `${territorialOps.actionHeadline}. Cobertura critica ${territorialOps.weakestService ? `${territorialOps.weakestService.shortLabel} ${territorialOps.weakestService.coveragePct}%` : "sin dato"} y ${territorialOps.alerts.length} alertas activas.`
+      );
+    } else if (showAiGeo) {
       setTextIfChanged(dom.overlayIndex, "IA");
       setTextIfChanged(dom.mapTitle, `IA territorial sobre ${aiGeo.context.scopeLabel}`);
       setTextIfChanged(

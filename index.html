@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-<meta name="geoportal-version" content="20260511-3">
+<meta name="geoportal-version" content="20260512-1">
   <title>Centro de Decisiones | Mejia y Quevedo</title>
   <meta
     name="description"
@@ -32,7 +32,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260511-3">
+  <link rel="stylesheet" href="./styles.css?v=20260512-1">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -150,7 +150,7 @@
         </div>
         <div class="user-pill">
           <span class="status-dot"></span>
-            Usuario publico | v20260511-3
+            Usuario publico | v20260512-1
           </div>
       </div>
     </header>
@@ -649,6 +649,9 @@
               <div id="agroSuitabilityVisual" class="agronomy-visual empty-state">
                 Aqui apareceran el ranking de lotes, la ventana termica-hidrica y la recomendacion agroclimatica.
               </div>
+              <div id="agroSuitabilityBoard" class="decision-board empty-state">
+                Aqui apareceran la recomendacion operativa, el manejo sugerido y la prioridad del cultivo objetivo.
+              </div>
               <div class="action-row analysis-actions">
                 <button id="focusAgroSuitabilityBtn" class="secondary-button" type="button">Centrar aptitud</button>
                 <button id="clearAgroSuitabilityBtn" class="ghost-button" type="button">Limpiar aptitud</button>
@@ -700,6 +703,9 @@
               </div>
               <div id="gpsVisual" class="agronomy-visual empty-state">
                 Aqui apareceran la trayectoria, velocidad, altura, precision y estado operativo del seguimiento GPS.
+              </div>
+              <div id="gpsReplayPanel" class="gps-replay-shell empty-state">
+                Aqui podras reproducir el recorrido, revisar hitos y detectar desvíos en secuencia.
               </div>
               <div id="gpsGeofenceEvents" class="gps-event-log empty-state">
                 Aqui apareceran las advertencias y el registro de entradas o salidas respecto al corredor cargado.
@@ -756,6 +762,29 @@
               </div>
               <div class="planning-command-note">
                 Flujo recomendado: aptitud, riesgo, estrategia y cierre 3D.
+              </div>
+            </article>
+
+            <article id="territorialOpsCard" class="module-card planning-card hidden" data-module-track="planificacion">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Centro de decisiones</p>
+                  <h3>Movilidad, riesgo y servicios en una sola lectura</h3>
+                </div>
+                <button id="runTerritorialOpsBtn" class="secondary-button" type="button">Construir tablero</button>
+              </div>
+              <p class="module-copy">
+                Consolida aptitud, cobertura, riesgo, agua y soporte oficial para decirte donde actuar primero y por que.
+              </p>
+              <div id="territorialOpsResults" class="metrics-grid empty-state">
+                Ejecuta el tablero para ver prioridad integrada, cobertura critica y sectores donde intervenir primero.
+              </div>
+              <div id="territorialOpsBoard" class="decision-board empty-state">
+                Aqui apareceran la lectura ejecutiva, el semaforo de operacion y las acciones recomendadas por sector.
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="focusTerritorialOpsBtn" class="secondary-button" type="button">Centrar tablero</button>
+                <button id="clearTerritorialOpsBtn" class="ghost-button" type="button">Limpiar tablero</button>
               </div>
             </article>
 
@@ -1304,18 +1333,18 @@
     <div id="planning3dBackdrop" class="planning-3d-backdrop"></div>
     <section id="planning3dShell" class="planning-3d-shell" role="dialog" aria-modal="true" aria-labelledby="planning3dTitle" data-panel="collapsed">
       <header class="planning-3d-header">
-        <div>
+        <div class="planning-3d-header-copy">
           <p class="overlay-kicker">Planificacion territorial</p>
           <h2 id="planning3dTitle">Centro 3D urbano</h2>
           <p id="planning3dSubtitle" class="planning-3d-subtitle">
-            Huellas reales, catastro y lectura 3D para validar implantacion urbana.
+            Volumen, catastro y sombras para validar implantacion urbana.
           </p>
         </div>
         <div class="planning-3d-header-actions">
-          <button id="planning3dPerspectiveBtn" class="ghost-button" type="button">Volumen</button>
-          <button id="planning3dOrthographicBtn" class="ghost-button" type="button">Ortogonal</button>
-          <button id="planning3dPanelToggleBtn" class="ghost-button active" type="button" aria-pressed="true">Ocultar</button>
-          <button id="planning3dResetViewBtn" class="ghost-button" type="button">Centrar</button>
+          <button id="planning3dPerspectiveBtn" class="ghost-button" type="button">3D</button>
+          <button id="planning3dOrthographicBtn" class="ghost-button" type="button">Orto</button>
+          <button id="planning3dPanelToggleBtn" class="ghost-button active" type="button" aria-pressed="true">Panel</button>
+          <button id="planning3dResetViewBtn" class="ghost-button" type="button">Centro</button>
           <button id="planning3dCloseBtn" class="secondary-button" type="button">Cerrar</button>
         </div>
       </header>
@@ -1513,6 +1542,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260511-3" defer></script>
+  <script src="./app.js?v=20260512-1" defer></script>
 </body>
 </html>
