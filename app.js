@@ -1273,6 +1273,22 @@ const territorialAreaCatalog = {
       [-78.624, -0.362],
     ], { category: "territorio", territoryId: "cutuglagua" }),
   },
+  quevedo: {
+    id: "quevedo",
+    label: "Quevedo",
+    shortLabel: "Quevedo",
+    scopeLabel: "Quevedo",
+    planning3dAreaId: "machachi",
+    feature: polygonFeature("Quevedo", [
+      [-79.585, -0.944],
+      [-79.431, -0.939],
+      [-79.375, -0.992],
+      [-79.388, -1.096],
+      [-79.499, -1.119],
+      [-79.584, -1.077],
+      [-79.596, -0.989],
+    ], { category: "territorio", territoryId: "quevedo" }),
+  },
 };
 
 const agronomyAreaCatalog = {
@@ -3556,6 +3572,10 @@ const state = {
   mobilityHighlightId: null,
   riskData: null,
   riskHighlightId: null,
+  zoningPatternsData: null,
+  zoningPatternsHighlightId: null,
+  housingPatternsData: null,
+  housingPatternsHighlightId: null,
   fieldEvidenceCatalog: null,
   officialHydroCatalog: null,
   officialHydroPromise: null,
@@ -3677,6 +3697,10 @@ const mapState = {
   riskLayer: null,
   riskHotspotLayer: null,
   riskBufferLayer: null,
+  zoningPatternsLayer: null,
+  zoningPatternsHotspotLayer: null,
+  housingPatternsLayer: null,
+  housingPatternsHotspotLayer: null,
   fodaCameZoneLayer: null,
   fodaCamePriorityLayer: null,
   aiGeoClassificationLayer: null,
@@ -4172,6 +4196,12 @@ function setTerritorialArea(areaId = state.territorialAreaId, options = {}) {
     }
     if (state.riskData) {
       runRiskAnalysis(true);
+    }
+    if (state.zoningPatternsData) {
+      runZoningPatternsAnalysis(true);
+    }
+    if (state.housingPatternsData) {
+      runHousingPatternsAnalysis(true);
     }
     if (state.landChangeData) {
       runLandChangeAnalysis(true);
@@ -5556,6 +5586,8 @@ function cacheDom() {
   dom.planningQuickMobilityBtn = document.querySelector("#planningQuickMobilityBtn");
   dom.planningQuickWaterBtn = document.querySelector("#planningQuickWaterBtn");
   dom.planningQuickStrategyBtn = document.querySelector("#planningQuickStrategyBtn");
+  dom.planningQuickZoningBtn = document.querySelector("#planningQuickZoningBtn");
+  dom.planningQuickHousingBtn = document.querySelector("#planningQuickHousingBtn");
   dom.planningQuick3dBtn = document.querySelector("#planningQuick3dBtn");
   dom.territorialOpsCard = document.querySelector("#territorialOpsCard");
   dom.runTerritorialOpsBtn = document.querySelector("#runTerritorialOpsBtn");
@@ -5638,6 +5670,12 @@ function cacheDom() {
   dom.runRiskBtn = document.querySelector("#runRiskBtn");
   dom.focusRiskBtn = document.querySelector("#focusRiskBtn");
   dom.clearRiskBtn = document.querySelector("#clearRiskBtn");
+  dom.runZoningPatternsBtn = document.querySelector("#runZoningPatternsBtn");
+  dom.focusZoningPatternsBtn = document.querySelector("#focusZoningPatternsBtn");
+  dom.clearZoningPatternsBtn = document.querySelector("#clearZoningPatternsBtn");
+  dom.runHousingPatternsBtn = document.querySelector("#runHousingPatternsBtn");
+  dom.focusHousingPatternsBtn = document.querySelector("#focusHousingPatternsBtn");
+  dom.clearHousingPatternsBtn = document.querySelector("#clearHousingPatternsBtn");
   dom.runFieldEvidenceBtn = document.querySelector("#runFieldEvidenceBtn");
   dom.focusFieldEvidenceBtn = document.querySelector("#focusFieldEvidenceBtn");
   dom.clearFieldEvidenceBtn = document.querySelector("#clearFieldEvidenceBtn");
@@ -5705,6 +5743,14 @@ function cacheDom() {
   dom.riskResults = document.querySelector("#riskResults");
   dom.riskDrivers = document.querySelector("#riskDrivers");
   dom.riskSectors = document.querySelector("#riskSectors");
+  dom.zoningPatternsResults = document.querySelector("#zoningPatternsResults");
+  dom.zoningPatternsReadout = document.querySelector("#zoningPatternsReadout");
+  dom.zoningPatternsClusters = document.querySelector("#zoningPatternsClusters");
+  dom.zoningPatternsSectors = document.querySelector("#zoningPatternsSectors");
+  dom.housingPatternsResults = document.querySelector("#housingPatternsResults");
+  dom.housingPatternsReadout = document.querySelector("#housingPatternsReadout");
+  dom.housingPatternsTypologies = document.querySelector("#housingPatternsTypologies");
+  dom.housingPatternsSectors = document.querySelector("#housingPatternsSectors");
   dom.fieldEvidenceResults = document.querySelector("#fieldEvidenceResults");
   dom.fieldEvidenceInventory = document.querySelector("#fieldEvidenceInventory");
   dom.fieldEvidenceSectors = document.querySelector("#fieldEvidenceSectors");
@@ -5718,6 +5764,8 @@ function cacheDom() {
   dom.hydrologyCard = document.querySelector("#hydrologyCard");
   dom.mobilityCard = document.querySelector("#mobilityCard");
   dom.riskCard = document.querySelector("#riskCard");
+  dom.zoningPatternsCard = document.querySelector("#zoningPatternsCard");
+  dom.housingPatternsCard = document.querySelector("#housingPatternsCard");
   dom.fieldEvidenceCard = document.querySelector("#fieldEvidenceCard");
   dom.planningModuleCards = Array.from(document.querySelectorAll('[data-module-track="planificacion"]'));
   dom.evidenceModuleCards = Array.from(document.querySelectorAll('[data-module-track="evidencia"]'));
@@ -6126,6 +6174,8 @@ function bindUI() {
   dom.hydrologySectors?.addEventListener("click", handleHydrologySectorsInteraction);
   dom.mobilitySectors?.addEventListener("click", handleMobilitySectorsInteraction);
   dom.riskSectors?.addEventListener("click", handleRiskSectorsInteraction);
+  dom.zoningPatternsSectors?.addEventListener("click", handleZoningPatternsSectorsInteraction);
+  dom.housingPatternsSectors?.addEventListener("click", handleHousingPatternsSectorsInteraction);
   dom.fieldEvidenceSectors?.addEventListener("click", handleFieldEvidenceInteraction);
   dom.fieldEvidenceStations?.addEventListener("click", handleFieldEvidenceInteraction);
   dom.fieldEvidenceSensitive?.addEventListener("click", handleFieldEvidenceInteraction);
@@ -6414,6 +6464,8 @@ function bindUI() {
   dom.planningQuickMobilityBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-mobility"));
   dom.planningQuickWaterBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-water"));
   dom.planningQuickStrategyBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-strategy"));
+  dom.planningQuickZoningBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-zoning"));
+  dom.planningQuickHousingBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-housing"));
   dom.planningQuick3dBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-3d"));
   dom.openGpsGeofenceBtn?.addEventListener("click", () => dom.gpsGeofenceFileInput?.click());
   dom.gpsGeofenceFileInput?.addEventListener("change", handleGpsGeofenceFileSelection);
@@ -6515,6 +6567,26 @@ function bindUI() {
   });
   dom.focusRiskBtn?.addEventListener("click", focusRiskStudy);
   dom.clearRiskBtn?.addEventListener("click", clearRiskAnalysis);
+  dom.runZoningPatternsBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.zoningPatternsResults, "Leyendo patrones territoriales, vitalidad y contrastes espaciales...", [
+      { target: dom.zoningPatternsReadout, message: "Interpretando patron dominante, vitalidad urbana y sentido territorial de la corrida..." },
+      { target: dom.zoningPatternsClusters, message: "Agrupando senales de mezcla urbana, servicios, acceso y resiliencia..." },
+      { target: dom.zoningPatternsSectors, message: "Priorizando sectores con mayor oportunidad o fragilidad territorial..." },
+    ]);
+    return runModuleAction(dom.runZoningPatternsBtn, "Leyendo patrones...", () => runZoningPatternsAnalysis());
+  });
+  dom.focusZoningPatternsBtn?.addEventListener("click", focusZoningPatternsStudy);
+  dom.clearZoningPatternsBtn?.addEventListener("click", clearZoningPatternsAnalysis);
+  dom.runHousingPatternsBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.housingPatternsResults, "Estimando intensidad de oferta, tipologia y tension habitacional...", [
+      { target: dom.housingPatternsReadout, message: "Traduciendo la lectura territorial a patrones de vivienda inspirados en plataformas digitales..." },
+      { target: dom.housingPatternsTypologies, message: "Resumiendo tipologias dominantes, senales de renta y brechas de acceso..." },
+      { target: dom.housingPatternsSectors, message: "Jerarquizando sectores con mayor tension o mejor encaje para vivienda..." },
+    ]);
+    return runModuleAction(dom.runHousingPatternsBtn, "Leyendo vivienda...", () => runHousingPatternsAnalysis());
+  });
+  dom.focusHousingPatternsBtn?.addEventListener("click", focusHousingPatternsStudy);
+  dom.clearHousingPatternsBtn?.addEventListener("click", clearHousingPatternsAnalysis);
   dom.runTerritorialOpsBtn?.addEventListener("click", () => {
     setModulePendingState(dom.territorialOpsResults, "Consolidando aptitud, movilidad, riesgo, agua y oficiales en una sola lectura operativa...", [
       { target: dom.territorialOpsBoard, message: "Armando el tablero territorial con semaforo, prioridades y acciones inmediatas..." },
@@ -6918,7 +6990,7 @@ function handleFieldEvidenceInteraction(event) {
 }
 
 function handleTerritorialSectorSheetsInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
+  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-zoning-sector-id], [data-housing-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
   if (!button || !dom.territorialSectorSheets?.contains(button)) {
     return;
   }
@@ -6933,6 +7005,14 @@ function handleTerritorialSectorSheetsInteraction(event) {
   }
   if (button.dataset.hydrologySectorId) {
     focusHydrologySector(button.dataset.hydrologySectorId);
+    return;
+  }
+  if (button.dataset.zoningSectorId) {
+    focusZoningPatternsSector(button.dataset.zoningSectorId);
+    return;
+  }
+  if (button.dataset.housingSectorId) {
+    focusHousingPatternsSector(button.dataset.housingSectorId);
     return;
   }
   if (button.dataset.fieldSectorId) {
@@ -6961,7 +7041,7 @@ function handleTerritorialSectorSheetsInteraction(event) {
 }
 
 function handleTerritorialAlertInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
+  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-zoning-sector-id], [data-housing-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
   if (!button || !dom.territorialAlertsPanel?.contains(button)) {
     return;
   }
@@ -6976,6 +7056,14 @@ function handleTerritorialAlertInteraction(event) {
   }
   if (button.dataset.hydrologySectorId) {
     focusHydrologySector(button.dataset.hydrologySectorId);
+    return;
+  }
+  if (button.dataset.zoningSectorId) {
+    focusZoningPatternsSector(button.dataset.zoningSectorId);
+    return;
+  }
+  if (button.dataset.housingSectorId) {
+    focusHousingPatternsSector(button.dataset.housingSectorId);
     return;
   }
   if (button.dataset.fieldSectorId) {
@@ -7004,7 +7092,7 @@ function handleTerritorialAlertInteraction(event) {
 }
 
 function handleTerritorialOpsInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-hydrology-sector-id], [data-mobility-sector-id], [data-risk-sector-id], [data-territorial-ops-action]");
+  const button = event.target.closest("[data-candidate-id], [data-hydrology-sector-id], [data-mobility-sector-id], [data-risk-sector-id], [data-zoning-sector-id], [data-housing-sector-id], [data-territorial-ops-action]");
   if (!button || !dom.territorialOpsBoard?.contains(button)) {
     return;
   }
@@ -7023,6 +7111,14 @@ function handleTerritorialOpsInteraction(event) {
   }
   if (button.dataset.hydrologySectorId) {
     focusHydrologySector(button.dataset.hydrologySectorId);
+    return;
+  }
+  if (button.dataset.zoningSectorId) {
+    focusZoningPatternsSector(button.dataset.zoningSectorId);
+    return;
+  }
+  if (button.dataset.housingSectorId) {
+    focusHousingPatternsSector(button.dataset.housingSectorId);
     return;
   }
   if (button.dataset.territorialOpsAction === "service-gap") {
@@ -7555,6 +7651,8 @@ function getModuleCardLabel(card) {
     hydrologyCard: "Agua",
     mobilityCard: "Movilidad",
     riskCard: "Riesgo",
+    zoningPatternsCard: "Zonificacion",
+    housingPatternsCard: "Vivienda",
     landChangeCard: "Huella",
     fodaCameCard: "FODA+CAME",
     territorialReadoutCard: "Lectura",
@@ -7640,6 +7738,8 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
         { id: "planning-mobility", label: "Movilidad", copy: "Cobertura y tiempos", tone: "neutral" },
         { id: "planning-official", label: "Oficiales", copy: "Vialidad y servicios", tone: "neutral" },
         { id: "planning-water", label: "Agua", copy: "Oferta y resiliencia", tone: "neutral" },
+        { id: "planning-zoning", label: "Zonificacion", copy: "Patrones y vitalidad", tone: "neutral" },
+        { id: "planning-housing", label: "Vivienda", copy: "Oferta y tension", tone: "neutral" },
         { id: "planning-strategy", label: "FODA + CAME", copy: "Diagnostico y accion", tone: "neutral" },
         { id: "planning-3d", label: "Visor 3D", copy: "Volumen y sombra", tone: "accent" },
         { id: "suite-dashboard", label: "Dashboard", copy: "Reporte y control", tone: "neutral" },
@@ -7693,8 +7793,8 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
     core: new Set(["planningCommandCard", "territorialOpsCard", "planningCard", "planningResultsCard"]),
     official: new Set(["officialDataCard"]),
     risk: new Set(["riskCard", "hydrologyCard", "territorialReadoutCard"]),
-    growth: new Set(["mobilityCard", "landChangeCard", "territorialScenarioCard"]),
-    strategy: new Set(["fodaCameCard", "territorialDecisionCard", "territorialAlertsCard", "aiGeoCard"]),
+    growth: new Set(["mobilityCard", "landChangeCard", "territorialScenarioCard", "zoningPatternsCard", "housingPatternsCard"]),
+    strategy: new Set(["fodaCameCard", "territorialDecisionCard", "territorialAlertsCard", "aiGeoCard", "zoningPatternsCard", "housingPatternsCard"]),
     validation: new Set(["planning3dCard"]),
     product: new Set(["executiveDashboardCard", "reportCenterCard", "scenarioLabCard", "timeSeriesCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard"]),
   };
@@ -7747,6 +7847,8 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
       territorialScenarioCard: true,
       mobilityCard: true,
       riskCard: true,
+      zoningPatternsCard: true,
+      housingPatternsCard: true,
       hydrologyCard: true,
       landChangeCard: true,
       fodaCameCard: true,
@@ -8464,6 +8566,18 @@ function runWorkflowGuideAction(actionId) {
       openSidebarWorkingPanel("modulos");
       dom.runHydrologyBtn?.click();
       focusModuleCard(dom.hydrologyCard);
+      return;
+    case "planning-zoning":
+      openSidebarWorkingPanel("modulos");
+      dom.runZoningPatternsBtn?.click();
+      focusModuleCard(dom.zoningPatternsCard);
+      setStatus("Patrones territoriales y vitalidad urbana listos para contrastar centralidades, borde y fragilidad.");
+      return;
+    case "planning-housing":
+      openSidebarWorkingPanel("modulos");
+      dom.runHousingPatternsBtn?.click();
+      focusModuleCard(dom.housingPatternsCard);
+      setStatus("Patrones de vivienda listos para revisar tension territorial, tipologias y oferta relativa.");
       return;
     case "planning-strategy":
       openSidebarWorkingPanel("modulos");
@@ -12835,7 +12949,7 @@ async function runInamhiAnalysis(silent = false) {
 
     paintMetricGrid(dom.inamhiResults, cards);
     Array.from(dom.inamhiResults.querySelectorAll(".metric-card strong")).forEach((node) => {
-      node.textContent = node.textContent.replace(/Â·|·/g, " - ");
+      node.textContent = node.textContent.replace(/·/g, " - ");
     });
     const result = {
       reference,
@@ -14754,7 +14868,7 @@ function buildAgroDecisionSnapshot(result = state.agronomyOutputs.agroSuitabilit
     actions,
     recommendationLines,
     nextStep: bestLot.score >= 78
-      ? "Pasa a agua y GPS para programar riego, seguimiento y verificación de campo."
+      ? "Pasa a agua y GPS para programar riego, seguimiento y verificacion de campo."
       : "Pasa a agua, clima y lote para corregir antes de sembrar o cambiar de cultivo.",
   };
 }
@@ -17196,7 +17310,7 @@ function renderGpsRelayReceptionStarted(device, connectedDevices = getGpsRelayCo
         ${connectedDevices.map((entry) => `
           <article class="gps-device-card">
             <strong>${entry.label}</strong>
-            <p>${entry.deviceType || "GPS"} Â· ${entry.statusLabel || "Conectado"}</p>
+            <p>${entry.deviceType || "GPS"} · ${entry.statusLabel || "Conectado"}</p>
             <p>${hasGpsCoordinates(entry) ? "Posicion recibida y visible en el mapa." : "Esperando primera coordenada GPS."}</p>
             <p>${formatGpsSignalAge(entry.timestamp)}</p>
           </article>
@@ -21421,6 +21535,8 @@ function renderPlanningModule() {
   renderFodaCameModule();
   renderMobilityModule();
   renderRiskModule();
+  renderZoningPatternsModule();
+  renderHousingPatternsModule();
   renderLandChangeModule();
   renderHydrologyModule();
   renderFieldEvidenceModule();
@@ -21491,6 +21607,18 @@ function renderPlanningModule() {
   }
   if (dom.clearRiskBtn) {
     dom.clearRiskBtn.disabled = !state.riskData;
+  }
+  if (dom.focusZoningPatternsBtn) {
+    dom.focusZoningPatternsBtn.disabled = !(state.zoningPatternsData?.prioritySectors?.length);
+  }
+  if (dom.clearZoningPatternsBtn) {
+    dom.clearZoningPatternsBtn.disabled = !state.zoningPatternsData;
+  }
+  if (dom.focusHousingPatternsBtn) {
+    dom.focusHousingPatternsBtn.disabled = !(state.housingPatternsData?.prioritySectors?.length);
+  }
+  if (dom.clearHousingPatternsBtn) {
+    dom.clearHousingPatternsBtn.disabled = !state.housingPatternsData;
   }
   if (dom.hydrologyClimateSelect) {
     dom.hydrologyClimateSelect.value = state.hydrologyClimateId;
@@ -24256,6 +24384,1060 @@ function handleRiskSectorsInteraction(event) {
     return;
   }
   focusRiskSector(button.dataset.riskSectorId);
+}
+
+function isCurrentTerritorialAnalysis(data, target = getCurrentTerritorialTarget()) {
+  return Boolean(data?.context?.targetKey && data.context.targetKey === target.targetKey);
+}
+
+function getZoningVitalityLabel(score = 0) {
+  if (score >= 74) {
+    return "Vitalidad alta";
+  }
+  if (score >= 58) {
+    return "Vitalidad media";
+  }
+  return "Vitalidad baja";
+}
+
+function classifyZoningPattern(metrics) {
+  if (metrics.accessScore >= 74 && metrics.serviceScore >= 70 && metrics.diversityScore >= 66 && metrics.vulnerabilityScore <= 44) {
+    return {
+      label: "Centralidad diversa",
+      tone: "low",
+      actionLabel: "Mantener",
+      recommendation: "Mantener mezcla urbana, reforzar espacio publico y cuidar habitabilidad sin perder diversidad.",
+    };
+  }
+  if (metrics.insideUrban && metrics.vitalityIndex >= 62 && metrics.serviceScore >= 58 && metrics.vulnerabilityScore < 56) {
+    return {
+      label: "Residencial consolidado",
+      tone: "low",
+      actionLabel: "Mejorar",
+      recommendation: "Consolidar servicios y renovar soporte barrial antes de abrir nuevo suelo.",
+    };
+  }
+  if (metrics.productiveEdgeScore >= 68 && !metrics.insideUrban) {
+    return {
+      label: "Interfaz rural-productiva",
+      tone: "mid",
+      actionLabel: "Proteger",
+      recommendation: "Proteger el borde productivo, compatibilizar vivienda con actividad rural y evitar dispersion.",
+    };
+  }
+  if (metrics.roadDistanceKm <= 0.35 && metrics.accessScore >= 62 && metrics.serviceScore >= 42 && !metrics.insideUrban) {
+    return {
+      label: "Corredor logistico-productivo",
+      tone: "mid",
+      actionLabel: "Regular",
+      recommendation: "Regular mezcla, accesos y franjas operativas para evitar conflicto entre movilidad y ocupacion.",
+    };
+  }
+  if (metrics.urbanDistanceKm <= 1.25 && metrics.serviceScore >= 44 && metrics.vulnerabilityScore <= 62) {
+    return {
+      label: "Expansion en consolidacion",
+      tone: "mid",
+      actionLabel: "Orientar",
+      recommendation: "Orientar crecimiento a sectores con cierre progresivo de servicios y contencion de riesgos.",
+    };
+  }
+  return {
+    label: "Fragilidad territorial",
+    tone: "high",
+    actionLabel: "Corregir",
+    recommendation: "Corregir deficit de acceso, servicios o resiliencia antes de consolidar nueva ocupacion.",
+  };
+}
+
+function getZoningPatternColor(label = "") {
+  const palette = {
+    "Centralidad diversa": { color: "#2f7f5f", fill: "#a7d3bb" },
+    "Residencial consolidado": { color: "#4a8a6e", fill: "#c5dfd1" },
+    "Expansion en consolidacion": { color: "#c18c31", fill: "#ecd29b" },
+    "Interfaz rural-productiva": { color: "#8f7d48", fill: "#d8cca0" },
+    "Corredor logistico-productivo": { color: "#627a9f", fill: "#c1cfe2" },
+    "Fragilidad territorial": { color: "#a35443", fill: "#ddb0a5" },
+  };
+  return palette[label] || { color: "#6f7f85", fill: "#d5dee2" };
+}
+
+function buildZoningPatternsAnalysis() {
+  const target = getCurrentTerritorialTarget();
+  const planning = isCurrentTerritorialAnalysis(state.planningData, target)
+    ? state.planningData
+    : buildPlanningAnalysis({ target });
+  const mobility = isCurrentTerritorialAnalysis(state.mobilityData, target)
+    ? state.mobilityData
+    : buildMobilityAnalysis();
+  const risk = isCurrentTerritorialAnalysis(state.riskData, target)
+    ? state.riskData
+    : buildRiskAnalysis();
+  const hydrology = isCurrentTerritorialAnalysis(state.hydrologyData, target)
+    ? state.hydrologyData
+    : buildHydrologyAnalysis();
+  const evidenceProfiles = getTerritorialEvidenceProfiles(target.feature);
+  const officialSummary = state.officialData.planificacion?.activeLayerCount
+    ? state.officialData.planificacion
+    : buildOfficialDataSummary("planificacion");
+  const facilityFeatures = filterFeaturesByTerritorialArea(geoSources.equipamientos?.features, state.territorialAreaId);
+  const urbanFeatures = filterFeaturesByTerritorialArea(geoSources.manchaUrbana?.features, state.territorialAreaId);
+  const roadFeatures = filterFeaturesByTerritorialArea(geoSources.vias?.features, state.territorialAreaId);
+  const canalFeatures = filterFeaturesByTerritorialArea(geoSources.canales?.features, state.territorialAreaId);
+  const cellSizeKm = target.scopeType === "studyArea" ? 2.2 : 0.76;
+  const targetCentroid = turf.centroid(target.feature).geometry.coordinates;
+  const sectors = buildTerritorialStudyGrid(target, cellSizeKm).slice(0, 48).map((cell, index) => {
+    const centroid = turf.centroid(cell);
+    const road = getNearestFeatureMatch(centroid, roadFeatures);
+    const canal = getNearestFeatureMatch(centroid, canalFeatures);
+    const nearestUrban = getNearestFeatureMatch(centroid, urbanFeatures);
+    const planningMatch = getNearestFeatureMatch(centroid, planning.surface?.features || []);
+    const mobilityMatch = getNearestFeatureMatch(centroid, (mobility.sectors || []).map((sector) => pointFeature(sector.id, sector.centroid, sector)));
+    const riskMatch = getNearestFeatureMatch(centroid, (risk.sectors || []).map((sector) => pointFeature(sector.id, sector.centroid, sector)));
+    const hydrologyMatch = getNearestFeatureMatch(centroid, (hydrology.sectors || []).map((sector) => pointFeature(sector.id, sector.centroid, sector)));
+    const insideUrban = urbanFeatures.some((feature) => turf.booleanIntersects(feature, cell));
+    const nearbyFacilities = facilityFeatures.filter((feature) => distanceToFeatureKm(centroid, feature) <= (target.scopeType === "studyArea" ? 3.4 : 1.25));
+    const serviceTypes = new Set(nearbyFacilities.map((feature) => feature.properties?.serviceType).filter(Boolean));
+    const planningProps = planningMatch.feature?.properties || {};
+    const mobilityProps = mobilityMatch.feature?.properties || {};
+    const riskProps = riskMatch.feature?.properties || {};
+    const hydrologyProps = hydrologyMatch.feature?.properties || {};
+    const evidence = computeTerritorialEvidenceImpact(cell, evidenceProfiles, {
+      stationDistanceKm: 5,
+      historyDistanceKm: 4.6,
+    });
+    const accessScore = Math.round(clamp(
+      (Number(planningProps.accessScore) || 0) * 0.58
+      + (Number(mobilityProps.score) || 0) * 0.42,
+      12,
+      98
+    ));
+    const serviceScore = Math.round(clamp(
+      (Number(planningProps.serviceScore) || 0) * 0.62
+      + Math.min(serviceTypes.size, 3) * 9
+      + (Number(mobilityProps.score) || 0) * 0.16,
+      10,
+      97
+    ));
+    const diversityScore = Math.round(clamp(
+      (insideUrban ? 48 : 20)
+      + Math.min(serviceTypes.size, 3) * 11
+      + Math.max(0, 24 - (road.distanceKm || 0) * 24)
+      + Math.max(0, 22 - (nearestUrban.distanceKm || 0) * 16),
+      8,
+      96
+    ));
+    const resilienceScore = Math.round(clamp(
+      (Number(planningProps.resilienceScore) || 0) * 0.42
+      + (Number(hydrologyProps.resilience) || hydrology.summary.meanResilience || 55) * 0.38
+      + Math.max(0, 18 - (evidence.sensitivePenalty * 100 * 0.6))
+      + Math.max(0, 14 - (Number(riskProps.score) || 0) * 0.12),
+      12,
+      96
+    ));
+    const productiveEdgeScore = Math.round(clamp(
+      (insideUrban ? 10 : 34)
+      + Math.max(0, 24 - (nearestUrban.distanceKm || 0) * 18)
+      + Math.max(0, 20 - Math.abs((canal.distanceKm || 0) - 0.45) * 26)
+      + evidence.hydricSectorCount * 6,
+      6,
+      95
+    ));
+    const vulnerabilityScore = Math.round(clamp(
+      (Number(riskProps.score) || risk.summary.meanScore || 42) * 0.54
+      + Math.max(0, 28 - (Number(hydrologyProps.resilience) || hydrology.summary.meanResilience || 60) * 0.2)
+      + evidence.sensitivePenalty * 100 * 0.56
+      + evidence.riskBoost * 100 * 0.28,
+      8,
+      97
+    ));
+    const vitalityIndex = Math.round(clamp(
+      accessScore * 0.24
+      + serviceScore * 0.22
+      + diversityScore * 0.18
+      + resilienceScore * 0.18
+      + productiveEdgeScore * 0.08
+      + Math.max(0, 100 - vulnerabilityScore) * 0.1,
+      0,
+      100
+    ));
+    const classification = classifyZoningPattern({
+      accessScore,
+      serviceScore,
+      diversityScore,
+      resilienceScore,
+      productiveEdgeScore,
+      vulnerabilityScore,
+      vitalityIndex,
+      insideUrban,
+      urbanDistanceKm: Number(planningProps.urbanDistanceKm) || nearestUrban.distanceKm || 0,
+      roadDistanceKm: Number(planningProps.roadDistanceKm) || road.distanceKm || 0,
+    });
+    const opportunityScore = Math.round(clamp(
+      vitalityIndex * 0.58
+      + Math.max(0, 100 - vulnerabilityScore) * 0.18
+      + productiveEdgeScore * 0.12
+      + serviceScore * 0.12,
+      0,
+      100
+    ));
+    const priorityScore = Math.round(clamp(
+      classification.actionLabel === "Corregir"
+        ? (100 - vitalityIndex) * 0.56 + vulnerabilityScore * 0.44
+        : classification.actionLabel === "Proteger"
+          ? productiveEdgeScore * 0.44 + vulnerabilityScore * 0.22 + (100 - serviceScore) * 0.18 + (100 - diversityScore) * 0.16
+          : classification.actionLabel === "Orientar"
+            ? opportunityScore * 0.62 + Math.max(0, 100 - vulnerabilityScore) * 0.18 + accessScore * 0.2
+            : classification.actionLabel === "Regular"
+              ? accessScore * 0.34 + vulnerabilityScore * 0.28 + productiveEdgeScore * 0.18 + diversityScore * 0.2
+              : opportunityScore,
+      0,
+      100
+    ));
+    const supportLabel = officialSummary.activeLayerCount
+      ? `${officialSummary.activeLayerCount} capas oficiales`
+      : "Base territorial";
+    const sectorName = `Sector ${index + 1} ${getRelativeDirectionLabel(targetCentroid, centroid.geometry.coordinates)}`;
+    return {
+      id: `zoning-${index + 1}`,
+      name: sectorName,
+      feature: cell,
+      centroid: centroid.geometry.coordinates,
+      patternLabel: classification.label,
+      tone: classification.tone,
+      actionLabel: classification.actionLabel,
+      vitalityIndex,
+      vitalityLabel: getZoningVitalityLabel(vitalityIndex),
+      accessScore,
+      serviceScore,
+      diversityScore,
+      resilienceScore,
+      productiveEdgeScore,
+      vulnerabilityScore,
+      priorityScore,
+      opportunityScore,
+      insideUrban,
+      roadDistanceKm: Number((road.distanceKm || 0).toFixed(2)),
+      canalDistanceKm: Number((canal.distanceKm || 0).toFixed(2)),
+      urbanDistanceKm: Number(((Number(planningProps.urbanDistanceKm) || nearestUrban.distanceKm || 0)).toFixed(2)),
+      supportLabel,
+      recommendation: classification.recommendation,
+      summary: `${classification.label} con ${getZoningVitalityLabel(vitalityIndex).toLowerCase()}, acceso ${accessScore}/100 y vulnerabilidad ${vulnerabilityScore}/100 en ${target.scopeLabel}.`,
+      dimensions: {
+        accessScore,
+        serviceScore,
+        diversityScore,
+        resilienceScore,
+        productiveEdgeScore,
+        vulnerabilityScore,
+      },
+      tags: [
+        `${accessScore}/100 acceso`,
+        `${serviceScore}/100 servicios`,
+        `${diversityScore}/100 mezcla`,
+        `${resilienceScore}/100 resiliencia`,
+        supportLabel,
+      ],
+    };
+  });
+
+  const patternCounts = sectors.reduce((accumulator, sector) => {
+    accumulator[sector.patternLabel] = (accumulator[sector.patternLabel] || 0) + 1;
+    return accumulator;
+  }, {});
+  const dominantPatternLabel = Object.entries(patternCounts).sort((left, right) => right[1] - left[1])[0]?.[0] || "Sin patron dominante";
+  const prioritySectors = sectors
+    .slice()
+    .sort((left, right) => right.priorityScore - left.priorityScore)
+    .slice(0, 6)
+    .map((sector, index) => ({ ...sector, rank: index + 1 }));
+  const meanVitality = Math.round(sectors.reduce((sum, sector) => sum + sector.vitalityIndex, 0) / Math.max(sectors.length, 1));
+  const highVitalityAreaHa = Number(sectors.reduce((sum, sector) => sum + (sector.vitalityIndex >= 74 ? turf.area(sector.feature) / 10000 : 0), 0).toFixed(1));
+  const fragileAreaHa = Number(sectors.reduce((sum, sector) => sum + (sector.patternLabel === "Fragilidad territorial" ? turf.area(sector.feature) / 10000 : 0), 0).toFixed(1));
+  const dominantActionLabel = prioritySectors[0]?.actionLabel || "Orientar";
+  const clusters = Object.entries(patternCounts)
+    .map(([label, count]) => {
+      const items = sectors.filter((sector) => sector.patternLabel === label);
+      const mean = Math.round(items.reduce((sum, sector) => sum + sector.vitalityIndex, 0) / Math.max(items.length, 1));
+      return {
+        label,
+        count,
+        meanVitality: mean,
+      };
+    })
+    .sort((left, right) => right.count - left.count);
+
+  return {
+    context: target,
+    sourceStudy: {
+      label: "Replica metodologica inspirada en el estudio multidimensional del DMQ",
+      variablesLabel: "6 dimensiones proxy del geoportal",
+      methodLabel: "Patrones territoriales + indice de vitalidad urbana",
+    },
+    sectors,
+    prioritySectors,
+    clusters,
+    summary: {
+      meanVitality,
+      vitalityLabel: getZoningVitalityLabel(meanVitality),
+      dominantPatternLabel,
+      dominantActionLabel,
+      highVitalityAreaHa,
+      fragileAreaHa,
+      officialLayers: officialSummary.activeLayerCount || 0,
+      readout: `${dominantPatternLabel} domina la corrida en ${target.scopeLabel}. La replica traduce accesibilidad, servicios, mezcla, resiliencia y borde productivo a una lectura de vitalidad urbana util para intervenir por sector.`,
+    },
+  };
+}
+
+function renderZoningPatternsModule() {
+  const areaProfile = getTerritorialAreaProfile();
+  if (!state.zoningPatternsData) {
+    resetMetricGrid(dom.zoningPatternsResults, `Ejecuta el estudio para leer patrones territoriales y vitalidad urbana en ${areaProfile.scopeLabel}.`);
+    dom.zoningPatternsReadout?.classList.add("empty-state");
+    dom.zoningPatternsReadout?.classList.remove("has-data");
+    if (dom.zoningPatternsReadout) {
+      setTextIfChanged(dom.zoningPatternsReadout, "Aqui apareceran el patron dominante, la vitalidad media y la lectura territorial inspirada en el estudio del DMQ.");
+    }
+    dom.zoningPatternsClusters?.classList.add("empty-state");
+    dom.zoningPatternsClusters?.classList.remove("has-data");
+    if (dom.zoningPatternsClusters) {
+      setTextIfChanged(dom.zoningPatternsClusters, "Aqui se resumiran los patrones, las dimensiones leidas y el soporte oficial activo.");
+    }
+    dom.zoningPatternsSectors?.classList.add("empty-state");
+    dom.zoningPatternsSectors?.classList.remove("has-data");
+    if (dom.zoningPatternsSectors) {
+      setTextIfChanged(dom.zoningPatternsSectors, "Aqui apareceran los sectores con mejor oportunidad o mayor fragilidad territorial.");
+    }
+    return;
+  }
+
+  const analysis = state.zoningPatternsData;
+  paintMetricGrid(dom.zoningPatternsResults, [
+    {
+      label: "Vitalidad media",
+      value: `${analysis.summary.meanVitality}/100`,
+      copy: `${analysis.summary.vitalityLabel} para ${analysis.context.scopeLabel}.`,
+      highlight: true,
+    },
+    {
+      label: "Patron dominante",
+      value: analysis.summary.dominantPatternLabel,
+      copy: `${analysis.clusters.length} patrones sintetizados en la corrida.`,
+    },
+    {
+      label: "Area dinamica",
+      value: `${analysis.summary.highVitalityAreaHa.toFixed(1)} ha`,
+      copy: "Superficie con vitalidad alta o capacidad clara de consolidacion.",
+    },
+    {
+      label: "Area fragil",
+      value: `${analysis.summary.fragileAreaHa.toFixed(1)} ha`,
+      copy: `${analysis.prioritySectors.filter((sector) => sector.actionLabel === "Corregir").length} sectores piden correccion o contencion.`,
+    },
+  ]);
+
+  dom.zoningPatternsReadout?.classList.remove("empty-state");
+  dom.zoningPatternsReadout?.classList.add("has-data");
+  if (dom.zoningPatternsReadout) {
+    setHtmlIfChanged(dom.zoningPatternsReadout, `
+      <div class="territorial-readout-head">
+        <div>
+          <p class="section-kicker">Replica metodologica</p>
+          <h4>Patrones y vitalidad urbana sobre ${escapeHtmlContent(analysis.context.scopeLabel)}</h4>
+        </div>
+        <span class="planning-pill emphasis">${escapeHtmlContent(analysis.summary.dominantPatternLabel)}</span>
+      </div>
+      <p class="territorial-readout-copy">${escapeHtmlContent(analysis.summary.readout)}</p>
+      <p class="territorial-readout-copy">Base usada: ${escapeHtmlContent(analysis.sourceStudy.methodLabel)} con ${escapeHtmlContent(analysis.sourceStudy.variablesLabel)}.</p>
+    `);
+  }
+
+  dom.zoningPatternsClusters?.classList.remove("empty-state");
+  dom.zoningPatternsClusters?.classList.add("has-data");
+  if (dom.zoningPatternsClusters) {
+    const clusterPills = [
+      `${analysis.sourceStudy.label}`,
+      `${analysis.summary.officialLayers} capas oficiales`,
+      ...analysis.clusters.slice(0, 5).map((cluster) => `${cluster.label}: ${cluster.count}`),
+    ];
+    setHtmlIfChanged(dom.zoningPatternsClusters, clusterPills.map((item) => `<span class="planning-pill emphasis">${escapeHtmlContent(item)}</span>`).join(""));
+  }
+
+  dom.zoningPatternsSectors?.classList.remove("empty-state");
+  dom.zoningPatternsSectors?.classList.add("has-data");
+  if (dom.zoningPatternsSectors) {
+    setHtmlIfChanged(dom.zoningPatternsSectors, analysis.prioritySectors.map((sector) => `
+      <article class="land-change-sector ${sector.id === state.zoningPatternsHighlightId ? "active" : ""}">
+        <div class="land-change-sector-head">
+          <div>
+            <p class="land-change-sector-kicker">${escapeHtmlContent(sector.actionLabel)}</p>
+            <h4>${escapeHtmlContent(sector.name)}</h4>
+          </div>
+          <span class="land-change-pill tone-${sector.tone}">${escapeHtmlContent(sector.patternLabel)}</span>
+        </div>
+        <p class="land-change-sector-copy">${escapeHtmlContent(sector.summary)}</p>
+        <div class="land-change-sector-grid">
+          <article class="land-change-sector-metric">
+            <span>Vitalidad</span>
+            <strong>${sector.vitalityIndex}/100</strong>
+          </article>
+          <article class="land-change-sector-metric">
+            <span>Servicios</span>
+            <strong>${sector.serviceScore}/100</strong>
+          </article>
+          <article class="land-change-sector-metric">
+            <span>Resiliencia</span>
+            <strong>${sector.resilienceScore}/100</strong>
+          </article>
+          <article class="land-change-sector-metric">
+            <span>Vulnerabilidad</span>
+            <strong>${sector.vulnerabilityScore}/100</strong>
+          </article>
+        </div>
+        <div class="land-change-sector-tags">
+          ${sector.tags.map((tag) => `<span>${escapeHtmlContent(tag)}</span>`).join("")}
+        </div>
+        <p class="land-change-sector-note">${escapeHtmlContent(sector.recommendation)}</p>
+        <button class="ghost-button" type="button" data-zoning-sector-id="${sector.id}">Ver en mapa</button>
+      </article>
+    `).join(""));
+  }
+}
+
+async function runZoningPatternsAnalysis(silent = false) {
+  try {
+    await runOfficialDataAnalysis(true);
+    if (!isCurrentTerritorialAnalysis(state.planningData)) {
+      state.planningData = buildPlanningAnalysis();
+      state.planningHighlightId = state.planningData.candidates[0]?.id || null;
+    }
+    if (!isCurrentTerritorialAnalysis(state.mobilityData)) {
+      state.mobilityData = buildMobilityAnalysis();
+      state.mobilityHighlightId = state.mobilityData.prioritySectors[0]?.id || null;
+    }
+    if (!isCurrentTerritorialAnalysis(state.riskData)) {
+      state.riskData = buildRiskAnalysis();
+      state.riskHighlightId = state.riskData.prioritySectors[0]?.id || null;
+    }
+    if (!isCurrentTerritorialAnalysis(state.hydrologyData)) {
+      state.hydrologyData = buildHydrologyAnalysis();
+      state.hydrologyHighlightId = state.hydrologyData.prioritySectors[0]?.id || null;
+    }
+    const analysis = buildZoningPatternsAnalysis();
+    state.zoningPatternsData = analysis;
+    state.zoningPatternsHighlightId = analysis.prioritySectors[0]?.id || null;
+    state.territorialFocus = "zoningPatterns";
+    renderZoningPatternsModule();
+    renderZoningPatternsOverlay(analysis);
+    renderPlanningModule();
+    updateMapSummary();
+    if (!silent) {
+      setStatus(`Patrones territoriales listos para ${analysis.context.scopeLabel}: ${analysis.summary.dominantPatternLabel.toLowerCase()} y ${analysis.summary.vitalityLabel.toLowerCase()}.`);
+    }
+    return analysis;
+  } catch (error) {
+    console.warn("Fallo el estudio de patrones territoriales.", error);
+    state.zoningPatternsData = null;
+    state.zoningPatternsHighlightId = null;
+    clearZoningPatternsOverlay();
+    resetTerritorialModuleState(dom.zoningPatternsResults, "No se pudo leer la zonificacion territorial en esta corrida.", [
+      { target: dom.zoningPatternsReadout, message: "No fue posible reconstruir la lectura de vitalidad urbana." },
+      { target: dom.zoningPatternsClusters, message: "No fue posible sintetizar los patrones dominantes." },
+      { target: dom.zoningPatternsSectors, message: "No fue posible priorizar sectores de oportunidad o fragilidad." },
+    ]);
+    if (!silent) {
+      setStatus(`Patrones territoriales: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    updateMapSummary();
+    return null;
+  }
+}
+
+function clearZoningPatternsAnalysis() {
+  state.zoningPatternsData = null;
+  state.zoningPatternsHighlightId = null;
+  clearZoningPatternsOverlay();
+  renderPlanningModule();
+  updateMapSummary();
+  setStatus(`Patrones territoriales limpiados para ${getTerritorialAreaProfile().scopeLabel}.`);
+}
+
+function renderZoningPatternsOverlay(analysis) {
+  clearZoningPatternsOverlay();
+  if (!mapState.map || !analysis?.sectors?.length || state.entryRoute !== "planificacion") {
+    return;
+  }
+
+  mapState.zoningPatternsLayer = L.geoJSON({
+    type: "FeatureCollection",
+    features: analysis.sectors.map((sector) => ({
+      ...cloneFeature(sector.feature),
+      properties: {
+        ...(sector.feature.properties || {}),
+        zoningSectorId: sector.id,
+        name: sector.name,
+        patternLabel: sector.patternLabel,
+        vitalityIndex: sector.vitalityIndex,
+        summary: sector.summary,
+      },
+    })),
+  }, {
+    style: (feature) => {
+      const active = feature.properties?.zoningSectorId === state.zoningPatternsHighlightId;
+      const palette = getZoningPatternColor(feature.properties?.patternLabel);
+      return {
+        color: palette.color,
+        weight: active ? 2.8 : 1.6,
+        fillColor: palette.fill,
+        fillOpacity: active ? 0.32 : 0.19,
+      };
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.patternLabel || "Patron"} · ${feature.properties?.vitalityIndex || 0}/100. ${feature.properties?.summary || ""}</p>`);
+    },
+  }).addTo(mapState.map);
+
+  mapState.zoningPatternsHotspotLayer = L.geoJSON({
+    type: "FeatureCollection",
+    features: analysis.prioritySectors.map((sector) => pointFeature(sector.name, sector.centroid, {
+      zoningSectorId: sector.id,
+      name: sector.name,
+      patternLabel: sector.patternLabel,
+      vitalityIndex: sector.vitalityIndex,
+      summary: sector.summary,
+    })),
+  }, {
+    pointToLayer: (feature, latlng) => {
+      const palette = getZoningPatternColor(feature.properties?.patternLabel);
+      return L.circleMarker(latlng, {
+        radius: 7,
+        color: "#fff9ef",
+        weight: 2,
+        fillColor: palette.color,
+        fillOpacity: 0.94,
+      });
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.patternLabel || "Patron"} · ${feature.properties?.vitalityIndex || 0}/100. ${feature.properties?.summary || ""}</p>`);
+    },
+  }).addTo(mapState.map);
+
+  mapState.zoningPatternsLayer?.bringToFront?.();
+  mapState.zoningPatternsHotspotLayer?.bringToFront?.();
+}
+
+function clearZoningPatternsOverlay() {
+  ["zoningPatternsLayer", "zoningPatternsHotspotLayer"].forEach((layerName) => {
+    if (mapState[layerName]) {
+      mapState.map?.removeLayer(mapState[layerName]);
+      mapState[layerName] = null;
+    }
+  });
+}
+
+function focusZoningPatternsStudy() {
+  if (!mapState.map || !mapState.zoningPatternsLayer) {
+    return;
+  }
+  state.territorialFocus = "zoningPatterns";
+  renderZoningPatternsModule();
+  renderZoningPatternsOverlay(state.zoningPatternsData);
+  updateMapSummary();
+  const bounds = mapState.zoningPatternsLayer.getBounds();
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 12 });
+  }
+}
+
+function focusZoningPatternsSector(sectorId) {
+  const sector = state.zoningPatternsData?.sectors?.find((item) => item.id === sectorId);
+  if (!sector || !mapState.map) {
+    return;
+  }
+  state.zoningPatternsHighlightId = sectorId;
+  state.territorialFocus = "zoningPatterns";
+  renderZoningPatternsModule();
+  renderZoningPatternsOverlay(state.zoningPatternsData);
+  updateMapSummary();
+  const bounds = L.geoJSON(sector.feature).getBounds();
+  mapState.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 13 });
+}
+
+function handleZoningPatternsSectorsInteraction(event) {
+  const button = event.target.closest("[data-zoning-sector-id]");
+  if (!button || !dom.zoningPatternsSectors?.contains(button)) {
+    return;
+  }
+  focusZoningPatternsSector(button.dataset.zoningSectorId);
+}
+
+function getHousingTensionLabel(score = 0) {
+  if (score >= 72) {
+    return "Tension alta";
+  }
+  if (score >= 56) {
+    return "Tension media";
+  }
+  return "Tension baja";
+}
+
+function classifyHousingTypology(metrics) {
+  if (metrics.shortStayPressure >= 70 && metrics.vitalityIndex >= 68) {
+    return {
+      label: "Departamento central",
+      tone: "mid",
+      actionLabel: "Regular",
+      recommendation: "Regular rotacion, mezcla de usos y permanencia residencial para evitar sobrepresion de renta corta.",
+    };
+  }
+  if (metrics.productiveEdgeScore >= 68 && metrics.offerIntensity <= 58) {
+    return {
+      label: "Vivienda productiva",
+      tone: "mid",
+      actionLabel: "Proteger",
+      recommendation: "Proteger la relacion vivienda-produccion y contener cambio de uso que rompa el soporte rural.",
+    };
+  }
+  if (metrics.informalSignal >= 64 && metrics.serviceScore <= 54) {
+    return {
+      label: "Oferta popular en tension",
+      tone: "high",
+      actionLabel: "Corregir",
+      recommendation: "Corregir deficit de servicios, accesibilidad y seguridad de tenencia antes de seguir consolidando oferta.",
+    };
+  }
+  if (metrics.vitalityIndex >= 60 && metrics.serviceScore >= 58) {
+    return {
+      label: "Casa consolidada",
+      tone: "low",
+      actionLabel: "Consolidar",
+      recommendation: "Consolidar vivienda y servicios barriales, mejorando soporte sin forzar nueva expansion.",
+    };
+  }
+  return {
+    label: "Mixto de borde",
+    tone: "mid",
+    actionLabel: "Ordenar",
+    recommendation: "Ordenar mezcla de tipologias y borde, reforzando servicios antes de empujar nueva demanda.",
+  };
+}
+
+function getHousingTypologyColor(label = "") {
+  const palette = {
+    "Departamento central": { color: "#7b6bb6", fill: "#d6ceef" },
+    "Casa consolidada": { color: "#2f7f5f", fill: "#b8d8c5" },
+    "Mixto de borde": { color: "#cb9440", fill: "#ecd4a5" },
+    "Oferta popular en tension": { color: "#a35443", fill: "#ddb0a5" },
+    "Vivienda productiva": { color: "#687a49", fill: "#ced8b4" },
+  };
+  return palette[label] || { color: "#6f7f85", fill: "#d5dee2" };
+}
+
+function buildHousingPatternsAnalysis() {
+  const target = getCurrentTerritorialTarget();
+  const zoning = isCurrentTerritorialAnalysis(state.zoningPatternsData, target)
+    ? state.zoningPatternsData
+    : buildZoningPatternsAnalysis();
+  const landChange = isCurrentTerritorialAnalysis(state.landChangeData, target)
+    ? state.landChangeData
+    : buildLandChangeAnalysis();
+  const planning = isCurrentTerritorialAnalysis(state.planningData, target)
+    ? state.planningData
+    : buildPlanningAnalysis({ target });
+  const sectorsBase = zoning.sectors.map((sector) => {
+    const landMatch = getNearestFeatureMatch(turf.point(sector.centroid), (landChange.sectors || []).map((item) => pointFeature(item.id, item.centroid, item)));
+    const landProps = landMatch.feature?.properties || {};
+    const offerIntensity = Math.round(clamp(
+      sector.vitalityIndex * 0.34
+      + sector.accessScore * 0.2
+      + sector.serviceScore * 0.2
+      + Math.max(0, 22 - sector.urbanDistanceKm * 14)
+      + (sector.insideUrban ? 10 : 0),
+      12,
+      96
+    ));
+    const formalSignal = Math.round(clamp(
+      sector.vitalityIndex * 0.42
+      + sector.serviceScore * 0.26
+      + sector.accessScore * 0.2
+      + (sector.insideUrban ? 8 : 0)
+      - sector.vulnerabilityScore * 0.08,
+      8,
+      95
+    ));
+    const informalSignal = Math.round(clamp(
+      (100 - sector.serviceScore) * 0.34
+      + (100 - sector.accessScore) * 0.18
+      + sector.productiveEdgeScore * 0.2
+      + (Number(landProps.score) || 48) * 0.16
+      + sector.vulnerabilityScore * 0.12,
+      8,
+      97
+    ));
+    const shortStayPressure = Math.round(clamp(
+      sector.vitalityIndex * 0.4
+      + sector.accessScore * 0.24
+      + sector.diversityScore * 0.2
+      + sector.serviceScore * 0.12
+      - sector.productiveEdgeScore * 0.08,
+      4,
+      94
+    ));
+    const priceIndex = Math.round(clamp(
+      formalSignal * 0.46
+      + shortStayPressure * 0.22
+      + sector.vitalityIndex * 0.18
+      + offerIntensity * 0.14
+      - informalSignal * 0.1
+      + 9,
+      18,
+      98
+    ));
+    const housingStress = Math.round(clamp(
+      (100 - sector.serviceScore) * 0.24
+      + sector.vulnerabilityScore * 0.18
+      + informalSignal * 0.22
+      + Math.max(0, shortStayPressure - 58) * 0.18
+      + Math.max(0, (Number(landProps.score) || 44) - 52) * 0.18,
+      12,
+      96
+    ));
+    return {
+      ...sector,
+      offerIntensity,
+      formalSignal,
+      informalSignal,
+      shortStayPressure,
+      priceIndex,
+      housingStress,
+    };
+  });
+
+  const priceReference = sectorsBase
+    .map((sector) => sector.priceIndex)
+    .sort((left, right) => left - right)[Math.floor(sectorsBase.length / 2)] || 50;
+  const sectors = sectorsBase.map((sector) => {
+    const priceGap = Math.round(sector.priceIndex - priceReference);
+    const typology = classifyHousingTypology({
+      ...sector,
+      priceGap,
+    });
+    const rentalSignal = sector.formalSignal >= sector.informalSignal ? "Renta formal" : "Renta informal";
+    return {
+      ...sector,
+      priceGap,
+      tensionLabel: getHousingTensionLabel(sector.housingStress),
+      typologyLabel: typology.label,
+      tone: typology.tone,
+      actionLabel: typology.actionLabel,
+      rentalSignal,
+      recommendation: typology.recommendation,
+      summary: `${typology.label} con ${getHousingTensionLabel(sector.housingStress).toLowerCase()}, intensidad ${sector.offerIntensity}/100 y brecha ${priceGap >= 0 ? "+" : ""}${priceGap} frente a la referencia interna.`,
+      tags: [
+        `${sector.offerIntensity}/100 oferta`,
+        `${sector.priceIndex}/100 referencia`,
+        `${sector.shortStayPressure}/100 corta estancia`,
+        rentalSignal,
+      ],
+    };
+  });
+
+  const dominantTypologyLabel = Object.entries(sectors.reduce((accumulator, sector) => {
+    accumulator[sector.typologyLabel] = (accumulator[sector.typologyLabel] || 0) + 1;
+    return accumulator;
+  }, {})).sort((left, right) => right[1] - left[1])[0]?.[0] || "Sin tipologia dominante";
+  const prioritySectors = sectors
+    .slice()
+    .sort((left, right) => {
+      const rightWeight = right.housingStress * 0.62 + Math.abs(right.priceGap) * 0.38;
+      const leftWeight = left.housingStress * 0.62 + Math.abs(left.priceGap) * 0.38;
+      return rightWeight - leftWeight;
+    })
+    .slice(0, 6)
+    .map((sector, index) => ({ ...sector, rank: index + 1 }));
+  const meanOfferIntensity = Math.round(sectors.reduce((sum, sector) => sum + sector.offerIntensity, 0) / Math.max(sectors.length, 1));
+  const meanPriceIndex = Math.round(sectors.reduce((sum, sector) => sum + sector.priceIndex, 0) / Math.max(sectors.length, 1));
+  const highStressCount = sectors.filter((sector) => sector.housingStress >= 72).length;
+  const shortStayCount = sectors.filter((sector) => sector.shortStayPressure >= 68).length;
+
+  return {
+    context: target,
+    sourceStudy: {
+      label: "Replica territorial inspirada en el estudio de vivienda del DMQ",
+      methodLabel: "Proxy de oferta, tipologia y tension habitacional",
+      platformsLabel: "Referencia conceptual: venta, renta formal, renta informal y corta estancia",
+    },
+    sectors,
+    prioritySectors,
+    summary: {
+      dominantTypologyLabel,
+      meanOfferIntensity,
+      meanPriceIndex,
+      referencePriceIndex: priceReference,
+      highStressCount,
+      shortStayCount,
+      readout: `${dominantTypologyLabel} domina la estructura habitacional de ${target.scopeLabel}. La replica no usa scraping real del mercado local; traduce centralidad, servicios, borde y presion territorial a una lectura comparativa de vivienda.`,
+    },
+  };
+}
+
+function renderHousingPatternsModule() {
+  const areaProfile = getTerritorialAreaProfile();
+  if (!state.housingPatternsData) {
+    resetMetricGrid(dom.housingPatternsResults, `Ejecuta el estudio para leer intensidad de oferta, tipologias y tension de vivienda en ${areaProfile.scopeLabel}.`);
+    dom.housingPatternsReadout?.classList.add("empty-state");
+    dom.housingPatternsReadout?.classList.remove("has-data");
+    if (dom.housingPatternsReadout) {
+      setTextIfChanged(dom.housingPatternsReadout, "Aqui apareceran la lectura de vivienda, la referencia interna y la tension territorial inspirada en el estudio del DMQ.");
+    }
+    dom.housingPatternsTypologies?.classList.add("empty-state");
+    dom.housingPatternsTypologies?.classList.remove("has-data");
+    if (dom.housingPatternsTypologies) {
+      setTextIfChanged(dom.housingPatternsTypologies, "Aqui se resumiran tipologias dominantes, senales de renta y focos de vigilancia.");
+    }
+    dom.housingPatternsSectors?.classList.add("empty-state");
+    dom.housingPatternsSectors?.classList.remove("has-data");
+    if (dom.housingPatternsSectors) {
+      setTextIfChanged(dom.housingPatternsSectors, "Aqui apareceran sectores con tension alta o mejor encaje para vivienda.");
+    }
+    return;
+  }
+
+  const analysis = state.housingPatternsData;
+  paintMetricGrid(dom.housingPatternsResults, [
+    {
+      label: "Oferta media",
+      value: `${analysis.summary.meanOfferIntensity}/100`,
+      copy: `Intensidad relativa de oferta y localizacion sobre ${analysis.context.scopeLabel}.`,
+      highlight: true,
+    },
+    {
+      label: "Tipologia dominante",
+      value: analysis.summary.dominantTypologyLabel,
+      copy: "Lectura sintetica de estructura habitacional del territorio.",
+    },
+    {
+      label: "Referencia interna",
+      value: `${analysis.summary.referencePriceIndex}/100`,
+      copy: "Indice relativo base para comparar tension y valor de oferta entre sectores.",
+    },
+    {
+      label: "Sectores en tension",
+      value: `${analysis.summary.highStressCount}`,
+      copy: `${analysis.summary.shortStayCount} sectores tambien muestran presion potencial de corta estancia.`,
+    },
+  ]);
+
+  dom.housingPatternsReadout?.classList.remove("empty-state");
+  dom.housingPatternsReadout?.classList.add("has-data");
+  if (dom.housingPatternsReadout) {
+    setHtmlIfChanged(dom.housingPatternsReadout, `
+      <div class="territorial-readout-head">
+        <div>
+          <p class="section-kicker">Replica de vivienda</p>
+          <h4>Oferta, tipologias y tension relativa</h4>
+        </div>
+        <span class="planning-pill emphasis">${escapeHtmlContent(analysis.summary.dominantTypologyLabel)}</span>
+      </div>
+      <p class="territorial-readout-copy">${escapeHtmlContent(analysis.summary.readout)}</p>
+      <p class="territorial-readout-copy">Base usada: ${escapeHtmlContent(analysis.sourceStudy.platformsLabel)}.</p>
+    `);
+  }
+
+  dom.housingPatternsTypologies?.classList.remove("empty-state");
+  dom.housingPatternsTypologies?.classList.add("has-data");
+  if (dom.housingPatternsTypologies) {
+    const pills = [
+      analysis.sourceStudy.label,
+      `${analysis.summary.meanPriceIndex}/100 indice medio`,
+      `${analysis.summary.referencePriceIndex}/100 referencia interna`,
+      `${analysis.summary.highStressCount} sectores en tension`,
+      `${analysis.summary.shortStayCount} con presion de corta estancia`,
+    ];
+    setHtmlIfChanged(dom.housingPatternsTypologies, pills.map((item) => `<span class="planning-pill emphasis">${escapeHtmlContent(item)}</span>`).join(""));
+  }
+
+  dom.housingPatternsSectors?.classList.remove("empty-state");
+  dom.housingPatternsSectors?.classList.add("has-data");
+  if (dom.housingPatternsSectors) {
+    setHtmlIfChanged(dom.housingPatternsSectors, analysis.prioritySectors.map((sector) => `
+      <article class="field-evidence-card ${sector.id === state.housingPatternsHighlightId ? "active" : ""}">
+        <div class="field-evidence-head">
+          <div>
+            <p class="candidate-rank">${escapeHtmlContent(sector.actionLabel)}</p>
+            <h4>${escapeHtmlContent(sector.name)}</h4>
+          </div>
+          <span class="planning-pill emphasis">${escapeHtmlContent(sector.typologyLabel)}</span>
+        </div>
+        <p class="territorial-readout-copy">${escapeHtmlContent(sector.summary)}</p>
+        <div class="field-evidence-metrics">
+          <span>${sector.offerIntensity}/100 oferta</span>
+          <span>${sector.priceGap >= 0 ? "+" : ""}${sector.priceGap} gap</span>
+          <span>${escapeHtmlContent(sector.rentalSignal)}</span>
+          <span>${escapeHtmlContent(sector.tensionLabel)}</span>
+        </div>
+        <p class="land-change-sector-note">${escapeHtmlContent(sector.recommendation)}</p>
+        <button class="ghost-button" type="button" data-housing-sector-id="${sector.id}">Ver en mapa</button>
+      </article>
+    `).join(""));
+  }
+}
+
+async function runHousingPatternsAnalysis(silent = false) {
+  try {
+    if (!isCurrentTerritorialAnalysis(state.zoningPatternsData)) {
+      await runZoningPatternsAnalysis(true);
+    }
+    if (!isCurrentTerritorialAnalysis(state.landChangeData)) {
+      state.landChangeData = buildLandChangeAnalysis();
+      state.landChangeHighlightId = state.landChangeData.prioritySectors[0]?.id || null;
+    }
+    const analysis = buildHousingPatternsAnalysis();
+    state.housingPatternsData = analysis;
+    state.housingPatternsHighlightId = analysis.prioritySectors[0]?.id || null;
+    state.territorialFocus = "housingPatterns";
+    renderHousingPatternsModule();
+    renderHousingPatternsOverlay(analysis);
+    renderPlanningModule();
+    updateMapSummary();
+    if (!silent) {
+      setStatus(`Patrones de vivienda listos para ${analysis.context.scopeLabel}: ${analysis.summary.dominantTypologyLabel.toLowerCase()} y ${analysis.summary.highStressCount} sectores en tension.`);
+    }
+    return analysis;
+  } catch (error) {
+    console.warn("Fallo el estudio de patrones de vivienda.", error);
+    state.housingPatternsData = null;
+    state.housingPatternsHighlightId = null;
+    clearHousingPatternsOverlay();
+    resetTerritorialModuleState(dom.housingPatternsResults, "No se pudo leer la estructura de vivienda en esta corrida.", [
+      { target: dom.housingPatternsReadout, message: "No fue posible reconstruir la lectura territorial de vivienda." },
+      { target: dom.housingPatternsTypologies, message: "No fue posible sintetizar tipologias y senales de renta." },
+      { target: dom.housingPatternsSectors, message: "No fue posible priorizar sectores de tension o consolidacion habitacional." },
+    ]);
+    if (!silent) {
+      setStatus(`Patrones de vivienda: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    updateMapSummary();
+    return null;
+  }
+}
+
+function clearHousingPatternsAnalysis() {
+  state.housingPatternsData = null;
+  state.housingPatternsHighlightId = null;
+  clearHousingPatternsOverlay();
+  renderPlanningModule();
+  updateMapSummary();
+  setStatus(`Patrones de vivienda limpiados para ${getTerritorialAreaProfile().scopeLabel}.`);
+}
+
+function renderHousingPatternsOverlay(analysis) {
+  clearHousingPatternsOverlay();
+  if (!mapState.map || !analysis?.sectors?.length || state.entryRoute !== "planificacion") {
+    return;
+  }
+
+  mapState.housingPatternsLayer = L.geoJSON({
+    type: "FeatureCollection",
+    features: analysis.sectors.map((sector) => ({
+      ...cloneFeature(sector.feature),
+      properties: {
+        ...(sector.feature.properties || {}),
+        housingSectorId: sector.id,
+        name: sector.name,
+        typologyLabel: sector.typologyLabel,
+        housingStress: sector.housingStress,
+        summary: sector.summary,
+      },
+    })),
+  }, {
+    style: (feature) => {
+      const active = feature.properties?.housingSectorId === state.housingPatternsHighlightId;
+      const palette = getHousingTypologyColor(feature.properties?.typologyLabel);
+      return {
+        color: palette.color,
+        weight: active ? 2.8 : 1.5,
+        fillColor: palette.fill,
+        fillOpacity: active ? 0.3 : 0.18,
+      };
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.typologyLabel || "Tipologia"} · ${feature.properties?.housingStress || 0}/100. ${feature.properties?.summary || ""}</p>`);
+    },
+  }).addTo(mapState.map);
+
+  mapState.housingPatternsHotspotLayer = L.geoJSON({
+    type: "FeatureCollection",
+    features: analysis.prioritySectors.map((sector) => pointFeature(sector.name, sector.centroid, {
+      housingSectorId: sector.id,
+      name: sector.name,
+      typologyLabel: sector.typologyLabel,
+      housingStress: sector.housingStress,
+      summary: sector.summary,
+    })),
+  }, {
+    pointToLayer: (feature, latlng) => {
+      const palette = getHousingTypologyColor(feature.properties?.typologyLabel);
+      return L.circleMarker(latlng, {
+        radius: 7,
+        color: "#fff7ef",
+        weight: 2,
+        fillColor: palette.color,
+        fillOpacity: 0.95,
+      });
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.typologyLabel || "Tipologia"} · ${feature.properties?.housingStress || 0}/100. ${feature.properties?.summary || ""}</p>`);
+    },
+  }).addTo(mapState.map);
+
+  mapState.housingPatternsLayer?.bringToFront?.();
+  mapState.housingPatternsHotspotLayer?.bringToFront?.();
+}
+
+function clearHousingPatternsOverlay() {
+  ["housingPatternsLayer", "housingPatternsHotspotLayer"].forEach((layerName) => {
+    if (mapState[layerName]) {
+      mapState.map?.removeLayer(mapState[layerName]);
+      mapState[layerName] = null;
+    }
+  });
+}
+
+function focusHousingPatternsStudy() {
+  if (!mapState.map || !mapState.housingPatternsLayer) {
+    return;
+  }
+  state.territorialFocus = "housingPatterns";
+  renderHousingPatternsModule();
+  renderHousingPatternsOverlay(state.housingPatternsData);
+  updateMapSummary();
+  const bounds = mapState.housingPatternsLayer.getBounds();
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 12 });
+  }
+}
+
+function focusHousingPatternsSector(sectorId) {
+  const sector = state.housingPatternsData?.sectors?.find((item) => item.id === sectorId);
+  if (!sector || !mapState.map) {
+    return;
+  }
+  state.housingPatternsHighlightId = sectorId;
+  state.territorialFocus = "housingPatterns";
+  renderHousingPatternsModule();
+  renderHousingPatternsOverlay(state.housingPatternsData);
+  updateMapSummary();
+  const bounds = L.geoJSON(sector.feature).getBounds();
+  mapState.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 13 });
+}
+
+function handleHousingPatternsSectorsInteraction(event) {
+  const button = event.target.closest("[data-housing-sector-id]");
+  if (!button || !dom.housingPatternsSectors?.contains(button)) {
+    return;
+  }
+  focusHousingPatternsSector(button.dataset.housingSectorId);
 }
 
 function renderHydrologyModule() {
@@ -27606,6 +28788,34 @@ function buildTerritorialDecisionSnapshot() {
     });
   }
 
+  if (state.zoningPatternsData) {
+    const zoning = state.zoningPatternsData;
+    const score = clamp(zoning.summary.meanVitality, 0, 100);
+    items.push({
+      id: "zoningPatterns",
+      score,
+      signal: getTerritorialSignalState(score),
+      title: "Patrones territoriales",
+      metric: `${zoning.summary.meanVitality}/100`,
+      copy: `${zoning.summary.dominantPatternLabel} domina la lectura y ${formatLandChangeHa(zoning.summary.fragileAreaHa)} ha quedan en fragilidad territorial.`,
+      note: `${zoning.sourceStudy.methodLabel} con ${zoning.sourceStudy.variablesLabel}.`,
+    });
+  }
+
+  if (state.housingPatternsData) {
+    const housing = state.housingPatternsData;
+    const score = clamp(100 - (housing.summary.highStressCount * 8) + housing.summary.meanOfferIntensity * 0.2, 0, 100);
+    items.push({
+      id: "housingPatterns",
+      score,
+      signal: getTerritorialSignalState(score),
+      title: "Patrones de vivienda",
+      metric: `${housing.summary.meanOfferIntensity}/100`,
+      copy: `${housing.summary.dominantTypologyLabel} domina el ambito y ${housing.summary.highStressCount} sectores piden correccion o regulacion.`,
+      note: `${housing.sourceStudy.methodLabel} con referencia interna ${housing.summary.referencePriceIndex}/100.`,
+    });
+  }
+
   if (state.fodaCameData) {
     const fodaCame = state.fodaCameData;
     const score = clamp(fodaCame.summary.overallScore, 0, 100);
@@ -27727,6 +28937,50 @@ function buildTerritorialSectorSheets() {
           { label: "Cobertura", value: `${sector.coveragePct}%` },
         ],
         actionAttr: `data-hydrology-sector-id="${sector.id}"`,
+      });
+    });
+  }
+
+  if (state.zoningPatternsData?.prioritySectors?.length) {
+    state.zoningPatternsData.prioritySectors.slice(0, 2).forEach((sector) => {
+      sheets.push({
+        id: sector.id,
+        module: "Patrones territoriales",
+        title: sector.name,
+        tone: sector.tone,
+        kicker: sector.patternLabel,
+        summary: sector.summary,
+        note: sector.recommendation,
+        metrics: [
+          { label: "Vitalidad", value: `${sector.vitalityIndex}/100` },
+          { label: "Acceso", value: `${sector.accessScore}/100` },
+          { label: "Servicios", value: `${sector.serviceScore}/100` },
+          { label: "Resiliencia", value: `${sector.resilienceScore}/100` },
+          { label: "Vulnerabilidad", value: `${sector.vulnerabilityScore}/100` },
+        ],
+        actionAttr: `data-zoning-sector-id="${sector.id}"`,
+      });
+    });
+  }
+
+  if (state.housingPatternsData?.prioritySectors?.length) {
+    state.housingPatternsData.prioritySectors.slice(0, 2).forEach((sector) => {
+      sheets.push({
+        id: sector.id,
+        module: "Patrones de vivienda",
+        title: sector.name,
+        tone: sector.tone,
+        kicker: sector.typologyLabel,
+        summary: sector.summary,
+        note: sector.recommendation,
+        metrics: [
+          { label: "Oferta", value: `${sector.offerIntensity}/100` },
+          { label: "Referencia", value: `${sector.priceIndex}/100` },
+          { label: "Gap", value: `${sector.priceGap >= 0 ? "+" : ""}${sector.priceGap}` },
+          { label: "Renta", value: sector.rentalSignal },
+          { label: "Tension", value: sector.tensionLabel },
+        ],
+        actionAttr: `data-housing-sector-id="${sector.id}"`,
       });
     });
   }
@@ -27859,6 +29113,54 @@ function buildTerritorialAlerts() {
     });
   }
 
+  if (state.zoningPatternsData?.prioritySectors?.length) {
+    state.zoningPatternsData.prioritySectors.slice(0, 3).forEach((sector) => {
+      if (sector.actionLabel === "Corregir" || sector.patternLabel === "Fragilidad territorial") {
+        alerts.push({
+          id: `alert-zoning-${sector.id}`,
+          tone: "critical",
+          module: "Patrones",
+          title: `${sector.name}: fragilidad territorial`,
+          copy: `${sector.patternLabel} con ${sector.vitalityLabel.toLowerCase()} y vulnerabilidad ${sector.vulnerabilityScore}/100. Requiere contencion o correccion.`,
+          actionAttr: `data-zoning-sector-id="${sector.id}"`,
+        });
+      } else if (sector.actionLabel === "Proteger") {
+        alerts.push({
+          id: `alert-zoning-protect-${sector.id}`,
+          tone: "watch",
+          module: "Patrones",
+          title: `${sector.name}: borde productivo sensible`,
+          copy: `${sector.patternLabel} con necesidad de proteger interfaz rural-productiva y evitar dispersion.`,
+          actionAttr: `data-zoning-sector-id="${sector.id}"`,
+        });
+      }
+    });
+  }
+
+  if (state.housingPatternsData?.prioritySectors?.length) {
+    state.housingPatternsData.prioritySectors.slice(0, 3).forEach((sector) => {
+      if (sector.housingStress >= 72 || sector.typologyLabel === "Oferta popular en tension") {
+        alerts.push({
+          id: `alert-housing-${sector.id}`,
+          tone: "critical",
+          module: "Vivienda",
+          title: `${sector.name}: tension habitacional`,
+          copy: `${sector.typologyLabel} con ${sector.tensionLabel.toLowerCase()} y gap ${sector.priceGap >= 0 ? "+" : ""}${sector.priceGap} frente a la referencia interna.`,
+          actionAttr: `data-housing-sector-id="${sector.id}"`,
+        });
+      } else if (sector.shortStayPressure >= 72) {
+        alerts.push({
+          id: `alert-housing-shortstay-${sector.id}`,
+          tone: "watch",
+          module: "Vivienda",
+          title: `${sector.name}: presion de corta estancia`,
+          copy: `${sector.typologyLabel} muestra senal alta de corta estancia y conviene regular mezcla y permanencia residencial.`,
+          actionAttr: `data-housing-sector-id="${sector.id}"`,
+        });
+      }
+    });
+  }
+
   if (state.fodaCameData?.priorityZones?.length) {
     state.fodaCameData.priorityZones.slice(0, 3).forEach((zone) => {
       if (zone.came.id === "afrontar" || zone.scores.threatScore >= 70) {
@@ -27904,20 +29206,24 @@ function buildTerritorialOpsAnalysis() {
   const mobility = state.mobilityData;
   const risk = state.riskData;
   const hydrology = state.hydrologyData;
+  const zoning = state.zoningPatternsData;
+  const housing = state.housingPatternsData;
   const official = state.officialData.planificacion;
   const decision = buildTerritorialDecisionSnapshot();
   const alerts = buildTerritorialAlerts();
 
-  if (!planning && !mobility && !risk && !hydrology && !official?.activeLayerCount && !decision) {
+  if (!planning && !mobility && !risk && !hydrology && !zoning && !housing && !official?.activeLayerCount && !decision) {
     return null;
   }
 
-  const context = planning?.context || mobility?.context || risk?.context || hydrology?.context || getCurrentTerritorialTarget();
+  const context = planning?.context || mobility?.context || risk?.context || hydrology?.context || zoning?.context || housing?.context || getCurrentTerritorialTarget();
   const weakestService = planning?.serviceCoverage?.items?.slice?.().sort((left, right) => left.coveragePct - right.coveragePct)[0] || null;
   const primaryCandidate = planning?.candidates?.[0] || null;
   const mobilitySector = mobility?.prioritySectors?.[0] || null;
   const riskSector = risk?.prioritySectors?.[0] || null;
   const hydrologySector = hydrology?.prioritySectors?.[0] || null;
+  const zoningSector = zoning?.prioritySectors?.[0] || null;
+  const housingSector = housing?.prioritySectors?.[0] || null;
   const overallScore = Math.round(clamp(
     (planning?.summary?.meanScore || 0) * 0.28
     + (mobility?.summary?.meanScore || 0) * 0.18
@@ -27959,6 +29265,18 @@ function buildTerritorialOpsAnalysis() {
       tone: hydrology.summary.balanceHm3 >= 0 ? "low" : hydrology.summary.meanResilience >= 58 ? "mid" : "high",
       value: `${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3`,
       copy: `${hydrology.summary.criticalSectorLabel} como frente hidrico principal.`,
+    } : null,
+    zoning ? {
+      label: "Patrones",
+      tone: zoning.summary.meanVitality >= 70 ? "low" : zoning.summary.meanVitality >= 55 ? "mid" : "high",
+      value: `${zoning.summary.meanVitality}/100`,
+      copy: `${zoning.summary.dominantPatternLabel} y ${zoning.prioritySectors.length} sectores de lectura prioritaria.`,
+    } : null,
+    housing ? {
+      label: "Vivienda",
+      tone: housing.summary.highStressCount >= 4 ? "high" : housing.summary.highStressCount >= 2 ? "mid" : "low",
+      value: `${housing.summary.meanOfferIntensity}/100`,
+      copy: `${housing.summary.dominantTypologyLabel} con ${housing.summary.highStressCount} sectores en tension.`,
     } : null,
     official?.activeLayerCount ? {
       label: "Oficiales",
@@ -28004,6 +29322,20 @@ function buildTerritorialOpsAnalysis() {
       copy: `${hydrologySector.balanceLabel} · ${hydrologySector.summary}`,
       actionAttr: `data-hydrology-sector-id="${hydrologySector.id}"`,
     } : null,
+    zoningSector ? {
+      title: "Patron clave",
+      tone: zoningSector.tone,
+      value: zoningSector.name,
+      copy: `${zoningSector.patternLabel} · ${zoningSector.summary}`,
+      actionAttr: `data-zoning-sector-id="${zoningSector.id}"`,
+    } : null,
+    housingSector ? {
+      title: "Tension de vivienda",
+      tone: housingSector.tone,
+      value: housingSector.name,
+      copy: `${housingSector.typologyLabel} · ${housingSector.summary}`,
+      actionAttr: `data-housing-sector-id="${housingSector.id}"`,
+    } : null,
   ].filter(Boolean);
 
   return {
@@ -28022,6 +29354,8 @@ function buildTerritorialOpsAnalysis() {
     mobilitySector,
     riskSector,
     hydrologySector,
+    zoningSector,
+    housingSector,
   };
 }
 
@@ -28106,6 +29440,8 @@ async function runTerritorialOpsAnalysis(silent = false) {
     await runMobilityAnalysis(true);
     await runRiskAnalysis(true);
     await runHydrologyAnalysis(true);
+    await runZoningPatternsAnalysis(true);
+    await runHousingPatternsAnalysis(true);
     const analysis = buildTerritorialOpsAnalysis();
     state.territorialOpsData = analysis;
     state.territorialFocus = "ops";
@@ -28250,6 +29586,30 @@ function buildTerritorialCsvExport() {
     ]);
   });
 
+  (state.zoningPatternsData?.prioritySectors || []).forEach((sector) => {
+    rows.push([
+      "patrones_territoriales",
+      sector.id,
+      sector.name,
+      `${sector.patternLabel} / ${sector.actionLabel}`,
+      `${sector.vitalityIndex}/100`,
+      `${sector.serviceScore}/100 | Vuln ${sector.vulnerabilityScore}/100`,
+      sector.summary,
+    ]);
+  });
+
+  (state.housingPatternsData?.prioritySectors || []).forEach((sector) => {
+    rows.push([
+      "patrones_vivienda",
+      sector.id,
+      sector.name,
+      `${sector.typologyLabel} / ${sector.tensionLabel}`,
+      `${sector.offerIntensity}/100`,
+      `${sector.priceGap >= 0 ? "+" : ""}${sector.priceGap} | ${sector.rentalSignal}`,
+      sector.summary,
+    ]);
+  });
+
   (state.fodaCameData?.priorityZones || []).forEach((zone) => {
     rows.push([
       "foda_came",
@@ -28357,6 +29717,38 @@ function buildTerritorialGeoJsonExport() {
     });
   }
 
+  if (state.zoningPatternsData) {
+    state.zoningPatternsData.sectors.forEach((sector) => {
+      const clone = cloneFeature(sector.feature);
+      clone.properties = {
+        ...(clone.properties || {}),
+        exportModule: "patrones_territoriales",
+        exportLayer: "zonificacion_vitalidad",
+        sectorId: sector.id,
+        sectorName: sector.name,
+        patternLabel: sector.patternLabel,
+        vitalityIndex: sector.vitalityIndex,
+      };
+      features.push(clone);
+    });
+  }
+
+  if (state.housingPatternsData) {
+    state.housingPatternsData.sectors.forEach((sector) => {
+      const clone = cloneFeature(sector.feature);
+      clone.properties = {
+        ...(clone.properties || {}),
+        exportModule: "patrones_vivienda",
+        exportLayer: "tipologias_tension",
+        sectorId: sector.id,
+        sectorName: sector.name,
+        typologyLabel: sector.typologyLabel,
+        housingStress: sector.housingStress,
+      };
+      features.push(clone);
+    });
+  }
+
   if (state.fodaCameData) {
     pushFeatures(state.fodaCameData.zoneSurface, "foda_came", "zonas_estrategicas");
     state.fodaCameData.priorityZones.forEach((zone) => {
@@ -28416,6 +29808,17 @@ function buildTerritorialJsonExport() {
       demand: state.hydrologyData.demand,
       summary: state.hydrologyData.summary,
       prioritySectors: state.hydrologyData.prioritySectors,
+    } : null,
+    patronesTerritoriales: state.zoningPatternsData ? {
+      sourceStudy: state.zoningPatternsData.sourceStudy,
+      summary: state.zoningPatternsData.summary,
+      clusters: state.zoningPatternsData.clusters,
+      prioritySectors: state.zoningPatternsData.prioritySectors,
+    } : null,
+    patronesVivienda: state.housingPatternsData ? {
+      sourceStudy: state.housingPatternsData.sourceStudy,
+      summary: state.housingPatternsData.summary,
+      prioritySectors: state.housingPatternsData.prioritySectors,
     } : null,
     fodaCame: state.fodaCameData ? {
       summary: state.fodaCameData.summary,
@@ -28543,6 +29946,32 @@ function buildTerritorialReportHtml(options = {}) {
               <div class="metric">${escapeHtmlContent(state.planningData.solarReadout.solarLabel)}</div>
               <p>${escapeHtmlContent(state.planningData.solarReadout.copy)}</p>
             </article>
+          </div>
+        </section>
+      ` : ""}
+      ${state.zoningPatternsData || state.housingPatternsData ? `
+        <section>
+          <p class="kicker">Estudios replicados para ${escapeHtmlContent(areaProfile.scopeLabel)}</p>
+          <h2>Patrones territoriales y vivienda</h2>
+          <div class="grid">
+            ${state.zoningPatternsData ? `
+              <article class="card">
+                <p class="kicker">Patrones territoriales</p>
+                <div class="metric">${escapeHtmlContent(`${state.zoningPatternsData.summary.meanVitality}/100`)}</div>
+                <p><strong>${escapeHtmlContent(state.zoningPatternsData.summary.dominantPatternLabel)}</strong></p>
+                <p>${escapeHtmlContent(state.zoningPatternsData.readout)}</p>
+                <p>${escapeHtmlContent(`Replica metodologica inspirada en ${state.zoningPatternsData.sourceStudy.label}.`)}</p>
+              </article>
+            ` : ""}
+            ${state.housingPatternsData ? `
+              <article class="card">
+                <p class="kicker">Patrones de vivienda</p>
+                <div class="metric">${escapeHtmlContent(`${state.housingPatternsData.summary.meanOfferIntensity}/100`)}</div>
+                <p><strong>${escapeHtmlContent(state.housingPatternsData.summary.dominantTypologyLabel)}</strong></p>
+                <p>${escapeHtmlContent(state.housingPatternsData.readout)}</p>
+                <p>${escapeHtmlContent(`Replica metodologica inspirada en ${state.housingPatternsData.sourceStudy.label}.`)}</p>
+              </article>
+            ` : ""}
           </div>
         </section>
       ` : ""}
@@ -32998,7 +34427,7 @@ function renderInamhiVisual(result = null) {
     <p class="agronomy-visual-copy">${result.readout}</p>
   `);
   Array.from(dom.inamhiVisual.querySelectorAll("strong")).forEach((node) => {
-    node.textContent = node.textContent.replace(/Â·|·/g, " - ");
+    node.textContent = node.textContent.replace(/·/g, " - ");
   });
 }
 
@@ -33057,6 +34486,8 @@ function updateMapSummary(force = false) {
     const hydrology = state.hydrologyData;
     const officialData = state.officialData.planificacion?.activeLayerCount ? state.officialData.planificacion : null;
     const territorialOps = state.territorialOpsData;
+    const zoningPatterns = state.zoningPatternsData;
+    const housingPatterns = state.housingPatternsData;
     const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
     const landChangePeriod = landChange?.period || getLandChangePeriodProfile();
     const landChangeScenario = landChange?.scenario || getLandChangeScenarioProfile();
@@ -33070,6 +34501,8 @@ function updateMapSummary(force = false) {
     const showHydrology = state.territorialFocus === "hydrology" && hydrology;
     const showOfficial = state.territorialFocus === "official" && officialData;
     const showOps = state.territorialFocus === "ops" && territorialOps;
+    const showZoningPatterns = state.territorialFocus === "zoningPatterns" && zoningPatterns;
+    const showHousingPatterns = state.territorialFocus === "housingPatterns" && housingPatterns;
     setTextIfChanged(dom.overlayIndex, planning ? "Aptitud" : imageryProfile.shortLabel);
     renderMapBadges();
     if (showOps) {
@@ -33107,6 +34540,20 @@ function updateMapSummary(force = false) {
         dom.mapSubtitle,
         `${hydrologyClimate.shortLabel} · ${hydrologyHorizon.shortLabel} · ${hydrologyDemand.shortLabel}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio y ${hydrology.prioritySectors.length} prioridades.`
       );
+    } else if (showZoningPatterns) {
+      setTextIfChanged(dom.overlayIndex, "Patrones");
+      setTextIfChanged(dom.mapTitle, `Patrones territoriales sobre ${zoningPatterns.context.scopeLabel}`);
+      setTextIfChanged(
+        dom.mapSubtitle,
+        `${zoningPatterns.summary.dominantPatternLabel} · ${zoningPatterns.summary.vitalityLabel} · ${zoningPatterns.prioritySectors.length} sectores visibles.`
+      );
+    } else if (showHousingPatterns) {
+      setTextIfChanged(dom.overlayIndex, "Vivienda");
+      setTextIfChanged(dom.mapTitle, `Patrones de vivienda sobre ${housingPatterns.context.scopeLabel}`);
+      setTextIfChanged(
+        dom.mapSubtitle,
+        `${housingPatterns.summary.dominantTypologyLabel} · oferta ${housingPatterns.summary.meanOfferIntensity}/100 · ${housingPatterns.summary.highStressCount} sectores en tension.`
+      );
     } else if (showOfficial) {
       setTextIfChanged(dom.overlayIndex, "Oficial");
       setTextIfChanged(dom.mapTitle, `Fuentes oficiales sobre ${officialData.scopeLabel}`);
@@ -33136,6 +34583,14 @@ function updateMapSummary(force = false) {
       setTextIfChanged(dom.overlayIndex, "Huella");
       setTextIfChanged(dom.mapTitle, "Estudio de transformacion del suelo listo");
       setTextIfChanged(dom.mapSubtitle, `${landChange.period.shortLabel} · ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas · ${landChange.summary.hotspotLabel}.`);
+    } else if (zoningPatterns) {
+      setTextIfChanged(dom.overlayIndex, "Patrones");
+      setTextIfChanged(dom.mapTitle, "Zonificacion territorial lista");
+      setTextIfChanged(dom.mapSubtitle, `${zoningPatterns.summary.dominantPatternLabel} · ${zoningPatterns.summary.vitalityLabel} sobre ${zoningPatterns.context.scopeLabel}.`);
+    } else if (housingPatterns) {
+      setTextIfChanged(dom.overlayIndex, "Vivienda");
+      setTextIfChanged(dom.mapTitle, "Patrones de vivienda listos");
+      setTextIfChanged(dom.mapSubtitle, `${housingPatterns.summary.dominantTypologyLabel} · ${housingPatterns.summary.highStressCount} sectores en tension sobre ${housingPatterns.context.scopeLabel}.`);
     } else if (officialData) {
       setTextIfChanged(dom.overlayIndex, "Oficial");
       setTextIfChanged(dom.mapTitle, `Fuentes oficiales sobre ${officialData.scopeLabel}`);

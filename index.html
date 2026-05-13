@@ -766,14 +766,24 @@
                   <strong>FODA + CAME</strong>
                   <span>Diagnostico y accion</span>
                 </button>
-                <button id="planningQuick3dBtn" class="planning-command-button accent" type="button">
+                <button id="planningQuickZoningBtn" class="planning-command-button" type="button">
                   <span class="planning-command-step">6</span>
+                  <strong>Zonificacion</strong>
+                  <span>Patrones y vitalidad</span>
+                </button>
+                <button id="planningQuickHousingBtn" class="planning-command-button" type="button">
+                  <span class="planning-command-step">7</span>
+                  <strong>Vivienda</strong>
+                  <span>Mercado y tipologias</span>
+                </button>
+                <button id="planningQuick3dBtn" class="planning-command-button accent" type="button">
+                  <span class="planning-command-step">8</span>
                   <strong>Validar en 3D</strong>
                   <span>Volumen, sombra y lote</span>
                 </button>
               </div>
               <div class="planning-command-note">
-                Flujo recomendado: aptitud, riesgo, estrategia y cierre 3D.
+                Flujo recomendado: aptitud, riesgo, zonificacion, vivienda, estrategia y cierre 3D.
               </div>
             </article>
 
@@ -818,6 +828,7 @@
                     <option value="mejia">Todo Mejia</option>
                     <option value="machachi">Machachi</option>
                     <option value="cutuglagua">Cutuglagua</option>
+                    <option value="quevedo">Quevedo</option>
                   </select>
                 </label>
                 <label class="field">
@@ -881,6 +892,7 @@
                     <option value="mejia">Todo Mejia</option>
                     <option value="machachi">Machachi</option>
                     <option value="cutuglagua">Cutuglagua</option>
+                    <option value="quevedo">Quevedo</option>
                   </select>
                 </label>
                 <label class="field">
@@ -986,6 +998,64 @@
               </div>
             </article>
 
+            <article id="zoningPatternsCard" class="module-card planning-card hidden" data-module-track="planificacion">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Zonificacion multidimensional</p>
+                  <h3>Patrones territoriales y vitalidad urbana</h3>
+                </div>
+                <button id="runZoningPatternsBtn" class="secondary-button" type="button">Leer patrones</button>
+              </div>
+              <p class="module-copy">
+                Replica metodologica inspirada en el estudio del DMQ: combina variables territoriales, servicios, accesibilidad y resiliencia para zonificar Mejia o Quevedo y estimar vitalidad urbana.
+              </p>
+              <div id="zoningPatternsResults" class="metrics-grid empty-state">
+                Ejecuta para ver patrones homogeneos, vitalidad y sectores que concentran ventajas o desafios.
+              </div>
+              <div id="zoningPatternsReadout" class="territorial-readout empty-state">
+                Aqui apareceran el patron dominante, la lectura de vitalidad urbana y el sentido territorial de la corrida.
+              </div>
+              <div id="zoningPatternsClusters" class="planning-pills empty-state">
+                Aqui se resumen tipologias, dimensiones y señales clave del estudio.
+              </div>
+              <div id="zoningPatternsSectors" class="land-change-sectors empty-state">
+                Aqui se listan sectores, claseres dominantes y acciones recomendadas.
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="focusZoningPatternsBtn" class="secondary-button" type="button">Centrar patrones</button>
+                <button id="clearZoningPatternsBtn" class="ghost-button" type="button">Limpiar patrones</button>
+              </div>
+            </article>
+
+            <article id="housingPatternsCard" class="module-card planning-card hidden" data-module-track="planificacion">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Patrones de vivienda</p>
+                  <h3>Oferta, tipologias y tension territorial</h3>
+                </div>
+                <button id="runHousingPatternsBtn" class="secondary-button" type="button">Leer vivienda</button>
+              </div>
+              <p class="module-copy">
+                Replica metodologica inspirada en el estudio del DMQ sobre plataformas digitales: estima intensidad de oferta, tipologia dominante y brecha relativa de vivienda para Mejia o Quevedo.
+              </p>
+              <div id="housingPatternsResults" class="metrics-grid empty-state">
+                Ejecuta para ver intensidad de oferta, tipologia dominante y tension de vivienda por sector.
+              </div>
+              <div id="housingPatternsReadout" class="territorial-readout empty-state">
+                Aqui apareceran la lectura del mercado territorial, la presion de renta y la brecha relativa con la referencia interna.
+              </div>
+              <div id="housingPatternsTypologies" class="planning-pills empty-state">
+                Aqui se resumen tipologias dominantes, senales de renta y focos de vigilancia.
+              </div>
+              <div id="housingPatternsSectors" class="territorial-sector-sheets empty-state">
+                Aqui se listan sectores, tipologia dominante y recomendacion de vivienda.
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="focusHousingPatternsBtn" class="secondary-button" type="button">Centrar vivienda</button>
+                <button id="clearHousingPatternsBtn" class="ghost-button" type="button">Limpiar vivienda</button>
+              </div>
+            </article>
+
             <article id="landChangeCard" class="module-card planning-card hidden" data-module-track="planificacion">
               <div class="module-head">
                 <div>
@@ -1004,6 +1074,7 @@
                     <option value="mejia">Todo Mejia</option>
                     <option value="machachi">Machachi</option>
                     <option value="cutuglagua">Cutuglagua</option>
+                    <option value="quevedo">Quevedo</option>
                   </select>
                 </label>
                 <label class="field">
