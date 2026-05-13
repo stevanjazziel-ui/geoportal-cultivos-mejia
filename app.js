@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260512-4";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260513-2";
 
 const layerCatalog = [
   {
@@ -7529,6 +7529,7 @@ function clearAgronomyMapContext() {
     "sentinelLayer",
     "managementLayer",
     "hydroNetworkLayer",
+    "hydroNetworkLineLayer",
     "hydroNetworkBufferLayer",
     "agroSuitabilityLayer",
     "agroSuitabilityHotspotLayer",
@@ -10051,6 +10052,9 @@ async function loadOfficialHydroCatalog(force = false) {
     for (const [areaId, files] of Object.entries(officialHydroFileCatalog)) {
       catalog[areaId] = { territoryId: areaId };
       for (const [layerId, url] of Object.entries(files)) {
+        if (typeof url !== "string" || !/\.(geo)?json(?:\?|$)/i.test(url)) {
+          continue;
+        }
         const payload = await fetchJson(url);
         catalog[areaId][layerId] = normalizeOfficialHydroCollection(layerId, payload, areaId);
       }
@@ -13997,10 +14001,19 @@ function isHydroLineAlignedWithOfficialContext(feature, validationFeatures = [])
     return true;
   }
   const lineAnchor = turf.centroid(feature);
-  return validationFeatures.some((candidate) => (
-    safeBooleanIntersects(feature, candidate)
-    || distanceToFeatureKm(lineAnchor, candidate) <= 1.35
-  ));
+  return validationFeatures.some((candidate) => {
+    if (safeBooleanIntersects(feature, candidate)) {
+      return true;
+    }
+    if (!candidate?.geometry) {
+      return false;
+    }
+    try {
+      return turf.distance(lineAnchor, turf.centroid(candidate), { units: "kilometers" }) <= 1.35;
+    } catch (_) {
+      return false;
+    }
+  });
 }
 
 function buildHydroLineSupportItems(context, officialContext, anchor) {
@@ -33710,13 +33723,40 @@ function distanceToFeatureKm(pointFeature, feature) {
     return turf.distance(pointFeature, feature, { units: "kilometers" });
   }
   if (type === "LineString" || type === "MultiLineString") {
-    return turf.pointToLineDistance(pointFeature, feature, { units: "kilometers" });
+    return distancePointToLineGeometryKm(pointFeature, feature);
   }
   if (type === "Polygon" || type === "MultiPolygon") {
     if (turf.booleanPointInPolygon(pointFeature, feature)) {
       return 0;
     }
-    return turf.pointToLineDistance(pointFeature, geometryToBoundaryLine(feature.geometry), { units: "kilometers" });
+    return distancePointToLineGeometryKm(pointFeature, geometryToBoundaryLine(feature.geometry));
+  }
+  return Number.POSITIVE_INFINITY;
+}
+
+function distancePointToLineGeometryKm(pointFeature, featureOrGeometry) {
+  const geometry = featureOrGeometry?.geometry || featureOrGeometry;
+  if (!geometry) {
+    return Number.POSITIVE_INFINITY;
+  }
+  if (geometry.type === "LineString") {
+    return turf.pointToLineDistance(pointFeature, turf.lineString(geometry.coordinates), { units: "kilometers" });
+  }
+  if (geometry.type === "MultiLineString") {
+    let minDistanceKm = Number.POSITIVE_INFINITY;
+    geometry.coordinates.forEach((coordinates) => {
+      if (!Array.isArray(coordinates) || coordinates.length < 2) {
+        return;
+      }
+      try {
+        const distanceKm = turf.pointToLineDistance(pointFeature, turf.lineString(coordinates), { units: "kilometers" });
+        if (Number.isFinite(distanceKm) && distanceKm < minDistanceKm) {
+          minDistanceKm = distanceKm;
+        }
+      } catch (_) {
+      }
+    });
+    return minDistanceKm;
   }
   return Number.POSITIVE_INFINITY;
 }

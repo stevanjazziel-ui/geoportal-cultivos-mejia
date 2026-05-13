@@ -13,6 +13,7 @@ let messageId = 0;
 let ws;
 const pending = new Map();
 const consoleMessages = [];
+const networkFailures = [];
 
 function formatRuntimeException(details = {}) {
   const rawText = details.text || details.exception?.description || details.exception?.value || "Runtime exception";
@@ -196,6 +197,92 @@ async function runAgronomyScenario(sessionId) {
     modulesTitle,
     sidebarTitle,
     wizardSummary: wizard.text.slice(0, 300),
+    screenshotPath,
+  };
+}
+
+async function readHydroSnapshot(sessionId) {
+  return evaluate(`
+    (() => {
+      const result = state?.agronomyOutputs?.hydroNetwork;
+      return {
+        ready: Boolean(result?.ranked?.length),
+        totalCount: result?.summary?.totalCount ?? 0,
+        structureCount: result?.summary?.structureCount ?? 0,
+        lineSupportCount: result?.summary?.lineSupportCount ?? 0,
+        rioCount: result?.summary?.rioCount ?? 0,
+        acequiaCount: result?.summary?.acequiaCount ?? 0,
+        quebradaCount: result?.summary?.quebradaCount ?? 0,
+        lineLayerCount: mapState?.hydroNetworkLineLayer?.getLayers?.().length ?? 0,
+        structureLayerCount: mapState?.hydroNetworkLayer?.getLayers?.().length ?? 0,
+        bufferLayerCount: mapState?.hydroNetworkBufferLayer?.getLayers?.().length ?? 0,
+      };
+    })()
+  `, sessionId).catch(() => null);
+}
+
+async function waitForHydroReadout(sessionId, label = "red hidrica") {
+  return waitFor(async () => {
+    const results = await readNodeInfo("#hydroNetworkResults", sessionId);
+    const visual = await readNodeInfo("#hydroNetworkVisual", sessionId);
+    const statusBar = await readText("#statusBar", sessionId);
+    const snapshot = await readHydroSnapshot(sessionId);
+    if (
+      results?.text
+      && snapshot?.ready
+      && /Estructura oficial|Lineas visibles|Riego de apoyo/i.test(results.text)
+      && !/No se pudo|Ejecuta el modulo/i.test(results.text)
+      && snapshot.structureCount > 0
+      && (snapshot.lineLayerCount > 0 || snapshot.lineSupportCount > 0 || snapshot.totalCount > 0)
+    ) {
+      return { results, visual, statusBar, snapshot };
+    }
+    return null;
+  }, { timeoutMs: 180000, label });
+}
+
+async function runHydroNetworkScenario(sessionId) {
+  await navigate(`${baseUrl}/?route=agronomia`, sessionId);
+  await waitForRoute("agronomia", sessionId);
+
+  let hydro = null;
+  try {
+    hydro = await waitForHydroReadout(sessionId, "red hidrica automatica");
+  } catch (_) {
+    await click("#runHydroNetworkBtn", sessionId);
+    hydro = await waitForHydroReadout(sessionId);
+  }
+
+  await click("#focusHydroNetworkBtn", sessionId);
+  await delay(900);
+  const screenshotPath = await captureScreenshot("smoke-agronomia-hidrologia", sessionId);
+
+  await navigate(`${baseUrl}/?route=planificacion`, sessionId);
+  await waitForRoute("planificacion", sessionId);
+  const cleanup = await waitFor(async () => {
+    const snapshot = await evaluate(`
+      (() => ({
+        hydroNetworkLayer: Boolean(mapState?.hydroNetworkLayer),
+        hydroNetworkLineLayer: Boolean(mapState?.hydroNetworkLineLayer),
+        hydroNetworkBufferLayer: Boolean(mapState?.hydroNetworkBufferLayer),
+      }))()
+    `, sessionId).catch(() => null);
+    return snapshot
+      && !snapshot.hydroNetworkLayer
+      && !snapshot.hydroNetworkLineLayer
+      && !snapshot.hydroNetworkBufferLayer
+      ? snapshot
+      : null;
+  }, { label: "limpieza de capas hidricas" });
+
+  return {
+    scenario: "red-hidrica",
+    ok: true,
+    statusBar: hydro.statusBar,
+    resultsSample: hydro.results.text.slice(0, 400),
+    visualSample: hydro.visual.text.slice(0, 400),
+    snapshot: hydro.snapshot,
+    cleanup,
     screenshotPath,
   };
 }
@@ -516,6 +603,18 @@ async function connectSession() {
         text: formatRuntimeException(data.params?.exceptionDetails),
       });
     }
+
+    if (data.method === "Network.responseReceived") {
+      const status = Number(data.params?.response?.status);
+      const url = data.params?.response?.url || "";
+      if (Number.isFinite(status) && status >= 400) {
+        networkFailures.push({
+          status,
+          url,
+          type: data.params?.type || "other",
+        });
+      }
+    }
   });
 
   const attach = await cdp("Target.attachToTarget", {
@@ -532,7 +631,7 @@ async function connectSession() {
 
 function getScenarioList() {
   if (scenarioArg === "all") {
-    return ["agronomia", "inteligencia-geo", "planificacion-foda", "planificacion-3d"];
+    return ["agronomia", "red-hidrica", "inteligencia-geo", "planificacion-foda", "planificacion-3d"];
   }
   return scenarioArg.split(",").map((item) => item.trim()).filter(Boolean);
 }
@@ -546,6 +645,10 @@ async function main() {
   for (const scenario of selectedScenarios) {
     if (scenario === "agronomia") {
       results.push(await runAgronomyScenario(sessionId));
+      continue;
+    }
+    if (scenario === "red-hidrica") {
+      results.push(await runHydroNetworkScenario(sessionId));
       continue;
     }
     if (scenario === "inteligencia-geo") {
@@ -573,6 +676,7 @@ async function main() {
     debugPort,
     executedAt: new Date().toISOString(),
     scenarios: results,
+    networkFailures: networkFailures.slice(-20),
     consoleMessages: consoleMessages.slice(-20),
   };
 
@@ -589,6 +693,7 @@ main().catch(async (error) => {
     debugPort,
     executedAt: new Date().toISOString(),
     error: error.message,
+    networkFailures,
     consoleMessages,
   };
   try {

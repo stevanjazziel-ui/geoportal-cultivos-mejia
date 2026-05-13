@@ -68,7 +68,7 @@ Modo recomendado:
 
 ## Validacion automatica
 
-- Para correr una prueba de humo completa del geoportal, incluyendo `agronomia`, `inteligencia geoespacial`, `planificacion FODA + CAME` y un caso dedicado del `visor 3D`, ejecuta:
+- Para correr una prueba de humo completa del geoportal, incluyendo `agronomia`, un caso dedicado de `red hidrica productiva`, `inteligencia geoespacial`, `planificacion FODA + CAME` y el `visor 3D`, ejecuta:
   ```powershell
   powershell -ExecutionPolicy Bypass -File .\tools\run_geoportal_smoke_suite.ps1
   ```
