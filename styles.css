@@ -5588,16 +5588,19 @@ button {
 
   .workspace {
     grid-template-columns: 1fr;
+    align-items: start;
   }
 
   .sidebar {
     position: absolute;
     inset: 0 auto auto 0;
     width: min(calc(100vw - 8px), 560px);
-    height: auto;
+    height: fit-content;
+    min-height: 0;
     max-height: calc(100vh - 16px);
     z-index: 900;
     isolation: isolate;
+    align-self: start;
     transform: translateX(-104%);
     transition: transform 220ms ease;
     overflow-y: auto;
@@ -5611,6 +5614,10 @@ button {
 
   .sidebar.open {
     transform: translateX(0);
+  }
+
+  .panel-glow {
+    display: none;
   }
 
   .tab-panels {
@@ -5850,6 +5857,8 @@ button {
     gap: 10px;
     padding: 14px 14px 16px;
     border-radius: 24px;
+    height: fit-content;
+    max-height: calc(100vh - 12px);
     background:
       linear-gradient(180deg, rgba(252, 253, 249, 1), rgba(247, 249, 244, 0.995)),
       radial-gradient(circle at top right, rgba(47, 109, 88, 0.1), transparent 30%);
