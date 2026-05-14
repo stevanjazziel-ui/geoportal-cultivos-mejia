@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260514-7";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260514-8";
 
 const layerCatalog = [
   {
@@ -6251,7 +6251,9 @@ function bindUI() {
   dom.territorialScenarioCompare?.addEventListener("click", handleTerritorialScenarioCompareInteraction);
   dom.territorialSectorSheets?.addEventListener("click", handleTerritorialSectorSheetsInteraction);
   dom.territorialExportPanel?.addEventListener("click", handleTerritorialExportInteraction);
+  dom.reportCenterBoard?.addEventListener("click", handleTerritorialExportInteraction);
   dom.territorialAlertsPanel?.addEventListener("click", handleTerritorialAlertInteraction);
+  dom.alertCenterBoard?.addEventListener("click", handleExecutiveDashboardInteraction);
   dom.territorialOpsBoard?.addEventListener("click", handleTerritorialOpsInteraction);
   dom.wizardModes?.addEventListener("click", handleWizardModeInteraction);
   dom.wizardSteps?.addEventListener("click", handleWizardStepInteraction);
@@ -6281,6 +6283,7 @@ function bindUI() {
   dom.exportDecisionLogBtn?.addEventListener("click", exportDecisionLog);
   dom.clearDecisionLogBtn?.addEventListener("click", clearDecisionLog);
   dom.decisionLogBoard?.addEventListener("click", handleDecisionLogInteraction);
+  dom.executiveDashboardBoard?.addEventListener("click", handleExecutiveDashboardInteraction);
   dom.saveUserProfileBtn?.addEventListener("click", saveUserProfileFromForm);
   dom.userRoleSelect?.addEventListener("change", () => updateUserProfile({ roleId: dom.userRoleSelect.value || "tecnico" }));
   dom.roleCardSelect?.addEventListener("change", () => updateUserProfile({ roleId: dom.roleCardSelect.value || "tecnico" }, { skipPersist: true, syncInputs: true }));
@@ -7208,7 +7211,7 @@ function handleFodaCameInteraction(event) {
 
 function handleTerritorialExportInteraction(event) {
   const button = event.target.closest("[data-export-format]");
-  if (!button || !dom.territorialExportPanel?.contains(button)) {
+  if (!button || !(dom.territorialExportPanel?.contains(button) || dom.reportCenterBoard?.contains(button))) {
     return;
   }
 
@@ -30494,6 +30497,8 @@ function renderExecutiveDashboardCard() {
     return;
   }
   const snapshot = buildExecutiveDashboardSnapshot();
+  const routeLabel = snapshot.route === "planificacion" ? "Territorial" : "Agronomico";
+  const alertTone = snapshot.alerts.length >= 5 ? "high" : snapshot.alerts.length >= 2 ? "mid" : "low";
   dom.executiveDashboardBoard.classList.remove("empty-state");
   dom.executiveDashboardBoard.classList.add("has-data");
   setHtmlIfChanged(dom.executiveDashboardBoard, `
@@ -30508,6 +30513,18 @@ function renderExecutiveDashboardCard() {
         <span>${escapeHtmlContent(snapshot.role.label)}</span>
       </div>
     </article>
+    <div class="dashboard-chip-row">
+      <span class="planning-pill emphasis">${routeLabel}</span>
+      <span class="planning-pill emphasis">${snapshot.score ? `${snapshot.score}/100` : "Sin corrida"}</span>
+      <span class="planning-pill emphasis ${alertTone === "high" ? "tone-high" : alertTone === "mid" ? "tone-mid" : "tone-low"}">${snapshot.alerts.length} alertas</span>
+      <span class="planning-pill emphasis">${state.platformData.projects.length} proyectos</span>
+    </div>
+    <div class="dashboard-action-row">
+      <button class="secondary-button" type="button" data-dashboard-action="report">Abrir reporte</button>
+      <button class="ghost-button" type="button" data-dashboard-action="scenario">Comparar escenarios</button>
+      <button class="ghost-button" type="button" data-dashboard-action="alerts">Ver alertas</button>
+      <button class="ghost-button" type="button" data-dashboard-action="projects">Proyectos</button>
+    </div>
     <div class="decision-grid">
       ${snapshot.items.map((item) => `
         <article class="decision-card tone-${item.tone}">
@@ -30529,6 +30546,39 @@ function renderExecutiveDashboardCard() {
       `).join("")}
     </div>
   `);
+}
+
+function handleExecutiveDashboardInteraction(event) {
+  const button = event.target.closest("[data-dashboard-action]");
+  const inDashboardBoard = dom.executiveDashboardBoard?.contains(button);
+  const inAlertBoard = dom.alertCenterBoard?.contains(button);
+  if (!button || !(inDashboardBoard || inAlertBoard)) {
+    return;
+  }
+  const action = button.dataset.dashboardAction;
+  if (action === "report") {
+    openExecutiveReport();
+    return;
+  }
+  if (action === "scenario") {
+    if (isTerritorialRoute()) {
+      focusModuleCard(dom.territorialScenarioCompare || dom.scenarioLabCard);
+    } else {
+      focusModuleCard(dom.scenarioLabCard);
+    }
+    return;
+  }
+  if (action === "alerts") {
+    focusModuleCard(dom.alertCenterCard);
+    return;
+  }
+  if (action === "projects") {
+    focusModuleCard(dom.projectRegistryCard);
+    return;
+  }
+  if (action === "gps") {
+    focusModuleCard(dom.gpsCard);
+  }
 }
 
 function buildAgroScenarioMatrix() {
@@ -30617,6 +30667,11 @@ function renderScenarioLabCard() {
         <h4>${escapeHtmlContent(snapshot.headline)}</h4>
       </div>
       <p>${snapshot.route === "planificacion" ? "Pulsa una tarjeta para cambiar el escenario activo." : "Pulsa una tarjeta para cambiar el cultivo objetivo."}</p>
+    </div>
+    <div class="dashboard-chip-row">
+      <span class="planning-pill emphasis">${snapshot.route === "planificacion" ? "Territorial" : "Agronomico"}</span>
+      <span class="planning-pill emphasis">${snapshot.cards.length} escenarios listos</span>
+      <span class="planning-pill emphasis">Comparador activo</span>
     </div>
     <div class="hydrology-timeline-grid">
       ${snapshot.cards.map((item) => `
@@ -30768,9 +30823,35 @@ function renderAlertCenterCard() {
     resetVisualPanel(dom.alertCenterBoard, "Aqui aparecera el consolidado automatico de alertas por severidad y frente operativo.");
     return;
   }
+  const criticalCount = alerts.filter((alert) => alert.tone === "critical").length;
+  const watchCount = alerts.filter((alert) => alert.tone === "watch").length;
+  const lowCount = alerts.filter((alert) => alert.tone === "low").length;
   dom.alertCenterBoard.classList.remove("empty-state");
   dom.alertCenterBoard.classList.add("has-data");
-  setHtmlIfChanged(dom.alertCenterBoard, alerts.map((alert) => `
+  setHtmlIfChanged(dom.alertCenterBoard, `
+    <div class="alert-center-summary">
+      <article>
+        <span>Criticas</span>
+        <strong>${criticalCount}</strong>
+        <span>Alertas que exigen revision inmediata.</span>
+      </article>
+      <article>
+        <span>Vigilancia</span>
+        <strong>${watchCount}</strong>
+        <span>Condiciones a monitorear en la siguiente corrida.</span>
+      </article>
+      <article>
+        <span>Estables</span>
+        <strong>${lowCount}</strong>
+        <span>Lecturas que no requieren correccion inmediata.</span>
+      </article>
+    </div>
+    <div class="dashboard-action-row">
+      <button class="secondary-button" type="button" data-dashboard-action="report">Abrir reporte</button>
+      <button class="ghost-button" type="button" data-dashboard-action="scenario">Escenarios</button>
+      <button class="ghost-button" type="button" data-dashboard-action="projects">Proyectos</button>
+    </div>
+    ${alerts.map((alert) => `
     <article class="territorial-alert tone-${escapeHtmlContent(alert.tone || "watch")}">
       <div class="territorial-alert-head">
         <div>
@@ -30781,7 +30862,8 @@ function renderAlertCenterCard() {
       </div>
       <p class="territorial-readout-copy">${escapeHtmlContent(alert.copy)}</p>
     </article>
-  `).join(""));
+  `).join("")}
+  `);
 }
 
 function buildExecutiveReportJson() {
@@ -30960,10 +31042,27 @@ function renderReportCenterCard() {
         <span class="planning-pill emphasis">${isTerritorialRoute() ? "Territorial" : "Agronomico"}</span>
       </div>
       <p class="territorial-readout-copy">${escapeHtmlContent(dashboard.copy)}</p>
+      <div class="report-center-summary">
+        ${dashboard.items.slice(0, 4).map((item) => `
+          <article class="report-center-metric">
+            <span>${escapeHtmlContent(item.label)}</span>
+            <strong>${escapeHtmlContent(item.value)}</strong>
+            <span>${escapeHtmlContent(item.copy)}</span>
+          </article>
+        `).join("")}
+      </div>
       <div class="territorial-export-pills">
         <span class="planning-pill emphasis">${buildExecutiveAlertList().length} alertas</span>
         <span class="planning-pill emphasis">${state.platformData.projects.length} proyectos</span>
         <span class="planning-pill emphasis">${state.platformData.decisionLog.length} registros</span>
+      </div>
+      <div class="dashboard-action-row">
+        <button class="secondary-button" type="button" data-export-format="report">Abrir informe</button>
+        <button class="ghost-button" type="button" data-export-format="print">Imprimir / PDF</button>
+        <button class="ghost-button" type="button" data-export-format="html">HTML</button>
+        <button class="ghost-button" type="button" data-export-format="csv">CSV</button>
+        <button class="ghost-button" type="button" data-export-format="geojson">GeoJSON</button>
+        <button class="ghost-button" type="button" data-export-format="json">JSON</button>
       </div>
     </article>
   `);
