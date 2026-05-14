@@ -20,6 +20,7 @@ $StaticFiles = @{
   "/gps-bridge.webmanifest" = "gps-bridge.webmanifest"
   "/gps-bridge-sw.js" = "gps-bridge-sw.js"
   "/gps-bridge-icon.svg" = "gps-bridge-icon.svg"
+  "/favicon.ico" = "gps-bridge-icon.svg"
   "/.nojekyll" = ".nojekyll"
 }
 
