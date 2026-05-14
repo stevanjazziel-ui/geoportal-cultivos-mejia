@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260513-2";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260514-1";
 
 const layerCatalog = [
   {
@@ -5483,6 +5483,7 @@ function cacheDom() {
   dom.sidebarDockTitle = document.querySelector("#sidebarDockTitle");
   dom.sidebarDockSubtitle = document.querySelector("#sidebarDockSubtitle");
   dom.sidebarDockActions = document.querySelector("#sidebarDockActions");
+  dom.mapLegend = document.querySelector("#mapLegend");
   dom.toggleSatelliteLayersBtn = document.querySelector("#toggleSatelliteLayersBtn");
   dom.esriResolutionButtons = Array.from(document.querySelectorAll("[data-esri-resolution]"));
   dom.toggleSatelliteSuperResolutionBtn = document.querySelector("#toggleSatelliteSuperResolutionBtn");
@@ -6091,7 +6092,7 @@ function saveUserProfileFromForm() {
 }
 
 function shouldShowPlotTools(route = state.entryRoute || "agronomia") {
-  return route === "agronomia";
+  return route === "agronomia" || route === "planificacion";
 }
 
 function syncPlotToolsState(route = state.entryRoute || "agronomia") {
@@ -8389,6 +8390,7 @@ function getSidebarDockConfig(route = state.entryRoute || "agronomia") {
       title: "Atajos inteligentes",
       subtitle: "Salta a decisiones clave y fuentes oficiales sin recorrer toda la columna.",
       actions: [
+        { id: "planning-area", label: "Area" },
         { id: "planning-copilot", label: "Copiloto" },
         { id: "planning-aptitude", label: "Aptitud" },
         { id: "planning-official", label: "Oficiales" },
@@ -8402,6 +8404,7 @@ function getSidebarDockConfig(route = state.entryRoute || "agronomia") {
     title: "Atajos inteligentes",
     subtitle: "Escena, agua, oficiales, cultivo y GPS al alcance de un clic.",
     actions: [
+      { id: "agronomy-plot", label: "Lote" },
       { id: "agronomy-scenes", label: "Escenas" },
       { id: "agronomy-water", label: "Agua" },
       { id: "agronomy-official", label: "Oficiales" },
@@ -8433,6 +8436,17 @@ function handleSidebarDockAction(event) {
   }
 
   const actionId = button.dataset.sidebarAction;
+  if (actionId === "agronomy-plot") {
+    startPlotDrawingFromOverlay();
+    setStatus("Abrimos el dibujo del lote para que delimites el AOI directamente en el mapa.");
+    return;
+  }
+  if (actionId === "planning-area") {
+    startPlotDrawingFromOverlay();
+    setStatus("Delimita el ambito de analisis en el mapa para afinar la lectura territorial.");
+    return;
+  }
+
   if (actionId === "planning-copilot") {
     openSidebarWorkingPanel("modulos");
     focusPlanningCommandCard();
@@ -10508,6 +10522,8 @@ function renderLegend() {
       </div>
     `
     : "";
+  const hasSceneContext = !!getSelectedImage() || !!state.analysisData || !!state.compareAnalysis || !!state.changeAnalysis;
+  const showMapLegend = state.entryRoute === "agronomia" && hasSceneContext;
 
   setHtmlIfChanged(dom.legendCard, `
     <strong>${config.label}</strong>
@@ -10523,6 +10539,25 @@ function renderLegend() {
     </div>
     ${statsMarkup}
   `);
+
+  if (dom.mapLegend) {
+    dom.mapLegend.classList.toggle("hidden", !showMapLegend);
+    if (showMapLegend) {
+      setHtmlIfChanged(dom.mapLegend, `
+        <span class="map-legend-kicker">${escapeHtmlContent(config.label)}</span>
+        <div
+          class="map-legend-scale"
+          style="background: linear-gradient(90deg, ${config.colors.join(", ")});"
+        ></div>
+        <div class="map-legend-values">
+          <span>${formatValue(config.min, config)}</span>
+          <span>${formatValue(config.max, config)}</span>
+        </div>
+      `);
+    } else {
+      setHtmlIfChanged(dom.mapLegend, "");
+    }
+  }
 }
 
 async function refreshActiveAnalysis({ silent = false } = {}) {
@@ -12409,12 +12444,28 @@ function renderCurrentPlotLayer(fitBounds = false) {
     mapState.map.removeLayer(mapState.currentPlotLayer);
   }
 
+  const plotAreaM2 = getCurrentPlotAreaM2();
+  const plotAreaHa = Number.isFinite(plotAreaM2) ? plotAreaM2 / 10000 : null;
+  const plotLabel = state.currentPlotLabel || "Lote activo";
+  const plotTooltip = plotAreaHa
+    ? `${plotLabel} · ${formatIrrigationNumber(plotAreaHa, plotAreaHa >= 10 ? 1 : 2)} ha`
+    : plotLabel;
+
   mapState.currentPlotLayer = L.geoJSON(state.currentPlot, {
     style: {
       color: "#ffce73",
       weight: 2,
       fillColor: "#ffce73",
       fillOpacity: 0.18,
+    },
+    onEachFeature: (_, layer) => {
+      layer.bindPopup(`
+        <h3 class="popup-title">${escapeHtmlContent(plotLabel)}</h3>
+        <p class="popup-copy">
+          AOI de trabajo listo para imagen satelital, riego, clima y aptitud${plotAreaHa ? ` · ${formatIrrigationNumber(plotAreaHa, plotAreaHa >= 10 ? 1 : 2)} ha` : ""}${plotAreaM2 ? ` (${formatIrrigationNumber(plotAreaM2, 0)} m2)` : ""}.
+        </p>
+      `);
+      layer.bindTooltip(plotTooltip, { sticky: true });
     },
   }).addTo(mapState.map);
 
