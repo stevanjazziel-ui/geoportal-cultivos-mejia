@@ -1019,6 +1019,14 @@ button {
   background: rgba(255, 255, 255, 0.72);
 }
 
+.ghost-button.active,
+.secondary-button.active {
+  color: #f9f6f1;
+  border-color: rgba(47, 109, 88, 0.18);
+  background: linear-gradient(135deg, var(--leaf-deep), var(--leaf));
+  box-shadow: 0 10px 22px rgba(27, 75, 62, 0.16);
+}
+
 .ghost-button:disabled,
 .secondary-button:disabled,
 .primary-button:disabled {
@@ -4177,7 +4185,13 @@ button {
 .plot-tools {
   display: grid;
   gap: 8px;
-  padding-top: 2px;
+  position: relative;
+  z-index: 2;
+  padding: 10px 12px;
+  border-radius: 18px;
+  border: 1px solid rgba(57, 73, 66, 0.08);
+  background: rgba(252, 253, 249, 0.94);
+  box-shadow: 0 12px 26px rgba(24, 40, 30, 0.08);
 }
 
 .plot-tools-head {
@@ -4441,11 +4455,39 @@ button {
   border: 0;
 }
 
+.leaflet-control-container {
+  z-index: 620 !important;
+}
+
+.leaflet-draw,
+.leaflet-draw-toolbar,
+.leaflet-draw-actions {
+  z-index: 620 !important;
+}
+
 .leaflet-bar a,
 .leaflet-bar a:hover {
   border: 0;
   color: var(--ink);
   background: rgba(255, 250, 244, 0.88);
+}
+
+.leaflet-draw-tooltip {
+  z-index: 650 !important;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(57, 73, 66, 0.12);
+  background: rgba(252, 253, 249, 0.97);
+  color: var(--ink);
+  box-shadow: 0 14px 28px rgba(22, 31, 27, 0.14);
+}
+
+.leaflet-draw-tooltip:before {
+  border-right-color: rgba(252, 253, 249, 0.97) !important;
+}
+
+.leaflet-draw-guide-dash {
+  background-color: rgba(27, 75, 62, 0.38) !important;
 }
 
 .leaflet-popup-content-wrapper {
@@ -5595,9 +5637,9 @@ button {
     position: absolute;
     inset: 0 auto auto 0;
     width: min(calc(100vw - 8px), 560px);
-    height: fit-content;
+    height: auto;
     min-height: 0;
-    max-height: calc(100vh - 16px);
+    max-height: calc(100dvh - 16px);
     z-index: 900;
     isolation: isolate;
     align-self: start;
@@ -5761,7 +5803,7 @@ button {
   }
 
   .sidebar-dock {
-    margin-top: 10px;
+    margin-top: 6px;
   }
 
   .sidebar-dock-actions {
@@ -5855,10 +5897,10 @@ button {
 
   .sidebar {
     gap: 10px;
-    padding: 14px 14px 16px;
+    padding: 14px 14px 10px;
     border-radius: 24px;
-    height: fit-content;
-    max-height: calc(100vh - 12px);
+    height: auto;
+    max-height: calc(100dvh - 12px);
     background:
       linear-gradient(180deg, rgba(252, 253, 249, 1), rgba(247, 249, 244, 0.995)),
       radial-gradient(circle at top right, rgba(47, 109, 88, 0.1), transparent 30%);
@@ -6013,7 +6055,12 @@ button {
 
   .sidebar-dock {
     gap: 8px;
-    margin-top: 6px;
+    margin-top: 4px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
   }
 
   .sidebar-dock-copy strong {

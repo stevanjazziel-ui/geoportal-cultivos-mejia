@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260514-5";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260514-6";
 
 const layerCatalog = [
   {
@@ -265,6 +265,7 @@ const officialSourceCatalog = {
 const officialHydroLayerIds = ["microcuencasIGM", "subcuencasIGM", "cuencasIGM", "cuerposAguaIGM", "estacionesPluvioIGM", "zonasHidrologicasIGM"];
 const officialHydroVisibleLayerIds = ["microcuencasIGM", "subcuencasIGM", "cuerposAguaIGM", "estacionesPluvioIGM", "zonasHidrologicasIGM"];
 const hydroSupportLayerIds = ["riegoEstatal", "suelosIGM", "coberturaMAATE"];
+const hydroOperationalLayerIds = [...officialHydroVisibleLayerIds, ...hydroSupportLayerIds];
 const officialHydroFileCatalog = {
   mejia: {
     territoryId: "mejia",
@@ -3591,6 +3592,7 @@ const state = {
     planificacion: null,
   },
   agronomyFocus: "imagery",
+  hydroLayersVisible: true,
   agroSuitabilityCropId: "papa",
   agronomyOutputs: {
     intralote: null,
@@ -4432,7 +4434,13 @@ async function setAgronomyArea(areaId = state.agronomyAreaId, options = {}) {
 
   if (mapState.map) {
     renderStudyAreaLayer();
-    refreshVisibleGeoLayers(["parroquias", "vias", "lotes", "estaciones", ...officialHydroLayerIds]);
+    refreshVisibleGeoLayers([
+      "parroquias",
+      "vias",
+      "lotes",
+      "estaciones",
+      ...(state.hydroLayersVisible !== false ? officialHydroLayerIds : []),
+    ]);
     if (options.fit !== false) {
       fitAgronomyArea();
     }
@@ -5543,6 +5551,7 @@ function cacheDom() {
   dom.runInamhiLiveBtn = document.querySelector("#runInamhiLiveBtn");
   dom.runHydroNetworkBtn = document.querySelector("#runHydroNetworkBtn");
   dom.focusHydroNetworkBtn = document.querySelector("#focusHydroNetworkBtn");
+  dom.toggleHydroLayersBtn = document.querySelector("#toggleHydroLayersBtn");
   dom.clearHydroNetworkBtn = document.querySelector("#clearHydroNetworkBtn");
   dom.runIrrigationFlowBtn = document.querySelector("#runIrrigationFlowBtn");
   dom.useIrrigationAreaBtn = document.querySelector("#useIrrigationAreaBtn");
@@ -6118,6 +6127,63 @@ function syncPlotToolsState(route = state.entryRoute || "agronomia") {
   }
 }
 
+function syncHydroLayersToggle() {
+  if (!dom.toggleHydroLayersBtn) {
+    return;
+  }
+
+  const available = state.entryRoute === "agronomia";
+  const visible = state.hydroLayersVisible !== false;
+  dom.toggleHydroLayersBtn.disabled = !available;
+  dom.toggleHydroLayersBtn.classList.toggle("active", available && visible);
+  dom.toggleHydroLayersBtn.setAttribute("aria-pressed", String(available && visible));
+  dom.toggleHydroLayersBtn.textContent = !available
+    ? "Agua N/A"
+    : visible
+      ? "Ocultar agua"
+      : "Mostrar agua";
+  dom.toggleHydroLayersBtn.title = !available
+    ? "La red hidrica solo se controla desde la ruta agricola."
+    : visible
+      ? "Ocultar la estructura hidrica oficial y el apoyo lineal visible del mapa."
+      : "Volver a mostrar la estructura hidrica oficial y el apoyo lineal visible del mapa.";
+}
+
+function setHydroLayersVisible(visible = true, options = {}) {
+  state.hydroLayersVisible = visible;
+  setLayerSelectionForIds(hydroOperationalLayerIds, visible, "agronomia");
+
+  if (dom.layersTree) {
+    hydroOperationalLayerIds.forEach((layerId) => {
+      const input = dom.layersTree.querySelector(`input[data-layer="${layerId}"]`);
+      if (input) {
+        input.checked = visible;
+      }
+    });
+  }
+
+  if (mapState.map) {
+    updateLayerVisibility();
+    if (!visible) {
+      clearHydroNetworkOverlay();
+    } else if (state.agronomyOutputs.hydroNetwork) {
+      renderHydroNetworkOverlay(state.agronomyOutputs.hydroNetwork);
+    }
+  }
+
+  syncHydroLayersToggle();
+  updateMapSummary();
+  if (!options.silent) {
+    setStatus(visible
+      ? `Capas hidricas visibles para ${getCurrentAgronomyScopeLabel()}.`
+      : `Capas hidricas ocultas para ${getCurrentAgronomyScopeLabel()}.`);
+  }
+}
+
+function toggleHydroLayersVisibility() {
+  setHydroLayersVisible(!(state.hydroLayersVisible !== false));
+}
+
 function closeSidebarForMapTask() {
   if (!dom.sidebar) {
     return;
@@ -6409,6 +6475,7 @@ function bindUI() {
     return task;
   });
   dom.focusHydroNetworkBtn?.addEventListener("click", focusHydroNetworkStudy);
+  dom.toggleHydroLayersBtn?.addEventListener("click", toggleHydroLayersVisibility);
   dom.clearHydroNetworkBtn?.addEventListener("click", clearHydroNetworkAnalysis);
   dom.runIrrigationFlowBtn?.addEventListener("click", () => {
     setModulePendingState(dom.irrigationFlowResults, "Calculando capacidad del sistema, necesidad del cultivo y aforo real...", [
@@ -7472,7 +7539,13 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   clearFieldEvidenceOverlay();
   clearAiGeoOverlay();
   renderStudyAreaLayer();
-  refreshVisibleGeoLayers(["parroquias", "vias", "lotes", "estaciones", ...officialHydroVisibleLayerIds]);
+  refreshVisibleGeoLayers([
+    "parroquias",
+    "vias",
+    "lotes",
+    "estaciones",
+    ...(state.hydroLayersVisible !== false ? officialHydroVisibleLayerIds : []),
+  ]);
   if (state.currentPlot) {
     renderCurrentPlotLayer();
   } else {
@@ -8722,6 +8795,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   collapseModuleCardsForRoute(route);
   applyModuleSearchFilter();
   syncPlotToolsState(route);
+  syncHydroLayersToggle();
   syncSatelliteLayerToggle();
   syncEsriResolutionButtons();
   syncSatelliteSuperResolution();
@@ -9184,6 +9258,7 @@ function ensureLeafletPane(name, zIndex, pointerEvents = "none") {
 function initializeAgronomyMapPanes() {
   ensureLeafletPane("sceneRasterPane", 340, "none");
   ensureLeafletPane("analysisOverlayPane", 390, "auto");
+  ensureLeafletPane("plotOverlayPane", 460, "auto");
 }
 
 function initializeMap() {
@@ -9250,6 +9325,7 @@ function initializeMap() {
       weight: 2,
       fillColor: "#cb9440",
       fillOpacity: 0.22,
+      pane: "plotOverlayPane",
     },
   };
 
@@ -10079,7 +10155,7 @@ async function loadOfficialHydroCatalog(force = false) {
     state.officialData.agronomia = buildOfficialDataSummary("agronomia");
     if (state.entryRoute === "agronomia") {
       renderOfficialDataModule("agronomia");
-      if (mapState.map) {
+      if (mapState.map && state.hydroLayersVisible !== false) {
         refreshVisibleGeoLayers(officialHydroLayerIds);
       }
     }
@@ -12452,6 +12528,7 @@ function renderCurrentPlotLayer(fitBounds = false) {
     : plotLabel;
 
   mapState.currentPlotLayer = L.geoJSON(state.currentPlot, {
+    pane: "plotOverlayPane",
     style: {
       color: "#ffce73",
       weight: 2,
@@ -14380,7 +14457,7 @@ function renderHydroNetworkVisual(result = null) {
 
 function renderHydroNetworkOverlay(result = state.agronomyOutputs.hydroNetwork) {
   clearHydroNetworkOverlay();
-  if (!mapState.map || state.entryRoute !== "agronomia") {
+  if (!mapState.map || state.entryRoute !== "agronomia" || state.hydroLayersVisible === false) {
     return;
   }
 
@@ -14500,15 +14577,19 @@ function clearHydroNetworkOverlay() {
 }
 
 function ensureHydroBaseLayersVisible() {
+  if (state.hydroLayersVisible === false) {
+    syncHydroLayersToggle();
+    return;
+  }
   if (!dom.layersTree) {
+    syncHydroLayersToggle();
     return;
   }
 
-  const hydroLayerIds = [...officialHydroVisibleLayerIds, ...hydroSupportLayerIds];
-  setLayerSelectionForIds(hydroLayerIds, true, "agronomia");
+  setLayerSelectionForIds(hydroOperationalLayerIds, true, "agronomia");
 
   let changed = false;
-  hydroLayerIds.forEach((layerId) => {
+  hydroOperationalLayerIds.forEach((layerId) => {
     const input = dom.layersTree.querySelector(`input[data-layer="${layerId}"]`);
     if (input && !input.checked) {
       input.checked = true;
@@ -14519,6 +14600,7 @@ function ensureHydroBaseLayersVisible() {
   if (changed) {
     updateLayerVisibility();
   }
+  syncHydroLayersToggle();
 }
 
 async function runHydroNetworkAnalysis(silent = false) {
@@ -14579,8 +14661,8 @@ async function runHydroNetworkAnalysis(silent = false) {
     paintMetricGrid(dom.hydroNetworkResults, cards);
     renderHydroNetworkVisual(result);
     ensureHydroBaseLayersVisible();
-    if (mapState.map) {
-      refreshVisibleGeoLayers(officialHydroVisibleLayerIds);
+    if (mapState.map && state.hydroLayersVisible !== false) {
+      refreshVisibleGeoLayers(hydroOperationalLayerIds);
     }
     try {
       renderHydroNetworkOverlay(result);
@@ -14591,6 +14673,7 @@ async function runHydroNetworkAnalysis(silent = false) {
     updateMapSummary();
     state.officialData.agronomia = buildOfficialDataSummary("agronomia");
     renderOfficialDataModule("agronomia");
+    syncHydroLayersToggle();
     if (!silent) {
       setStatus(`Red hidrica lista para ${result.context.scopeLabel}: ${result.summary.lineSupportCount} lineas visibles, ${formatIrrigationNumber(result.summary.waterBodyAreaHa, 1)} ha de agua superficial y ${formatIrrigationNumber(result.summary.irrigationSupportLengthKm, result.summary.irrigationSupportLengthKm >= 10 ? 1 : 2)} km de riego de apoyo.`);
       focusHydroNetworkStudy();
@@ -14602,6 +14685,7 @@ async function runHydroNetworkAnalysis(silent = false) {
     clearHydroNetworkOverlay();
     resetMetricGrid(dom.hydroNetworkResults, "No se pudo construir la red hidrica del ambito.");
     resetVisualPanel(dom.hydroNetworkVisual, "No se pudo resumir la red hidrica en esta corrida.");
+    syncHydroLayersToggle();
     renderWorkflowGuide();
     updateMapSummary();
     if (!silent) {
@@ -14633,6 +14717,7 @@ function clearHydroNetworkAnalysis() {
   clearHydroNetworkOverlay();
   resetMetricGrid(dom.hydroNetworkResults, "Ejecuta el modulo para leer rios, acequias, quebradas y soporte hidrico del ambito.");
   resetVisualPanel(dom.hydroNetworkVisual, "Aqui veras estructura hidrica oficial, la red lineal visible y las estaciones priorizadas para el ambito.");
+  syncHydroLayersToggle();
   renderWorkflowGuide();
   updateMapSummary();
   setStatus(`Red hidrica limpiada para ${getCurrentAgronomyScopeLabel()}.`);
