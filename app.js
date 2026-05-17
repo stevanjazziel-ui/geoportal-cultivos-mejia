@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260517-1";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260517-2";
 
 const layerCatalog = [
   {
@@ -3687,6 +3687,9 @@ const state = {
   activeWizard: "Monitoreo",
   currentPlot: null,
   currentPlotLabel: "Sin seleccionar",
+  currentPlotEditing: false,
+  currentPlotEditBackup: null,
+  currentPlotEditLabelBackup: null,
   agronomyAreaId: "mejia",
   baseLayer: "satellite",
   backendChecked: false,
@@ -3850,6 +3853,7 @@ const mapState = {
   planningSolarLayer: null,
   digitalCadastreLayer: null,
   digitalCadastreGuideLayer: null,
+  digitalCadastreSupportLayer: null,
   mobilityLayer: null,
   mobilityGapLayer: null,
   mobilityLinkLayer: null,
@@ -5717,6 +5721,9 @@ function cacheDom() {
   dom.plotTools = document.querySelector("#plotTools");
   dom.plotToolsState = document.querySelector("#plotToolsState");
   dom.startPlotDrawBtn = document.querySelector("#startPlotDrawBtn");
+  dom.editMapPlotBtn = document.querySelector("#editMapPlotBtn");
+  dom.saveMapPlotEditBtn = document.querySelector("#saveMapPlotEditBtn");
+  dom.cancelMapPlotEditBtn = document.querySelector("#cancelMapPlotEditBtn");
   dom.useMapDemoPlotBtn = document.querySelector("#useMapDemoPlotBtn");
   dom.clearMapPlotBtn = document.querySelector("#clearMapPlotBtn");
   dom.overlayIndex = document.querySelector("#overlayIndex");
@@ -5832,6 +5839,9 @@ function cacheDom() {
   dom.clearPlanningBtn = document.querySelector("#clearPlanningBtn");
   dom.runDigitalCadastreBtn = document.querySelector("#runDigitalCadastreBtn");
   dom.focusDigitalCadastreBtn = document.querySelector("#focusDigitalCadastreBtn");
+  dom.adjustDigitalCadastreBtn = document.querySelector("#adjustDigitalCadastreBtn");
+  dom.saveDigitalCadastreAdjustBtn = document.querySelector("#saveDigitalCadastreAdjustBtn");
+  dom.cancelDigitalCadastreAdjustBtn = document.querySelector("#cancelDigitalCadastreAdjustBtn");
   dom.clearDigitalCadastreBtn = document.querySelector("#clearDigitalCadastreBtn");
   dom.digitalCadastreModeSelect = document.querySelector("#digitalCadastreModeSelect");
   dom.digitalCadastreSupportInput = document.querySelector("#digitalCadastreSupportInput");
@@ -6304,17 +6314,31 @@ function syncPlotToolsState(route = state.entryRoute || "agronomia") {
   }
 
   const hasPlot = !!state.currentPlot;
+  const editing = !!state.currentPlotEditing;
   if (dom.plotToolsState) {
-    dom.plotToolsState.textContent = hasPlot ? state.currentPlotLabel : "Sin poligono";
+    dom.plotToolsState.textContent = editing
+      ? `${state.currentPlotLabel} · ajustando`
+      : hasPlot
+        ? state.currentPlotLabel
+        : "Sin poligono";
   }
   if (dom.startPlotDrawBtn) {
-    dom.startPlotDrawBtn.disabled = !(mapState.map && mapState.drawPolygonHandler);
+    dom.startPlotDrawBtn.disabled = !(mapState.map && mapState.drawPolygonHandler) || editing;
+  }
+  if (dom.editMapPlotBtn) {
+    dom.editMapPlotBtn.disabled = !hasPlot || editing;
+  }
+  if (dom.saveMapPlotEditBtn) {
+    dom.saveMapPlotEditBtn.disabled = !editing;
+  }
+  if (dom.cancelMapPlotEditBtn) {
+    dom.cancelMapPlotEditBtn.disabled = !editing;
   }
   if (dom.useMapDemoPlotBtn) {
-    dom.useMapDemoPlotBtn.disabled = !mapState.map;
+    dom.useMapDemoPlotBtn.disabled = !mapState.map || editing;
   }
   if (dom.clearMapPlotBtn) {
-    dom.clearMapPlotBtn.disabled = !hasPlot;
+    dom.clearMapPlotBtn.disabled = !hasPlot || editing;
   }
 }
 
@@ -6388,6 +6412,10 @@ function closeSidebarForMapTask() {
 function startPlotDrawingFromOverlay() {
   if (!mapState.map || !mapState.drawPolygonHandler) {
     setStatus("El mapa aun se esta preparando para dibujar el lote.");
+    return;
+  }
+  if (state.currentPlotEditing) {
+    setStatus("Primero guarda o cancela el ajuste del contorno actual.");
     return;
   }
 
@@ -6762,6 +6790,9 @@ function bindUI() {
   dom.runWizardNextBtn?.addEventListener("click", runWizardNextStep);
   dom.runWizardPlanBtn?.addEventListener("click", runWizardPlan);
   dom.startPlotDrawBtn?.addEventListener("click", startPlotDrawingFromOverlay);
+  dom.editMapPlotBtn?.addEventListener("click", enableCurrentPlotEditing);
+  dom.saveMapPlotEditBtn?.addEventListener("click", saveCurrentPlotAdjustment);
+  dom.cancelMapPlotEditBtn?.addEventListener("click", cancelCurrentPlotAdjustment);
   dom.useMapDemoPlotBtn?.addEventListener("click", useWizardDemoPlot);
   dom.clearMapPlotBtn?.addEventListener("click", () => clearCurrentPlot(true));
   dom.useDemoPlotBtn?.addEventListener("click", useWizardDemoPlot);
@@ -6790,6 +6821,9 @@ function bindUI() {
     return runModuleAction(dom.runDigitalCadastreBtn, "Digitalizando...", () => runDigitalCadastreAnalysis());
   });
   dom.focusDigitalCadastreBtn?.addEventListener("click", focusDigitalCadastreStudy);
+  dom.adjustDigitalCadastreBtn?.addEventListener("click", enableCurrentPlotEditing);
+  dom.saveDigitalCadastreAdjustBtn?.addEventListener("click", saveCurrentPlotAdjustment);
+  dom.cancelDigitalCadastreAdjustBtn?.addEventListener("click", cancelCurrentPlotAdjustment);
   dom.clearDigitalCadastreBtn?.addEventListener("click", clearDigitalCadastreAnalysis);
   dom.digitalCadastreModeSelect?.addEventListener("change", () => {
     state.digitalCadastreModeId = dom.digitalCadastreModeSelect.value || "calibrado";
@@ -7507,6 +7541,127 @@ function handleTerritorialExportInteraction(event) {
   if (format === "report") {
     openTerritorialReport();
   }
+}
+
+function getEditableCurrentPlotLayers() {
+  const layers = [];
+  if (!mapState.currentPlotLayer?.eachLayer) {
+    return layers;
+  }
+  mapState.currentPlotLayer.eachLayer((layer) => {
+    if (typeof layer.toGeoJSON === "function") {
+      layers.push(layer);
+    }
+  });
+  return layers;
+}
+
+function buildFeatureFromEditablePlotLayers() {
+  const features = getEditableCurrentPlotLayers()
+    .map((layer) => layer.toGeoJSON?.())
+    .filter((feature) => feature?.geometry);
+  if (!features.length) {
+    return null;
+  }
+  if (features.length === 1) {
+    const feature = cloneFeature(features[0]);
+    feature.properties = {
+      ...(cloneFeature(state.currentPlot)?.properties || {}),
+      ...(feature.properties || {}),
+    };
+    return feature;
+  }
+  if (features.every((feature) => feature.geometry?.type === "Polygon")) {
+    return {
+      type: "Feature",
+      properties: {
+        ...(cloneFeature(state.currentPlot)?.properties || {}),
+      },
+      geometry: {
+        type: "MultiPolygon",
+        coordinates: features.map((feature) => feature.geometry.coordinates),
+      },
+    };
+  }
+  return cloneFeature(features[0]);
+}
+
+function enableCurrentPlotEditing() {
+  if (!state.currentPlot || !mapState.currentPlotLayer) {
+    setStatus("Primero digitaliza o dibuja un predio para poder ajustarlo.");
+    return;
+  }
+  if (state.currentPlotEditing) {
+    setStatus("El contorno ya esta en modo ajuste.");
+    return;
+  }
+  const editableLayers = getEditableCurrentPlotLayers();
+  if (!editableLayers.length || !editableLayers.every((layer) => layer.editing?.enable)) {
+    setStatus("No pudimos activar el ajuste del contorno en este momento.");
+    return;
+  }
+
+  state.currentPlotEditBackup = cloneFeature(state.currentPlot);
+  state.currentPlotEditLabelBackup = state.currentPlotLabel;
+  state.currentPlotEditing = true;
+  editableLayers.forEach((layer) => {
+    layer.editing.enable();
+    layer.setStyle?.({
+      color: "#ffd585",
+      weight: 3,
+      fillOpacity: 0.12,
+    });
+  });
+  mapState.currentPlotLayer?.bringToFront?.();
+  syncPlotToolsState();
+  syncPlanningControls();
+  setStatus("Ajusta los vertices del predio y luego guarda o cancela el contorno.");
+}
+
+function disableCurrentPlotEditingVisualState() {
+  getEditableCurrentPlotLayers().forEach((layer) => {
+    layer.editing?.disable?.();
+  });
+  state.currentPlotEditing = false;
+  state.currentPlotEditBackup = null;
+  state.currentPlotEditLabelBackup = null;
+  syncPlotToolsState();
+  syncPlanningControls();
+}
+
+function saveCurrentPlotAdjustment() {
+  if (!state.currentPlotEditing) {
+    return;
+  }
+  const adjustedFeature = buildFeatureFromEditablePlotLayers();
+  if (!adjustedFeature?.geometry) {
+    setStatus("No pudimos guardar el ajuste del contorno.");
+    return;
+  }
+  const label = state.currentPlotLabel?.includes("ajustado")
+    ? state.currentPlotLabel
+    : `${state.currentPlotLabel || "Predio"} ajustado`;
+  disableCurrentPlotEditingVisualState();
+  setCurrentPlot(adjustedFeature, label);
+  if (state.digitalCadastreData) {
+    state.territorialFocus = "digitalCadastre";
+  }
+  setStatus(`Contorno guardado para ${label}. La digitalizacion se recalculo con el ajuste aplicado.`);
+}
+
+function cancelCurrentPlotAdjustment() {
+  if (!state.currentPlotEditing) {
+    return;
+  }
+  const backupFeature = state.currentPlotEditBackup ? cloneFeature(state.currentPlotEditBackup) : null;
+  const backupLabel = state.currentPlotEditLabelBackup || state.currentPlotLabel || "Predio";
+  disableCurrentPlotEditingVisualState();
+  if (backupFeature?.geometry) {
+    setCurrentPlot(backupFeature, backupLabel);
+  } else {
+    renderCurrentPlotLayer();
+  }
+  setStatus("Se cancelaron los cambios del contorno y se restauro el predio anterior.");
 }
 
 function handleTerritorialScenarioCompareInteraction(event) {
@@ -13002,6 +13157,9 @@ function renderCurrentPlotLayer(fitBounds = false) {
 }
 
 function clearCurrentPlot(triggerRefresh = false) {
+  if (state.currentPlotEditing) {
+    disableCurrentPlotEditingVisualState();
+  }
   state.currentPlot = null;
   state.currentPlotLabel = "Sin seleccionar";
   state.analysisData = null;
@@ -22312,6 +22470,15 @@ function renderPlanningModule() {
   if (dom.focusDigitalCadastreBtn) {
     dom.focusDigitalCadastreBtn.disabled = !(state.digitalCadastreData?.candidates?.length);
   }
+  if (dom.adjustDigitalCadastreBtn) {
+    dom.adjustDigitalCadastreBtn.disabled = !state.currentPlot || state.currentPlotEditing;
+  }
+  if (dom.saveDigitalCadastreAdjustBtn) {
+    dom.saveDigitalCadastreAdjustBtn.disabled = !state.currentPlotEditing;
+  }
+  if (dom.cancelDigitalCadastreAdjustBtn) {
+    dom.cancelDigitalCadastreAdjustBtn.disabled = !state.currentPlotEditing;
+  }
   if (dom.clearDigitalCadastreBtn) {
     dom.clearDigitalCadastreBtn.disabled = !state.digitalCadastreData;
   }
@@ -27637,6 +27804,10 @@ async function runDigitalCadastreAnalysis(silent = false) {
 }
 
 async function activateDigitalCadastreCandidate(candidateId, options = {}) {
+  if (state.currentPlotEditing) {
+    setStatus("Primero guarda o cancela el ajuste del contorno actual antes de digitalizar otro predio.");
+    return;
+  }
   const candidate = state.digitalCadastreData?.candidates?.find((item) => item.id === candidateId);
   if (!candidate || !mapState.map) {
     return;
@@ -33137,6 +33308,7 @@ async function buildDigitalCadastreAnalysis() {
         supportLabel: areaProfile.supportLabel,
         boundaryLabel: "AOI requerido",
         needsPlot: true,
+        supportParcelCount: 0,
       },
       sourceNote: "La norma admite apoyo con imagen y linderos visibles, pero en modo asistido conviene dibujar un AOI para proponer contornos razonables.",
       readout: {
@@ -33148,6 +33320,7 @@ async function buildDigitalCadastreAnalysis() {
       candidates: [],
       candidateCollection: { type: "FeatureCollection", features: [] },
       guideCollection: { type: "FeatureCollection", features: [] },
+      supportCollection: { type: "FeatureCollection", features: [] },
       normativeRefs: [
         "La norma tecnica nacional trabaja con representacion predial poligonal.",
         "La cartografia rural puede apoyarse en imagen satelital, ortofoto o fotos aereas y linderos fisicos visibles.",
@@ -33160,8 +33333,10 @@ async function buildDigitalCadastreAnalysis() {
   }
 
   let baseFeatures = [];
+  let supportCollection = { type: "FeatureCollection", features: [] };
   if (effectiveMode.id === "calibrado" && areaProfile.localParcels) {
     const dataset = await loadDigitalCadastreParcelCollection(areaProfile.id, state.currentPlot ? "full" : "preview");
+    supportCollection = dataset;
     const featurePool = dataset.features.filter((feature) => boundsIntersect(feature.properties?.bounds, targetBounds));
     baseFeatures = (state.currentPlot
       ? featurePool.filter((feature) => safeBooleanIntersects(feature, target.feature))
@@ -33282,7 +33457,9 @@ async function buildDigitalCadastreAnalysis() {
       localParcels: areaProfile.localParcels,
       checklistCount: checklist.length,
       activeSupportLayers: officialSummary?.activeLayerCount || 0,
+      supportParcelCount: supportCollection.features?.length || 0,
     },
+    supportCollection,
   };
 }
 
@@ -33345,7 +33522,7 @@ function renderDigitalCadastreModule() {
     {
       label: "Soporte",
       value: analysis.summary.supportLabel,
-      copy: `${analysis.summary.activeSupportLayers || 0} capas oficiales activas y lectura ${analysis.imageryProfile.shortLabel}.`,
+      copy: `${analysis.summary.activeSupportLayers || 0} capas oficiales activas, ${analysis.summary.supportParcelCount || 0} predios de apoyo y lectura ${analysis.imageryProfile.shortLabel}.`,
     },
   ]);
 
@@ -33363,6 +33540,7 @@ function renderDigitalCadastreModule() {
       </div>
       <p class="territorial-readout-copy">${escapeHtmlContent(analysis.readout.copy)}</p>
       <p class="territorial-readout-copy">${escapeHtmlContent(analysis.readout.recommendation)}</p>
+      ${analysis.areaProfile.localParcels ? `<p class="territorial-readout-copy"><strong>Parcelario fino local:</strong> ${escapeHtmlContent(String(analysis.summary.supportParcelCount || 0))} predios de apoyo cargados para contraste visual y ajuste.</p>` : ""}
       ${activeCandidate ? `<p class="territorial-readout-copy"><strong>Predio activo:</strong> ${escapeHtmlContent(activeCandidate.title)}. Pasa el cursor para inspeccionarlo y haz clic para digitalizarlo como lote actual.</p>` : ""}
     `);
   }
@@ -34790,7 +34968,26 @@ function clearFieldEvidenceOverlay() {
 
 function renderDigitalCadastreOverlay(analysis) {
   clearDigitalCadastreOverlay();
-  if (!mapState.map || !analysis?.candidateCollection?.features?.length) {
+  if (!mapState.map || !analysis) {
+    return;
+  }
+
+  if (analysis.supportCollection?.features?.length) {
+    mapState.digitalCadastreSupportLayer = L.geoJSON(analysis.supportCollection, {
+      pane: "analysisOverlayPane",
+      style: {
+        color: "#8e887e",
+        weight: 1.1,
+        opacity: 0.34,
+        fillOpacity: 0,
+      },
+      interactive: false,
+    }).addTo(mapState.map);
+  }
+
+  if (!analysis?.candidateCollection?.features?.length) {
+    mapState.digitalCadastreSupportLayer?.bringToBack?.();
+    mapState.currentPlotLayer?.bringToFront?.();
     return;
   }
 
@@ -34842,12 +35039,17 @@ function renderDigitalCadastreOverlay(analysis) {
     },
   }).addTo(mapState.map);
 
+  mapState.digitalCadastreSupportLayer?.bringToBack?.();
   mapState.digitalCadastreGuideLayer?.bringToBack?.();
   mapState.digitalCadastreLayer?.bringToFront?.();
   mapState.currentPlotLayer?.bringToFront?.();
 }
 
 function clearDigitalCadastreOverlay() {
+  if (mapState.digitalCadastreSupportLayer) {
+    mapState.map.removeLayer(mapState.digitalCadastreSupportLayer);
+    mapState.digitalCadastreSupportLayer = null;
+  }
   if (mapState.digitalCadastreLayer) {
     mapState.map.removeLayer(mapState.digitalCadastreLayer);
     mapState.digitalCadastreLayer = null;

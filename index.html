@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="geoportal-version" content="20260517-1">
+  <meta name="geoportal-version" content="20260517-2">
   <title>Centro de Decisiones | Mejia y Quevedo</title>
   <meta
     name="description"
@@ -158,7 +158,7 @@
           <span class="status-dot"></span>
           <div class="user-pill-copy">
             <strong id="userNameLabel">Usuario publico</strong>
-            <span id="userVersionLabel">v20260517-1</span>
+            <span id="userVersionLabel">v20260517-2</span>
           </div>
           <label class="user-role-field" for="userRoleSelect">
             <span>Rol</span>
@@ -1248,6 +1248,9 @@
               </div>
               <div class="action-row analysis-actions">
                 <button id="focusDigitalCadastreBtn" class="secondary-button" type="button">Centrar predios</button>
+                <button id="adjustDigitalCadastreBtn" class="ghost-button" type="button">Ajustar contorno</button>
+                <button id="saveDigitalCadastreAdjustBtn" class="secondary-button" type="button">Guardar ajuste</button>
+                <button id="cancelDigitalCadastreAdjustBtn" class="ghost-button" type="button">Cancelar ajuste</button>
                 <button id="clearDigitalCadastreBtn" class="ghost-button" type="button">Limpiar catastro</button>
               </div>
             </article>
@@ -1630,6 +1633,15 @@
             <div class="plot-tools-actions">
               <button id="startPlotDrawBtn" class="plot-tool-button plot-tool-button-primary" type="button">
                 Dibujar lote
+              </button>
+              <button id="editMapPlotBtn" class="plot-tool-button" type="button">
+                Ajustar
+              </button>
+              <button id="saveMapPlotEditBtn" class="plot-tool-button" type="button">
+                Guardar
+              </button>
+              <button id="cancelMapPlotEditBtn" class="plot-tool-button plot-tool-button-ghost" type="button">
+                Cancelar
               </button>
               <button id="useMapDemoPlotBtn" class="plot-tool-button" type="button">
                 Lote demo
