@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-<meta name="geoportal-version" content="20260514-8">
+  <meta name="geoportal-version" content="20260517-1">
   <title>Centro de Decisiones | Mejia y Quevedo</title>
   <meta
     name="description"
@@ -98,14 +98,19 @@
               <strong>Territorio y equipamientos</strong>
               <span>Aptitud, huella, riesgo, movilidad, estrategia y visor 3D para decisiones territoriales.</span>
             </button>
-            <button id="openOperationsBtn" class="entry-option operations" type="button">
+            <button id="openCadastreBtn" class="entry-option cadastre" type="button">
               <span class="entry-eyebrow">Ruta 3</span>
+              <strong>Catastro asistido</strong>
+              <span>Predios visibles, contornos, soporte oficial y digitalizacion guiada sobre imagen y parcelario local.</span>
+            </button>
+            <button id="openOperationsBtn" class="entry-option operations" type="button">
+              <span class="entry-eyebrow">Ruta 4</span>
               <strong>Centro GPS operativo</strong>
               <span>Seguimiento en tiempo real, corredores KML, replay y control operativo para campo, dron o aeronave.</span>
             </button>
           </div>
           <p class="login-note">
-            Los tres accesos entran directo a decisiones agronomicas, territoriales y operativas.
+            Los cuatro accesos entran directo a decisiones agronomicas, territoriales, catastrales y operativas.
           </p>
         </div>
       </div>
@@ -153,7 +158,7 @@
           <span class="status-dot"></span>
           <div class="user-pill-copy">
             <strong id="userNameLabel">Usuario publico</strong>
-            <span id="userVersionLabel">v20260514-8</span>
+            <span id="userVersionLabel">v20260517-1</span>
           </div>
           <label class="user-role-field" for="userRoleSelect">
             <span>Rol</span>
@@ -778,14 +783,19 @@
                   <strong>Vivienda</strong>
                   <span>Mercado y tipologias</span>
                 </button>
-                <button id="planningQuick3dBtn" class="planning-command-button accent" type="button">
+                <button id="planningQuickCadastreBtn" class="planning-command-button" type="button">
                   <span class="planning-command-step">8</span>
+                  <strong>Catastro</strong>
+                  <span>Predios y contornos</span>
+                </button>
+                <button id="planningQuick3dBtn" class="planning-command-button accent" type="button">
+                  <span class="planning-command-step">9</span>
                   <strong>Validar en 3D</strong>
                   <span>Volumen, sombra y lote</span>
                 </button>
               </div>
               <div class="planning-command-note">
-                Flujo recomendado: aptitud, riesgo, zonificacion, vivienda, estrategia y cierre 3D.
+                Flujo recomendado: aptitud, riesgo, catastro asistido, zonificacion, vivienda, estrategia y cierre 3D.
               </div>
             </article>
 
@@ -1185,6 +1195,60 @@
               </div>
               <div class="action-row analysis-actions">
                 <button id="clearPlanningBtn" class="ghost-button" type="button">Limpiar analisis</button>
+              </div>
+            </article>
+
+            <article id="digitalCadastreCard" class="module-card planning-card hidden" data-module-track="planificacion">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Catastro asistido por imagen</p>
+                  <h3>Digitalizacion automatica de predios</h3>
+                </div>
+                <button id="runDigitalCadastreBtn" class="secondary-button" type="button">Digitalizar predios</button>
+              </div>
+              <p class="module-copy">
+                Delimita predios visibles con apoyo de imagen satelital, parcelario local donde exista y validacion tecnica segun la Norma Tecnica Nacional de Catastros.
+              </p>
+              <div class="planning-toolbar">
+                <label class="field">
+                  <span>Ambito</span>
+                  <select data-territorial-area-select>
+                    <option value="mejia">Todo Mejia</option>
+                    <option value="machachi">Machachi</option>
+                    <option value="cutuglagua">Cutuglagua</option>
+                    <option value="quevedo">Quevedo</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Modo</span>
+                  <select id="digitalCadastreModeSelect">
+                    <option value="calibrado">Calibrado con parcelario</option>
+                    <option value="asistido">Asistido por imagen</option>
+                  </select>
+                </label>
+                <label class="field">
+                  <span>Soporte visible</span>
+                  <input id="digitalCadastreSupportInput" type="text" value="Contornos visibles y revision tecnica" readonly>
+                </label>
+              </div>
+              <p id="digitalCadastreSourceNote" class="service-note">
+                Soporte normativo, visibilidad de linderos y parcelario local aparecen aqui al ejecutar el modulo.
+              </p>
+              <div id="digitalCadastreResults" class="metrics-grid empty-state">
+                Ejecuta el modulo para leer predios visibles, confianza de delimitacion y soporte normativo sobre el ambito activo.
+              </div>
+              <div id="digitalCadastreReadout" class="territorial-readout empty-state">
+                Aqui aparece la lectura del modo calibrado o asistido, con precision esperada y alcance del estudio.
+              </div>
+              <div id="digitalCadastreChecklist" class="planning-pills empty-state">
+                Aqui se listan revisiones tecnicas, soporte visible y controles minimos antes de usar la delimitacion.
+              </div>
+              <div id="digitalCadastreCandidates" class="territorial-sector-sheets empty-state">
+                Aqui aparecen los predios o frentes de digitalizacion mejor soportados por imagen, vialidad, drenaje y borde visible.
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="focusDigitalCadastreBtn" class="secondary-button" type="button">Centrar predios</button>
+                <button id="clearDigitalCadastreBtn" class="ghost-button" type="button">Limpiar catastro</button>
               </div>
             </article>
 

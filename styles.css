@@ -682,6 +682,14 @@ button {
   --sidebar-width: clamp(560px, 40vw, 820px);
 }
 
+.app-shell[data-route="catastro"] {
+  --sidebar-width: clamp(360px, 25vw, 460px);
+}
+
+.app-shell[data-route="catastro"][data-active-tab="modulos"] {
+  --sidebar-width: clamp(520px, 38vw, 760px);
+}
+
 .app-shell[data-route="gps"] {
   --sidebar-width: clamp(360px, 27vw, 460px);
 }
@@ -4448,55 +4456,68 @@ button {
   bottom: 46px;
 }
 
-.app-shell[data-route="planificacion"] {
+.app-shell[data-route="planificacion"],
+.app-shell[data-route="catastro"] {
   padding: 16px;
   gap: 16px;
 }
 
-.app-shell[data-route="planificacion"] .topbar {
+.app-shell[data-route="planificacion"] .topbar,
+.app-shell[data-route="catastro"] .topbar {
   padding: 14px 18px;
 }
 
-.app-shell[data-route="planificacion"] .topbar h1 {
+.app-shell[data-route="planificacion"] .topbar h1,
+.app-shell[data-route="catastro"] .topbar h1 {
   font-size: clamp(1.2rem, 1.8vw, 1.8rem);
 }
 
-.app-shell[data-route="planificacion"] .topbar-actions {
+.app-shell[data-route="planificacion"] .topbar-actions,
+.app-shell[data-route="catastro"] .topbar-actions {
   gap: 12px;
   justify-content: flex-end;
 }
 
-.app-shell[data-route="planificacion"] .workspace {
+.app-shell[data-route="planificacion"] .workspace,
+.app-shell[data-route="catastro"] .workspace {
   grid-template-columns: minmax(0, var(--sidebar-width)) minmax(0, 1fr);
   gap: 16px;
 }
 
 .app-shell[data-route="planificacion"] .section-block,
 .app-shell[data-route="planificacion"] .module-card,
-.app-shell[data-route="planificacion"] .legend-card {
+.app-shell[data-route="planificacion"] .legend-card,
+.app-shell[data-route="catastro"] .section-block,
+.app-shell[data-route="catastro"] .module-card,
+.app-shell[data-route="catastro"] .legend-card {
   padding: 16px;
 }
 
-.app-shell[data-route="planificacion"] .map-stage {
+.app-shell[data-route="planificacion"] .map-stage,
+.app-shell[data-route="catastro"] .map-stage {
   min-height: clamp(580px, calc(100vh - 138px), 860px);
 }
 
-.app-shell[data-route="planificacion"] .overlay-left {
+.app-shell[data-route="planificacion"] .overlay-left,
+.app-shell[data-route="catastro"] .overlay-left {
   max-width: min(282px, calc(100% - 184px));
   background: rgba(250, 252, 247, 0.9);
   border-color: rgba(255, 255, 255, 0.52);
 }
 
-.app-shell[data-route="planificacion"] .overlay-right {
+.app-shell[data-route="planificacion"] .overlay-right,
+.app-shell[data-route="catastro"] .overlay-right {
   background: rgba(26, 33, 29, 0.78);
 }
 
-.app-shell[data-route="planificacion"] .status-bar {
+.app-shell[data-route="planificacion"] .status-bar,
+.app-shell[data-route="catastro"] .status-bar {
   max-width: 460px;
   background: rgba(252, 253, 249, 0.9);
 }
 
-.app-shell[data-route="planificacion"] .footer-pill {
+.app-shell[data-route="planificacion"] .footer-pill,
+.app-shell[data-route="catastro"] .footer-pill {
   font-size: 0.72rem;
 }
 

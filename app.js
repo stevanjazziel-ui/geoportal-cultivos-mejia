@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260514-8";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260517-1";
 
 const layerCatalog = [
   {
@@ -142,12 +142,26 @@ const layerCatalog = [
 const routeDefaultLayerIds = {
   agronomia: ["lotes", "estaciones"],
   gps: ["vias", "lotes", "estaciones"],
+  catastro: ["manchaUrbana", "equipamientos", "hidrozonas"],
   planificacion: ["manchaUrbana", "equipamientos", "hidrozonas"],
 };
 
 const gpsRouteVisibleModuleCardIds = new Set([
   "workflowGuideCard",
   "gpsCard",
+  "executiveDashboardCard",
+  "reportCenterCard",
+  "alertCenterCard",
+  "projectRegistryCard",
+  "decisionLogCard",
+  "accessRolesCard",
+  "apiCenterCard",
+]);
+
+const cadastreRouteVisibleModuleCardIds = new Set([
+  "workflowGuideCard",
+  "officialDataCard",
+  "digitalCadastreCard",
   "executiveDashboardCard",
   "reportCenterCard",
   "alertCenterCard",
@@ -3356,6 +3370,143 @@ function applyPlanning3dAreaProfile(areaId = planning3dState?.areaId || "machach
 
 applyPlanning3dAreaProfile("machachi");
 
+const digitalCadastreModeCatalog = {
+  calibrado: {
+    id: "calibrado",
+    label: "Calibrado con parcelario",
+    shortLabel: "Calibrado",
+    confidenceBase: 84,
+    requiresPlot: false,
+    note: "Usa predios locales, contornos visibles y control tecnico sobre imagen.",
+  },
+  asistido: {
+    id: "asistido",
+    label: "Asistido por imagen",
+    shortLabel: "Asistido",
+    confidenceBase: 58,
+    requiresPlot: true,
+    note: "Usa AOI, contornos visibles y soporte normativo como pre-digitizacion.",
+  },
+};
+
+const digitalCadastreAreaCatalog = {
+  mejia: {
+    id: "mejia",
+    label: "Canton Mejia",
+    localParcels: false,
+    supportLabel: "Imagen satelital, ortofoto cuando exista y linderos visibles",
+    sourceLabel: "Norma nacional + soporte visible",
+  },
+  machachi: {
+    id: "machachi",
+    label: "Machachi",
+    localParcels: true,
+    datasetAreaId: "machachi",
+    supportLabel: "Parcelario local calibrado + imagen visible",
+    sourceLabel: "Parcelario local + norma nacional",
+  },
+  cutuglagua: {
+    id: "cutuglagua",
+    label: "Cutuglagua",
+    localParcels: true,
+    datasetAreaId: "cutuglagua",
+    supportLabel: "Parcelario local calibrado + imagen visible",
+    sourceLabel: "Parcelario local + norma nacional",
+  },
+  quevedo: {
+    id: "quevedo",
+    label: "Quevedo",
+    localParcels: false,
+    supportLabel: "Imagen satelital, ortofoto cuando exista y linderos visibles",
+    sourceLabel: "Norma nacional + soporte visible",
+  },
+};
+
+const digitalCadastreDatasetCache = new Map();
+
+function getDigitalCadastreAreaProfile(areaId = state.territorialAreaId) {
+  return digitalCadastreAreaCatalog[areaId] || digitalCadastreAreaCatalog.mejia;
+}
+
+function getDigitalCadastreModeProfile(modeId = state.digitalCadastreModeId) {
+  return digitalCadastreModeCatalog[modeId] || digitalCadastreModeCatalog.calibrado;
+}
+
+function getDigitalCadastreTarget() {
+  if (state.currentPlot?.geometry) {
+    return {
+      feature: cloneFeature(state.currentPlot),
+      scopeLabel: state.currentPlotLabel || "Lote activo",
+      scopeType: "plot",
+      targetKey: `plot:${getFeatureKey(state.currentPlot)}`,
+    };
+  }
+  return getCurrentTerritorialTarget();
+}
+
+function normalizeDigitalCadastreCollection(areaId, collection) {
+  const areaFeature = getTerritorialAreaFeature(areaId);
+  return {
+    type: "FeatureCollection",
+    features: (Array.isArray(collection?.features) ? collection.features : [])
+      .filter((feature) => isPlanning3dRenderablePublicGeometry(feature?.geometry))
+      .filter((feature) => doesFeatureIntersectTerritorialArea(feature, areaFeature))
+      .map((feature, index) => {
+        const props = feature?.properties || {};
+        const estimate = estimatePlanning3dMetrics(feature?.geometry);
+        const line = geometryToBoundaryLine(feature?.geometry);
+        const perimeterKm = line ? turf.length(line, { units: "kilometers" }) : 0;
+        return {
+          type: "Feature",
+          id: Number(props.id) || index + 1,
+          properties: {
+            parcelIndex: index + 1,
+            parcelId: Number(props.id) || index + 1,
+            cadastralCode: props.cod_catast || null,
+            lotNumber: props.numero_lot || null,
+            areaHa: Number((turf.area(feature) / 10000).toFixed(3)),
+            perimeterM: Number((perimeterKm * 1000).toFixed(1)),
+            centroid: estimate.centroid,
+            bounds: estimate.bounds,
+          },
+          geometry: cloneFeature(feature).geometry,
+        };
+      }),
+  };
+}
+
+async function loadDigitalCadastreParcelCollection(areaId, mode = "preview") {
+  const profile = getDigitalCadastreAreaProfile(areaId);
+  if (!profile.localParcels || !profile.datasetAreaId) {
+    return {
+      type: "FeatureCollection",
+      features: [],
+    };
+  }
+
+  const area3dProfile = getPlanning3dAreaProfile(profile.datasetAreaId);
+  const dataPath = mode === "full"
+    ? area3dProfile.parcelsPath
+    : (area3dProfile.previewParcelsPath || area3dProfile.parcelsPath);
+  const cacheKey = `${profile.datasetAreaId}:${mode}:${dataPath}`;
+  if (digitalCadastreDatasetCache.has(cacheKey)) {
+    return digitalCadastreDatasetCache.get(cacheKey);
+  }
+
+  const response = await fetch(dataPath, {
+    headers: {
+      Accept: "application/geo+json, application/json",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`No se pudo cargar el parcelario ${dataPath} (${response.status}).`);
+  }
+  const payload = await response.json();
+  const normalized = normalizeDigitalCadastreCollection(profile.datasetAreaId, payload);
+  digitalCadastreDatasetCache.set(cacheKey, normalized);
+  return normalized;
+}
+
 function getPlanning3dViewCamera(mode = planning3dState.viewMode, overrides = {}) {
   const base = {
     center: planning3dPublishedView.center,
@@ -3555,6 +3706,9 @@ const state = {
   planningGrowthScenarioId: "balanceado",
   planningData: null,
   planningHighlightId: null,
+  digitalCadastreModeId: "calibrado",
+  digitalCadastreData: null,
+  digitalCadastreHighlightId: null,
   fodaCameData: null,
   fodaCameHighlightId: null,
   aiGeoData: null,
@@ -3694,6 +3848,8 @@ const mapState = {
   planningServiceGapLayer: null,
   planningFacilityLayer: null,
   planningSolarLayer: null,
+  digitalCadastreLayer: null,
+  digitalCadastreGuideLayer: null,
   mobilityLayer: null,
   mobilityGapLayer: null,
   mobilityLinkLayer: null,
@@ -4193,6 +4349,9 @@ function setTerritorialArea(areaId = state.territorialAreaId, options = {}) {
   if (options.rerun !== false) {
     if (state.planningData) {
       runPlanningAnalysis(true);
+    }
+    if (state.digitalCadastreData) {
+      runDigitalCadastreAnalysis(true);
     }
     if (state.mobilityData) {
       runMobilityAnalysis(true);
@@ -5448,6 +5607,25 @@ const workflowGuideCatalog = {
       { id: "gps-dashboard", label: "Dashboard", tone: "ghost" },
     ],
   },
+  catastro: {
+    badge: "Ruta especializada",
+    title: "Secuencia corta para delimitar y validar predios",
+    defaultCopy: "AOI, soporte oficial, predios visibles y digitalizacion asistida en una sola ruta.",
+    steps: [
+      { id: "scope", title: "Elegir ambito", pending: "Define Mejia, Machachi, Cutuglagua o Quevedo." },
+      { id: "plot", title: "Delimitar AOI", pending: "Dibuja el poligono o usa el parcelario visible." },
+      { id: "official", title: "Activar soporte oficial", pending: "Cruza vialidad, drenaje y apoyos oficiales visibles." },
+      { id: "digitize", title: "Digitalizar predio", pending: "Pasa el cursor, revisa el contorno y haz clic para activarlo." },
+      { id: "validate", title: "Validar tecnicamente", pending: "Contrasta con imagen, ortofoto y revision catastral." },
+    ],
+    actions: [
+      { id: "cadastre-area", label: "Dibujar AOI", tone: "secondary" },
+      { id: "planning-cadastre", label: "Leer predios", tone: "ghost" },
+      { id: "planning-official", label: "Fuentes oficiales", tone: "ghost" },
+      { id: "cadastre-focus", label: "Centrar predios", tone: "ghost" },
+      { id: "suite-dashboard", label: "Dashboard", tone: "ghost" },
+    ],
+  },
   planificacion: {
     badge: "Ruta sugerida",
     title: "Secuencia corta para decidir y validar",
@@ -5478,6 +5656,7 @@ function cacheDom() {
   dom.loginOverlay = document.querySelector("#loginOverlay");
   dom.openAgronomyBtn = document.querySelector("#openAgronomyBtn");
   dom.openPlanningBtn = document.querySelector("#openPlanningBtn");
+  dom.openCadastreBtn = document.querySelector("#openCadastreBtn");
   dom.openOperationsBtn = document.querySelector("#openOperationsBtn");
   dom.openFieldEvidenceBtn = document.querySelector("#openFieldEvidenceBtn");
   dom.appShell = document.querySelector("#appShell");
@@ -5599,6 +5778,7 @@ function cacheDom() {
   dom.planningQuickStrategyBtn = document.querySelector("#planningQuickStrategyBtn");
   dom.planningQuickZoningBtn = document.querySelector("#planningQuickZoningBtn");
   dom.planningQuickHousingBtn = document.querySelector("#planningQuickHousingBtn");
+  dom.planningQuickCadastreBtn = document.querySelector("#planningQuickCadastreBtn");
   dom.planningQuick3dBtn = document.querySelector("#planningQuick3dBtn");
   dom.territorialOpsCard = document.querySelector("#territorialOpsCard");
   dom.runTerritorialOpsBtn = document.querySelector("#runTerritorialOpsBtn");
@@ -5650,6 +5830,16 @@ function cacheDom() {
   dom.runPlanningBtn = document.querySelector("#runPlanningBtn");
   dom.focusPlanningBtn = document.querySelector("#focusPlanningBtn");
   dom.clearPlanningBtn = document.querySelector("#clearPlanningBtn");
+  dom.runDigitalCadastreBtn = document.querySelector("#runDigitalCadastreBtn");
+  dom.focusDigitalCadastreBtn = document.querySelector("#focusDigitalCadastreBtn");
+  dom.clearDigitalCadastreBtn = document.querySelector("#clearDigitalCadastreBtn");
+  dom.digitalCadastreModeSelect = document.querySelector("#digitalCadastreModeSelect");
+  dom.digitalCadastreSupportInput = document.querySelector("#digitalCadastreSupportInput");
+  dom.digitalCadastreSourceNote = document.querySelector("#digitalCadastreSourceNote");
+  dom.digitalCadastreResults = document.querySelector("#digitalCadastreResults");
+  dom.digitalCadastreReadout = document.querySelector("#digitalCadastreReadout");
+  dom.digitalCadastreChecklist = document.querySelector("#digitalCadastreChecklist");
+  dom.digitalCadastreCandidates = document.querySelector("#digitalCadastreCandidates");
   dom.runFodaCameBtn = document.querySelector("#runFodaCameBtn");
   dom.focusFodaCameBtn = document.querySelector("#focusFodaCameBtn");
   dom.clearFodaCameBtn = document.querySelector("#clearFodaCameBtn");
@@ -5769,6 +5959,7 @@ function cacheDom() {
   dom.fieldEvidenceSensitive = document.querySelector("#fieldEvidenceSensitive");
   dom.fieldEvidenceHistory = document.querySelector("#fieldEvidenceHistory");
   dom.planningCard = document.querySelector("#planningCard");
+  dom.digitalCadastreCard = document.querySelector("#digitalCadastreCard");
   dom.fodaCameCard = document.querySelector("#fodaCameCard");
   dom.aiGeoCard = document.querySelector("#aiGeoCard");
   dom.landChangeCard = document.querySelector("#landChangeCard");
@@ -6101,7 +6292,7 @@ function saveUserProfileFromForm() {
 }
 
 function shouldShowPlotTools(route = state.entryRoute || "agronomia") {
-  return route === "agronomia" || route === "planificacion";
+  return route === "agronomia" || route === "planificacion" || route === "catastro";
 }
 
 function syncPlotToolsState(route = state.entryRoute || "agronomia") {
@@ -6219,6 +6410,10 @@ function bindUI() {
     state.pendingEntryAction = null;
     enterPublicView("planificacion");
   });
+  dom.openCadastreBtn?.addEventListener("click", () => {
+    state.pendingEntryAction = null;
+    enterPublicView("catastro");
+  });
   dom.openOperationsBtn?.addEventListener("click", () => {
     state.pendingEntryAction = null;
     enterPublicView("gps");
@@ -6249,6 +6444,13 @@ function bindUI() {
   dom.fieldEvidenceSensitive?.addEventListener("click", handleFieldEvidenceInteraction);
   dom.fieldEvidenceHistory?.addEventListener("click", handleFieldEvidenceInteraction);
   dom.territorialScenarioCompare?.addEventListener("click", handleTerritorialScenarioCompareInteraction);
+  dom.digitalCadastreCandidates?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-digital-cadastre-id]");
+    if (!button) {
+      return;
+    }
+    activateDigitalCadastreCandidate(button.dataset.digitalCadastreId);
+  });
   dom.territorialSectorSheets?.addEventListener("click", handleTerritorialSectorSheetsInteraction);
   dom.territorialExportPanel?.addEventListener("click", handleTerritorialExportInteraction);
   dom.reportCenterBoard?.addEventListener("click", handleTerritorialExportInteraction);
@@ -6538,6 +6740,7 @@ function bindUI() {
   dom.planningQuickStrategyBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-strategy"));
   dom.planningQuickZoningBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-zoning"));
   dom.planningQuickHousingBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-housing"));
+  dom.planningQuickCadastreBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-cadastre"));
   dom.planningQuick3dBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-3d"));
   dom.openGpsGeofenceBtn?.addEventListener("click", () => dom.gpsGeofenceFileInput?.click());
   dom.gpsGeofenceFileInput?.addEventListener("change", handleGpsGeofenceFileSelection);
@@ -6578,6 +6781,25 @@ function bindUI() {
   });
   dom.focusPlanningBtn.addEventListener("click", focusPlanningCandidates);
   dom.clearPlanningBtn.addEventListener("click", clearPlanningAnalysis);
+  dom.runDigitalCadastreBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.digitalCadastreResults, "Leyendo contornos visibles, parcelario de apoyo y norma catastral aplicable...", [
+      { target: dom.digitalCadastreReadout, message: "Preparando lectura calibrada o asistida segun el ambito y el soporte disponible..." },
+      { target: dom.digitalCadastreChecklist, message: "Compilando controles minimos de digitalizacion y validacion tecnica..." },
+      { target: dom.digitalCadastreCandidates, message: "Buscando predios o frentes de digitalizacion con mejor soporte visible..." },
+    ]);
+    return runModuleAction(dom.runDigitalCadastreBtn, "Digitalizando...", () => runDigitalCadastreAnalysis());
+  });
+  dom.focusDigitalCadastreBtn?.addEventListener("click", focusDigitalCadastreStudy);
+  dom.clearDigitalCadastreBtn?.addEventListener("click", clearDigitalCadastreAnalysis);
+  dom.digitalCadastreModeSelect?.addEventListener("change", () => {
+    state.digitalCadastreModeId = dom.digitalCadastreModeSelect.value || "calibrado";
+    if (state.digitalCadastreData) {
+      runDigitalCadastreAnalysis(true);
+    } else {
+      renderDigitalCadastreModule();
+      updateMapSummary();
+    }
+  });
   dom.runFodaCameBtn?.addEventListener("click", () => {
     setModulePendingState(dom.fodaCameResults, "Traduciendo aptitud, huella, riesgo y servicios a un diagnostico FODA + CAME...", [
       { target: dom.fodaCameSwot, message: "Clasificando fortalezas, oportunidades, debilidades y amenazas por zona..." },
@@ -7062,13 +7284,25 @@ function handleFieldEvidenceInteraction(event) {
 }
 
 function handleTerritorialSectorSheetsInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-zoning-sector-id], [data-housing-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
+  const button = event.target.closest("[data-candidate-id], [data-digital-cadastre-id], [data-cadastre-draw], [data-cadastre-open], [data-land-change-sector-id], [data-hydrology-sector-id], [data-zoning-sector-id], [data-housing-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
   if (!button || !dom.territorialSectorSheets?.contains(button)) {
     return;
   }
 
   if (button.dataset.candidateId) {
     focusPlanningCandidate(button.dataset.candidateId);
+    return;
+  }
+  if (button.dataset.digitalCadastreId) {
+    focusDigitalCadastreCandidate(button.dataset.digitalCadastreId, { openPopup: true });
+    return;
+  }
+  if (button.dataset.cadastreDraw) {
+    startPlotDrawingFromOverlay();
+    return;
+  }
+  if (button.dataset.cadastreOpen) {
+    runWorkflowGuideAction("planning-cadastre");
     return;
   }
   if (button.dataset.landChangeSectorId) {
@@ -7113,13 +7347,25 @@ function handleTerritorialSectorSheetsInteraction(event) {
 }
 
 function handleTerritorialAlertInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-land-change-sector-id], [data-hydrology-sector-id], [data-zoning-sector-id], [data-housing-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
+  const button = event.target.closest("[data-candidate-id], [data-digital-cadastre-id], [data-cadastre-draw], [data-cadastre-open], [data-land-change-sector-id], [data-hydrology-sector-id], [data-zoning-sector-id], [data-housing-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
   if (!button || !dom.territorialAlertsPanel?.contains(button)) {
     return;
   }
 
   if (button.dataset.candidateId) {
     focusPlanningCandidate(button.dataset.candidateId);
+    return;
+  }
+  if (button.dataset.digitalCadastreId) {
+    focusDigitalCadastreCandidate(button.dataset.digitalCadastreId, { openPopup: true });
+    return;
+  }
+  if (button.dataset.cadastreDraw) {
+    startPlotDrawingFromOverlay();
+    return;
+  }
+  if (button.dataset.cadastreOpen) {
+    runWorkflowGuideAction("planning-cadastre");
     return;
   }
   if (button.dataset.landChangeSectorId) {
@@ -7373,6 +7619,10 @@ function isPlanningRoute(route = state.entryRoute || "agronomia") {
   return route === "planificacion";
 }
 
+function isCadastreRoute(route = state.entryRoute || "agronomia") {
+  return route === "catastro";
+}
+
 function isGpsRoute(route = state.entryRoute || "agronomia") {
   return route === "gps";
 }
@@ -7382,7 +7632,7 @@ function isEvidenceRoute(route = state.entryRoute || "agronomia") {
 }
 
 function isTerritorialRoute(route = state.entryRoute || "agronomia") {
-  return isPlanningRoute(route);
+  return isPlanningRoute(route) || isCadastreRoute(route);
 }
 
 function isAgronomyLikeRoute(route = state.entryRoute || "agronomia") {
@@ -7410,6 +7660,8 @@ function applyRouteFromUrl() {
   state.pendingEntryAction = null;
   const route = routeParam === "planificacion"
     ? "planificacion"
+    : routeParam === "catastro"
+      ? "catastro"
     : routeParam === "operacion" || routeParam === "gps"
       ? "gps"
     : routeParam === "evidencia"
@@ -7485,6 +7737,45 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     updateMapSummary();
     window.setTimeout(() => {
       focusPlanningCommandCard();
+    }, 120);
+    return;
+  }
+
+  if (isCadastreRoute(route)) {
+    state.pendingEntryAction = null;
+    state.territorialFocus = "digitalCadastre";
+    clearAgronomyMapContext();
+    if (mapState.studyAreaLayer) {
+      mapState.map.removeLayer(mapState.studyAreaLayer);
+      mapState.studyAreaLayer = null;
+    }
+    clearPlanningOverlay();
+    clearFodaCameOverlay();
+    clearLandChangeOverlay();
+    clearHydrologyOverlay();
+    clearMobilityOverlay();
+    clearRiskOverlay();
+    clearFieldEvidenceOverlay();
+    clearAiGeoOverlay();
+    if (state.currentPlot) {
+      renderCurrentPlotLayer();
+    }
+    if (state.digitalCadastreData) {
+      renderDigitalCadastreOverlay(state.digitalCadastreData);
+    }
+    setActiveTab("modulos");
+    if (dom.sidebarTitle) {
+      dom.sidebarTitle.textContent = "Centro catastral inteligente";
+    }
+    if (dom.sidebarSubtitle) {
+      dom.sidebarSubtitle.textContent = "Predios visibles, contornos, soporte oficial y validacion tecnica en una ruta separada para digitalizar con clic.";
+    }
+    if (dom.overlayMode) {
+      dom.overlayMode.textContent = "Catastro";
+    }
+    updateMapSummary();
+    window.setTimeout(() => {
+      focusModuleCard(dom.digitalCadastreCard);
     }, 120);
     return;
   }
@@ -7726,6 +8017,7 @@ function getModuleCardLabel(card) {
     planningCommandCard: "Copiloto",
     planningCard: "Aptitud",
     planningResultsCard: "Resultados",
+    digitalCadastreCard: "Catastro",
     territorialScenarioCard: "Escenarios",
     hydrologyCard: "Agua",
     mobilityCard: "Movilidad",
@@ -7774,12 +8066,37 @@ function getModuleRouteLabel(route = state.entryRoute || "agronomia") {
   if (isGpsRoute(route)) {
     return "seguimiento GPS";
   }
+  if (isCadastreRoute(route)) {
+    return "catastro asistido";
+  }
   return isPlanningRoute(route)
     ? "planificacion territorial"
     : "agronomia";
 }
 
 function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
+  if (isCadastreRoute(route)) {
+    return {
+      kicker: "Catastro inteligente",
+      title: "Delimita predios visibles con una ruta separada y mas limpia",
+      copy: "AOI, soporte oficial, parcelario local y digitalizacion asistida sin mezclarte con el resto del tablero territorial.",
+      actions: [
+        { id: "cadastre-area", label: "Dibujar AOI", copy: "Poligono de trabajo", tone: "primary" },
+        { id: "planning-cadastre", label: "Leer predios", copy: "Contornos visibles", tone: "accent" },
+        { id: "planning-official", label: "Oficiales", copy: "Vias y drenaje", tone: "neutral" },
+        { id: "cadastre-focus", label: "Centrar", copy: "Predios detectados", tone: "neutral" },
+        { id: "gps-reports", label: "Reportes", copy: "HTML, JSON y CSV", tone: "neutral" },
+      ],
+      filters: [
+        { id: "all", label: "Todo" },
+        { id: "core", label: "Digitalizar" },
+        { id: "official", label: "Oficiales" },
+        { id: "validation", label: "Validacion" },
+        { id: "product", label: "Gestion" },
+      ],
+    };
+  }
+
   if (isGpsRoute(route)) {
     return {
       kicker: "Centro GPS",
@@ -7817,6 +8134,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
         { id: "planning-mobility", label: "Movilidad", copy: "Cobertura y tiempos", tone: "neutral" },
         { id: "planning-official", label: "Oficiales", copy: "Vialidad y servicios", tone: "neutral" },
         { id: "planning-water", label: "Agua", copy: "Oferta y resiliencia", tone: "neutral" },
+        { id: "planning-cadastre", label: "Catastro", copy: "Predios y contornos", tone: "neutral" },
         { id: "planning-zoning", label: "Zonificacion", copy: "Patrones y vitalidad", tone: "neutral" },
         { id: "planning-housing", label: "Vivienda", copy: "Oferta y tension", tone: "neutral" },
         { id: "planning-strategy", label: "FODA + CAME", copy: "Diagnostico y accion", tone: "neutral" },
@@ -7870,12 +8188,19 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
 
   const planningFilters = {
     core: new Set(["planningCommandCard", "territorialOpsCard", "planningCard", "planningResultsCard"]),
-    official: new Set(["officialDataCard"]),
+    official: new Set(["officialDataCard", "digitalCadastreCard"]),
     risk: new Set(["riskCard", "hydrologyCard", "territorialReadoutCard"]),
     growth: new Set(["mobilityCard", "landChangeCard", "territorialScenarioCard", "zoningPatternsCard", "housingPatternsCard"]),
     strategy: new Set(["fodaCameCard", "territorialDecisionCard", "territorialAlertsCard", "aiGeoCard", "zoningPatternsCard", "housingPatternsCard"]),
-    validation: new Set(["planning3dCard"]),
+    validation: new Set(["planning3dCard", "digitalCadastreCard"]),
     product: new Set(["executiveDashboardCard", "reportCenterCard", "scenarioLabCard", "timeSeriesCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard"]),
+  };
+
+  const cadastreFilters = {
+    core: new Set(["digitalCadastreCard"]),
+    official: new Set(["officialDataCard", "digitalCadastreCard"]),
+    validation: new Set(["digitalCadastreCard"]),
+    product: new Set(["executiveDashboardCard", "reportCenterCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard"]),
   };
 
   const agronomyFilters = {
@@ -7895,7 +8220,9 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
     management: new Set(["executiveDashboardCard", "reportCenterCard", "projectRegistryCard", "accessRolesCard", "apiCenterCard"]),
   };
 
-  const filters = isPlanningRoute(route)
+  const filters = isCadastreRoute(route)
+    ? cadastreFilters
+    : isPlanningRoute(route)
     ? planningFilters
     : isGpsRoute(route)
       ? gpsFilters
@@ -7915,6 +8242,21 @@ function setModuleQuickNavActive(cardId = "") {
 }
 
 function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
+  if (isCadastreRoute(route)) {
+    return {
+      workflowGuideCard: false,
+      officialDataCard: true,
+      digitalCadastreCard: false,
+      executiveDashboardCard: false,
+      reportCenterCard: true,
+      alertCenterCard: false,
+      projectRegistryCard: true,
+      decisionLogCard: true,
+      accessRolesCard: true,
+      apiCenterCard: true,
+    };
+  }
+
   if (isPlanningRoute(route)) {
     return {
       workflowGuideCard: true,
@@ -7923,6 +8265,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
       territorialOpsCard: false,
       planningCard: true,
       planningResultsCard: true,
+      digitalCadastreCard: true,
       territorialScenarioCard: true,
       mobilityCard: true,
       riskCard: true,
@@ -8232,11 +8575,53 @@ function clearPlanningModuleFocus() {
 }
 
 function getWorkflowGuideModel(route = state.entryRoute || "agronomia") {
-  const profile = isPlanningRoute(route)
+  const profile = isCadastreRoute(route)
+    ? workflowGuideCatalog.catastro
+    : isPlanningRoute(route)
     ? workflowGuideCatalog.planificacion
     : isGpsRoute(route)
       ? workflowGuideCatalog.gps
       : workflowGuideCatalog.agronomia;
+
+  if (isCadastreRoute(route)) {
+    const areaProfile = getDigitalCadastreAreaProfile(state.territorialAreaId);
+    const cadastre = state.digitalCadastreData;
+    const highlight = cadastre?.candidates?.find((candidate) => candidate.id === state.digitalCadastreHighlightId) || cadastre?.candidates?.[0] || null;
+    const officialReady = !!state.officialData.planificacion?.activeLayerCount;
+    return {
+      ...profile,
+      copy: cadastre
+        ? `${cadastre.summary.candidateCount} ${cadastre.summary.candidateCount === 1 ? "predio" : "predios"} visibles sobre ${cadastre.context.scopeLabel}. ${highlight ? `Activo: ${highlight.title}.` : ""}`
+        : `${profile.defaultCopy} El ambito activo es ${areaProfile.scopeLabel}.`,
+      steps: [
+        {
+          ...profile.steps[0],
+          tone: "ready",
+          stateLabel: areaProfile.scopeLabel,
+        },
+        {
+          ...profile.steps[1],
+          tone: state.currentPlot ? "ready" : "pending",
+          stateLabel: state.currentPlot ? `${state.currentPlotLabel} listo` : profile.steps[1].pending,
+        },
+        {
+          ...profile.steps[2],
+          tone: officialReady ? "ready" : "pending",
+          stateLabel: officialReady ? `${state.officialData.planificacion.activeLayerCount} capas oficiales activas` : profile.steps[2].pending,
+        },
+        {
+          ...profile.steps[3],
+          tone: cadastre?.candidates?.length ? "ready" : "pending",
+          stateLabel: cadastre?.candidates?.length ? `${cadastre.summary.meanConfidence}/100 de confianza media` : profile.steps[3].pending,
+        },
+        {
+          ...profile.steps[4],
+          tone: highlight ? "available" : "pending",
+          stateLabel: highlight ? `${highlight.title} listo para revision` : profile.steps[4].pending,
+        },
+      ],
+    };
+  }
 
   if (isGpsRoute(route)) {
     const areaProfile = getAgronomyAreaProfile();
@@ -8447,6 +8832,19 @@ function openSidebarWorkingPanel(tabId = "modulos") {
 }
 
 function getSidebarDockConfig(route = state.entryRoute || "agronomia") {
+  if (isCadastreRoute(route)) {
+    return {
+      title: "Atajos catastrales",
+      subtitle: "AOI, soporte oficial y digitalizacion del predio sin bajar toda la columna.",
+      actions: [
+        { id: "cadastre-area", label: "AOI" },
+        { id: "planning-cadastre", label: "Predios" },
+        { id: "planning-official", label: "Oficiales" },
+        { id: "cadastre-focus", label: "Centrar" },
+      ],
+    };
+  }
+
   if (isGpsRoute(route)) {
     return {
       title: "Atajos GPS",
@@ -8522,6 +8920,16 @@ function handleSidebarDockAction(event) {
     setStatus("Delimita el ambito de analisis en el mapa para afinar la lectura territorial.");
     return;
   }
+  if (actionId === "cadastre-area") {
+    startPlotDrawingFromOverlay();
+    setStatus("Dibuja el AOI y luego pasa el cursor por el predio visible para inspeccionarlo antes de digitalizarlo.");
+    return;
+  }
+  if (actionId === "cadastre-focus") {
+    focusDigitalCadastreStudy();
+    setStatus("Predios visibles centrados para revisar contorno, soporte y seleccion activa.");
+    return;
+  }
 
   if (actionId === "planning-copilot") {
     openSidebarWorkingPanel("modulos");
@@ -8535,6 +8943,14 @@ function handleSidebarDockAction(event) {
 
 function runWorkflowGuideAction(actionId) {
   switch (actionId) {
+    case "cadastre-area":
+      startPlotDrawingFromOverlay();
+      setStatus("Dibuja el AOI y luego pasa el cursor por el predio visible para inspeccionarlo antes de digitalizarlo.");
+      return;
+    case "cadastre-focus":
+      focusDigitalCadastreStudy();
+      setStatus("Predios visibles centrados para revisar contorno, soporte y seleccion activa.");
+      return;
     case "agronomy-scenes":
       openSidebarWorkingPanel("sentinel");
       dom.sentinelForm?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -8659,6 +9075,12 @@ function runWorkflowGuideAction(actionId) {
       dom.runHydrologyBtn?.click();
       focusModuleCard(dom.hydrologyCard);
       return;
+    case "planning-cadastre":
+      openSidebarWorkingPanel("modulos");
+      dom.runDigitalCadastreBtn?.click();
+      focusModuleCard(dom.digitalCadastreCard);
+      setStatus("Catastro asistido listo para leer predios visibles, soporte oficial y revision tecnica.");
+      return;
     case "planning-zoning":
       openSidebarWorkingPanel("modulos");
       dom.runZoningPatternsBtn?.click();
@@ -8693,9 +9115,10 @@ function runWorkflowGuideAction(actionId) {
 
 function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   const isPlanning = isPlanningRoute(route);
+  const isCadastre = isCadastreRoute(route);
   const isGps = isGpsRoute(route);
   const isEvidence = isEvidenceRoute(route);
-  const isTerritorial = isPlanning || isEvidence;
+  const isTerritorial = isPlanning || isCadastre || isEvidence;
   if (state.moduleSearchRoute !== route) {
     state.moduleSearchRoute = route;
     state.moduleSearchQuery = "";
@@ -8710,11 +9133,13 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
     dom.tabImageryBtn.textContent = "Imagenes";
   }
   if (dom.tabModulesBtn) {
-    dom.tabModulesBtn.textContent = isGps ? "GPS" : "Copiloto";
+    dom.tabModulesBtn.textContent = isGps ? "GPS" : isCadastre ? "Catastro" : "Copiloto";
   }
   if (dom.moduleSearchInput) {
     dom.moduleSearchInput.placeholder = isGps
       ? "Buscar seguimiento, corredor, replay o alertas"
+      : isCadastre
+        ? "Buscar predios, contornos, oficiales o catastro"
       : isPlanning
         ? "Buscar aptitud, agua, riesgo, FODA o 3D"
         : "Buscar GPS, agua, riesgo, FODA, 3D o clima";
@@ -8728,6 +9153,8 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   if (dom.modulesSectionKicker) {
     dom.modulesSectionKicker.textContent = isGps
       ? "Centro operativo"
+      : isCadastre
+      ? "Catastro inteligente"
       : isPlanning
       ? "Modulo inteligente"
       : isEvidence
@@ -8737,6 +9164,8 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   if (dom.modulesSectionTitle) {
     dom.modulesSectionTitle.textContent = isGps
       ? "Centro GPS operativo"
+      : isCadastre
+      ? "Modulo catastral inteligente"
       : isPlanning
       ? "Modulo territorial inteligente"
       : isEvidence
@@ -8746,6 +9175,8 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   if (dom.modulesSectionCopy) {
     dom.modulesSectionCopy.textContent = isGps
       ? `Seguimiento en vivo, corredor, replay, alertas y reporte sobre ${getAgronomyAreaProfile().scopeLabel}.`
+      : isCadastre
+      ? "Predios visibles, contornos, soporte oficial y validacion tecnica en una ruta aparte."
       : isPlanning
       ? "Copiloto, oficiales, aptitud, agua, riesgo, estrategia y 3D en una sola ruta."
       : isEvidence
@@ -8755,6 +9186,8 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   if (dom.modeFooterPill) {
     dom.modeFooterPill.textContent = isGps
       ? "Operacion GPS"
+      : isCadastre
+      ? "Catastro inteligente"
       : isPlanning
       ? "Territorio inteligente"
       : isEvidence
@@ -8763,7 +9196,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   }
   if (Array.isArray(dom.planningModuleCards)) {
     dom.planningModuleCards.forEach((card) => {
-      card.classList.toggle("hidden", !isPlanning);
+      card.classList.toggle("hidden", isCadastre ? card.id !== "digitalCadastreCard" : !isPlanning);
     });
   }
   if (Array.isArray(dom.evidenceModuleCards)) {
@@ -8773,12 +9206,16 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   }
   if (Array.isArray(dom.globalModuleCards)) {
     dom.globalModuleCards.forEach((card) => {
-      card.classList.toggle("hidden", isGps ? !gpsRouteVisibleModuleCardIds.has(card.id) : false);
+      card.classList.toggle("hidden", isGps
+        ? !gpsRouteVisibleModuleCardIds.has(card.id)
+        : isCadastre
+          ? !cadastreRouteVisibleModuleCardIds.has(card.id)
+          : false);
     });
   }
   if (Array.isArray(dom.agronomyModuleCards)) {
     dom.agronomyModuleCards.forEach((card) => {
-      card.classList.toggle("hidden", isTerritorial || (isGps && card.id !== "gpsCard"));
+      card.classList.toggle("hidden", isTerritorial || isGps);
     });
   }
   if (dom.workflowGuideCard) {
@@ -8807,7 +9244,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
 }
 
 function getOfficialRouteKey(route = state.entryRoute || "agronomia") {
-  return isPlanningRoute(route) || isEvidenceRoute(route) ? "planificacion" : "agronomia";
+  return isPlanningRoute(route) || isCadastreRoute(route) || isEvidenceRoute(route) ? "planificacion" : "agronomia";
 }
 
 function getOfficialSourceProfile(route = state.entryRoute || "agronomia") {
@@ -9473,6 +9910,9 @@ function renderLayerTree() {
 }
 
 function getLayerSelectionRouteKey(route = state.entryRoute || "agronomia") {
+  if (isCadastreRoute(route)) {
+    return "catastro";
+  }
   if (isPlanningRoute(route) || isEvidenceRoute(route)) {
     return "planificacion";
   }
@@ -12483,7 +12923,8 @@ async function runModuleAction(button, busyLabel, action) {
   }
 }
 
-function setCurrentPlot(feature, label) {
+function setCurrentPlot(feature, label, options = {}) {
+  const { skipDigitalCadastreRefresh = false } = options;
   state.currentPlot = feature;
   state.currentPlotLabel = label;
   state.analysisData = null;
@@ -12509,6 +12950,9 @@ function setCurrentPlot(feature, label) {
   }
   if (state.planningData) {
     runPlanningAnalysis(true);
+  }
+  if (state.digitalCadastreData && !skipDigitalCadastreRefresh) {
+    runDigitalCadastreAnalysis(true);
   }
   filterSentinelImages();
   renderWizardAssistantState();
@@ -12591,6 +13035,9 @@ function clearCurrentPlot(triggerRefresh = false) {
   resetVisualPanel(dom.climateVisual, "Aqui apareceran la lectura visual de lluvia, humedad, temperatura y estres termico.");
   if (state.planningData) {
     runPlanningAnalysis(true);
+  }
+  if (state.digitalCadastreData) {
+    runDigitalCadastreAnalysis(true);
   }
   renderAnalysisSummary();
   renderCompareSummary();
@@ -21832,6 +22279,7 @@ function renderPlanningModule() {
   renderLandChangeModule();
   renderHydrologyModule();
   renderFieldEvidenceModule();
+  renderDigitalCadastreModule();
   renderTerritorialScenarioCompare();
   renderPlanningTerritoryReadout();
   renderTerritorialDecisionSupport();
@@ -21860,6 +22308,15 @@ function renderPlanningModule() {
   }
   if (dom.clearPlanningBtn) {
     dom.clearPlanningBtn.disabled = !state.planningData;
+  }
+  if (dom.focusDigitalCadastreBtn) {
+    dom.focusDigitalCadastreBtn.disabled = !(state.digitalCadastreData?.candidates?.length);
+  }
+  if (dom.clearDigitalCadastreBtn) {
+    dom.clearDigitalCadastreBtn.disabled = !state.digitalCadastreData;
+  }
+  if (dom.digitalCadastreModeSelect) {
+    dom.digitalCadastreModeSelect.value = state.digitalCadastreModeId;
   }
   if (dom.focusFodaCameBtn) {
     dom.focusFodaCameBtn.disabled = !(state.fodaCameData?.priorityZones?.length);
@@ -27140,6 +27597,82 @@ function clearPlanningAnalysis() {
   setStatus("Modulo de planificacion limpiado. Puedes lanzar un nuevo escenario territorial.");
 }
 
+async function runDigitalCadastreAnalysis(silent = false) {
+  try {
+    const previousCandidate = state.digitalCadastreData?.candidates?.find((candidate) => candidate.id === state.digitalCadastreHighlightId) || null;
+    const analysis = await buildDigitalCadastreAnalysis();
+    state.digitalCadastreData = analysis;
+    state.digitalCadastreHighlightId = findMatchingDigitalCadastreCandidate(previousCandidate, analysis)?.id || analysis.candidates[0]?.id || null;
+    state.territorialFocus = "digitalCadastre";
+    renderDigitalCadastreModule();
+    renderDigitalCadastreOverlay(analysis);
+    updateMapSummary();
+
+    if (!silent) {
+      setStatus(
+        analysis.summary.needsPlot
+          ? `Catastro asistido listo en ${analysis.areaProfile.label}. Dibuja un AOI para proponer el contorno predial.`
+          : `Digitalizacion predial ${analysis.mode.shortLabel.toLowerCase()} lista para ${analysis.context.scopeLabel} con ${analysis.summary.candidateCount} ${analysis.summary.candidateCount === 1 ? "predio" : "predios"} visibles.`
+      );
+    }
+
+    return analysis;
+  } catch (error) {
+    console.warn("Fallo el modulo de digitalizacion predial.", error);
+    state.digitalCadastreData = null;
+    state.digitalCadastreHighlightId = null;
+    clearDigitalCadastreOverlay();
+    resetTerritorialModuleState(dom.digitalCadastreResults, "No se pudo construir la digitalizacion predial para esta corrida.", [
+      { target: dom.digitalCadastreReadout, message: "No fue posible construir la lectura calibrada o asistida del predio." },
+      { target: dom.digitalCadastreChecklist, message: "No fue posible listar los controles tecnicos y normativos de la corrida." },
+      { target: dom.digitalCadastreCandidates, message: "No fue posible preparar los predios o frentes de digitalizacion en esta corrida." },
+    ]);
+    renderPlanningModule();
+    updateMapSummary();
+    if (!silent) {
+      setStatus(`Digitalizacion predial: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    return null;
+  }
+}
+
+async function activateDigitalCadastreCandidate(candidateId, options = {}) {
+  const candidate = state.digitalCadastreData?.candidates?.find((item) => item.id === candidateId);
+  if (!candidate || !mapState.map) {
+    return;
+  }
+
+  setCurrentPlot(cloneFeature(candidate.feature), candidate.title, {
+    skipDigitalCadastreRefresh: true,
+  });
+  const refreshedAnalysis = await runDigitalCadastreAnalysis(true);
+  const refreshedCandidate = findMatchingDigitalCadastreCandidate(candidate, refreshedAnalysis);
+  if (refreshedCandidate) {
+    focusDigitalCadastreCandidate(refreshedCandidate.id, {
+      fitBounds: false,
+      openPopup: true,
+      announce: false,
+    });
+  }
+  setStatus(`Predio ${candidate.title} digitalizado como lote activo. Pasa el cursor para inspeccionar y valida el contorno antes del uso catastral final.`);
+}
+
+function clearDigitalCadastreAnalysis() {
+  state.digitalCadastreData = null;
+  state.digitalCadastreHighlightId = null;
+  clearDigitalCadastreOverlay();
+  state.territorialFocus = isCadastreRoute()
+    ? "digitalCadastre"
+    : state.planningData
+    ? "planning"
+    : state.hydrologyData
+      ? "hydrology"
+      : "planning";
+  renderPlanningModule();
+  updateMapSummary();
+  setStatus("Catastro asistido limpiado. Puedes lanzar una nueva corrida sobre otro ambito o lote.");
+}
+
 function buildPlanningAnalysis(options = {}) {
   const program = getPlanningProgram(options.programId);
   const imageryProfile = getPlanningImageryProfile(options.imageryId);
@@ -29108,6 +29641,22 @@ function buildTerritorialDecisionSnapshot() {
     });
   }
 
+  if (state.digitalCadastreData?.candidates?.length || state.digitalCadastreData?.summary?.needsPlot) {
+    const digitalCadastre = state.digitalCadastreData;
+    const score = clamp(digitalCadastre.summary.meanConfidence || 0, 0, 100);
+    items.push({
+      id: "digitalCadastre",
+      score,
+      signal: getTerritorialSignalState(score),
+      title: "Catastro asistido",
+      metric: `${digitalCadastre.summary.candidateCount} predios`,
+      copy: digitalCadastre.summary.needsPlot
+        ? "La ruta catastral pide un AOI antes de proponer contornos visibles sobre imagen y soporte oficial."
+        : `${digitalCadastre.summary.boundaryLabel} con soporte ${digitalCadastre.summary.supportLabel.toLowerCase()} y ${digitalCadastre.summary.candidateCount} predios visibles.`,
+      note: `${digitalCadastre.mode.shortLabel} | ${digitalCadastre.summary.meanConfidence}/100 | ${digitalCadastre.summary.activeSupportLayers || 0} capas oficiales activas.`,
+    });
+  }
+
   if (state.fodaCameData) {
     const fodaCame = state.fodaCameData;
     const score = clamp(fodaCame.summary.overallScore, 0, 100);
@@ -29275,6 +29824,66 @@ function buildTerritorialSectorSheets() {
         actionAttr: `data-housing-sector-id="${sector.id}"`,
       });
     });
+  }
+
+  if (state.digitalCadastreData?.candidates?.length) {
+    state.digitalCadastreData.candidates.slice(0, 3).forEach((candidate) => {
+      sheets.push({
+        id: candidate.id,
+        module: "Catastro asistido",
+        title: candidate.title,
+        tone: candidate.confidenceTone === "high" ? "high" : candidate.confidenceTone === "mid" ? "mid" : "low",
+        kicker: state.digitalCadastreData.mode.shortLabel,
+        summary: candidate.summary,
+        note: candidate.recommendation,
+        metrics: [
+          { label: "Confianza", value: `${candidate.confidenceScore}/100` },
+          { label: "Area", value: `${candidate.areaHa.toFixed(candidate.areaHa >= 10 ? 1 : 2)} ha` },
+          { label: "Perimetro", value: `${Math.round(candidate.perimeterM)} m` },
+          { label: "Soporte visible", value: candidate.boundaryLabel },
+          { label: "Codigo", value: candidate.cadastralCode || candidate.lotNumber || "Sin codigo" },
+        ],
+        actionAttr: `data-digital-cadastre-id="${candidate.id}"`,
+      });
+    });
+  }
+
+  if (state.digitalCadastreData) {
+    const digitalCadastre = state.digitalCadastreData;
+    if (digitalCadastre.summary.needsPlot) {
+      alerts.push({
+        id: "alert-digital-cadastre-plot",
+        tone: "watch",
+        module: "Catastro asistido",
+        title: "Dibuja un AOI para iniciar la digitalizacion",
+        copy: "El modo asistido necesita un poligono de trabajo antes de proponer contornos prediales visibles.",
+        actionAttr: `data-cadastre-draw="true"`,
+      });
+    }
+    (digitalCadastre.candidates || []).slice(0, 3).forEach((candidate) => {
+      if (candidate.confidenceScore < 68 || candidate.visibleHits === 0) {
+        alerts.push({
+          id: `alert-digital-cadastre-${candidate.id}`,
+          tone: candidate.confidenceScore < 60 ? "critical" : "watch",
+          module: "Catastro asistido",
+          title: `${candidate.title}: revisar delimitacion`,
+          copy: candidate.visibleHits === 0
+            ? "El contorno tiene poco apoyo visible sobre vias, drenaje o borde urbano. Requiere ortofoto o revision de campo."
+            : `La confianza de delimitacion queda en ${candidate.confidenceScore}/100 y conviene revisar el lindero antes de usarlo en catastro.`,
+          actionAttr: `data-digital-cadastre-id="${candidate.id}"`,
+        });
+      }
+    });
+    if (!digitalCadastre.areaProfile.localParcels && digitalCadastre.mode.id === "asistido") {
+      alerts.push({
+        id: "alert-digital-cadastre-assisted-only",
+        tone: "watch",
+        module: "Catastro asistido",
+        title: `${digitalCadastre.areaProfile.label}: lectura asistida`,
+        copy: "El ambito no tiene parcelario local dentro del portal. El resultado es una pre-digitizacion apoyada en imagen y soporte visible.",
+        actionAttr: `data-cadastre-open="true"`,
+      });
+    }
   }
 
   if (state.fodaCameData?.priorityZones?.length) {
@@ -29902,6 +30511,18 @@ function buildTerritorialCsvExport() {
     ]);
   });
 
+  (state.digitalCadastreData?.candidates || []).forEach((candidate) => {
+    rows.push([
+      "catastro_asistido",
+      candidate.id,
+      candidate.title,
+      `${candidate.confidenceScore}/100`,
+      `${candidate.areaHa.toFixed(candidate.areaHa >= 10 ? 1 : 2)} ha | ${Math.round(candidate.perimeterM)} m`,
+      `${candidate.boundaryLabel} | ${candidate.supportLabel}`,
+      candidate.recommendation,
+    ]);
+  });
+
   (state.fodaCameData?.priorityZones || []).forEach((zone) => {
     rows.push([
       "foda_came",
@@ -30041,6 +30662,11 @@ function buildTerritorialGeoJsonExport() {
     });
   }
 
+  if (state.digitalCadastreData) {
+    pushFeatures(state.digitalCadastreData.candidateCollection, "catastro_asistido", "predios_asistidos");
+    pushFeatures(state.digitalCadastreData.guideCollection, "catastro_asistido", "guias_visibles");
+  }
+
   if (state.fodaCameData) {
     pushFeatures(state.fodaCameData.zoneSurface, "foda_came", "zonas_estrategicas");
     state.fodaCameData.priorityZones.forEach((zone) => {
@@ -30111,6 +30737,16 @@ function buildTerritorialJsonExport() {
       sourceStudy: state.housingPatternsData.sourceStudy,
       summary: state.housingPatternsData.summary,
       prioritySectors: state.housingPatternsData.prioritySectors,
+    } : null,
+    digitalizacionPredial: state.digitalCadastreData ? {
+      mode: state.digitalCadastreData.mode,
+      areaProfile: state.digitalCadastreData.areaProfile,
+      summary: state.digitalCadastreData.summary,
+      readout: state.digitalCadastreData.readout,
+      checklist: state.digitalCadastreData.checklist,
+      normativeRefs: state.digitalCadastreData.normativeRefs,
+      sourceStudy: state.digitalCadastreData.sourceStudy,
+      candidates: state.digitalCadastreData.candidates,
     } : null,
     fodaCame: state.fodaCameData ? {
       summary: state.fodaCameData.summary,
@@ -30239,6 +30875,42 @@ function buildTerritorialReportHtml(options = {}) {
               <p>${escapeHtmlContent(state.planningData.solarReadout.copy)}</p>
             </article>
           </div>
+        </section>
+      ` : ""}
+      ${state.digitalCadastreData ? `
+        <section>
+          <p class="kicker">Catastro asistido</p>
+          <h2>Digitalizacion predial visible</h2>
+          <p>${escapeHtmlContent(state.digitalCadastreData.readout.copy)}</p>
+          <div class="grid">
+            <article class="card">
+              <p class="kicker">Modo</p>
+              <div class="metric">${escapeHtmlContent(state.digitalCadastreData.mode.shortLabel)}</div>
+              <p>${escapeHtmlContent(state.digitalCadastreData.sourceNote)}</p>
+            </article>
+            <article class="card">
+              <p class="kicker">Confianza media</p>
+              <div class="metric">${escapeHtmlContent(`${state.digitalCadastreData.summary.meanConfidence}/100`)}</div>
+              <p>${escapeHtmlContent(state.digitalCadastreData.summary.boundaryLabel)}</p>
+            </article>
+            <article class="card">
+              <p class="kicker">Predios visibles</p>
+              <div class="metric">${escapeHtmlContent(String(state.digitalCadastreData.summary.candidateCount))}</div>
+              <p>${escapeHtmlContent(state.digitalCadastreData.summary.supportLabel)}</p>
+            </article>
+          </div>
+          ${state.digitalCadastreData.candidates?.length ? `
+            <div class="grid">
+              ${state.digitalCadastreData.candidates.slice(0, 3).map((candidate) => `
+                <article class="card">
+                  <p class="kicker">${escapeHtmlContent(candidate.title)}</p>
+                  <div class="metric">${escapeHtmlContent(`${candidate.confidenceScore}/100`)}</div>
+                  <p>${escapeHtmlContent(candidate.summary)}</p>
+                  <p>${escapeHtmlContent(candidate.recommendation)}</p>
+                </article>
+              `).join("")}
+            </div>
+          ` : ""}
         </section>
       ` : ""}
       ${state.zoningPatternsData || state.housingPatternsData ? `
@@ -32209,6 +32881,543 @@ function renderPlanningCandidates(planning) {
     .join(""));
 }
 
+function getDigitalCadastreConfidenceLabel(score = 0) {
+  if (score >= 84) {
+    return "Confianza alta";
+  }
+  if (score >= 68) {
+    return "Confianza media";
+  }
+  return "Confianza referencial";
+}
+
+function getDigitalCadastreConfidenceTone(score = 0) {
+  if (score >= 84) {
+    return "high";
+  }
+  if (score >= 68) {
+    return "mid";
+  }
+  return "low";
+}
+
+function getDigitalCadastreBoundaryLabel(hitCount = 0) {
+  if (hitCount >= 3) {
+    return "Contorno visible alto";
+  }
+  if (hitCount >= 2) {
+    return "Contorno visible medio";
+  }
+  if (hitCount >= 1) {
+    return "Contorno visible base";
+  }
+  return "Contorno no concluyente";
+}
+
+function boundsIntersect(leftBounds, rightBounds) {
+  if (!Array.isArray(leftBounds) || !Array.isArray(rightBounds) || leftBounds.length !== 4 || rightBounds.length !== 4) {
+    return false;
+  }
+  return !(
+    leftBounds[2] < rightBounds[0]
+    || leftBounds[0] > rightBounds[2]
+    || leftBounds[3] < rightBounds[1]
+    || leftBounds[1] > rightBounds[3]
+  );
+}
+
+function getDigitalCadastreSupportPoint(referencePoint, feature) {
+  if (!referencePoint?.geometry || !feature?.geometry) {
+    return null;
+  }
+  try {
+    if (feature.geometry.type === "LineString" || feature.geometry.type === "MultiLineString") {
+      const snapped = turf.nearestPointOnLine(feature, referencePoint, { units: "kilometers" });
+      if (snapped?.geometry?.coordinates) {
+        return snapped.geometry.coordinates;
+      }
+    }
+  } catch (_) {
+    // no-op
+  }
+  try {
+    return turf.centroid(feature).geometry.coordinates;
+  } catch (_) {
+    return null;
+  }
+}
+
+function buildDigitalCadastreGuideFeature(candidate, supportMatch, kind = "via") {
+  if (!candidate?.centroid || !supportMatch?.feature?.geometry) {
+    return null;
+  }
+  const anchorCoords = getDigitalCadastreSupportPoint(turf.point(candidate.centroid), supportMatch.feature);
+  if (!Array.isArray(anchorCoords) || anchorCoords.length < 2) {
+    return null;
+  }
+  return lineFeature(
+    `${candidate.title || "Predio"} / ${kind}`,
+    [candidate.centroid, anchorCoords],
+    {
+      digitalCadastreGuide: true,
+      digitalCadastreId: candidate.id,
+      guideKind: kind,
+      guideDistanceKm: supportMatch.distanceKm,
+    }
+  );
+}
+
+function getDigitalCadastreCandidateStableKey(candidate) {
+  if (!candidate) {
+    return null;
+  }
+  return candidate.cadastralCode
+    || candidate.lotNumber
+    || candidate.id
+    || null;
+}
+
+function findMatchingDigitalCadastreCandidate(referenceCandidate, analysis = state.digitalCadastreData) {
+  const sourceCandidates = Array.isArray(analysis?.candidates) ? analysis.candidates : [];
+  if (!sourceCandidates.length) {
+    return null;
+  }
+  if (!referenceCandidate) {
+    return sourceCandidates[0] || null;
+  }
+
+  const stableKey = getDigitalCadastreCandidateStableKey(referenceCandidate);
+  if (stableKey) {
+    const exactMatch = sourceCandidates.find((candidate) => getDigitalCadastreCandidateStableKey(candidate) === stableKey);
+    if (exactMatch) {
+      return exactMatch;
+    }
+  }
+
+  if (Array.isArray(referenceCandidate.centroid)) {
+    const centroidMatch = sourceCandidates.find((candidate) => {
+      if (!Array.isArray(candidate.centroid)) {
+        return false;
+      }
+      return Math.abs(Number(candidate.centroid[0]) - Number(referenceCandidate.centroid[0])) <= 0.00001
+        && Math.abs(Number(candidate.centroid[1]) - Number(referenceCandidate.centroid[1])) <= 0.00001;
+    });
+    if (centroidMatch) {
+      return centroidMatch;
+    }
+  }
+
+  return sourceCandidates[0] || null;
+}
+
+function buildDigitalCadastreCandidate(feature, index, context) {
+  const centroid = turf.centroid(feature);
+  const road = getNearestFeatureMatch(centroid, context.roadFeatures);
+  const hydro = getNearestFeatureMatch(centroid, context.hydroFeatures);
+  const urban = getNearestFeatureMatch(centroid, context.urbanFeatures);
+  const roadDistanceKm = Number((road.distanceKm || 0).toFixed(2));
+  const hydroDistanceKm = Number((hydro.distanceKm || 0).toFixed(2));
+  const urbanDistanceKm = Number((urban.distanceKm || 0).toFixed(2));
+  const props = feature.properties || {};
+  const areaHa = Number((props.areaHa || turf.area(feature) / 10000).toFixed(3));
+  const boundaryLine = geometryToBoundaryLine(feature.geometry);
+  const perimeterM = Number((props.perimeterM || (((boundaryLine ? turf.length(boundaryLine, { units: "kilometers" }) : 0) || 0) * 1000)).toFixed(1));
+  const insideUrban = context.urbanFeatures.some((urbanFeature) => safeBooleanIntersects(feature, urbanFeature));
+  const visibleHits = [
+    roadDistanceKm <= 0.08,
+    hydroDistanceKm <= 0.12,
+    insideUrban || urbanDistanceKm <= 0.18,
+  ].filter(Boolean).length;
+  const confidenceScore = Math.round(clamp(
+    context.mode.confidenceBase
+      + (context.areaProfile.localParcels ? 10 : 0)
+      + visibleHits * 7
+      + (props.cadastralCode ? 4 : 0)
+      + (context.scopeType === "plot" ? 4 : 0)
+      - (roadDistanceKm > 0.5 ? 8 : 0)
+      - (hydroDistanceKm > 0.6 ? 5 : 0)
+      - (!insideUrban && urbanDistanceKm > 1 ? 6 : 0),
+    context.areaProfile.localParcels ? 54 : 42,
+    97
+  ));
+  const confidenceLabel = getDigitalCadastreConfidenceLabel(confidenceScore);
+  const boundaryLabel = getDigitalCadastreBoundaryLabel(visibleHits);
+  const supportParts = [];
+  if (roadDistanceKm <= 0.18) {
+    supportParts.push(`via ${formatDistanceKm(roadDistanceKm)}`);
+  }
+  if (hydroDistanceKm <= 0.22) {
+    supportParts.push(`drenaje ${formatDistanceKm(hydroDistanceKm)}`);
+  }
+  if (insideUrban || urbanDistanceKm <= 0.24) {
+    supportParts.push(insideUrban ? "borde urbano dentro del poligono" : `borde urbano ${formatDistanceKm(urbanDistanceKm)}`);
+  }
+  const supportLabel = supportParts.length ? supportParts.join(" - ") : "Sin apoyo visible claro";
+  const rankScore = confidenceScore + visibleHits * 3 - Math.min(roadDistanceKm, 1.5) * 6 - Math.min(hydroDistanceKm, 1.5) * 4;
+  const titleBase = props.cadastralCode || props.lotNumber
+    ? `Predio ${props.cadastralCode || `Lote ${props.lotNumber}`}`
+    : context.mode.id === "calibrado"
+      ? `Predio visible ${index + 1}`
+      : `Trazo asistido ${index + 1}`;
+  const recommendation = context.mode.id === "calibrado"
+    ? "Verificar lindero con ortofoto o visita tecnica antes de usarlo como base catastral definitiva."
+    : "Usar este trazo como pre-digitizacion y cerrarlo con ortofoto VHR, campo y revision legal catastral.";
+
+  return {
+    id: `digital-cadastre-${context.areaProfile.id}-${index + 1}`,
+    title: titleBase,
+    rank: index + 1,
+    feature: cloneFeature(feature),
+    centroid: centroid.geometry.coordinates,
+    cadastralCode: props.cadastralCode || null,
+    lotNumber: props.lotNumber || null,
+    areaHa,
+    perimeterM,
+    roadDistanceKm,
+    hydroDistanceKm,
+    urbanDistanceKm,
+    insideUrban,
+    visibleHits,
+    boundaryLabel,
+    confidenceScore,
+    confidenceLabel,
+    confidenceTone: getDigitalCadastreConfidenceTone(confidenceScore),
+    supportLabel,
+    summary: `${titleBase} con ${boundaryLabel.toLowerCase()}, ${confidenceLabel.toLowerCase()} y soporte ${supportLabel.toLowerCase()} en ${context.scopeLabel}.`,
+    recommendation,
+    tags: [
+      `${areaHa.toFixed(areaHa >= 10 ? 1 : 2)} ha`,
+      `${Math.round(perimeterM)} m perimetro`,
+      `${context.mode.shortLabel}`,
+      supportLabel,
+    ],
+    guideFeatures: [
+      buildDigitalCadastreGuideFeature({ id: `digital-cadastre-${context.areaProfile.id}-${index + 1}`, centroid: centroid.geometry.coordinates, title: titleBase }, road, "via"),
+      buildDigitalCadastreGuideFeature({ id: `digital-cadastre-${context.areaProfile.id}-${index + 1}`, centroid: centroid.geometry.coordinates, title: titleBase }, hydro, "hidrica"),
+    ].filter(Boolean),
+    rankScore,
+  };
+}
+
+async function buildDigitalCadastreAnalysis() {
+  const requestedMode = getDigitalCadastreModeProfile();
+  const areaProfile = getDigitalCadastreAreaProfile();
+  const effectiveMode = areaProfile.localParcels
+    ? requestedMode
+    : getDigitalCadastreModeProfile("asistido");
+  const target = getDigitalCadastreTarget();
+  const imageryProfile = getPlanningImageryProfile();
+  const officialSummary = state.officialData.planificacion || null;
+  const roadFeatures = filterFeaturesByTerritorialArea(geoSources.vias?.features || [], state.territorialAreaId).map(cloneFeature);
+  const hydroFeatures = [
+    ...filterFeaturesByTerritorialArea(geoSources.canales?.features || [], state.territorialAreaId),
+    ...filterFeaturesByTerritorialArea(geoSources.rios?.features || [], state.territorialAreaId),
+  ].map(cloneFeature);
+  const urbanFeatures = filterFeaturesByTerritorialArea(geoSources.manchaUrbana?.features || [], state.territorialAreaId).map(cloneFeature);
+  const targetAreaHa = Number((turf.area(target.feature) / 10000).toFixed(3));
+  const targetBounds = turf.bbox(target.feature);
+  const sharedChecklist = [
+    "Representar el predio como poligono cerrado y georreferenciado.",
+    "Usar SIRGAS Ecuador / UTM como referencia geometrica de trabajo.",
+    "Contrastar linderos visibles con vias, cerramientos, drenajes o accidentes geograficos.",
+    "Validar en campo y revision tecnica antes de registrar o actualizar catastro.",
+  ];
+
+  if (effectiveMode.requiresPlot && !state.currentPlot?.geometry) {
+    return {
+      context: target,
+      requestedMode,
+      mode: effectiveMode,
+      areaProfile,
+      imageryProfile,
+      officialSummary,
+      summary: {
+        candidateCount: 0,
+        meanConfidence: 0,
+        supportLabel: areaProfile.supportLabel,
+        boundaryLabel: "AOI requerido",
+        needsPlot: true,
+      },
+      sourceNote: "La norma admite apoyo con imagen y linderos visibles, pero en modo asistido conviene dibujar un AOI para proponer contornos razonables.",
+      readout: {
+        headline: "Dibuja un poligono para iniciar la digitalizacion asistida",
+        copy: `En ${areaProfile.label} aun no hay parcelario calibrado dentro del portal. El modulo necesita un AOI para proponer el contorno sobre ${imageryProfile.label}.`,
+        recommendation: "Dibuja el area de trabajo, luego ejecuta el modulo para estimar el contorno visible y la revision tecnica requerida.",
+      },
+      checklist: sharedChecklist,
+      candidates: [],
+      candidateCollection: { type: "FeatureCollection", features: [] },
+      guideCollection: { type: "FeatureCollection", features: [] },
+      normativeRefs: [
+        "La norma tecnica nacional trabaja con representacion predial poligonal.",
+        "La cartografia rural puede apoyarse en imagen satelital, ortofoto o fotos aereas y linderos fisicos visibles.",
+      ],
+      sourceStudy: {
+        label: "Delineacion asistida de linderos visibles",
+        methodLabel: "Imagen de alta resolucion + validacion tecnica",
+      },
+    };
+  }
+
+  let baseFeatures = [];
+  if (effectiveMode.id === "calibrado" && areaProfile.localParcels) {
+    const dataset = await loadDigitalCadastreParcelCollection(areaProfile.id, state.currentPlot ? "full" : "preview");
+    const featurePool = dataset.features.filter((feature) => boundsIntersect(feature.properties?.bounds, targetBounds));
+    baseFeatures = (state.currentPlot
+      ? featurePool.filter((feature) => safeBooleanIntersects(feature, target.feature))
+      : featurePool.filter((feature) => safeBooleanIntersects(feature, target.feature))
+    ).map(cloneFeature);
+    if (!baseFeatures.length && state.currentPlot) {
+      baseFeatures = dataset.features
+        .slice()
+        .sort((left, right) => distanceToFeatureKm(turf.centroid(target.feature), left) - distanceToFeatureKm(turf.centroid(target.feature), right))
+        .slice(0, 6)
+        .map(cloneFeature);
+    }
+  } else if (state.currentPlot?.geometry) {
+    baseFeatures = [cloneFeature(state.currentPlot)];
+  }
+
+  const context = {
+    ...target,
+    areaProfile,
+    mode: effectiveMode,
+    requestedMode,
+    imageryProfile,
+    officialSummary,
+    roadFeatures,
+    hydroFeatures,
+    urbanFeatures,
+  };
+
+  const candidates = baseFeatures
+    .map((feature, index) => buildDigitalCadastreCandidate(feature, index, context))
+    .sort((left, right) => right.rankScore - left.rankScore)
+    .slice(0, state.currentPlot ? 8 : 6)
+    .map((candidate, index) => ({
+      ...candidate,
+      rank: index + 1,
+    }));
+
+  const candidateCollection = {
+    type: "FeatureCollection",
+    features: candidates.map((candidate) => ({
+      type: "Feature",
+      properties: {
+        ...(candidate.feature.properties || {}),
+        digitalCadastreId: candidate.id,
+        digitalCadastreTitle: candidate.title,
+        confidenceScore: candidate.confidenceScore,
+        boundaryLabel: candidate.boundaryLabel,
+        supportLabel: candidate.supportLabel,
+        areaHa: candidate.areaHa,
+        perimeterM: candidate.perimeterM,
+      },
+      geometry: cloneFeature(candidate.feature).geometry,
+    })),
+  };
+
+  const guideCollection = {
+    type: "FeatureCollection",
+    features: candidates.flatMap((candidate) => candidate.guideFeatures || []),
+  };
+
+  const meanConfidence = candidates.length
+    ? Math.round(candidates.reduce((sum, candidate) => sum + candidate.confidenceScore, 0) / candidates.length)
+    : 0;
+  const meanAreaHa = candidates.length
+    ? Number((candidates.reduce((sum, candidate) => sum + candidate.areaHa, 0) / candidates.length).toFixed(2))
+    : 0;
+  const visibleSupportLabel = candidates[0]?.boundaryLabel || (effectiveMode.id === "calibrado" ? "Parcelario local sin soporte puntual" : "AOI asistido");
+  const checklist = [
+    ...sharedChecklist,
+    effectiveMode.id === "calibrado"
+      ? "Ajustar solo predios con soporte local y revisar saltos entre parcelario e imagen visible."
+      : "Tomar el resultado como pre-digitizacion y no como actualizacion catastral final sin control humano.",
+    areaProfile.localParcels
+      ? `Parcelario local disponible para ${areaProfile.label}.`
+      : `Sin parcelario local en ${areaProfile.label}; el modulo se apoya en imagen y contornos visibles.`,
+  ];
+
+  return {
+    context: target,
+    requestedMode,
+    mode: effectiveMode,
+    areaProfile,
+    imageryProfile,
+    officialSummary,
+    sourceNote: effectiveMode.id === "calibrado"
+      ? `Modo calibrado con ${areaProfile.supportLabel.toLowerCase()} sobre ${target.scopeLabel}. Se usa imagen ${imageryProfile.shortLabel} como apoyo visual y la revision final sigue siendo tecnica.`
+      : `Modo asistido sobre ${target.scopeLabel}. La delimitacion se apoya en contornos visibles, soporte ${areaProfile.sourceLabel.toLowerCase()} y requiere validacion posterior.`,
+    readout: {
+      headline: effectiveMode.id === "calibrado"
+        ? `Predios visibles calibrados sobre ${target.scopeLabel}`
+        : `Pre-digitizacion asistida sobre ${target.scopeLabel}`,
+      copy: candidates.length
+        ? `${candidates.length} ${candidates.length === 1 ? "predio" : "predios"} con ${getDigitalCadastreConfidenceLabel(meanConfidence).toLowerCase()} y ${visibleSupportLabel.toLowerCase()}. La lectura combina parcelario local donde existe, vias, drenajes, borde urbano y soporte oficial activo.`
+        : `No aparecieron predios visibles suficientes dentro del ambito actual. Conviene ajustar el area, dibujar un AOI mas fino o cargar soporte local adicional.`,
+      recommendation: candidates.length
+        ? `Prioriza ${candidates[0].title.toLowerCase()} para revision de lindero, contraste con ortofoto y chequeo tecnico antes de registrar o actualizar el predio.`
+        : "Acota mejor el ambito de trabajo o usa un lote activo para que la digitalizacion asistida tenga un contorno claro.",
+    },
+    checklist,
+    candidates,
+    candidateCollection,
+    guideCollection,
+    normativeRefs: [
+      "Norma Tecnica Nacional de Catastros: representacion predial poligonal georreferenciada.",
+      "La cartografia rural puede apoyarse en imagen satelital, ortofoto, foto aerea y limites fisicos visibles.",
+    ],
+    sourceStudy: {
+      label: "Delineacion asistida de linderos visibles",
+      methodLabel: "Aprendizaje profundo y fotointerpretacion de limites visibles",
+    },
+    summary: {
+      candidateCount: candidates.length,
+      meanConfidence,
+      meanAreaHa,
+      supportLabel: areaProfile.supportLabel,
+      boundaryLabel: visibleSupportLabel,
+      needsPlot: false,
+      localParcels: areaProfile.localParcels,
+      checklistCount: checklist.length,
+      activeSupportLayers: officialSummary?.activeLayerCount || 0,
+    },
+  };
+}
+
+function renderDigitalCadastreModule() {
+  if (!dom.digitalCadastreResults) {
+    return;
+  }
+
+  const areaProfile = getDigitalCadastreAreaProfile();
+  const requestedMode = getDigitalCadastreModeProfile();
+  const effectiveMode = areaProfile.localParcels ? requestedMode : getDigitalCadastreModeProfile("asistido");
+  if (dom.digitalCadastreModeSelect) {
+    dom.digitalCadastreModeSelect.value = requestedMode.id;
+  }
+  if (dom.digitalCadastreSupportInput) {
+    setValueIfChanged(dom.digitalCadastreSupportInput, areaProfile.supportLabel);
+  }
+
+  if (!state.digitalCadastreData) {
+    resetMetricGrid(dom.digitalCadastreResults, `Ejecuta el modulo para digitalizar predios visibles sobre ${areaProfile.label} con soporte ${effectiveMode.shortLabel.toLowerCase()}.`);
+    dom.digitalCadastreReadout?.classList.add("empty-state");
+    dom.digitalCadastreReadout?.classList.remove("has-data");
+    if (dom.digitalCadastreReadout) {
+      setTextIfChanged(dom.digitalCadastreReadout, "Aqui aparece la lectura de delimitacion predial, su precision esperada y el alcance tecnico de la corrida.");
+    }
+    dom.digitalCadastreChecklist?.classList.add("empty-state");
+    dom.digitalCadastreChecklist?.classList.remove("has-data");
+    if (dom.digitalCadastreChecklist) {
+      setTextIfChanged(dom.digitalCadastreChecklist, "Aqui se listan controles normativos, soporte visible y revisiones tecnicas antes de usar la delimitacion.");
+    }
+    dom.digitalCadastreCandidates?.classList.add("empty-state");
+    dom.digitalCadastreCandidates?.classList.remove("has-data");
+    if (dom.digitalCadastreCandidates) {
+      setTextIfChanged(dom.digitalCadastreCandidates, "Aqui apareceran predios o frentes de digitalizacion con mejor apoyo por imagen y soporte territorial.");
+    }
+    if (dom.digitalCadastreSourceNote) {
+      setTextIfChanged(dom.digitalCadastreSourceNote, `Base preparada para ${areaProfile.label}. ${effectiveMode.note}`);
+    }
+    return;
+  }
+
+  const analysis = state.digitalCadastreData;
+  paintMetricGrid(dom.digitalCadastreResults, [
+    {
+      label: "Modo activo",
+      value: analysis.mode.label,
+      copy: analysis.areaProfile.localParcels ? "Con parcelario local utilizable." : "Con asistencia por imagen y AOI.",
+      highlight: true,
+    },
+    {
+      label: "Predios visibles",
+      value: `${analysis.summary.candidateCount}`,
+      copy: analysis.summary.candidateCount ? "Candidatos listos para revisar en mapa." : "Sin candidatos concluyentes en esta corrida.",
+    },
+    {
+      label: "Confianza media",
+      value: analysis.summary.meanConfidence ? `${analysis.summary.meanConfidence}/100` : "s/d",
+      copy: analysis.summary.boundaryLabel,
+    },
+    {
+      label: "Soporte",
+      value: analysis.summary.supportLabel,
+      copy: `${analysis.summary.activeSupportLayers || 0} capas oficiales activas y lectura ${analysis.imageryProfile.shortLabel}.`,
+    },
+  ]);
+
+  dom.digitalCadastreReadout?.classList.remove("empty-state");
+  dom.digitalCadastreReadout?.classList.add("has-data");
+  if (dom.digitalCadastreReadout) {
+    const activeCandidate = analysis.candidates.find((candidate) => candidate.id === state.digitalCadastreHighlightId) || null;
+    setHtmlIfChanged(dom.digitalCadastreReadout, `
+      <div class="territorial-readout-head">
+        <div>
+          <p class="section-kicker">Digitalizacion asistida</p>
+          <h4>${escapeHtmlContent(analysis.readout.headline)}</h4>
+        </div>
+        <span class="planning-pill emphasis">${escapeHtmlContent(analysis.mode.shortLabel)}</span>
+      </div>
+      <p class="territorial-readout-copy">${escapeHtmlContent(analysis.readout.copy)}</p>
+      <p class="territorial-readout-copy">${escapeHtmlContent(analysis.readout.recommendation)}</p>
+      ${activeCandidate ? `<p class="territorial-readout-copy"><strong>Predio activo:</strong> ${escapeHtmlContent(activeCandidate.title)}. Pasa el cursor para inspeccionarlo y haz clic para digitalizarlo como lote actual.</p>` : ""}
+    `);
+  }
+
+  dom.digitalCadastreChecklist?.classList.remove("empty-state");
+  dom.digitalCadastreChecklist?.classList.add("has-data");
+  if (dom.digitalCadastreChecklist) {
+    const pills = [
+      ...analysis.checklist.slice(0, 4),
+      analysis.sourceStudy.label,
+      ...analysis.normativeRefs,
+    ];
+    setHtmlIfChanged(dom.digitalCadastreChecklist, pills.map((item) => `<span class="planning-pill emphasis">${escapeHtmlContent(item)}</span>`).join(""));
+  }
+
+  if (!analysis.candidates.length) {
+    dom.digitalCadastreCandidates?.classList.add("empty-state");
+    dom.digitalCadastreCandidates?.classList.remove("has-data");
+    if (dom.digitalCadastreCandidates) {
+      setTextIfChanged(dom.digitalCadastreCandidates, analysis.summary.needsPlot
+        ? "Dibuja un poligono de trabajo para proponer el contorno predial asistido."
+        : "No aparecieron predios visibles suficientes en el ambito actual. Ajusta el AOI o cambia de modo.");
+    }
+  } else if (dom.digitalCadastreCandidates) {
+    dom.digitalCadastreCandidates.classList.remove("empty-state");
+    dom.digitalCadastreCandidates.classList.add("has-data");
+    setHtmlIfChanged(dom.digitalCadastreCandidates, analysis.candidates.map((candidate) => `
+      <article class="field-evidence-card ${candidate.id === state.digitalCadastreHighlightId ? "active" : ""}">
+        <div class="field-evidence-head">
+          <div>
+            <p class="candidate-rank">Predio ${candidate.rank}</p>
+            <h4>${escapeHtmlContent(candidate.title)}</h4>
+          </div>
+          <span class="planning-pill emphasis tone-${candidate.confidenceTone}">${escapeHtmlContent(candidate.confidenceLabel)}</span>
+        </div>
+        <p class="territorial-readout-copy">${escapeHtmlContent(candidate.summary)}</p>
+        <div class="field-evidence-metrics">
+          <span>${candidate.areaHa.toFixed(candidate.areaHa >= 10 ? 1 : 2)} ha</span>
+          <span>${Math.round(candidate.perimeterM)} m</span>
+          <span>${escapeHtmlContent(candidate.boundaryLabel)}</span>
+        </div>
+        <div class="land-change-sector-tags">
+          ${candidate.tags.map((tag) => `<span>${escapeHtmlContent(tag)}</span>`).join("")}
+        </div>
+        <p class="land-change-sector-note">${escapeHtmlContent(candidate.recommendation)}</p>
+        <button class="ghost-button" type="button" data-digital-cadastre-id="${candidate.id}">Digitalizar en mapa</button>
+      </article>
+    `).join(""));
+  }
+
+  if (dom.digitalCadastreSourceNote) {
+    setTextIfChanged(dom.digitalCadastreSourceNote, analysis.sourceNote);
+  }
+}
+
 function renderTerritorialScenarioCompare() {
   if (!dom.territorialScenarioCompare) {
     return;
@@ -33579,6 +34788,76 @@ function clearFieldEvidenceOverlay() {
   }
 }
 
+function renderDigitalCadastreOverlay(analysis) {
+  clearDigitalCadastreOverlay();
+  if (!mapState.map || !analysis?.candidateCollection?.features?.length) {
+    return;
+  }
+
+  if (analysis.guideCollection?.features?.length) {
+    mapState.digitalCadastreGuideLayer = L.geoJSON(analysis.guideCollection, {
+      style: (feature) => ({
+        color: feature.properties?.guideKind === "hidrica" ? "#5f9077" : "#9f8b64",
+        weight: feature.properties?.digitalCadastreId === state.digitalCadastreHighlightId ? 2.1 : 1.3,
+        opacity: feature.properties?.digitalCadastreId === state.digitalCadastreHighlightId ? 0.88 : 0.58,
+        dashArray: "7 6",
+      }),
+    }).addTo(mapState.map);
+  }
+
+  mapState.digitalCadastreLayer = L.geoJSON(analysis.candidateCollection, {
+    style: (feature) => {
+      const active = feature.properties?.digitalCadastreId === state.digitalCadastreHighlightId;
+      const confidenceScore = Number(feature.properties?.confidenceScore) || 0;
+      return {
+        color: active ? "#fff7ef" : confidenceScore >= 84 ? "#2f7f5f" : confidenceScore >= 68 ? "#c28a34" : "#a5544b",
+        weight: active ? 2.8 : 1.9,
+        fillColor: confidenceScore >= 84 ? "#7bbd9a" : confidenceScore >= 68 ? "#e6c46f" : "#d99688",
+        fillOpacity: active ? 0.34 : 0.2,
+      };
+    },
+    onEachFeature: (feature, layer) => {
+      const title = feature.properties?.digitalCadastreTitle || "Predio asistido";
+      const confidenceScore = Number(feature.properties?.confidenceScore) || 0;
+      const areaHa = Number(feature.properties?.areaHa) || 0;
+      const perimeterM = Number(feature.properties?.perimeterM) || 0;
+      const supportLabel = feature.properties?.supportLabel || "Sin soporte";
+      layer.bindPopup(
+        `<h3 class="popup-title">${escapeHtmlContent(title)}</h3><p class="popup-copy">${escapeHtmlContent(getDigitalCadastreConfidenceLabel(confidenceScore))} - ${areaHa.toFixed(areaHa >= 10 ? 1 : 2)} ha - ${Math.round(perimeterM)} m. ${escapeHtmlContent(supportLabel)}. Haz clic para digitalizarlo como lote activo.</p>`
+      );
+      layer.bindTooltip(`${title} - ${getDigitalCadastreConfidenceLabel(confidenceScore)} - clic para digitalizar`, { sticky: true });
+      layer.on("mouseover", () => {
+        const previewId = feature.properties?.digitalCadastreId;
+        if (previewId && previewId !== state.digitalCadastreHighlightId) {
+          state.digitalCadastreHighlightId = previewId;
+          renderDigitalCadastreModule();
+        }
+      });
+      layer.on("click", () => {
+        const candidateId = feature.properties?.digitalCadastreId;
+        if (candidateId) {
+          activateDigitalCadastreCandidate(candidateId);
+        }
+      });
+    },
+  }).addTo(mapState.map);
+
+  mapState.digitalCadastreGuideLayer?.bringToBack?.();
+  mapState.digitalCadastreLayer?.bringToFront?.();
+  mapState.currentPlotLayer?.bringToFront?.();
+}
+
+function clearDigitalCadastreOverlay() {
+  if (mapState.digitalCadastreLayer) {
+    mapState.map.removeLayer(mapState.digitalCadastreLayer);
+    mapState.digitalCadastreLayer = null;
+  }
+  if (mapState.digitalCadastreGuideLayer) {
+    mapState.map.removeLayer(mapState.digitalCadastreGuideLayer);
+    mapState.digitalCadastreGuideLayer = null;
+  }
+}
+
 function clearPlanningOverlay() {
   if (mapState.planningLayer) {
     mapState.map.removeLayer(mapState.planningLayer);
@@ -33806,6 +35085,59 @@ function focusPlanningCandidate(candidateId) {
     maxZoom: 14,
   });
   openPlanningCandidatePopup(candidateId);
+}
+
+function focusDigitalCadastreStudy() {
+  if (!mapState.map || !state.digitalCadastreData?.candidates?.length) {
+    return;
+  }
+
+  state.territorialFocus = "digitalCadastre";
+  state.digitalCadastreHighlightId = state.digitalCadastreHighlightId || state.digitalCadastreData.candidates[0]?.id || null;
+  renderDigitalCadastreModule();
+  renderDigitalCadastreOverlay(state.digitalCadastreData);
+  updateMapSummary();
+  const bounds = buildBoundsFromFeatures(state.digitalCadastreData.candidates.map((candidate) => candidate.feature))
+    || mapState.digitalCadastreLayer?.getBounds?.();
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, {
+      padding: [52, 52],
+      maxZoom: 16,
+    });
+  }
+}
+
+function focusDigitalCadastreCandidate(candidateId, options = {}) {
+  const candidate = state.digitalCadastreData?.candidates?.find((item) => item.id === candidateId);
+  if (!candidate || !mapState.map) {
+    return;
+  }
+
+  state.digitalCadastreHighlightId = candidateId;
+  state.territorialFocus = "digitalCadastre";
+  renderDigitalCadastreModule();
+  renderDigitalCadastreOverlay(state.digitalCadastreData);
+  updateMapSummary();
+
+  if (options.fitBounds !== false) {
+    const bounds = L.geoJSON(candidate.feature).getBounds();
+    mapState.map.fitBounds(bounds, {
+      padding: [54, 54],
+      maxZoom: 17,
+    });
+  }
+
+  if (options.openPopup && mapState.digitalCadastreLayer) {
+    mapState.digitalCadastreLayer.eachLayer((layer) => {
+      if (layer.feature?.properties?.digitalCadastreId === candidateId) {
+        layer.openPopup();
+      }
+    });
+  }
+
+  if (options.announce !== false) {
+    setStatus(`Predio ${candidate.title} enfocado. Pasa el cursor para revisar soporte visible o haz clic para digitalizarlo como lote activo.`);
+  }
 }
 
 function focusLandChangeSector(sectorId) {
@@ -34894,12 +36226,14 @@ function updateMapSummary(force = false) {
   renderProductSuite();
 
   if (isTerritorialRoute()) {
+    const cadastreRoute = isCadastreRoute();
     const planning = state.planningData;
     const fodaCame = state.fodaCameData;
     const aiGeo = state.aiGeoData;
     const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
     const officialData = state.officialData.planificacion?.activeLayerCount ? state.officialData.planificacion : null;
+    const digitalCadastre = state.digitalCadastreData;
     const territorialOps = state.territorialOpsData;
     const zoningPatterns = state.zoningPatternsData;
     const housingPatterns = state.housingPatternsData;
@@ -34915,12 +36249,20 @@ function updateMapSummary(force = false) {
     const showLandChange = state.territorialFocus === "landChange" && landChange;
     const showHydrology = state.territorialFocus === "hydrology" && hydrology;
     const showOfficial = state.territorialFocus === "official" && officialData;
+    const showDigitalCadastre = state.territorialFocus === "digitalCadastre" && digitalCadastre;
     const showOps = state.territorialFocus === "ops" && territorialOps;
     const showZoningPatterns = state.territorialFocus === "zoningPatterns" && zoningPatterns;
     const showHousingPatterns = state.territorialFocus === "housingPatterns" && housingPatterns;
     setTextIfChanged(dom.overlayIndex, planning ? "Aptitud" : imageryProfile.shortLabel);
     renderMapBadges();
-    if (showOps) {
+    if (showDigitalCadastre) {
+      setTextIfChanged(dom.overlayIndex, "Catastro");
+      setTextIfChanged(dom.mapTitle, `Digitalizacion predial sobre ${digitalCadastre.context.scopeLabel}`);
+      setTextIfChanged(
+        dom.mapSubtitle,
+        `${digitalCadastre.mode.shortLabel} | ${digitalCadastre.summary.candidateCount} predios | confianza ${digitalCadastre.summary.meanConfidence}/100 | ${digitalCadastre.summary.boundaryLabel}.`
+      );
+    } else if (showOps) {
       setTextIfChanged(dom.overlayIndex, "Ops");
       setTextIfChanged(dom.mapTitle, `Tablero territorial sobre ${territorialOps.context.scopeLabel}`);
       setTextIfChanged(
@@ -34982,6 +36324,10 @@ function updateMapSummary(force = false) {
         dom.mapSubtitle,
         `${planning.imageryProfile.shortLabel} · ${planning.horizon.label} · ${planning.scenario.label}. ${planning.candidates.length} candidatos y cobertura ${planning.serviceCoverage.overallCoverage}%.`
       );
+    } else if (digitalCadastre) {
+      setTextIfChanged(dom.overlayIndex, "Catastro");
+      setTextIfChanged(dom.mapTitle, "Catastro asistido listo");
+      setTextIfChanged(dom.mapSubtitle, `${digitalCadastre.mode.shortLabel} | ${digitalCadastre.summary.candidateCount} predios visibles sobre ${digitalCadastre.context.scopeLabel}. Hover inspecciona y clic digitaliza.`);
     } else if (fodaCame) {
       setTextIfChanged(dom.overlayIndex, "FODA");
       setTextIfChanged(dom.mapTitle, "Estrategia territorial lista");
@@ -35014,8 +36360,14 @@ function updateMapSummary(force = false) {
         `${officialData.activeLayerCount} capas listas, ${officialData.pointCount} servicios y ${officialData.totalFeatures} referencias oficiales visibles.`
       );
     } else {
-      setTextIfChanged(dom.mapTitle, "Planificacion territorial lista");
-      setTextIfChanged(dom.mapSubtitle, `Empieza por aptitud, huella, agua, estrategia o 3D sobre ${getTerritorialAreaProfile().scopeLabel}.`);
+      if (cadastreRoute) {
+        setTextIfChanged(dom.overlayIndex, "Catastro");
+        setTextIfChanged(dom.mapTitle, "Catastro asistido listo");
+        setTextIfChanged(dom.mapSubtitle, `Dibuja un AOI o activa el modulo para delimitar predios visibles sobre ${getDigitalCadastreAreaProfile().scopeLabel}.`);
+      } else {
+        setTextIfChanged(dom.mapTitle, "Planificacion territorial lista");
+        setTextIfChanged(dom.mapSubtitle, `Empieza por aptitud, huella, agua, estrategia o 3D sobre ${getTerritorialAreaProfile().scopeLabel}.`);
+      }
     }
     return;
   }
@@ -35135,17 +36487,51 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
   }
 
   if (isTerritorialRoute()) {
+    const cadastreRoute = isCadastreRoute();
     const planning = state.planningData;
     const fodaCame = state.fodaCameData;
     const aiGeo = state.aiGeoData;
     const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
+    const digitalCadastre = state.digitalCadastreData;
+    const officialData = state.officialData.planificacion?.activeLayerCount ? state.officialData.planificacion : null;
     const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
     const landChangePeriod = landChange?.period || getLandChangePeriodProfile();
     const landChangeScenario = landChange?.scenario || getLandChangeScenarioProfile();
     const climate = hydrology?.climate || getHydrologyClimateProfile();
     const horizon = hydrology?.horizon || getHydrologyHorizonProfile();
-    const badges = (state.territorialFocus === "aiGeo" && aiGeo?.mode === "territorial")
+    const badges = (state.territorialFocus === "digitalCadastre" && digitalCadastre)
+      ? [
+          {
+            tone: "analysis",
+            label: "Catastro",
+          },
+          {
+            tone: "neutral",
+            label: digitalCadastre.mode.shortLabel,
+          },
+          {
+            tone: digitalCadastre.summary.meanConfidence >= 84
+              ? "exact"
+              : digitalCadastre.summary.meanConfidence >= 68
+                ? "preview"
+                : "compare",
+            label: `${digitalCadastre.summary.meanConfidence}/100`,
+          },
+          {
+            tone: "neutral",
+            label: `${digitalCadastre.summary.candidateCount} predios`,
+          },
+          {
+            tone: "neutral",
+            label: digitalCadastre.summary.boundaryLabel,
+          },
+          {
+            tone: "neutral",
+            label: `${digitalCadastre.summary.activeSupportLayers || 0} oficiales`,
+          },
+        ]
+      : (state.territorialFocus === "aiGeo" && aiGeo?.mode === "territorial")
       ? [
           {
             tone: "analysis",
@@ -35278,6 +36664,25 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
           {
             tone: "neutral",
             label: `${officialData.areaCount} superficies`,
+          },
+        ]
+      : cadastreRoute
+      ? [
+          {
+            tone: "analysis",
+            label: "Catastro",
+          },
+          {
+            tone: "neutral",
+            label: getDigitalCadastreAreaProfile().shortLabel,
+          },
+          {
+            tone: "neutral",
+            label: "Hover inspeccion",
+          },
+          {
+            tone: "preview",
+            label: "Clic digitaliza",
           },
         ]
       : [
