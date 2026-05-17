@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260517-2";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260517-3";
 
 const layerCatalog = [
   {
@@ -5842,6 +5842,7 @@ function cacheDom() {
   dom.adjustDigitalCadastreBtn = document.querySelector("#adjustDigitalCadastreBtn");
   dom.saveDigitalCadastreAdjustBtn = document.querySelector("#saveDigitalCadastreAdjustBtn");
   dom.cancelDigitalCadastreAdjustBtn = document.querySelector("#cancelDigitalCadastreAdjustBtn");
+  dom.exportDigitalCadastreShpBtn = document.querySelector("#exportDigitalCadastreShpBtn");
   dom.clearDigitalCadastreBtn = document.querySelector("#clearDigitalCadastreBtn");
   dom.digitalCadastreModeSelect = document.querySelector("#digitalCadastreModeSelect");
   dom.digitalCadastreSupportInput = document.querySelector("#digitalCadastreSupportInput");
@@ -6824,6 +6825,7 @@ function bindUI() {
   dom.adjustDigitalCadastreBtn?.addEventListener("click", enableCurrentPlotEditing);
   dom.saveDigitalCadastreAdjustBtn?.addEventListener("click", saveCurrentPlotAdjustment);
   dom.cancelDigitalCadastreAdjustBtn?.addEventListener("click", cancelCurrentPlotAdjustment);
+  dom.exportDigitalCadastreShpBtn?.addEventListener("click", exportDigitalCadastreShapefile);
   dom.clearDigitalCadastreBtn?.addEventListener("click", clearDigitalCadastreAnalysis);
   dom.digitalCadastreModeSelect?.addEventListener("change", () => {
     state.digitalCadastreModeId = dom.digitalCadastreModeSelect.value || "calibrado";
@@ -22479,6 +22481,9 @@ function renderPlanningModule() {
   if (dom.cancelDigitalCadastreAdjustBtn) {
     dom.cancelDigitalCadastreAdjustBtn.disabled = !state.currentPlotEditing;
   }
+  if (dom.exportDigitalCadastreShpBtn) {
+    dom.exportDigitalCadastreShpBtn.disabled = !state.currentPlot || state.currentPlotEditing;
+  }
   if (dom.clearDigitalCadastreBtn) {
     dom.clearDigitalCadastreBtn.disabled = !state.digitalCadastreData;
   }
@@ -31167,6 +31172,425 @@ function downloadTerritorialFile(filename, content, mimeType) {
   anchor.click();
   anchor.remove();
   window.setTimeout(() => window.URL.revokeObjectURL(url), 400);
+}
+
+function normalizeAsciiText(value, fallback = "") {
+  return String(value ?? fallback)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\x20-\x7E]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function createCrc32Table() {
+  const table = new Uint32Array(256);
+  for (let index = 0; index < 256; index += 1) {
+    let crc = index;
+    for (let bit = 0; bit < 8; bit += 1) {
+      crc = (crc & 1) ? (0xEDB88320 ^ (crc >>> 1)) : (crc >>> 1);
+    }
+    table[index] = crc >>> 0;
+  }
+  return table;
+}
+
+const CRC32_TABLE = createCrc32Table();
+
+function computeCrc32(bytes) {
+  let crc = 0xFFFFFFFF;
+  for (let index = 0; index < bytes.length; index += 1) {
+    crc = CRC32_TABLE[(crc ^ bytes[index]) & 0xFF] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function encodeUtf8(text) {
+  return new TextEncoder().encode(String(text ?? ""));
+}
+
+function makeZipDosDateTime(date = new Date()) {
+  const safeDate = date instanceof Date && !Number.isNaN(date.getTime()) ? date : new Date();
+  const year = Math.max(1980, safeDate.getFullYear());
+  const dosTime = ((safeDate.getHours() & 0x1F) << 11)
+    | ((safeDate.getMinutes() & 0x3F) << 5)
+    | (Math.floor(safeDate.getSeconds() / 2) & 0x1F);
+  const dosDate = (((year - 1980) & 0x7F) << 9)
+    | (((safeDate.getMonth() + 1) & 0x0F) << 5)
+    | (safeDate.getDate() & 0x1F);
+  return { dosDate, dosTime };
+}
+
+function buildStoredZip(entries) {
+  const normalizedEntries = entries.map((entry) => {
+    const nameBytes = encodeUtf8(entry.name);
+    const dataBytes = entry.data instanceof Uint8Array ? entry.data : new Uint8Array(entry.data);
+    const crc32 = computeCrc32(dataBytes);
+    const { dosDate, dosTime } = makeZipDosDateTime(entry.modifiedAt);
+    return {
+      ...entry,
+      nameBytes,
+      dataBytes,
+      crc32,
+      dosDate,
+      dosTime,
+    };
+  });
+
+  let localSize = 0;
+  let centralSize = 0;
+  normalizedEntries.forEach((entry) => {
+    localSize += 30 + entry.nameBytes.length + entry.dataBytes.length;
+    centralSize += 46 + entry.nameBytes.length;
+  });
+
+  const output = new Uint8Array(localSize + centralSize + 22);
+  const view = new DataView(output.buffer);
+  let offset = 0;
+  const centralEntries = [];
+
+  normalizedEntries.forEach((entry) => {
+    const localOffset = offset;
+    view.setUint32(offset, 0x04034b50, true); offset += 4;
+    view.setUint16(offset, 20, true); offset += 2;
+    view.setUint16(offset, 0, true); offset += 2;
+    view.setUint16(offset, 0, true); offset += 2;
+    view.setUint16(offset, entry.dosTime, true); offset += 2;
+    view.setUint16(offset, entry.dosDate, true); offset += 2;
+    view.setUint32(offset, entry.crc32, true); offset += 4;
+    view.setUint32(offset, entry.dataBytes.length, true); offset += 4;
+    view.setUint32(offset, entry.dataBytes.length, true); offset += 4;
+    view.setUint16(offset, entry.nameBytes.length, true); offset += 2;
+    view.setUint16(offset, 0, true); offset += 2;
+    output.set(entry.nameBytes, offset); offset += entry.nameBytes.length;
+    output.set(entry.dataBytes, offset); offset += entry.dataBytes.length;
+    centralEntries.push({ ...entry, localOffset });
+  });
+
+  const centralOffset = offset;
+  centralEntries.forEach((entry) => {
+    view.setUint32(offset, 0x02014b50, true); offset += 4;
+    view.setUint16(offset, 20, true); offset += 2;
+    view.setUint16(offset, 20, true); offset += 2;
+    view.setUint16(offset, 0, true); offset += 2;
+    view.setUint16(offset, 0, true); offset += 2;
+    view.setUint16(offset, entry.dosTime, true); offset += 2;
+    view.setUint16(offset, entry.dosDate, true); offset += 2;
+    view.setUint32(offset, entry.crc32, true); offset += 4;
+    view.setUint32(offset, entry.dataBytes.length, true); offset += 4;
+    view.setUint32(offset, entry.dataBytes.length, true); offset += 4;
+    view.setUint16(offset, entry.nameBytes.length, true); offset += 2;
+    view.setUint16(offset, 0, true); offset += 2;
+    view.setUint16(offset, 0, true); offset += 2;
+    view.setUint16(offset, 0, true); offset += 2;
+    view.setUint16(offset, 0, true); offset += 2;
+    view.setUint32(offset, 0, true); offset += 4;
+    view.setUint32(offset, entry.localOffset, true); offset += 4;
+    output.set(entry.nameBytes, offset); offset += entry.nameBytes.length;
+  });
+
+  view.setUint32(offset, 0x06054b50, true); offset += 4;
+  view.setUint16(offset, 0, true); offset += 2;
+  view.setUint16(offset, 0, true); offset += 2;
+  view.setUint16(offset, centralEntries.length, true); offset += 2;
+  view.setUint16(offset, centralEntries.length, true); offset += 2;
+  view.setUint32(offset, centralSize, true); offset += 4;
+  view.setUint32(offset, centralOffset, true); offset += 4;
+  view.setUint16(offset, 0, true);
+
+  return output;
+}
+
+function ensureClosedRingCoordinates(ring) {
+  const normalized = (Array.isArray(ring) ? ring : [])
+    .map((point) => [Number(point?.[0]), Number(point?.[1])])
+    .filter((point) => point.every(Number.isFinite));
+  if (normalized.length < 3) {
+    return [];
+  }
+  const first = normalized[0];
+  const last = normalized[normalized.length - 1];
+  if (first[0] !== last[0] || first[1] !== last[1]) {
+    normalized.push([first[0], first[1]]);
+  }
+  return normalized;
+}
+
+function getPolygonPartsFromFeature(feature) {
+  const geometry = feature?.geometry;
+  if (!geometry) {
+    return [];
+  }
+  if (geometry.type === "Polygon") {
+    return geometry.coordinates
+      .map((ring) => ensureClosedRingCoordinates(ring))
+      .filter((ring) => ring.length >= 4);
+  }
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates
+      .flatMap((polygon) => polygon.map((ring) => ensureClosedRingCoordinates(ring)))
+      .filter((ring) => ring.length >= 4);
+  }
+  return [];
+}
+
+function collectShapefileGeometryMetrics(features) {
+  const allXs = [];
+  const allYs = [];
+  let totalPoints = 0;
+  let totalParts = 0;
+  const records = features.map((feature) => {
+    const parts = getPolygonPartsFromFeature(feature);
+    const partIndexes = [];
+    const points = [];
+    parts.forEach((ring) => {
+      partIndexes.push(points.length);
+      ring.forEach((point) => {
+        points.push(point);
+        allXs.push(point[0]);
+        allYs.push(point[1]);
+      });
+    });
+    totalParts += parts.length;
+    totalPoints += points.length;
+    return {
+      feature,
+      partIndexes,
+      points,
+      bbox: points.length
+        ? [
+            Math.min(...points.map((point) => point[0])),
+            Math.min(...points.map((point) => point[1])),
+            Math.max(...points.map((point) => point[0])),
+            Math.max(...points.map((point) => point[1])),
+          ]
+        : [0, 0, 0, 0],
+    };
+  });
+
+  return {
+    records,
+    bbox: allXs.length
+      ? [Math.min(...allXs), Math.min(...allYs), Math.max(...allXs), Math.max(...allYs)]
+      : [0, 0, 0, 0],
+    totalPoints,
+    totalParts,
+  };
+}
+
+function buildPolygonShapefileBuffers(features) {
+  const { records, bbox } = collectShapefileGeometryMetrics(features);
+  if (!records.length || !records.some((record) => record.points.length >= 4)) {
+    throw new Error("No hay geometrias poligonales validas para exportar.");
+  }
+
+  const recordBuffers = records.map((record, index) => {
+    const contentBytes = 44 + (record.partIndexes.length * 4) + (record.points.length * 16);
+    const totalBytes = 8 + contentBytes;
+    const buffer = new ArrayBuffer(totalBytes);
+    const view = new DataView(buffer);
+    let offset = 0;
+    view.setInt32(offset, index + 1, false); offset += 4;
+    view.setInt32(offset, contentBytes / 2, false); offset += 4;
+    view.setInt32(offset, 5, true); offset += 4;
+    view.setFloat64(offset, record.bbox[0], true); offset += 8;
+    view.setFloat64(offset, record.bbox[1], true); offset += 8;
+    view.setFloat64(offset, record.bbox[2], true); offset += 8;
+    view.setFloat64(offset, record.bbox[3], true); offset += 8;
+    view.setInt32(offset, record.partIndexes.length, true); offset += 4;
+    view.setInt32(offset, record.points.length, true); offset += 4;
+    record.partIndexes.forEach((partIndex) => {
+      view.setInt32(offset, partIndex, true); offset += 4;
+    });
+    record.points.forEach((point) => {
+      view.setFloat64(offset, point[0], true); offset += 8;
+      view.setFloat64(offset, point[1], true); offset += 8;
+    });
+    return new Uint8Array(buffer);
+  });
+
+  const shpLengthBytes = 100 + recordBuffers.reduce((sum, buffer) => sum + buffer.length, 0);
+  const shpBuffer = new ArrayBuffer(shpLengthBytes);
+  const shpView = new DataView(shpBuffer);
+  let shpOffset = 0;
+  shpView.setInt32(shpOffset, 9994, false); shpOffset += 4;
+  for (let index = 0; index < 5; index += 1) {
+    shpView.setInt32(shpOffset, 0, false); shpOffset += 4;
+  }
+  shpView.setInt32(shpOffset, shpLengthBytes / 2, false); shpOffset += 4;
+  shpView.setInt32(shpOffset, 1000, true); shpOffset += 4;
+  shpView.setInt32(shpOffset, 5, true); shpOffset += 4;
+  shpView.setFloat64(shpOffset, bbox[0], true); shpOffset += 8;
+  shpView.setFloat64(shpOffset, bbox[1], true); shpOffset += 8;
+  shpView.setFloat64(shpOffset, bbox[2], true); shpOffset += 8;
+  shpView.setFloat64(shpOffset, bbox[3], true); shpOffset += 8;
+  shpView.setFloat64(shpOffset, 0, true); shpOffset += 8;
+  shpView.setFloat64(shpOffset, 0, true); shpOffset += 8;
+  shpView.setFloat64(shpOffset, 0, true); shpOffset += 8;
+  shpView.setFloat64(shpOffset, 0, true); shpOffset += 8;
+  const shpBytes = new Uint8Array(shpBuffer);
+  recordBuffers.forEach((buffer) => {
+    shpBytes.set(buffer, shpOffset);
+    shpOffset += buffer.length;
+  });
+
+  const shxLengthBytes = 100 + (records.length * 8);
+  const shxBuffer = new ArrayBuffer(shxLengthBytes);
+  const shxView = new DataView(shxBuffer);
+  let shxOffset = 0;
+  shxView.setInt32(shxOffset, 9994, false); shxOffset += 4;
+  for (let index = 0; index < 5; index += 1) {
+    shxView.setInt32(shxOffset, 0, false); shxOffset += 4;
+  }
+  shxView.setInt32(shxOffset, shxLengthBytes / 2, false); shxOffset += 4;
+  shxView.setInt32(shxOffset, 1000, true); shxOffset += 4;
+  shxView.setInt32(shxOffset, 5, true); shxOffset += 4;
+  shxView.setFloat64(shxOffset, bbox[0], true); shxOffset += 8;
+  shxView.setFloat64(shxOffset, bbox[1], true); shxOffset += 8;
+  shxView.setFloat64(shxOffset, bbox[2], true); shxOffset += 8;
+  shxView.setFloat64(shxOffset, bbox[3], true); shxOffset += 8;
+  shxView.setFloat64(shxOffset, 0, true); shxOffset += 8;
+  shxView.setFloat64(shxOffset, 0, true); shxOffset += 8;
+  shxView.setFloat64(shxOffset, 0, true); shxOffset += 8;
+  shxView.setFloat64(shxOffset, 0, true); shxOffset += 8;
+  let recordOffsetWords = 50;
+  records.forEach((record) => {
+    const contentBytes = 44 + (record.partIndexes.length * 4) + (record.points.length * 16);
+    shxView.setInt32(shxOffset, recordOffsetWords, false); shxOffset += 4;
+    shxView.setInt32(shxOffset, contentBytes / 2, false); shxOffset += 4;
+    recordOffsetWords += (8 + contentBytes) / 2;
+  });
+
+  return {
+    shp: new Uint8Array(shpBuffer),
+    shx: new Uint8Array(shxBuffer),
+  };
+}
+
+function buildDbfFieldDefinition(name, type, length, decimals = 0) {
+  return { name: String(name).slice(0, 10), type, length, decimals };
+}
+
+function encodeDbfValue(field, value) {
+  if (field.type === "N") {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) {
+      return " ".repeat(field.length);
+    }
+    const fixed = field.decimals > 0 ? numeric.toFixed(field.decimals) : String(Math.round(numeric));
+    return fixed.slice(-field.length).padStart(field.length, " ");
+  }
+  const text = normalizeAsciiText(value, "").slice(0, field.length);
+  return text.padEnd(field.length, " ");
+}
+
+function buildDbfBuffer(records) {
+  const fields = [
+    buildDbfFieldDefinition("PREDIO", "C", 60),
+    buildDbfFieldDefinition("AREA_HA", "N", 18, 4),
+    buildDbfFieldDefinition("PERIM_M", "N", 18, 2),
+    buildDbfFieldDefinition("MODO", "C", 20),
+    buildDbfFieldDefinition("CONF", "N", 5, 0),
+    buildDbfFieldDefinition("SOPORTE", "C", 60),
+    buildDbfFieldDefinition("AMBITO", "C", 40),
+    buildDbfFieldDefinition("FECHA", "C", 19),
+  ];
+  const headerLength = 32 + (fields.length * 32) + 1;
+  const recordLength = 1 + fields.reduce((sum, field) => sum + field.length, 0);
+  const totalLength = headerLength + (records.length * recordLength) + 1;
+  const buffer = new ArrayBuffer(totalLength);
+  const view = new DataView(buffer);
+  const bytes = new Uint8Array(buffer);
+  const now = new Date();
+
+  view.setUint8(0, 0x03);
+  view.setUint8(1, now.getFullYear() - 1900);
+  view.setUint8(2, now.getMonth() + 1);
+  view.setUint8(3, now.getDate());
+  view.setUint32(4, records.length, true);
+  view.setUint16(8, headerLength, true);
+  view.setUint16(10, recordLength, true);
+
+  let offset = 32;
+  fields.forEach((field) => {
+    const nameBytes = encodeUtf8(field.name);
+    bytes.set(nameBytes.slice(0, 10), offset);
+    view.setUint8(offset + 11, field.type.charCodeAt(0));
+    view.setUint8(offset + 16, field.length);
+    view.setUint8(offset + 17, field.decimals);
+    offset += 32;
+  });
+  view.setUint8(offset, 0x0D);
+  offset = headerLength;
+
+  records.forEach((record) => {
+    view.setUint8(offset, 0x20);
+    offset += 1;
+    fields.forEach((field) => {
+      const value = encodeDbfValue(field, record[field.name]);
+      bytes.set(encodeUtf8(value), offset);
+      offset += field.length;
+    });
+  });
+  view.setUint8(totalLength - 1, 0x1A);
+  return new Uint8Array(buffer);
+}
+
+function getDigitalCadastreExportRecord(feature, candidate) {
+  const areaHa = Number((turf.area(feature) / 10000).toFixed(4));
+  const line = geometryToBoundaryLine(feature.geometry);
+  const perimeterM = Number((((line ? turf.length(line, { units: "kilometers" }) : 0) * 1000)).toFixed(2));
+  const areaProfile = getDigitalCadastreAreaProfile();
+  const activeMode = state.digitalCadastreData?.mode || getDigitalCadastreModeProfile();
+  return {
+    PREDIO: candidate?.title || state.currentPlotLabel || "Predio digitalizado",
+    AREA_HA: areaHa,
+    PERIM_M: perimeterM,
+    MODO: activeMode.shortLabel || activeMode.label || "Asistido",
+    CONF: candidate?.confidenceScore || state.digitalCadastreData?.summary?.meanConfidence || 0,
+    SOPORTE: state.digitalCadastreData?.summary?.supportLabel || areaProfile.supportLabel,
+    AMBITO: areaProfile.label,
+    FECHA: new Date().toISOString().slice(0, 19),
+  };
+}
+
+function buildDigitalCadastreShapefileZip() {
+  if (!state.currentPlot?.geometry) {
+    throw new Error("No hay un predio digitalizado para exportar.");
+  }
+  const feature = cloneFeature(state.currentPlot);
+  const candidate = state.digitalCadastreData?.candidates?.find((item) => item.id === state.digitalCadastreHighlightId) || null;
+  const shapefileGeometry = buildPolygonShapefileBuffers([feature]);
+  const dbf = buildDbfBuffer([getDigitalCadastreExportRecord(feature, candidate)]);
+  const prj = encodeUtf8('GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]]');
+  const cpg = encodeUtf8("UTF-8");
+  const slugBase = normalizeAsciiText(candidate?.title || state.currentPlotLabel || "predio_digitalizado", "predio_digitalizado")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "") || "predio_digitalizado";
+  const folder = `${slugBase}_${formatDateInput(new Date())}`;
+  const zipBytes = buildStoredZip([
+    { name: `${folder}.shp`, data: shapefileGeometry.shp },
+    { name: `${folder}.shx`, data: shapefileGeometry.shx },
+    { name: `${folder}.dbf`, data: dbf },
+    { name: `${folder}.prj`, data: prj },
+    { name: `${folder}.cpg`, data: cpg },
+  ]);
+  return {
+    filename: `${folder}.zip`,
+    bytes: zipBytes,
+  };
+}
+
+function exportDigitalCadastreShapefile() {
+  try {
+    const archive = buildDigitalCadastreShapefileZip();
+    downloadTerritorialFile(archive.filename, archive.bytes, "application/zip");
+    setStatus("Shapefile del predio digitalizado descargado. Incluye SHP, SHX, DBF, PRJ y CPG en un ZIP.");
+  } catch (error) {
+    console.warn("No se pudo exportar el shapefile del catastro asistido.", error);
+    setStatus(error?.message || "No se pudo exportar el shapefile del predio digitalizado.");
+  }
 }
 
 function openTerritorialReport(options = {}) {
