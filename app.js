@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260518-2";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260518-3";
 
 const layerCatalog = [
   {
@@ -6510,6 +6510,7 @@ function bindUI() {
   dom.digitalCadastreFichaBoard?.addEventListener("input", handleDigitalCadastreFichaInput);
   dom.digitalCadastreFichaBoard?.addEventListener("change", handleDigitalCadastreFichaInput);
   dom.digitalCadastreFichaBoard?.addEventListener("click", handleDigitalCadastreFichaAction);
+  dom.digitalCadastreCompareBoard?.addEventListener("click", handleDigitalCadastreCompareAction);
   dom.digitalCadastreBatchBoard?.addEventListener("click", handleDigitalCadastreBatchAction);
   dom.territorialSectorSheets?.addEventListener("click", handleTerritorialSectorSheetsInteraction);
   dom.territorialExportPanel?.addEventListener("click", handleTerritorialExportInteraction);
@@ -34379,6 +34380,8 @@ function captureDigitalCadastreAdjustmentSnapshot(beforeFeature, afterFeature, s
   const afterMetrics = captureDigitalCadastreFeatureMetrics(afterFeature);
   return {
     title: candidate?.title || state.currentPlotLabel || "Predio ajustado",
+    beforeFeature: cloneFeature(beforeFeature),
+    afterFeature: cloneFeature(afterFeature),
     before: beforeMetrics,
     after: afterMetrics,
     deltaAreaHa: Number((afterMetrics.areaHa - beforeMetrics.areaHa).toFixed(4)),
@@ -34867,6 +34870,51 @@ function handleDigitalCadastreBatchAction(event) {
   if (action === "print-report") {
     openDigitalCadastreReport({ autoPrint: true, batch: true });
   }
+}
+
+function handleDigitalCadastreCompareAction(event) {
+  const button = event.target.closest("[data-cadastre-compare-action]");
+  if (!button) {
+    return;
+  }
+  const action = button.dataset.cadastreCompareAction;
+  if (action === "restore-adjustment-before") {
+    restoreDigitalCadastreAdjustmentBase();
+    return;
+  }
+  if (action === "load-previous-record") {
+    loadPreviousDigitalCadastreRecord();
+  }
+}
+
+function restoreDigitalCadastreAdjustmentBase() {
+  const snapshot = state.digitalCadastreAdjustmentSnapshot;
+  if (!snapshot?.beforeFeature?.geometry) {
+    setStatus("No hay una geometria previa de ajuste para restaurar.");
+    return;
+  }
+  setCurrentPlot(cloneFeature(snapshot.beforeFeature), snapshot.title || state.currentPlotLabel || "Predio restaurado");
+  state.currentPlotEditing = false;
+  state.digitalCadastreAdjustmentSnapshot = null;
+  renderDigitalCadastreModule();
+  updateMapSummary();
+  setStatus("Se restauro la geometria previa al ultimo ajuste del contorno.");
+}
+
+function loadPreviousDigitalCadastreRecord() {
+  const analysis = state.digitalCadastreData;
+  const candidate = getDigitalCadastreActiveCandidate(analysis);
+  const previousRecord = getDigitalCadastrePreviousRecord(candidate, analysis);
+  if (!previousRecord?.currentPlot?.geometry) {
+    setStatus("No hay una version previa guardada para cargar.");
+    return;
+  }
+  state.digitalCadastreLastSavedRecordId = previousRecord.id;
+  state.digitalCadastreFichaDraft = resolveDigitalCadastreFichaDraft(candidate, analysis);
+  setCurrentPlot(cloneFeature(previousRecord.currentPlot), previousRecord.currentPlotLabel || previousRecord.name || "Predio previo");
+  renderDigitalCadastreModule();
+  updateMapSummary();
+  setStatus(`Se cargo la version previa ${previousRecord.name} para contraste tecnico.`);
 }
 
 function buildDigitalCadastreHistoryEntry({ feature, candidate, analysis, draft, quality, geometryAudit, previousComparison, integrationSummary }) {
@@ -35855,6 +35903,8 @@ function renderDigitalCadastreModule() {
   }
 
   const analysis = state.digitalCadastreData;
+  const geometryStableCount = analysis.candidates.reduce((sum, candidate) => sum + (buildDigitalCadastreGeometryAudit(candidate.feature, candidate, analysis).status.id === "good" ? 1 : 0), 0);
+  const fieldBacklogCount = analysis.candidates.reduce((sum, candidate) => sum + ((resolveDigitalCadastreFichaDraft(candidate, analysis).reviewStatus || "gabinete") === "campo" ? 1 : 0), 0);
   paintMetricGrid(dom.digitalCadastreResults, [
     {
       label: "Modo activo",
@@ -35876,6 +35926,11 @@ function renderDigitalCadastreModule() {
       label: "Soporte",
       value: analysis.summary.supportLabel,
       copy: `${analysis.summary.activeSupportLayers || 0} capas oficiales activas, ${analysis.summary.supportParcelCount || 0} predios de apoyo y lectura ${analysis.imageryProfile.shortLabel}.`,
+    },
+    {
+      label: "Geometria estable",
+      value: `${geometryStableCount}`,
+      copy: `${fieldBacklogCount} predios siguen marcados para revision de campo.`,
     },
   ]);
 
