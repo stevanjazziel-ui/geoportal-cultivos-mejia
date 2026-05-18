@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260517-3";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260518-1";
 
 const layerCatalog = [
   {
@@ -3690,6 +3690,7 @@ const state = {
   currentPlotEditing: false,
   currentPlotEditBackup: null,
   currentPlotEditLabelBackup: null,
+  digitalCadastreAdjustmentSnapshot: null,
   agronomyAreaId: "mejia",
   baseLayer: "satellite",
   backendChecked: false,
@@ -3712,6 +3713,7 @@ const state = {
   digitalCadastreModeId: "calibrado",
   digitalCadastreData: null,
   digitalCadastreHighlightId: null,
+  digitalCadastreLastSavedRecordId: null,
   fodaCameData: null,
   fodaCameHighlightId: null,
   aiGeoData: null,
@@ -5850,7 +5852,17 @@ function cacheDom() {
   dom.digitalCadastreResults = document.querySelector("#digitalCadastreResults");
   dom.digitalCadastreReadout = document.querySelector("#digitalCadastreReadout");
   dom.digitalCadastreChecklist = document.querySelector("#digitalCadastreChecklist");
+  dom.digitalCadastreQueueBoard = document.querySelector("#digitalCadastreQueueBoard");
   dom.digitalCadastreCandidates = document.querySelector("#digitalCadastreCandidates");
+  dom.digitalCadastreFichaBoard = document.querySelector("#digitalCadastreFichaBoard");
+  dom.digitalCadastreCompareBoard = document.querySelector("#digitalCadastreCompareBoard");
+  dom.digitalCadastreBatchBoard = document.querySelector("#digitalCadastreBatchBoard");
+  dom.previousDigitalCadastreBtn = document.querySelector("#previousDigitalCadastreBtn");
+  dom.nextDigitalCadastreBtn = document.querySelector("#nextDigitalCadastreBtn");
+  dom.saveDigitalCadastreRecordBtn = document.querySelector("#saveDigitalCadastreRecordBtn");
+  dom.exportDigitalCadastreKmlBtn = document.querySelector("#exportDigitalCadastreKmlBtn");
+  dom.exportDigitalCadastreDxfBtn = document.querySelector("#exportDigitalCadastreDxfBtn");
+  dom.exportDigitalCadastreBatchShpBtn = document.querySelector("#exportDigitalCadastreBatchShpBtn");
   dom.runFodaCameBtn = document.querySelector("#runFodaCameBtn");
   dom.focusFodaCameBtn = document.querySelector("#focusFodaCameBtn");
   dom.clearFodaCameBtn = document.querySelector("#clearFodaCameBtn");
@@ -6480,6 +6492,15 @@ function bindUI() {
     }
     activateDigitalCadastreCandidate(button.dataset.digitalCadastreId);
   });
+  dom.digitalCadastreQueueBoard?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-digital-cadastre-id]");
+    if (!button) {
+      return;
+    }
+    focusDigitalCadastreCandidate(button.dataset.digitalCadastreId, {
+      openPopup: true,
+    });
+  });
   dom.territorialSectorSheets?.addEventListener("click", handleTerritorialSectorSheetsInteraction);
   dom.territorialExportPanel?.addEventListener("click", handleTerritorialExportInteraction);
   dom.reportCenterBoard?.addEventListener("click", handleTerritorialExportInteraction);
@@ -6822,10 +6843,16 @@ function bindUI() {
     return runModuleAction(dom.runDigitalCadastreBtn, "Digitalizando...", () => runDigitalCadastreAnalysis());
   });
   dom.focusDigitalCadastreBtn?.addEventListener("click", focusDigitalCadastreStudy);
+  dom.previousDigitalCadastreBtn?.addEventListener("click", () => focusAdjacentDigitalCadastreCandidate(-1));
+  dom.nextDigitalCadastreBtn?.addEventListener("click", () => focusAdjacentDigitalCadastreCandidate(1));
   dom.adjustDigitalCadastreBtn?.addEventListener("click", enableCurrentPlotEditing);
   dom.saveDigitalCadastreAdjustBtn?.addEventListener("click", saveCurrentPlotAdjustment);
   dom.cancelDigitalCadastreAdjustBtn?.addEventListener("click", cancelCurrentPlotAdjustment);
+  dom.saveDigitalCadastreRecordBtn?.addEventListener("click", () => saveDigitalCadastreRecord({ silentStatus: false, advanceQueue: true, reason: "manual-save" }));
   dom.exportDigitalCadastreShpBtn?.addEventListener("click", exportDigitalCadastreShapefile);
+  dom.exportDigitalCadastreKmlBtn?.addEventListener("click", exportDigitalCadastreKml);
+  dom.exportDigitalCadastreDxfBtn?.addEventListener("click", exportDigitalCadastreDxf);
+  dom.exportDigitalCadastreBatchShpBtn?.addEventListener("click", exportDigitalCadastreBatchShapefile);
   dom.clearDigitalCadastreBtn?.addEventListener("click", clearDigitalCadastreAnalysis);
   dom.digitalCadastreModeSelect?.addEventListener("change", () => {
     state.digitalCadastreModeId = dom.digitalCadastreModeSelect.value || "calibrado";
@@ -7631,7 +7658,7 @@ function disableCurrentPlotEditingVisualState() {
   syncPlanningControls();
 }
 
-function saveCurrentPlotAdjustment() {
+async function saveCurrentPlotAdjustment() {
   if (!state.currentPlotEditing) {
     return;
   }
@@ -7640,15 +7667,45 @@ function saveCurrentPlotAdjustment() {
     setStatus("No pudimos guardar el ajuste del contorno.");
     return;
   }
+  const backupFeature = state.currentPlotEditBackup ? cloneFeature(state.currentPlotEditBackup) : cloneFeature(state.currentPlot);
   const label = state.currentPlotLabel?.includes("ajustado")
     ? state.currentPlotLabel
     : `${state.currentPlotLabel || "Predio"} ajustado`;
+  const activeCandidate = getDigitalCadastreActiveCandidate();
+  const snapResult = applyDigitalCadastreAutoSnap(adjustedFeature, state.digitalCadastreData, activeCandidate);
+  state.digitalCadastreAdjustmentSnapshot = captureDigitalCadastreAdjustmentSnapshot(
+    backupFeature,
+    snapResult.feature,
+    snapResult,
+    activeCandidate
+  );
   disableCurrentPlotEditingVisualState();
-  setCurrentPlot(adjustedFeature, label);
+  setCurrentPlot(snapResult.feature, label, {
+    skipDigitalCadastreRefresh: true,
+  });
+  let refreshedAnalysis = null;
   if (state.digitalCadastreData) {
     state.territorialFocus = "digitalCadastre";
+    refreshedAnalysis = await runDigitalCadastreAnalysis(true);
   }
-  setStatus(`Contorno guardado para ${label}. La digitalizacion se recalculo con el ajuste aplicado.`);
+  const refreshedCandidate = findMatchingDigitalCadastreCandidate(activeCandidate, refreshedAnalysis || state.digitalCadastreData);
+  if (refreshedCandidate) {
+    focusDigitalCadastreCandidate(refreshedCandidate.id, {
+      fitBounds: false,
+      openPopup: true,
+      announce: false,
+    });
+  }
+  await saveDigitalCadastreRecord({
+    silentStatus: true,
+    projectId: state.digitalCadastreLastSavedRecordId || undefined,
+    reason: "adjustment-save",
+  });
+  setStatus(
+    `Contorno guardado para ${label}. ${snapResult.applied
+      ? `Se aplico auto-snap contra ${snapResult.label.toLowerCase()} (${Math.round((snapResult.score || 0) * 100)}%).`
+      : "El ajuste queda como contorno manual para revision tecnica."}`
+  );
 }
 
 function cancelCurrentPlotAdjustment() {
@@ -13164,6 +13221,7 @@ function clearCurrentPlot(triggerRefresh = false) {
   }
   state.currentPlot = null;
   state.currentPlotLabel = "Sin seleccionar";
+  state.digitalCadastreAdjustmentSnapshot = null;
   state.analysisData = null;
   state.agronomyOutputs.intralote = null;
   state.agronomyOutputs.dem = null;
@@ -22472,6 +22530,12 @@ function renderPlanningModule() {
   if (dom.focusDigitalCadastreBtn) {
     dom.focusDigitalCadastreBtn.disabled = !(state.digitalCadastreData?.candidates?.length);
   }
+  if (dom.previousDigitalCadastreBtn) {
+    dom.previousDigitalCadastreBtn.disabled = !state.digitalCadastreData?.candidates?.length || state.currentPlotEditing;
+  }
+  if (dom.nextDigitalCadastreBtn) {
+    dom.nextDigitalCadastreBtn.disabled = !state.digitalCadastreData?.candidates?.length || state.currentPlotEditing;
+  }
   if (dom.adjustDigitalCadastreBtn) {
     dom.adjustDigitalCadastreBtn.disabled = !state.currentPlot || state.currentPlotEditing;
   }
@@ -22483,6 +22547,18 @@ function renderPlanningModule() {
   }
   if (dom.exportDigitalCadastreShpBtn) {
     dom.exportDigitalCadastreShpBtn.disabled = !state.currentPlot || state.currentPlotEditing;
+  }
+  if (dom.exportDigitalCadastreKmlBtn) {
+    dom.exportDigitalCadastreKmlBtn.disabled = !state.currentPlot || state.currentPlotEditing;
+  }
+  if (dom.exportDigitalCadastreDxfBtn) {
+    dom.exportDigitalCadastreDxfBtn.disabled = !state.currentPlot || state.currentPlotEditing;
+  }
+  if (dom.saveDigitalCadastreRecordBtn) {
+    dom.saveDigitalCadastreRecordBtn.disabled = !state.currentPlot || state.currentPlotEditing;
+  }
+  if (dom.exportDigitalCadastreBatchShpBtn) {
+    dom.exportDigitalCadastreBatchShpBtn.disabled = !(state.digitalCadastreData?.candidates?.length > 1) || state.currentPlotEditing;
   }
   if (dom.clearDigitalCadastreBtn) {
     dom.clearDigitalCadastreBtn.disabled = !state.digitalCadastreData;
@@ -27818,6 +27894,7 @@ async function activateDigitalCadastreCandidate(candidateId, options = {}) {
     return;
   }
 
+  state.digitalCadastreAdjustmentSnapshot = null;
   setCurrentPlot(cloneFeature(candidate.feature), candidate.title, {
     skipDigitalCadastreRefresh: true,
   });
@@ -27830,12 +27907,19 @@ async function activateDigitalCadastreCandidate(candidateId, options = {}) {
       announce: false,
     });
   }
+  await saveDigitalCadastreRecord({
+    silentStatus: true,
+    forceNewId: true,
+    reason: "candidate-digitalized",
+  });
   setStatus(`Predio ${candidate.title} digitalizado como lote activo. Pasa el cursor para inspeccionar y valida el contorno antes del uso catastral final.`);
 }
 
 function clearDigitalCadastreAnalysis() {
   state.digitalCadastreData = null;
   state.digitalCadastreHighlightId = null;
+  state.digitalCadastreAdjustmentSnapshot = null;
+  state.digitalCadastreLastSavedRecordId = null;
   clearDigitalCadastreOverlay();
   state.territorialFocus = isCadastreRoute()
     ? "digitalCadastre"
@@ -31554,20 +31638,47 @@ function getDigitalCadastreExportRecord(feature, candidate) {
   };
 }
 
-function buildDigitalCadastreShapefileZip() {
+function getDigitalCadastreExportItems(options = {}) {
+  if (options.batch) {
+    const analysis = state.digitalCadastreData;
+    if (!analysis?.candidates?.length) {
+      throw new Error("No hay una cola de predios lista para exportar.");
+    }
+    return analysis.candidates
+      .filter((candidate) => candidate?.feature?.geometry)
+      .map((candidate) => ({
+        feature: cloneFeature(candidate.feature),
+        candidate,
+      }));
+  }
+
   if (!state.currentPlot?.geometry) {
     throw new Error("No hay un predio digitalizado para exportar.");
   }
-  const feature = cloneFeature(state.currentPlot);
-  const candidate = state.digitalCadastreData?.candidates?.find((item) => item.id === state.digitalCadastreHighlightId) || null;
-  const shapefileGeometry = buildPolygonShapefileBuffers([feature]);
-  const dbf = buildDbfBuffer([getDigitalCadastreExportRecord(feature, candidate)]);
-  const prj = encodeUtf8('GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]]');
-  const cpg = encodeUtf8("UTF-8");
-  const slugBase = normalizeAsciiText(candidate?.title || state.currentPlotLabel || "predio_digitalizado", "predio_digitalizado")
+  return [{
+    feature: cloneFeature(state.currentPlot),
+    candidate: getDigitalCadastreActiveCandidate(),
+  }];
+}
+
+function getDigitalCadastreExportSlug(items) {
+  const firstCandidate = items[0]?.candidate || null;
+  const slugBase = normalizeAsciiText(firstCandidate?.title || state.currentPlotLabel || "predio_digitalizado", "predio_digitalizado")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_+|_+$/g, "") || "predio_digitalizado";
+  return items.length > 1
+    ? `${slugBase}_cola_${items.length}`
+    : slugBase;
+}
+
+function buildDigitalCadastreShapefileZip(options = {}) {
+  const items = getDigitalCadastreExportItems(options);
+  const shapefileGeometry = buildPolygonShapefileBuffers(items.map((item) => item.feature));
+  const dbf = buildDbfBuffer(items.map((item) => getDigitalCadastreExportRecord(item.feature, item.candidate)));
+  const prj = encodeUtf8('GEOGCS["WGS 84",DATUM["WGS_1984",SPHEROID["WGS 84",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["degree",0.0174532925199433]]');
+  const cpg = encodeUtf8("UTF-8");
+  const slugBase = getDigitalCadastreExportSlug(items);
   const folder = `${slugBase}_${formatDateInput(new Date())}`;
   const zipBytes = buildStoredZip([
     { name: `${folder}.shp`, data: shapefileGeometry.shp },
@@ -31590,6 +31701,145 @@ function exportDigitalCadastreShapefile() {
   } catch (error) {
     console.warn("No se pudo exportar el shapefile del catastro asistido.", error);
     setStatus(error?.message || "No se pudo exportar el shapefile del predio digitalizado.");
+  }
+}
+
+function exportDigitalCadastreBatchShapefile() {
+  try {
+    const archive = buildDigitalCadastreShapefileZip({ batch: true });
+    downloadTerritorialFile(archive.filename, archive.bytes, "application/zip");
+    recordDigitalCadastreActivity(
+      `Cola catastral exportada: ${archive.filename}`,
+      `Se exportaron ${state.digitalCadastreData?.candidates?.length || 0} predios asistidos a un shapefile ZIP para gabinete y control tecnico.`,
+      { silentStatus: true }
+    );
+    setStatus("Cola de predios asistidos descargada en SHP ZIP.");
+  } catch (error) {
+    console.warn("No se pudo exportar la cola catastral a shapefile.", error);
+    setStatus(error?.message || "No se pudo exportar la cola catastral a shapefile.");
+  }
+}
+
+function getDigitalCadastrePolygonCollections(feature) {
+  if (!feature?.geometry) {
+    return [];
+  }
+  if (feature.geometry.type === "Polygon") {
+    return [feature.geometry.coordinates];
+  }
+  if (feature.geometry.type === "MultiPolygon") {
+    return feature.geometry.coordinates;
+  }
+  return [];
+}
+
+function buildDigitalCadastreKmlDocument(items) {
+  const placemarks = items.map((item, index) => {
+    const feature = item.feature;
+    const candidate = item.candidate || null;
+    const record = getDigitalCadastreExportRecord(feature, candidate);
+    const polygons = getDigitalCadastrePolygonCollections(feature)
+      .map((polygon) => `
+        <Polygon>
+          <outerBoundaryIs>
+            <LinearRing>
+              <coordinates>${polygon[0].map((coordinate) => `${Number(coordinate[0]).toFixed(8)},${Number(coordinate[1]).toFixed(8)},0`).join(" ")}</coordinates>
+            </LinearRing>
+          </outerBoundaryIs>
+        </Polygon>
+      `)
+      .join("");
+    const geometryMarkup = polygons.includes("<Polygon>")
+      ? polygons.split("</Polygon>").filter(Boolean).length > 1
+        ? `<MultiGeometry>${polygons}</MultiGeometry>`
+        : polygons
+      : "";
+    return `
+      <Placemark>
+        <name>${escapeHtmlContent(record.PREDIO || `Predio ${index + 1}`)}</name>
+        <description>${escapeHtmlContent(`${record.SOPORTE} | ${record.MODO} | ${record.CONF}/100`)}</description>
+        ${geometryMarkup}
+      </Placemark>
+    `;
+  }).join("");
+
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2">
+  <Document>
+    <name>Catastro asistido</name>
+    ${placemarks}
+  </Document>
+</kml>`;
+}
+
+function exportDigitalCadastreKml() {
+  try {
+    const items = getDigitalCadastreExportItems();
+    const filename = `${getDigitalCadastreExportSlug(items)}_${formatDateInput(new Date())}.kml`;
+    downloadTerritorialFile(filename, buildDigitalCadastreKmlDocument(items), "application/vnd.google-earth.kml+xml;charset=utf-8");
+    recordDigitalCadastreActivity(
+      `KML exportado: ${filename}`,
+      `Se exporto el predio digitalizado a KML para contraste rapido en Google Earth o QGIS.`,
+      { silentStatus: true }
+    );
+    setStatus("KML del predio digitalizado descargado.");
+  } catch (error) {
+    console.warn("No se pudo exportar el predio digitalizado a KML.", error);
+    setStatus(error?.message || "No se pudo exportar el predio digitalizado a KML.");
+  }
+}
+
+function buildDigitalCadastreDxfDocument(items) {
+  const lines = [
+    "0",
+    "SECTION",
+    "2",
+    "HEADER",
+    "9",
+    "$ACADVER",
+    "1",
+    "AC1015",
+    "0",
+    "ENDSEC",
+    "0",
+    "SECTION",
+    "2",
+    "ENTITIES",
+  ];
+
+  items.forEach((item, itemIndex) => {
+    const candidate = item.candidate || null;
+    const layerName = normalizeAsciiText(candidate?.title || `PREDIO_${itemIndex + 1}`, `PREDIO_${itemIndex + 1}`)
+      .toUpperCase()
+      .replace(/[^A-Z0-9_]+/g, "_")
+      .slice(0, 30) || `PREDIO_${itemIndex + 1}`;
+    getDigitalCadastrePolygonCollections(item.feature).forEach((polygon) => {
+      const outerRing = ensureClosedRingCoordinates(polygon[0] || []);
+      lines.push("0", "LWPOLYLINE", "8", layerName, "90", `${outerRing.length}`, "70", "1");
+      outerRing.forEach((coordinate) => {
+        lines.push("10", `${Number(coordinate[0]).toFixed(8)}`, "20", `${Number(coordinate[1]).toFixed(8)}`);
+      });
+    });
+  });
+
+  lines.push("0", "ENDSEC", "0", "EOF");
+  return lines.join("\r\n");
+}
+
+function exportDigitalCadastreDxf() {
+  try {
+    const items = getDigitalCadastreExportItems();
+    const filename = `${getDigitalCadastreExportSlug(items)}_${formatDateInput(new Date())}.dxf`;
+    downloadTerritorialFile(filename, buildDigitalCadastreDxfDocument(items), "application/dxf;charset=utf-8");
+    recordDigitalCadastreActivity(
+      `DXF exportado: ${filename}`,
+      `Se exporto el predio digitalizado a DXF ASCII para CAD operativo y contraste de lindero.`,
+      { silentStatus: true }
+    );
+    setStatus("DXF del predio digitalizado descargado.");
+  } catch (error) {
+    console.warn("No se pudo exportar el predio digitalizado a DXF.", error);
+    setStatus(error?.message || "No se pudo exportar el predio digitalizado a DXF.");
   }
 }
 
@@ -32339,7 +32589,14 @@ function renderReportCenterCard() {
 
 function buildProjectSnapshot() {
   const route = state.entryRoute || "agronomia";
-  const name = (dom.projectNameInput?.value || "").trim() || `${isTerritorialRoute(route) ? "Territorio" : "Agronomia"} ${formatDateInput(new Date())}`;
+  const routeBaseName = isCadastreRoute(route)
+    ? "Catastro"
+    : route === "gps"
+      ? "GPS"
+      : isTerritorialRoute(route)
+        ? "Territorio"
+        : "Agronomia";
+  const name = (dom.projectNameInput?.value || "").trim() || `${routeBaseName} ${formatDateInput(new Date())}`;
   const owner = (dom.projectOwnerInput?.value || state.userProfile.name || "Usuario publico").trim();
   const note = (dom.projectNoteInput?.value || "").trim();
   const summary = buildExecutiveDashboardSnapshot();
@@ -32351,7 +32608,11 @@ function buildProjectSnapshot() {
     route,
     savedAt: new Date().toISOString(),
     roleId: state.userProfile.roleId,
-    scopeLabel: isTerritorialRoute(route) ? getTerritorialAreaProfile().scopeLabel : getCurrentAgronomyScopeLabel(),
+    scopeLabel: isCadastreRoute(route)
+      ? (state.currentPlotLabel || getTerritorialAreaProfile().scopeLabel)
+      : isTerritorialRoute(route)
+        ? getTerritorialAreaProfile().scopeLabel
+        : getCurrentAgronomyScopeLabel(),
     dashboard: summary,
     completedModules: {
       planning: !!state.planningData,
@@ -32361,6 +32622,7 @@ function buildProjectSnapshot() {
       landChange: !!state.landChangeData,
       foda: !!state.fodaCameData,
       aiGeo: !!state.aiGeoData,
+      cadastre: !!state.digitalCadastreData,
       hydro: !!state.agronomyOutputs.hydroNetwork,
       irrigation: !!state.agronomyOutputs.irrigationFlow,
       climate: !!state.agronomyOutputs.climate,
@@ -32383,19 +32645,31 @@ function buildProjectSnapshot() {
       hydrologyHorizonId: state.hydrologyHorizonId,
       hydrologyDemandId: state.hydrologyDemandId,
       agroSuitabilityCropId: state.agroSuitabilityCropId,
+      digitalCadastreModeId: state.digitalCadastreModeId,
     },
     currentPlot: state.currentPlot ? cloneFeature(state.currentPlot) : null,
     currentPlotLabel: state.currentPlotLabel,
+    cadastreMeta: state.digitalCadastreData
+      ? {
+          candidateId: getDigitalCadastreActiveCandidate()?.id || null,
+          candidateTitle: getDigitalCadastreActiveCandidate()?.title || state.currentPlotLabel || null,
+          confidenceScore: getDigitalCadastreActiveCandidate()?.confidenceScore || state.digitalCadastreData.summary?.meanConfidence || 0,
+          supportLabel: getDigitalCadastreActiveCandidate()?.supportLabel || state.digitalCadastreData.summary?.supportLabel || null,
+          qualityLabel: getDigitalCadastreQualityProfile().label,
+          adjustmentSnapshot: state.digitalCadastreAdjustmentSnapshot,
+        }
+      : null,
   };
 }
 
 function normalizeProjectRecord(project = {}) {
+  const allowedRoutes = new Set(["agronomia", "planificacion", "catastro", "gps"]);
   return {
     id: String(project.id || `project-${Date.now()}`),
     name: String(project.name || "Proyecto"),
     owner: String(project.owner || "Usuario publico"),
     note: String(project.note || ""),
-    route: project.route === "planificacion" ? "planificacion" : "agronomia",
+    route: allowedRoutes.has(project.route) ? project.route : "agronomia",
     savedAt: project.savedAt || new Date().toISOString(),
     roleId: roleCatalog[project.roleId] ? project.roleId : "tecnico",
     scopeLabel: String(project.scopeLabel || ""),
@@ -32404,6 +32678,7 @@ function normalizeProjectRecord(project = {}) {
     settings: project.settings || {},
     currentPlot: project.currentPlot || null,
     currentPlotLabel: project.currentPlotLabel || "Sin seleccionar",
+    cadastreMeta: project.cadastreMeta || null,
   };
 }
 
@@ -32446,7 +32721,7 @@ function renderProjectRegistryCard() {
   paintMetricGrid(dom.projectRegistrySummary, [
     { label: "Proyectos", value: `${projects.length}`, copy: "Corridas guardadas y listas para reabrir." },
     { label: "Ultima actualizacion", value: new Date(projects[0].savedAt).toLocaleDateString("es-EC"), copy: projects[0].name, highlight: true },
-    { label: "Ruta activa", value: isTerritorialRoute() ? "Territorio" : "Agronomia", copy: "La lista puede mezclar frentes guardados." },
+    { label: "Ruta activa", value: getRouteWorkLabel(state.entryRoute), copy: "La lista puede mezclar frentes guardados." },
   ]);
 
   dom.projectRegistryList.classList.remove("empty-state");
@@ -32527,6 +32802,7 @@ async function applyProjectSnapshot(project) {
   state.hydrologyHorizonId = snapshot.settings.hydrologyHorizonId || state.hydrologyHorizonId;
   state.hydrologyDemandId = snapshot.settings.hydrologyDemandId || state.hydrologyDemandId;
   state.agroSuitabilityCropId = snapshot.settings.agroSuitabilityCropId || state.agroSuitabilityCropId;
+  state.digitalCadastreModeId = snapshot.settings.digitalCadastreModeId || state.digitalCadastreModeId;
   if (snapshot.currentPlot?.geometry) {
     state.currentPlot = cloneFeature(snapshot.currentPlot);
     state.currentPlotLabel = snapshot.currentPlotLabel || "Lote recuperado";
@@ -32534,6 +32810,7 @@ async function applyProjectSnapshot(project) {
     state.currentPlot = null;
     state.currentPlotLabel = "Sin seleccionar";
   }
+  state.digitalCadastreLastSavedRecordId = snapshot.route === "catastro" ? snapshot.id : state.digitalCadastreLastSavedRecordId;
   syncAgronomyAreaUi();
   syncTerritorialAreaSelects();
   ensureSelectedIndex();
@@ -32549,6 +32826,11 @@ async function applyProjectSnapshot(project) {
 }
 
 async function replayProjectSnapshot(snapshot) {
+  if (snapshot.route === "catastro") {
+    if (snapshot.completedModules.cadastre) { await runDigitalCadastreAnalysis(true); }
+    if (snapshot.completedModules.aiGeo) { await runAiGeoAnalysis(true); }
+    return;
+  }
   if (snapshot.route === "planificacion") {
     if (snapshot.completedModules.planning) { await runPlanningAnalysis(true); }
     if (snapshot.completedModules.mobility) { await runMobilityAnalysis(true); }
@@ -32608,12 +32890,13 @@ function exportActiveProjectSnapshot() {
 }
 
 function normalizeDecisionLogEntry(entry = {}) {
+  const allowedRoutes = new Set(["agronomia", "planificacion", "catastro", "gps"]);
   return {
     id: String(entry.id || `decision-${Date.now()}`),
     title: String(entry.title || "Decision registrada"),
     copy: String(entry.copy || "Sin detalle adicional."),
     module: String(entry.module || "General"),
-    route: entry.route === "planificacion" ? "planificacion" : "agronomia",
+    route: allowedRoutes.has(entry.route) ? entry.route : "agronomia",
     timestamp: entry.timestamp || new Date().toISOString(),
     focusAction: entry.focusAction || null,
   };
@@ -32678,6 +32961,16 @@ function recordDecisionLogEntry(entry = {}, options = {}) {
 }
 
 function buildCurrentDecisionLogSeed() {
+  if (isCadastreRoute()) {
+    const candidate = getDigitalCadastreActiveCandidate();
+    return {
+      title: `Decision catastral sobre ${state.currentPlotLabel || getTerritorialAreaProfile().scopeLabel}`,
+      copy: candidate?.summary || "Digitalizacion asistida lista para revision tecnica o ajuste de lindero.",
+      module: "Catastro",
+      focusAction: "planning-cadastre",
+      route: "catastro",
+    };
+  }
   if (isTerritorialRoute()) {
     const dashboard = buildExecutiveDashboardSnapshot();
     return {
@@ -32890,10 +33183,10 @@ function renderProjectRegistryCard() {
   dom.projectRegistryList.classList.remove("empty-state");
   dom.projectRegistryList.classList.add("has-data");
   setHtmlIfChanged(dom.projectRegistryList, projects.map((project) => `
-    <article class="territorial-sector-sheet tone-${project.route === "planificacion" ? "mid" : "low"}">
+    <article class="territorial-sector-sheet tone-${getRouteTone(project.route)}">
       <div class="territorial-sector-head">
         <div>
-          <p class="candidate-rank">${escapeHtmlContent(project.owner)} | ${escapeHtmlContent(project.route)}</p>
+          <p class="candidate-rank">${escapeHtmlContent(project.owner)} | ${escapeHtmlContent(getRouteWorkLabel(project.route))}</p>
           <h4>${escapeHtmlContent(project.name)}</h4>
         </div>
         <span class="planning-pill emphasis">${escapeHtmlContent(project.scopeLabel || "Sin ambito")}</span>
@@ -33605,6 +33898,392 @@ function findMatchingDigitalCadastreCandidate(referenceCandidate, analysis = sta
   return sourceCandidates[0] || null;
 }
 
+function getDigitalCadastreActiveCandidate(analysis = state.digitalCadastreData) {
+  if (!analysis?.candidates?.length) {
+    return null;
+  }
+  return analysis.candidates.find((candidate) => candidate.id === state.digitalCadastreHighlightId) || analysis.candidates[0] || null;
+}
+
+function getDigitalCadastreActiveCandidateIndex(analysis = state.digitalCadastreData) {
+  if (!analysis?.candidates?.length) {
+    return -1;
+  }
+  const activeCandidate = getDigitalCadastreActiveCandidate(analysis);
+  return analysis.candidates.findIndex((candidate) => candidate.id === activeCandidate?.id);
+}
+
+function captureDigitalCadastreFeatureMetrics(feature) {
+  if (!feature?.geometry) {
+    return {
+      areaHa: 0,
+      perimeterM: 0,
+    };
+  }
+  const areaHa = Number((turf.area(feature) / 10000).toFixed(4));
+  const boundaryLine = geometryToBoundaryLine(feature.geometry);
+  const perimeterM = Number((((boundaryLine ? turf.length(boundaryLine, { units: "kilometers" }) : 0) || 0) * 1000).toFixed(2));
+  return {
+    areaHa,
+    perimeterM,
+  };
+}
+
+function getDigitalCadastreQualityProfile(candidate = getDigitalCadastreActiveCandidate(), analysis = state.digitalCadastreData) {
+  const confidence = Number(candidate?.confidenceScore || analysis?.summary?.meanConfidence || 0);
+  const visibleHits = Number(candidate?.visibleHits || 0);
+  const hasLocalParcels = !!analysis?.areaProfile?.localParcels;
+  const hasSupportParcels = Number(analysis?.summary?.supportParcelCount || 0) > 0;
+  const supportReady = hasLocalParcels || hasSupportParcels;
+
+  if (confidence >= 88 && supportReady && visibleHits >= 2) {
+    return {
+      id: "ready",
+      label: "Listo para revision tecnica",
+      shortLabel: "Listo",
+      tone: "good",
+      copy: "El predio tiene soporte parcelario o visible suficiente para pasar a revision tecnica y contraste de gabinete.",
+    };
+  }
+  if (confidence >= 72 && visibleHits >= 2) {
+    return {
+      id: "visible",
+      label: "Visible",
+      shortLabel: "Visible",
+      tone: "watch",
+      copy: "El contorno se reconoce bien y puede trabajarse en gabinete, aunque conviene confirmar linderos en ortofoto o campo.",
+    };
+  }
+  if (confidence >= 58) {
+    return {
+      id: "doubtful",
+      label: "Dudoso",
+      shortLabel: "Dudoso",
+      tone: "critical",
+      copy: "El predio requiere ajuste manual o mejor soporte porque el lindero visible todavia no es suficientemente consistente.",
+    };
+  }
+  return {
+    id: "field",
+    label: "Requiere campo",
+    shortLabel: "Campo",
+    tone: "pending",
+    copy: "La lectura es apenas referencial. Conviene relevar en campo o incorporar mejor parcelario antes de usarla tecnicamente.",
+  };
+}
+
+function getDigitalCadastreSupportFeatures(analysis = state.digitalCadastreData) {
+  if (analysis?.supportCollection?.features?.length) {
+    return analysis.supportCollection.features;
+  }
+  if (analysis?.candidateCollection?.features?.length) {
+    return analysis.candidateCollection.features;
+  }
+  return [];
+}
+
+function computeDigitalCadastreSnapScore(sourceFeature, targetFeature) {
+  if (!sourceFeature?.geometry || !targetFeature?.geometry) {
+    return 0;
+  }
+  const sourceArea = turf.area(sourceFeature) || 0;
+  const targetArea = turf.area(targetFeature) || 0;
+  if (!sourceArea || !targetArea) {
+    return 0;
+  }
+
+  let overlapArea = 0;
+  try {
+    if (safeBooleanIntersects(sourceFeature, targetFeature)) {
+      const intersection = turf.intersect(sourceFeature, targetFeature);
+      overlapArea = intersection ? turf.area(intersection) : 0;
+    }
+  } catch (_) {
+    overlapArea = 0;
+  }
+
+  const overlapRatio = clamp(overlapArea / Math.min(sourceArea, targetArea), 0, 1);
+  const areaPenalty = clamp(1 - Math.abs(sourceArea - targetArea) / Math.max(sourceArea, targetArea), 0, 1);
+  let centroidDistanceKm = 1;
+  try {
+    centroidDistanceKm = turf.distance(turf.centroid(sourceFeature), turf.centroid(targetFeature), { units: "kilometers" });
+  } catch (_) {
+    centroidDistanceKm = 1;
+  }
+  const centroidScore = clamp(1 - centroidDistanceKm / 0.18, 0, 1);
+  return Number((overlapRatio * 0.72 + areaPenalty * 0.12 + centroidScore * 0.16).toFixed(4));
+}
+
+function getDigitalCadastreSnapSuggestion(feature, analysis = state.digitalCadastreData, candidate = getDigitalCadastreActiveCandidate(analysis)) {
+  if (!feature?.geometry || !analysis) {
+    return null;
+  }
+
+  const supportFeatures = getDigitalCadastreSupportFeatures(analysis)
+    .filter((supportFeature) => supportFeature?.geometry)
+    .filter((supportFeature) => {
+      const supportBounds = supportFeature.properties?.bounds;
+      const featureBounds = turf.bbox(feature);
+      return !Array.isArray(supportBounds) || boundsIntersect(supportBounds, featureBounds);
+    });
+
+  const stableKey = getDigitalCadastreCandidateStableKey(candidate);
+  if (stableKey) {
+    const stableMatch = supportFeatures.find((supportFeature) => {
+      const props = supportFeature.properties || {};
+      return props.cadastralCode === stableKey
+        || props.lotNumber === stableKey
+        || String(props.parcelId || "") === String(stableKey);
+    });
+    if (stableMatch) {
+      return {
+        feature: cloneFeature(stableMatch),
+        score: 1,
+        label: "parcelario local",
+        kind: "parcelario-local",
+      };
+    }
+  }
+
+  const rankedSupport = supportFeatures
+    .map((supportFeature) => ({
+      feature: supportFeature,
+      score: computeDigitalCadastreSnapScore(feature, supportFeature),
+    }))
+    .sort((left, right) => right.score - left.score);
+
+  if (rankedSupport[0]?.score >= 0.74) {
+    return {
+      feature: cloneFeature(rankedSupport[0].feature),
+      score: rankedSupport[0].score,
+      label: analysis.areaProfile?.localParcels ? "parcelario local" : "soporte local visible",
+      kind: analysis.areaProfile?.localParcels ? "parcelario-local" : "soporte-visible",
+    };
+  }
+
+  if (candidate?.feature?.geometry) {
+    const candidateScore = computeDigitalCadastreSnapScore(feature, candidate.feature);
+    if (candidateScore >= 0.58) {
+      return {
+        feature: cloneFeature(candidate.feature),
+        score: candidateScore,
+        label: "contorno visible detectado",
+        kind: "contorno-visible",
+      };
+    }
+  }
+
+  return null;
+}
+
+function applyDigitalCadastreAutoSnap(feature, analysis = state.digitalCadastreData, candidate = getDigitalCadastreActiveCandidate(analysis)) {
+  if (!feature?.geometry) {
+    return {
+      feature: feature ? cloneFeature(feature) : null,
+      applied: false,
+      label: "Sin ajuste",
+      kind: "none",
+      score: 0,
+    };
+  }
+
+  const suggestion = getDigitalCadastreSnapSuggestion(feature, analysis, candidate);
+  if (!suggestion?.feature?.geometry) {
+    return {
+      feature: cloneFeature(feature),
+      applied: false,
+      label: "Sin ajuste",
+      kind: "none",
+      score: 0,
+    };
+  }
+
+  const snappedFeature = cloneFeature(suggestion.feature);
+  snappedFeature.properties = {
+    ...(cloneFeature(feature)?.properties || {}),
+    ...(snappedFeature.properties || {}),
+    cadastreSnapApplied: true,
+    cadastreSnapLabel: suggestion.label,
+    cadastreSnapKind: suggestion.kind,
+    cadastreSnapScore: suggestion.score,
+  };
+  return {
+    feature: snappedFeature,
+    applied: true,
+    label: suggestion.label,
+    kind: suggestion.kind,
+    score: suggestion.score,
+  };
+}
+
+function captureDigitalCadastreAdjustmentSnapshot(beforeFeature, afterFeature, snapResult = null, candidate = getDigitalCadastreActiveCandidate()) {
+  const beforeMetrics = captureDigitalCadastreFeatureMetrics(beforeFeature);
+  const afterMetrics = captureDigitalCadastreFeatureMetrics(afterFeature);
+  return {
+    title: candidate?.title || state.currentPlotLabel || "Predio ajustado",
+    before: beforeMetrics,
+    after: afterMetrics,
+    deltaAreaHa: Number((afterMetrics.areaHa - beforeMetrics.areaHa).toFixed(4)),
+    deltaPerimeterM: Number((afterMetrics.perimeterM - beforeMetrics.perimeterM).toFixed(2)),
+    snapApplied: !!snapResult?.applied,
+    snapLabel: snapResult?.label || "Sin ajuste automatico",
+    snapScore: Number(snapResult?.score || 0),
+    generatedAt: new Date().toISOString(),
+  };
+}
+
+function getDigitalCadastreRecordSummary(candidate = getDigitalCadastreActiveCandidate(), analysis = state.digitalCadastreData) {
+  const quality = getDigitalCadastreQualityProfile(candidate, analysis);
+  return {
+    quality,
+    note: [
+      quality.label,
+      candidate?.confidenceScore ? `${candidate.confidenceScore}/100` : null,
+      candidate?.supportLabel || analysis?.summary?.supportLabel || null,
+      `Usuario: ${state.userProfile.name || "Usuario publico"}`,
+    ].filter(Boolean).join(" | "),
+  };
+}
+
+function buildDigitalCadastreSnapshotName(candidate = getDigitalCadastreActiveCandidate(), analysis = state.digitalCadastreData) {
+  const areaProfile = analysis?.areaProfile || getDigitalCadastreAreaProfile();
+  const base = normalizeAsciiText(candidate?.title || state.currentPlotLabel || `Predio ${areaProfile.label}`, `Predio ${areaProfile.label}`);
+  return `${base} ${formatDateInput(new Date())}`;
+}
+
+function getRouteWorkLabel(route = state.entryRoute || "agronomia") {
+  if (route === "catastro") {
+    return "Catastro";
+  }
+  if (route === "planificacion") {
+    return "Territorio";
+  }
+  if (route === "gps") {
+    return "GPS";
+  }
+  return "Agronomia";
+}
+
+function getRouteTone(route = state.entryRoute || "agronomia") {
+  if (route === "catastro") {
+    return "high";
+  }
+  if (route === "planificacion") {
+    return "mid";
+  }
+  return "low";
+}
+
+function recordDigitalCadastreActivity(title, copy, options = {}) {
+  return recordDecisionLogEntry({
+    title,
+    copy,
+    module: "Catastro",
+    route: "catastro",
+    focusAction: "planning-cadastre",
+  }, {
+    persist: true,
+    silentStatus: options.silentStatus !== false,
+  });
+}
+
+async function saveDigitalCadastreRecord(options = {}) {
+  if (!state.currentPlot?.geometry || !state.digitalCadastreData) {
+    return null;
+  }
+  if (!canAccessRole("tecnico")) {
+    if (!options.silentStatus) {
+      setStatus("Este perfil no puede guardar fichas catastrales asistidas.");
+    }
+    return null;
+  }
+
+  const candidate = getDigitalCadastreActiveCandidate();
+  const { quality, note } = getDigitalCadastreRecordSummary(candidate, state.digitalCadastreData);
+  const preferredId = options.forceNewId
+    ? null
+    : (options.projectId || state.digitalCadastreLastSavedRecordId || state.platformData.activeProjectId || null);
+  const snapshot = normalizeProjectRecord({
+    ...buildProjectSnapshot(),
+    id: preferredId || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `project-${Date.now()}`),
+    name: options.name || buildDigitalCadastreSnapshotName(candidate, state.digitalCadastreData),
+    owner: state.userProfile.name || "Usuario publico",
+    note: options.note || note,
+    route: "catastro",
+    currentPlot: cloneFeature(state.currentPlot),
+    currentPlotLabel: state.currentPlotLabel,
+    cadastreMeta: {
+      candidateId: candidate?.id || null,
+      candidateTitle: candidate?.title || state.currentPlotLabel || "Predio digitalizado",
+      cadastralCode: candidate?.cadastralCode || null,
+      lotNumber: candidate?.lotNumber || null,
+      confidenceScore: candidate?.confidenceScore || state.digitalCadastreData.summary?.meanConfidence || 0,
+      supportLabel: candidate?.supportLabel || state.digitalCadastreData.summary?.supportLabel || getDigitalCadastreAreaProfile().supportLabel,
+      qualityId: quality.id,
+      qualityLabel: quality.label,
+      qualityTone: quality.tone,
+      savedBy: state.userProfile.name || "Usuario publico",
+      savedAt: new Date().toISOString(),
+      adjustmentSnapshot: state.digitalCadastreAdjustmentSnapshot,
+    },
+    completedModules: {
+      ...buildProjectSnapshot().completedModules,
+      cadastre: true,
+    },
+  });
+
+  const projects = [...(state.platformData.projects || []).filter((item) => item.id !== snapshot.id)];
+  projects.unshift(snapshot);
+  state.platformData.projects = projects.slice(0, 80);
+  state.platformData.activeProjectId = snapshot.id;
+  state.digitalCadastreLastSavedRecordId = snapshot.id;
+  renderProjectRegistryCard();
+  await persistProjectCollection();
+  recordDigitalCadastreActivity(
+    options.reason === "adjustment-save"
+      ? `Contorno ajustado y guardado: ${snapshot.name}`
+      : options.reason === "manual-save"
+        ? `Ficha guardada: ${snapshot.name}`
+        : `Predio digitalizado: ${snapshot.name}`,
+    `${snapshot.note}. ${candidate?.recommendation || "Listo para revision tecnica y continuidad de cola."}`,
+    { silentStatus: options.silentStatus !== false }
+  );
+
+  if (!options.silentStatus) {
+    setStatus(`Ficha catastral asistida guardada para ${snapshot.name}.`);
+  }
+
+  if (options.advanceQueue) {
+    focusAdjacentDigitalCadastreCandidate(1, {
+      announce: false,
+      fitBounds: false,
+    });
+    if (!options.silentStatus) {
+      setStatus(`Ficha guardada para ${snapshot.name}. Se dejo listo el siguiente predio de la cola.`);
+    }
+  }
+
+  return snapshot;
+}
+
+function focusAdjacentDigitalCadastreCandidate(direction = 1, options = {}) {
+  const analysis = state.digitalCadastreData;
+  if (!analysis?.candidates?.length) {
+    return;
+  }
+  const currentIndex = Math.max(0, getDigitalCadastreActiveCandidateIndex(analysis));
+  const nextIndex = (currentIndex + direction + analysis.candidates.length) % analysis.candidates.length;
+  const nextCandidate = analysis.candidates[nextIndex];
+  if (!nextCandidate) {
+    return;
+  }
+  focusDigitalCadastreCandidate(nextCandidate.id, {
+    fitBounds: options.fitBounds !== false,
+    openPopup: options.openPopup !== false,
+    announce: options.announce !== false,
+  });
+}
+
 function buildDigitalCadastreCandidate(feature, index, context) {
   const centroid = turf.centroid(feature);
   const road = getNearestFeatureMatch(centroid, context.roadFeatures);
@@ -33887,6 +34566,219 @@ async function buildDigitalCadastreAnalysis() {
   };
 }
 
+function renderDigitalCadastreQueueBoard(analysis = state.digitalCadastreData) {
+  if (!dom.digitalCadastreQueueBoard) {
+    return;
+  }
+  if (!analysis?.candidates?.length) {
+    dom.digitalCadastreQueueBoard.classList.add("empty-state");
+    dom.digitalCadastreQueueBoard.classList.remove("has-data");
+    setTextIfChanged(dom.digitalCadastreQueueBoard, "Aqui aparece la cola de predios detectados para revisar, digitalizar y recorrer sin salir del modulo.");
+    return;
+  }
+
+  const activeCandidate = getDigitalCadastreActiveCandidate(analysis);
+  const activeIndex = Math.max(0, getDigitalCadastreActiveCandidateIndex(analysis));
+  const previewCandidates = analysis.candidates.slice(activeIndex, activeIndex + 3);
+  dom.digitalCadastreQueueBoard.classList.remove("empty-state");
+  dom.digitalCadastreQueueBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.digitalCadastreQueueBoard, `
+    <article class="territorial-export-card">
+      <div class="territorial-export-head">
+        <div>
+          <p class="section-kicker">Cola operativa</p>
+          <h4>Predio ${activeIndex + 1} de ${analysis.candidates.length}</h4>
+        </div>
+        <span class="planning-pill emphasis">${analysis.summary.meanConfidence}/100 promedio</span>
+      </div>
+      <p class="territorial-readout-copy">
+        Flujo recomendado: clic digitaliza, revisa soporte y calidad, guarda ficha y pasa al siguiente predio.
+      </p>
+      <div class="territorial-export-pills">
+        <span class="planning-pill emphasis">${activeCandidate?.title || "Predio activo"}</span>
+        <span class="planning-pill emphasis">${activeCandidate?.supportLabel || analysis.summary.supportLabel}</span>
+        <span class="planning-pill emphasis">${getDigitalCadastreQualityProfile(activeCandidate, analysis).shortLabel}</span>
+      </div>
+      <div class="decision-grid compact">
+        ${previewCandidates.map((candidate) => `
+          <article class="decision-card tone-${getDigitalCadastreQualityProfile(candidate, analysis).tone}">
+            <p class="candidate-rank">Predio ${candidate.rank}</p>
+            <h5>${escapeHtmlContent(candidate.title)}</h5>
+            <p>${escapeHtmlContent(candidate.boundaryLabel)} | ${escapeHtmlContent(candidate.supportLabel)}</p>
+            <button class="ghost-button" type="button" data-digital-cadastre-id="${escapeHtmlContent(candidate.id)}">Revisar</button>
+          </article>
+        `).join("")}
+      </div>
+    </article>
+  `);
+}
+
+function renderDigitalCadastreFichaBoard(analysis = state.digitalCadastreData) {
+  if (!dom.digitalCadastreFichaBoard) {
+    return;
+  }
+  const activeCandidate = getDigitalCadastreActiveCandidate(analysis);
+  if (!analysis || !activeCandidate) {
+    dom.digitalCadastreFichaBoard.classList.add("empty-state");
+    dom.digitalCadastreFichaBoard.classList.remove("has-data");
+    setTextIfChanged(dom.digitalCadastreFichaBoard, "Aqui aparece la ficha del predio activo, su semaforo de calidad y el registro de digitalizacion.");
+    return;
+  }
+
+  const quality = getDigitalCadastreQualityProfile(activeCandidate, analysis);
+  const metrics = captureDigitalCadastreFeatureMetrics(state.currentPlot || activeCandidate.feature);
+  const savedRecord = (state.platformData.projects || []).find((project) => project.id === state.digitalCadastreLastSavedRecordId) || null;
+
+  dom.digitalCadastreFichaBoard.classList.remove("empty-state");
+  dom.digitalCadastreFichaBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.digitalCadastreFichaBoard, `
+    <article class="territorial-export-card">
+      <div class="territorial-export-head">
+        <div>
+          <p class="section-kicker">Ficha predial</p>
+          <h4>${escapeHtmlContent(activeCandidate.title)}</h4>
+        </div>
+        <span class="planning-pill emphasis">${escapeHtmlContent(quality.label)}</span>
+      </div>
+      <div class="territorial-decision-grid">
+        <article class="territorial-sector-metric">
+          <span>Confianza</span>
+          <strong>${activeCandidate.confidenceScore}/100</strong>
+        </article>
+        <article class="territorial-sector-metric">
+          <span>Area</span>
+          <strong>${formatIrrigationNumber(metrics.areaHa, metrics.areaHa >= 10 ? 1 : 2)} ha</strong>
+        </article>
+        <article class="territorial-sector-metric">
+          <span>Perimetro</span>
+          <strong>${Math.round(metrics.perimeterM)} m</strong>
+        </article>
+        <article class="territorial-sector-metric">
+          <span>Soporte</span>
+          <strong>${escapeHtmlContent(activeCandidate.supportLabel)}</strong>
+        </article>
+      </div>
+      <p class="territorial-readout-copy">
+        ${escapeHtmlContent(quality.copy)}
+      </p>
+      <div class="territorial-export-pills">
+        <span class="planning-pill emphasis">${escapeHtmlContent(activeCandidate.cadastralCode || activeCandidate.lotNumber || "Sin codigo local")}</span>
+        <span class="planning-pill emphasis">Digitalizo: ${escapeHtmlContent(state.userProfile.name || "Usuario publico")}</span>
+        <span class="planning-pill emphasis">${savedRecord?.cadastreMeta?.savedAt ? new Date(savedRecord.cadastreMeta.savedAt).toLocaleString("es-EC") : "Sin guardar aun"}</span>
+      </div>
+    </article>
+  `);
+}
+
+function renderDigitalCadastreCompareBoard() {
+  if (!dom.digitalCadastreCompareBoard) {
+    return;
+  }
+  const snapshot = state.digitalCadastreAdjustmentSnapshot;
+  if (!snapshot) {
+    dom.digitalCadastreCompareBoard.classList.add("empty-state");
+    dom.digitalCadastreCompareBoard.classList.remove("has-data");
+    setTextIfChanged(dom.digitalCadastreCompareBoard, "Aqui aparece la comparacion antes / despues cuando ajustes el contorno del predio.");
+    return;
+  }
+
+  dom.digitalCadastreCompareBoard.classList.remove("empty-state");
+  dom.digitalCadastreCompareBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.digitalCadastreCompareBoard, `
+    <article class="territorial-export-card">
+      <div class="territorial-export-head">
+        <div>
+          <p class="section-kicker">Comparacion de contorno</p>
+          <h4>${escapeHtmlContent(snapshot.title)}</h4>
+        </div>
+        <span class="planning-pill emphasis">${snapshot.snapApplied ? `Snap ${escapeHtmlContent(snapshot.snapLabel)}` : "Sin snap"}</span>
+      </div>
+      <div class="territorial-decision-grid">
+        <article class="territorial-sector-metric">
+          <span>Antes</span>
+          <strong>${formatIrrigationNumber(snapshot.before.areaHa, snapshot.before.areaHa >= 10 ? 1 : 2)} ha | ${Math.round(snapshot.before.perimeterM)} m</strong>
+        </article>
+        <article class="territorial-sector-metric">
+          <span>Despues</span>
+          <strong>${formatIrrigationNumber(snapshot.after.areaHa, snapshot.after.areaHa >= 10 ? 1 : 2)} ha | ${Math.round(snapshot.after.perimeterM)} m</strong>
+        </article>
+        <article class="territorial-sector-metric">
+          <span>Delta area</span>
+          <strong>${snapshot.deltaAreaHa >= 0 ? "+" : ""}${formatIrrigationNumber(snapshot.deltaAreaHa, 4)} ha</strong>
+        </article>
+        <article class="territorial-sector-metric">
+          <span>Delta perimetro</span>
+          <strong>${snapshot.deltaPerimeterM >= 0 ? "+" : ""}${Math.round(snapshot.deltaPerimeterM)} m</strong>
+        </article>
+      </div>
+      <p class="territorial-readout-copy">
+        ${snapshot.snapApplied
+          ? `El ajuste se alineo automaticamente con ${escapeHtmlContent(snapshot.snapLabel)} para reducir desviacion del contorno.`
+          : "El ajuste se guardo como contorno manual y queda listo para contraste tecnico o de campo."}
+      </p>
+    </article>
+  `);
+}
+
+function renderDigitalCadastreBatchBoard(analysis = state.digitalCadastreData) {
+  if (!dom.digitalCadastreBatchBoard) {
+    return;
+  }
+  if (!analysis?.candidates?.length) {
+    dom.digitalCadastreBatchBoard.classList.add("empty-state");
+    dom.digitalCadastreBatchBoard.classList.remove("has-data");
+    setTextIfChanged(dom.digitalCadastreBatchBoard, "Aqui aparece la cola masiva por AOI, el semaforo general y la salida asistida por soporte local.");
+    return;
+  }
+
+  const qualityBuckets = analysis.candidates.reduce((accumulator, candidate) => {
+    const quality = getDigitalCadastreQualityProfile(candidate, analysis);
+    accumulator[quality.id] = (accumulator[quality.id] || 0) + 1;
+    return accumulator;
+  }, {});
+
+  dom.digitalCadastreBatchBoard.classList.remove("empty-state");
+  dom.digitalCadastreBatchBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.digitalCadastreBatchBoard, `
+    <article class="territorial-export-card">
+      <div class="territorial-export-head">
+        <div>
+          <p class="section-kicker">Loteo masivo asistido</p>
+          <h4>${analysis.candidates.length} predios en cola</h4>
+        </div>
+        <span class="planning-pill emphasis">${analysis.context.scopeType === "plot" ? "AOI activo" : analysis.context.scopeLabel}</span>
+      </div>
+      <p class="territorial-readout-copy">
+        El modulo ya puede recorrer, guardar y exportar una cola masiva de predios cuando el AOI o el soporte local ofrecen linderos suficientes.
+      </p>
+      <div class="territorial-export-pills">
+        <span class="planning-pill emphasis">${qualityBuckets.ready || 0} listos</span>
+        <span class="planning-pill emphasis">${qualityBuckets.visible || 0} visibles</span>
+        <span class="planning-pill emphasis">${qualityBuckets.doubtful || 0} dudosos</span>
+        <span class="planning-pill emphasis">${qualityBuckets.field || 0} campo</span>
+      </div>
+      <div class="territorial-decision-grid">
+        <article class="territorial-sector-metric">
+          <span>Predio medio</span>
+          <strong>${formatIrrigationNumber(analysis.summary.meanAreaHa || 0, 2)} ha</strong>
+        </article>
+        <article class="territorial-sector-metric">
+          <span>Confianza media</span>
+          <strong>${analysis.summary.meanConfidence}/100</strong>
+        </article>
+        <article class="territorial-sector-metric">
+          <span>Parcelario soporte</span>
+          <strong>${analysis.summary.supportParcelCount || 0}</strong>
+        </article>
+        <article class="territorial-sector-metric">
+          <span>Salida</span>
+          <strong>Cola SHP lista</strong>
+        </article>
+      </div>
+    </article>
+  `);
+}
+
 function renderDigitalCadastreModule() {
   if (!dom.digitalCadastreResults) {
     return;
@@ -33918,6 +34810,26 @@ function renderDigitalCadastreModule() {
     dom.digitalCadastreCandidates?.classList.remove("has-data");
     if (dom.digitalCadastreCandidates) {
       setTextIfChanged(dom.digitalCadastreCandidates, "Aqui apareceran predios o frentes de digitalizacion con mejor apoyo por imagen y soporte territorial.");
+    }
+    if (dom.digitalCadastreQueueBoard) {
+      dom.digitalCadastreQueueBoard.classList.add("empty-state");
+      dom.digitalCadastreQueueBoard.classList.remove("has-data");
+      setTextIfChanged(dom.digitalCadastreQueueBoard, "Aqui aparece la cola de predios detectados para revisar, digitalizar y recorrer sin salir del modulo.");
+    }
+    if (dom.digitalCadastreFichaBoard) {
+      dom.digitalCadastreFichaBoard.classList.add("empty-state");
+      dom.digitalCadastreFichaBoard.classList.remove("has-data");
+      setTextIfChanged(dom.digitalCadastreFichaBoard, "Aqui aparece la ficha del predio activo, su semaforo de calidad y el registro de digitalizacion.");
+    }
+    if (dom.digitalCadastreCompareBoard) {
+      dom.digitalCadastreCompareBoard.classList.add("empty-state");
+      dom.digitalCadastreCompareBoard.classList.remove("has-data");
+      setTextIfChanged(dom.digitalCadastreCompareBoard, "Aqui aparece la comparacion antes / despues cuando ajustes el contorno del predio.");
+    }
+    if (dom.digitalCadastreBatchBoard) {
+      dom.digitalCadastreBatchBoard.classList.add("empty-state");
+      dom.digitalCadastreBatchBoard.classList.remove("has-data");
+      setTextIfChanged(dom.digitalCadastreBatchBoard, "Aqui aparece la cola masiva por AOI, el semaforo general y la salida asistida por soporte local.");
     }
     if (dom.digitalCadastreSourceNote) {
       setTextIfChanged(dom.digitalCadastreSourceNote, `Base preparada para ${areaProfile.label}. ${effectiveMode.note}`);
@@ -34018,6 +34930,10 @@ function renderDigitalCadastreModule() {
   if (dom.digitalCadastreSourceNote) {
     setTextIfChanged(dom.digitalCadastreSourceNote, analysis.sourceNote);
   }
+  renderDigitalCadastreQueueBoard(analysis);
+  renderDigitalCadastreFichaBoard(analysis);
+  renderDigitalCadastreCompareBoard();
+  renderDigitalCadastreBatchBoard(analysis);
 }
 
 function renderTerritorialScenarioCompare() {
