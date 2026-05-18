@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260518-1";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260518-2";
 
 const layerCatalog = [
   {
@@ -3691,6 +3691,7 @@ const state = {
   currentPlotEditBackup: null,
   currentPlotEditLabelBackup: null,
   digitalCadastreAdjustmentSnapshot: null,
+  digitalCadastreFichaDraft: null,
   agronomyAreaId: "mejia",
   baseLayer: "satellite",
   backendChecked: false,
@@ -5860,8 +5861,13 @@ function cacheDom() {
   dom.previousDigitalCadastreBtn = document.querySelector("#previousDigitalCadastreBtn");
   dom.nextDigitalCadastreBtn = document.querySelector("#nextDigitalCadastreBtn");
   dom.saveDigitalCadastreRecordBtn = document.querySelector("#saveDigitalCadastreRecordBtn");
+  dom.saveDigitalCadastreBatchBtn = document.querySelector("#saveDigitalCadastreBatchBtn");
   dom.exportDigitalCadastreKmlBtn = document.querySelector("#exportDigitalCadastreKmlBtn");
   dom.exportDigitalCadastreDxfBtn = document.querySelector("#exportDigitalCadastreDxfBtn");
+  dom.exportDigitalCadastreGeoJsonBtn = document.querySelector("#exportDigitalCadastreGeoJsonBtn");
+  dom.exportDigitalCadastreCsvBtn = document.querySelector("#exportDigitalCadastreCsvBtn");
+  dom.printDigitalCadastreReportBtn = document.querySelector("#printDigitalCadastreReportBtn");
+  dom.exportDigitalCadastrePackageBtn = document.querySelector("#exportDigitalCadastrePackageBtn");
   dom.exportDigitalCadastreBatchShpBtn = document.querySelector("#exportDigitalCadastreBatchShpBtn");
   dom.runFodaCameBtn = document.querySelector("#runFodaCameBtn");
   dom.focusFodaCameBtn = document.querySelector("#focusFodaCameBtn");
@@ -6501,6 +6507,10 @@ function bindUI() {
       openPopup: true,
     });
   });
+  dom.digitalCadastreFichaBoard?.addEventListener("input", handleDigitalCadastreFichaInput);
+  dom.digitalCadastreFichaBoard?.addEventListener("change", handleDigitalCadastreFichaInput);
+  dom.digitalCadastreFichaBoard?.addEventListener("click", handleDigitalCadastreFichaAction);
+  dom.digitalCadastreBatchBoard?.addEventListener("click", handleDigitalCadastreBatchAction);
   dom.territorialSectorSheets?.addEventListener("click", handleTerritorialSectorSheetsInteraction);
   dom.territorialExportPanel?.addEventListener("click", handleTerritorialExportInteraction);
   dom.reportCenterBoard?.addEventListener("click", handleTerritorialExportInteraction);
@@ -6849,9 +6859,14 @@ function bindUI() {
   dom.saveDigitalCadastreAdjustBtn?.addEventListener("click", saveCurrentPlotAdjustment);
   dom.cancelDigitalCadastreAdjustBtn?.addEventListener("click", cancelCurrentPlotAdjustment);
   dom.saveDigitalCadastreRecordBtn?.addEventListener("click", () => saveDigitalCadastreRecord({ silentStatus: false, advanceQueue: true, reason: "manual-save" }));
+  dom.saveDigitalCadastreBatchBtn?.addEventListener("click", saveDigitalCadastreBatchRecords);
   dom.exportDigitalCadastreShpBtn?.addEventListener("click", exportDigitalCadastreShapefile);
   dom.exportDigitalCadastreKmlBtn?.addEventListener("click", exportDigitalCadastreKml);
   dom.exportDigitalCadastreDxfBtn?.addEventListener("click", exportDigitalCadastreDxf);
+  dom.exportDigitalCadastreGeoJsonBtn?.addEventListener("click", exportDigitalCadastreGeoJson);
+  dom.exportDigitalCadastreCsvBtn?.addEventListener("click", exportDigitalCadastreCsv);
+  dom.printDigitalCadastreReportBtn?.addEventListener("click", () => openDigitalCadastreReport({ autoPrint: true }));
+  dom.exportDigitalCadastrePackageBtn?.addEventListener("click", exportDigitalCadastrePackage);
   dom.exportDigitalCadastreBatchShpBtn?.addEventListener("click", exportDigitalCadastreBatchShapefile);
   dom.clearDigitalCadastreBtn?.addEventListener("click", clearDigitalCadastreAnalysis);
   dom.digitalCadastreModeSelect?.addEventListener("change", () => {
@@ -13222,6 +13237,7 @@ function clearCurrentPlot(triggerRefresh = false) {
   state.currentPlot = null;
   state.currentPlotLabel = "Sin seleccionar";
   state.digitalCadastreAdjustmentSnapshot = null;
+  state.digitalCadastreFichaDraft = null;
   state.analysisData = null;
   state.agronomyOutputs.intralote = null;
   state.agronomyOutputs.dem = null;
@@ -22557,8 +22573,23 @@ function renderPlanningModule() {
   if (dom.saveDigitalCadastreRecordBtn) {
     dom.saveDigitalCadastreRecordBtn.disabled = !state.currentPlot || state.currentPlotEditing;
   }
+  if (dom.saveDigitalCadastreBatchBtn) {
+    dom.saveDigitalCadastreBatchBtn.disabled = !(state.digitalCadastreData?.candidates?.length) || state.currentPlotEditing;
+  }
   if (dom.exportDigitalCadastreBatchShpBtn) {
     dom.exportDigitalCadastreBatchShpBtn.disabled = !(state.digitalCadastreData?.candidates?.length > 1) || state.currentPlotEditing;
+  }
+  if (dom.exportDigitalCadastreGeoJsonBtn) {
+    dom.exportDigitalCadastreGeoJsonBtn.disabled = !(state.currentPlot?.geometry || state.digitalCadastreData?.candidates?.length) || state.currentPlotEditing;
+  }
+  if (dom.exportDigitalCadastreCsvBtn) {
+    dom.exportDigitalCadastreCsvBtn.disabled = !(state.currentPlot?.geometry || state.digitalCadastreData?.candidates?.length) || state.currentPlotEditing;
+  }
+  if (dom.printDigitalCadastreReportBtn) {
+    dom.printDigitalCadastreReportBtn.disabled = !(state.currentPlot?.geometry || state.digitalCadastreData?.candidates?.length);
+  }
+  if (dom.exportDigitalCadastrePackageBtn) {
+    dom.exportDigitalCadastrePackageBtn.disabled = !(state.currentPlot?.geometry || state.digitalCadastreData?.candidates?.length);
   }
   if (dom.clearDigitalCadastreBtn) {
     dom.clearDigitalCadastreBtn.disabled = !state.digitalCadastreData;
@@ -27895,6 +27926,7 @@ async function activateDigitalCadastreCandidate(candidateId, options = {}) {
   }
 
   state.digitalCadastreAdjustmentSnapshot = null;
+  state.digitalCadastreFichaDraft = getDefaultDigitalCadastreFichaDraft(candidate, state.digitalCadastreData);
   setCurrentPlot(cloneFeature(candidate.feature), candidate.title, {
     skipDigitalCadastreRefresh: true,
   });
@@ -27919,6 +27951,7 @@ function clearDigitalCadastreAnalysis() {
   state.digitalCadastreData = null;
   state.digitalCadastreHighlightId = null;
   state.digitalCadastreAdjustmentSnapshot = null;
+  state.digitalCadastreFichaDraft = null;
   state.digitalCadastreLastSavedRecordId = null;
   clearDigitalCadastreOverlay();
   state.territorialFocus = isCadastreRoute()
@@ -31843,6 +31876,222 @@ function exportDigitalCadastreDxf() {
   }
 }
 
+function buildDigitalCadastreGeoJsonCollection(items) {
+  return {
+    type: "FeatureCollection",
+    features: items.map((item, index) => {
+      const feature = cloneFeature(item.feature);
+      const candidate = item.candidate || null;
+      const draft = resolveDigitalCadastreFichaDraft(candidate);
+      const quality = getDigitalCadastreQualityProfile(candidate);
+      const geometryAudit = buildDigitalCadastreGeometryAudit(item.feature, candidate, state.digitalCadastreData);
+      const integrationSummary = buildDigitalCadastreIntegrationSummary(candidate, state.digitalCadastreData);
+      feature.properties = {
+        ...(feature.properties || {}),
+        exportIndex: index + 1,
+        predio: candidate?.title || state.currentPlotLabel || `Predio ${index + 1}`,
+        cadastralCode: candidate?.cadastralCode || draft.cadastralCode || null,
+        ownerName: draft.ownerName || null,
+        landUse: draft.landUse || null,
+        sourceType: draft.sourceType || null,
+        technicianName: draft.technicianName || null,
+        reviewStatus: draft.reviewStatus || null,
+        legalCheck: draft.legalCheck || null,
+        confidenceScore: candidate?.confidenceScore || state.digitalCadastreData?.summary?.meanConfidence || 0,
+        qualityLabel: quality.label,
+        supportLabel: candidate?.supportLabel || state.digitalCadastreData?.summary?.supportLabel || getDigitalCadastreAreaProfile().supportLabel,
+        geometryStatus: geometryAudit.status.label,
+        geometryTone: geometryAudit.status.tone,
+        gpsLabel: integrationSummary.gpsLabel,
+        geofenceLabel: integrationSummary.geofenceLabel,
+      };
+      return feature;
+    }),
+  };
+}
+
+function buildDigitalCadastreCsvExport(items) {
+  const rows = [[
+    "predio",
+    "codigo_catastral",
+    "area_ha",
+    "perimetro_m",
+    "confianza",
+    "calidad",
+    "soporte",
+    "estado_geometrico",
+    "estado_campo",
+    "propietario",
+    "uso",
+    "fuente",
+    "control_legal",
+    "gps",
+    "corredor",
+    "tecnico",
+  ]];
+  items.forEach((item, index) => {
+    const candidate = item.candidate || null;
+    const draft = resolveDigitalCadastreFichaDraft(candidate);
+    const metrics = captureDigitalCadastreFeatureMetrics(item.feature);
+    const quality = getDigitalCadastreQualityProfile(candidate);
+    const geometryAudit = buildDigitalCadastreGeometryAudit(item.feature, candidate, state.digitalCadastreData);
+    const integrationSummary = buildDigitalCadastreIntegrationSummary(candidate, state.digitalCadastreData);
+    rows.push([
+      candidate?.title || state.currentPlotLabel || `Predio ${index + 1}`,
+      draft.cadastralCode || candidate?.cadastralCode || "",
+      metrics.areaHa,
+      metrics.perimeterM,
+      candidate?.confidenceScore || state.digitalCadastreData?.summary?.meanConfidence || 0,
+      quality.label,
+      candidate?.supportLabel || state.digitalCadastreData?.summary?.supportLabel || getDigitalCadastreAreaProfile().supportLabel,
+      geometryAudit.status.label,
+      draft.reviewStatus || "gabinete",
+      draft.ownerName || "",
+      draft.landUse || "",
+      draft.sourceType || "",
+      draft.legalCheck || "",
+      integrationSummary.gpsLabel || "",
+      integrationSummary.geofenceLabel || "",
+      draft.technicianName || state.userProfile.name || "Usuario publico",
+    ]);
+  });
+  return rows.map((row) => row.map(escapeCsvValue).join(",")).join("\n");
+}
+
+function exportDigitalCadastreGeoJson(options = {}) {
+  try {
+    const items = getDigitalCadastreExportItems(options);
+    const filename = `${getDigitalCadastreExportSlug(items)}_${formatDateInput(new Date())}.geojson`;
+    downloadTerritorialFile(filename, JSON.stringify(buildDigitalCadastreGeoJsonCollection(items), null, 2), "application/geo+json;charset=utf-8");
+    setStatus(options.batch ? "Cola catastral descargada en GeoJSON." : "GeoJSON del predio digitalizado descargado.");
+  } catch (error) {
+    console.warn("No se pudo exportar el catastro asistido a GeoJSON.", error);
+    setStatus(error?.message || "No se pudo exportar el catastro asistido a GeoJSON.");
+  }
+}
+
+function exportDigitalCadastreCsv(options = {}) {
+  try {
+    const items = getDigitalCadastreExportItems(options);
+    const filename = `${getDigitalCadastreExportSlug(items)}_${formatDateInput(new Date())}.csv`;
+    downloadTerritorialFile(filename, buildDigitalCadastreCsvExport(items), "text/csv;charset=utf-8");
+    setStatus(options.batch ? "Cola catastral descargada en CSV." : "CSV del predio digitalizado descargado.");
+  } catch (error) {
+    console.warn("No se pudo exportar el catastro asistido a CSV.", error);
+    setStatus(error?.message || "No se pudo exportar el catastro asistido a CSV.");
+  }
+}
+
+function buildDigitalCadastreReportHtml(options = {}) {
+  const items = getDigitalCadastreExportItems(options);
+  const analysis = state.digitalCadastreData;
+  const candidate = items[0]?.candidate || getDigitalCadastreActiveCandidate(analysis);
+  const draft = resolveDigitalCadastreFichaDraft(candidate, analysis);
+  const quality = getDigitalCadastreQualityProfile(candidate, analysis);
+  const geometryAudit = buildDigitalCadastreGeometryAudit(items[0]?.feature || state.currentPlot, candidate, analysis);
+  const previousComparison = buildDigitalCadastrePreviousComparison(items[0]?.feature || state.currentPlot);
+  const boundaryInsights = buildDigitalCadastreBoundaryInsights(candidate, analysis);
+  const integrationSummary = buildDigitalCadastreIntegrationSummary(candidate, analysis);
+  return `<!doctype html>
+  <html lang="es">
+    <head>
+      <meta charset="utf-8">
+      <title>Ficha catastral asistida</title>
+      <style>
+        body{font-family:Arial,sans-serif;margin:24px;color:#153126}
+        h1,h2,h3{margin:0 0 8px}
+        .muted{color:#5e7068}
+        .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:14px 0}
+        .card{border:1px solid #d9e4dc;border-radius:16px;padding:14px;background:#fbfdfb}
+        .pill{display:inline-block;padding:6px 10px;border-radius:999px;background:#edf5f0;margin:0 8px 8px 0}
+        .screen-only{margin-bottom:14px}
+        @media print {.screen-only{display:none!important;} body{margin:18px;}}
+      </style>
+    </head>
+    <body>
+      <div class="screen-only"><button type="button" onclick="window.print()">Imprimir o guardar como PDF</button></div>
+      <h1>Ficha catastral asistida</h1>
+      <p class="muted">${escapeHtmlContent(analysis?.context?.scopeLabel || getTerritorialAreaProfile().scopeLabel)} | ${escapeHtmlContent(analysis?.mode?.label || "Catastro asistido")} | ${items.length} predio(s)</p>
+      <div class="pill">${escapeHtmlContent(candidate?.title || state.currentPlotLabel || "Predio digitalizado")}</div>
+      <div class="pill">${escapeHtmlContent(quality.label)}</div>
+      <div class="pill">${escapeHtmlContent(draft.reviewStatus || "gabinete")}</div>
+      <div class="grid">
+        <div class="card"><strong>Clave catastral</strong><br>${escapeHtmlContent(draft.cadastralCode || "Sin definir")}</div>
+        <div class="card"><strong>Propietario</strong><br>${escapeHtmlContent(draft.ownerName || "Sin registrar")}</div>
+        <div class="card"><strong>Uso</strong><br>${escapeHtmlContent(draft.landUse || "Sin definir")}</div>
+        <div class="card"><strong>Tecnico</strong><br>${escapeHtmlContent(draft.technicianName || state.userProfile.name || "Usuario publico")}</div>
+      </div>
+      <h2>Control geometrico</h2>
+      <div class="grid">
+        ${geometryAudit.checks.map((check) => `<div class="card"><strong>${escapeHtmlContent(check.label)}</strong><br>${escapeHtmlContent(check.value)}<br><span class="muted">${escapeHtmlContent(check.copy)}</span></div>`).join("")}
+      </div>
+      <h2>Interpretacion automatizada</h2>
+      <div class="grid">
+        ${boundaryInsights.map((item) => `<div class="card"><strong>${escapeHtmlContent(item.label)}</strong><br>${item.confidence}/100<br><span class="muted">${escapeHtmlContent(item.copy)}</span></div>`).join("")}
+      </div>
+      <h2>Comparacion previa</h2>
+      <div class="card">${previousComparison
+        ? `Registro previo: ${escapeHtmlContent(previousComparison.previousName)} | Delta area ${previousComparison.deltaAreaHa >= 0 ? "+" : ""}${previousComparison.deltaAreaHa} ha | Delta perimetro ${previousComparison.deltaPerimeterM >= 0 ? "+" : ""}${Math.round(previousComparison.deltaPerimeterM)} m`
+        : "Sin version previa comparable en la cartera local."}</div>
+      <h2>Integracion GPS / RTK</h2>
+      <div class="card">${escapeHtmlContent(integrationSummary.gpsLabel)} | ${escapeHtmlContent(integrationSummary.geofenceLabel)} | ${escapeHtmlContent(integrationSummary.imageryLabel)}</div>
+      <h2>Observaciones</h2>
+      <div class="card">${escapeHtmlContent(draft.observations || "Sin observaciones registradas.")}</div>
+      ${items.length > 1 ? `
+      <h2>Cola masiva por AOI</h2>
+      <div class="grid">
+        ${items.map((item, index) => {
+          const itemCandidate = item.candidate || null;
+          const itemQuality = getDigitalCadastreQualityProfile(itemCandidate, analysis);
+          const itemMetrics = captureDigitalCadastreFeatureMetrics(item.feature);
+          return `<div class="card"><strong>${escapeHtmlContent(itemCandidate?.title || `Predio ${index + 1}`)}</strong><br>${escapeHtmlContent(itemQuality.label)}<br><span class="muted">${formatIrrigationNumber(itemMetrics.areaHa, itemMetrics.areaHa >= 10 ? 1 : 2)} ha | ${Math.round(itemMetrics.perimeterM)} m</span></div>`;
+        }).join("")}
+      </div>` : ""}
+      ${options.autoPrint ? `<script>window.addEventListener("load",()=>window.setTimeout(()=>window.print(),260));</script>` : ""}
+    </body>
+  </html>`;
+}
+
+function openDigitalCadastreReport(options = {}) {
+  if (typeof window === "undefined" || typeof Blob === "undefined") {
+    return;
+  }
+  const html = buildDigitalCadastreReportHtml(options);
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = window.URL.createObjectURL(blob);
+  window.open(url, "_blank", "noopener");
+  window.setTimeout(() => window.URL.revokeObjectURL(url), 1200);
+}
+
+function exportDigitalCadastrePackage(options = {}) {
+  try {
+    const items = getDigitalCadastreExportItems(options);
+    const slug = `${getDigitalCadastreExportSlug(items)}_${formatDateInput(new Date())}`;
+    const shapefileArchive = buildDigitalCadastreShapefileZip(options);
+    const entries = [
+      { name: `${slug}.geojson`, data: encodeUtf8(JSON.stringify(buildDigitalCadastreGeoJsonCollection(items), null, 2)) },
+      { name: `${slug}.csv`, data: encodeUtf8(buildDigitalCadastreCsvExport(items)) },
+      { name: `${slug}.kml`, data: encodeUtf8(buildDigitalCadastreKmlDocument(items)) },
+      { name: `${slug}.dxf`, data: encodeUtf8(buildDigitalCadastreDxfDocument(items)) },
+      { name: shapefileArchive.filename, data: shapefileArchive.bytes },
+      { name: `${slug}_reporte.html`, data: encodeUtf8(buildDigitalCadastreReportHtml(options)) },
+      { name: `${slug}_resumen.json`, data: encodeUtf8(JSON.stringify({
+        version: APP_VERSION,
+        route: "catastro",
+        scopeLabel: state.digitalCadastreData?.context?.scopeLabel || getTerritorialAreaProfile().scopeLabel,
+        candidateCount: state.digitalCadastreData?.summary?.candidateCount || items.length,
+        meanConfidence: state.digitalCadastreData?.summary?.meanConfidence || 0,
+      }, null, 2)) },
+    ];
+    const zipBytes = buildStoredZip(entries);
+    downloadTerritorialFile(`${slug}_paquete.zip`, zipBytes, "application/zip");
+    setStatus(options.batch ? "Paquete ZIP de la cola catastral descargado." : "Paquete ZIP del predio digitalizado descargado.");
+  } catch (error) {
+    console.warn("No se pudo exportar el paquete catastral.", error);
+    setStatus(error?.message || "No se pudo exportar el paquete catastral.");
+  }
+}
+
 function openTerritorialReport(options = {}) {
   if (typeof window === "undefined" || typeof Blob === "undefined") {
     return;
@@ -32664,6 +32913,15 @@ function buildProjectSnapshot() {
 
 function normalizeProjectRecord(project = {}) {
   const allowedRoutes = new Set(["agronomia", "planificacion", "catastro", "gps"]);
+  const cadastreMeta = project.cadastreMeta
+    ? {
+        ...project.cadastreMeta,
+        history: Array.isArray(project.cadastreMeta.history) ? project.cadastreMeta.history : [],
+        reviewStatus: project.cadastreMeta.reviewStatus || "gabinete",
+        confidenceNote: project.cadastreMeta.confidenceNote || "",
+        legalCheck: project.cadastreMeta.legalCheck || "requiere contraste",
+      }
+    : null;
   return {
     id: String(project.id || `project-${Date.now()}`),
     name: String(project.name || "Proyecto"),
@@ -32678,7 +32936,7 @@ function normalizeProjectRecord(project = {}) {
     settings: project.settings || {},
     currentPlot: project.currentPlot || null,
     currentPlotLabel: project.currentPlotLabel || "Sin seleccionar",
-    cadastreMeta: project.cadastreMeta || null,
+    cadastreMeta,
   };
 }
 
@@ -34174,6 +34432,525 @@ function getRouteTone(route = state.entryRoute || "agronomia") {
   return "low";
 }
 
+function getDefaultDigitalCadastreFichaDraft(candidate = getDigitalCadastreActiveCandidate(), analysis = state.digitalCadastreData) {
+  const quality = getDigitalCadastreQualityProfile(candidate, analysis);
+  return {
+    cadastralCode: candidate?.cadastralCode || "",
+    ownerName: "",
+    landUse: "Sin definir",
+    sourceType: analysis?.mode?.id === "calibrado" ? "Parcelario calibrado + imagen" : "Imagen satelital + ajuste tecnico",
+    technicianName: state.userProfile.name || "Usuario publico",
+    observations: candidate?.recommendation || "",
+    reviewStatus: quality.id === "ready" ? "listo" : quality.id === "field" ? "campo" : "gabinete",
+    confidenceNote: `${candidate?.confidenceScore || analysis?.summary?.meanConfidence || 0}/100`,
+    legalCheck: quality.id === "ready" ? "revision tecnica" : "requiere contraste",
+  };
+}
+
+function ensureDigitalCadastreFichaDraft(candidate = getDigitalCadastreActiveCandidate(), analysis = state.digitalCadastreData, options = {}) {
+  const baseDraft = getDefaultDigitalCadastreFichaDraft(candidate, analysis);
+  if (!state.digitalCadastreFichaDraft || options.force) {
+    state.digitalCadastreFichaDraft = {
+      ...baseDraft,
+      ...(options.seed || {}),
+    };
+    return state.digitalCadastreFichaDraft;
+  }
+  state.digitalCadastreFichaDraft = {
+    ...baseDraft,
+    ...state.digitalCadastreFichaDraft,
+    ...(options.seed || {}),
+  };
+  return state.digitalCadastreFichaDraft;
+}
+
+function updateDigitalCadastreFichaDraft(patch = {}) {
+  state.digitalCadastreFichaDraft = {
+    ...ensureDigitalCadastreFichaDraft(),
+    ...patch,
+  };
+  return state.digitalCadastreFichaDraft;
+}
+
+function getDigitalCadastreReviewStatusProfile(status = "gabinete") {
+  const normalized = String(status || "gabinete").toLowerCase();
+  if (normalized === "listo") {
+    return {
+      id: "listo",
+      label: "Listo para revision tecnica",
+      shortLabel: "Listo",
+      tone: "good",
+      copy: "El predio puede pasar a contraste de gabinete y validacion tecnica final.",
+    };
+  }
+  if (normalized === "validado_campo") {
+    return {
+      id: "validado_campo",
+      label: "Validado en campo",
+      shortLabel: "Campo ok",
+      tone: "good",
+      copy: "El lindero ya tuvo verificacion de campo y queda mejor sustentado.",
+    };
+  }
+  if (normalized === "campo" || normalized === "requiere_campo") {
+    return {
+      id: "campo",
+      label: "Requiere campo",
+      shortLabel: "Campo",
+      tone: "pending",
+      copy: "Hace falta visita de campo, RTK o evidencia adicional antes de cerrar la ficha.",
+    };
+  }
+  if (normalized === "observado") {
+    return {
+      id: "observado",
+      label: "Observado",
+      shortLabel: "Observado",
+      tone: "critical",
+      copy: "Se detectaron observaciones tecnicas o legales que impiden cerrar el predio.",
+    };
+  }
+  return {
+    id: "gabinete",
+    label: "Revision de gabinete",
+    shortLabel: "Gabinete",
+    tone: "watch",
+    copy: "El predio sigue en escritorio y requiere contraste tecnico antes de aprobarse.",
+  };
+}
+
+function doesDigitalCadastreProjectMatchCandidate(project, candidate = getDigitalCadastreActiveCandidate(), analysis = state.digitalCadastreData) {
+  if (!project || project.route !== "catastro" || !candidate) {
+    return false;
+  }
+  const stableKey = String(getDigitalCadastreCandidateStableKey(candidate) || "").trim();
+  const projectStableKey = String(project.cadastreMeta?.cadastralCode || project.cadastreMeta?.lotNumber || project.cadastreMeta?.candidateId || "").trim();
+  if (stableKey && projectStableKey && stableKey === projectStableKey) {
+    return true;
+  }
+  const candidateTitle = normalizeAsciiText(candidate.title || state.currentPlotLabel || "", "");
+  const projectTitle = normalizeAsciiText(project.cadastreMeta?.candidateTitle || project.currentPlotLabel || project.name || "", "");
+  const sameScope = String(project.scopeLabel || "").toLowerCase() === String(analysis?.context?.scopeLabel || "").toLowerCase()
+    || String(project.scopeLabel || "").toLowerCase() === String(getTerritorialAreaProfile().scopeLabel || "").toLowerCase();
+  return sameScope && Boolean(candidateTitle) && candidateTitle === projectTitle;
+}
+
+function getDigitalCadastreRelevantRecord(candidate = getDigitalCadastreActiveCandidate(), analysis = state.digitalCadastreData, options = {}) {
+  const includeCurrent = options.includeCurrent !== false;
+  const projects = Array.isArray(state.platformData.projects) ? state.platformData.projects : [];
+  if (includeCurrent && state.digitalCadastreLastSavedRecordId) {
+    const currentRecord = projects.find((project) => project.id === state.digitalCadastreLastSavedRecordId) || null;
+    if (currentRecord && doesDigitalCadastreProjectMatchCandidate(currentRecord, candidate, analysis)) {
+      return currentRecord;
+    }
+  }
+  return getDigitalCadastrePreviousRecord(candidate, analysis);
+}
+
+function resolveDigitalCadastreFichaDraft(candidate = getDigitalCadastreActiveCandidate(), analysis = state.digitalCadastreData) {
+  const defaults = getDefaultDigitalCadastreFichaDraft(candidate, analysis);
+  const liveDraft = candidate?.id && candidate.id === getDigitalCadastreActiveCandidate(analysis)?.id
+    ? state.digitalCadastreFichaDraft
+    : null;
+  const savedMeta = getDigitalCadastreRelevantRecord(candidate, analysis)?.cadastreMeta || null;
+  return {
+    ...defaults,
+    ...(savedMeta
+      ? {
+          cadastralCode: savedMeta.cadastralCode || defaults.cadastralCode,
+          ownerName: savedMeta.ownerName || defaults.ownerName,
+          landUse: savedMeta.landUse || defaults.landUse,
+          sourceType: savedMeta.sourceType || defaults.sourceType,
+          technicianName: savedMeta.technicianName || defaults.technicianName,
+          observations: savedMeta.observations || defaults.observations,
+          reviewStatus: savedMeta.reviewStatus || defaults.reviewStatus,
+          confidenceNote: savedMeta.confidenceNote || defaults.confidenceNote,
+          legalCheck: savedMeta.legalCheck || defaults.legalCheck,
+        }
+      : {}),
+    ...(liveDraft || {}),
+  };
+}
+
+function getDigitalCadastreRingClosureState(feature) {
+  const collections = getDigitalCadastrePolygonCollections(feature);
+  if (!collections.length) {
+    return false;
+  }
+  return collections.every((polygon) => {
+    const outer = polygon?.[0] || [];
+    if (outer.length < 4) {
+      return false;
+    }
+    const first = outer[0];
+    const last = outer[outer.length - 1];
+    return first && last
+      && Number(first[0]).toFixed(8) === Number(last[0]).toFixed(8)
+      && Number(first[1]).toFixed(8) === Number(last[1]).toFixed(8);
+  });
+}
+
+function getDigitalCadastreMinDimensions(feature) {
+  if (!feature?.geometry) {
+    return { widthM: 0, heightM: 0, minEdgeM: 0 };
+  }
+  const [minX, minY, maxX, maxY] = turf.bbox(feature);
+  const widthM = turf.distance([minX, minY], [maxX, minY], { units: "kilometers" }) * 1000;
+  const heightM = turf.distance([minX, minY], [minX, maxY], { units: "kilometers" }) * 1000;
+  return {
+    widthM: Number(widthM.toFixed(2)),
+    heightM: Number(heightM.toFixed(2)),
+    minEdgeM: Number(Math.min(widthM, heightM).toFixed(2)),
+  };
+}
+
+function getDigitalCadastreOverlapSummary(feature, analysis = state.digitalCadastreData, candidate = getDigitalCadastreActiveCandidate(analysis)) {
+  if (!feature?.geometry || !analysis?.candidates?.length) {
+    return {
+      overlapCount: 0,
+      overlapAreaM2: 0,
+      labels: [],
+    };
+  }
+  const overlaps = [];
+  analysis.candidates.forEach((otherCandidate) => {
+    if (!otherCandidate?.feature?.geometry || otherCandidate.id === candidate?.id) {
+      return;
+    }
+    try {
+      if (!safeBooleanIntersects(feature, otherCandidate.feature)) {
+        return;
+      }
+      const intersection = turf.intersect(feature, otherCandidate.feature);
+      const overlapArea = intersection ? turf.area(intersection) : 0;
+      if (overlapArea >= 3) {
+        overlaps.push({
+          id: otherCandidate.id,
+          label: otherCandidate.title,
+          areaM2: overlapArea,
+        });
+      }
+    } catch (_) {
+      // Seguimos con los demas candidatos.
+    }
+  });
+  const overlapAreaM2 = overlaps.reduce((sum, item) => sum + item.areaM2, 0);
+  return {
+    overlapCount: overlaps.length,
+    overlapAreaM2: Number(overlapAreaM2.toFixed(2)),
+    labels: overlaps.slice(0, 3).map((item) => `${item.label} (${Math.round(item.areaM2)} m2)`),
+  };
+}
+
+function buildDigitalCadastreGeometryAudit(feature = state.currentPlot, candidate = getDigitalCadastreActiveCandidate(), analysis = state.digitalCadastreData) {
+  const metrics = captureDigitalCadastreFeatureMetrics(feature);
+  const kinksCount = feature?.geometry ? (turf.kinks(feature)?.features?.length || 0) : 0;
+  const ringClosed = getDigitalCadastreRingClosureState(feature);
+  const dimensions = getDigitalCadastreMinDimensions(feature);
+  const overlap = getDigitalCadastreOverlapSummary(feature, analysis, candidate);
+  const roadDistanceM = Number(((candidate?.roadDistanceKm || 0) * 1000).toFixed(1));
+  const checks = [
+    {
+      id: "topology",
+      label: "Topologia",
+      value: kinksCount ? `${kinksCount} cruce(s)` : "Valida",
+      tone: kinksCount ? "critical" : "good",
+      copy: kinksCount ? "El poligono presenta autointersecciones y requiere correccion." : "Sin autointersecciones detectadas.",
+    },
+    {
+      id: "closure",
+      label: "Cierre",
+      value: ringClosed ? "Cerrado" : "Abierto",
+      tone: ringClosed ? "good" : "critical",
+      copy: ringClosed ? "El anillo exterior cierra correctamente." : "El anillo requiere cierre tecnico antes de registrar.",
+    },
+    {
+      id: "frontage",
+      label: "Frente minimo",
+      value: `${Math.round(dimensions.minEdgeM)} m`,
+      tone: dimensions.minEdgeM >= 6 ? "good" : dimensions.minEdgeM >= 3 ? "watch" : "critical",
+      copy: roadDistanceM <= 120
+        ? `Frente aproximado con apoyo vial a ${Math.round(roadDistanceM)} m.`
+        : "No hay apoyo vial inmediato para validar frente predial.",
+    },
+    {
+      id: "overlap",
+      label: "Solape",
+      value: overlap.overlapCount ? `${overlap.overlapCount} cruce(s)` : "Sin solape",
+      tone: overlap.overlapCount ? "critical" : "good",
+      copy: overlap.overlapCount
+        ? `Cruza con ${overlap.labels.join(", ")}.`
+        : "No se detectaron solapes importantes con otros candidatos.",
+    },
+    {
+      id: "area",
+      label: "Area",
+      value: `${formatIrrigationNumber(metrics.areaHa, metrics.areaHa >= 10 ? 1 : 2)} ha`,
+      tone: metrics.areaHa >= 0.01 ? "good" : "watch",
+      copy: `Perimetro ${Math.round(metrics.perimeterM)} m y caja minima ${Math.round(dimensions.minEdgeM)} m.`,
+    },
+    {
+      id: "legal",
+      label: "Revision legal",
+      value: candidate?.cadastralCode ? "Con clave de apoyo" : "Pendiente",
+      tone: candidate?.cadastralCode ? "watch" : "pending",
+      copy: candidate?.cadastralCode
+        ? "Hay identificador local, pero la aprobacion legal sigue siendo externa al portal."
+        : "Falta clave o cruce legal previo a una actualizacion formal.",
+    },
+  ];
+  const criticalCount = checks.filter((check) => check.tone === "critical").length;
+  const watchCount = checks.filter((check) => check.tone === "watch").length;
+  const status = criticalCount
+    ? { id: "critical", label: "Requiere correccion", shortLabel: "Corregir", tone: "critical" }
+    : watchCount >= 2
+      ? { id: "watch", label: "Requiere revision", shortLabel: "Revisar", tone: "watch" }
+      : { id: "good", label: "Control tecnico estable", shortLabel: "Estable", tone: "good" };
+  return {
+    metrics,
+    dimensions,
+    overlap,
+    kinksCount,
+    ringClosed,
+    checks,
+    status,
+  };
+}
+
+function buildDigitalCadastreBoundaryInsights(candidate = getDigitalCadastreActiveCandidate(), analysis = state.digitalCadastreData) {
+  if (!candidate) {
+    return [];
+  }
+  const supportLabel = analysis?.summary?.supportLabel || getDigitalCadastreAreaProfile().supportLabel;
+  return [
+    {
+      id: "vial",
+      label: "Borde vial",
+      confidence: clamp(Math.round(100 - Math.min((candidate.roadDistanceKm || 1.5) * 100, 90)), 10, 98),
+      copy: candidate.roadDistanceKm <= 0.12
+        ? `La via mas cercana apoya el frente del predio a ${formatDistanceKm(candidate.roadDistanceKm)}.`
+        : "No hay borde vial inmediato. Conviene contraste visual o de campo.",
+    },
+    {
+      id: "hidrico",
+      label: "Borde hidrico",
+      confidence: clamp(Math.round(92 - Math.min((candidate.hydroDistanceKm || 1.5) * 120, 88)), 8, 96),
+      copy: candidate.hydroDistanceKm <= 0.18
+        ? `Hay drenaje o acequia de apoyo a ${formatDistanceKm(candidate.hydroDistanceKm)}.`
+        : "El lindero no muestra apoyo hidrico cercano.",
+    },
+    {
+      id: "urbano",
+      label: "Borde urbano",
+      confidence: candidate.insideUrban ? 92 : clamp(Math.round(84 - Math.min((candidate.urbanDistanceKm || 2) * 70, 76)), 10, 90),
+      copy: candidate.insideUrban
+        ? "El poligono cae dentro del tejido urbano o periurbano inmediato."
+        : `El borde urbano mas cercano esta a ${formatDistanceKm(candidate.urbanDistanceKm)}.`,
+    },
+    {
+      id: "soporte",
+      label: "Parcelario / soporte local",
+      confidence: analysis?.areaProfile?.localParcels ? 94 : Math.max(38, candidate.confidenceScore - 10),
+      copy: `${supportLabel} respalda la lectura y permite ajustar el predio con mejor criterio de gabinete.`,
+    },
+  ];
+}
+
+function getDigitalCadastrePreviousRecord(candidate = getDigitalCadastreActiveCandidate(), analysis = state.digitalCadastreData) {
+  const code = String(candidate?.cadastralCode || "").trim();
+  const title = normalizeAsciiText(candidate?.title || state.currentPlotLabel || "", "");
+  return (state.platformData.projects || []).find((project) => {
+    if (project.id === state.digitalCadastreLastSavedRecordId || project.route !== "catastro" || !project.cadastreMeta) {
+      return false;
+    }
+    const projectCode = String(project.cadastreMeta.cadastralCode || "").trim();
+    const projectTitle = normalizeAsciiText(project.cadastreMeta.candidateTitle || project.currentPlotLabel || project.name || "", "");
+    const sameScope = String(project.scopeLabel || "").toLowerCase() === String(analysis?.context?.scopeLabel || "").toLowerCase()
+      || String(project.scopeLabel || "").toLowerCase() === String(getTerritorialAreaProfile().scopeLabel || "").toLowerCase();
+    return sameScope && ((code && projectCode && code === projectCode) || (title && projectTitle && title === projectTitle));
+  }) || null;
+}
+
+function buildDigitalCadastrePreviousComparison(feature = state.currentPlot, previousRecord = getDigitalCadastrePreviousRecord()) {
+  if (!feature?.geometry || !previousRecord?.currentPlot?.geometry) {
+    return null;
+  }
+  const currentMetrics = captureDigitalCadastreFeatureMetrics(feature);
+  const previousMetrics = captureDigitalCadastreFeatureMetrics(previousRecord.currentPlot);
+  return {
+    previousId: previousRecord.id,
+    previousName: previousRecord.name,
+    previousDate: previousRecord.savedAt,
+    previousAreaHa: previousMetrics.areaHa,
+    currentAreaHa: currentMetrics.areaHa,
+    deltaAreaHa: Number((currentMetrics.areaHa - previousMetrics.areaHa).toFixed(4)),
+    previousPerimeterM: previousMetrics.perimeterM,
+    currentPerimeterM: currentMetrics.perimeterM,
+    deltaPerimeterM: Number((currentMetrics.perimeterM - previousMetrics.perimeterM).toFixed(2)),
+  };
+}
+
+function buildDigitalCadastreIntegrationSummary(candidate = getDigitalCadastreActiveCandidate(), analysis = state.digitalCadastreData) {
+  const gpsDevice = state.agronomyOutputs.gps?.activeDevice || state.gpsTracking.lastDeviceSnapshot || null;
+  const geofence = state.gpsTracking.geofence || null;
+  const currentPlot = state.currentPlot;
+  let gpsDistanceM = null;
+  if (gpsDevice && currentPlot?.geometry && Number.isFinite(Number(gpsDevice.lon)) && Number.isFinite(Number(gpsDevice.lat))) {
+    try {
+      gpsDistanceM = turf.pointToLineDistance(
+        turf.point([Number(gpsDevice.lon), Number(gpsDevice.lat)]),
+        geometryToBoundaryLine(currentPlot.geometry),
+        { units: "kilometers" }
+      ) * 1000;
+    } catch (_) {
+      gpsDistanceM = null;
+    }
+  }
+  return {
+    gpsLabel: gpsDevice ? gpsDevice.label || gpsDevice.id || "GPS activo" : "Sin GPS activo",
+    gpsDistanceM: gpsDistanceM == null ? null : Number(gpsDistanceM.toFixed(1)),
+    gpsTone: gpsDistanceM == null ? "pending" : gpsDistanceM <= 8 ? "good" : gpsDistanceM <= 20 ? "watch" : "critical",
+    geofenceLabel: geofence?.label || "Sin corredor",
+    geofenceTone: geofence ? "good" : "pending",
+    imageryLabel: analysis?.imageryProfile?.label || getPlanningImageryProfile().label,
+    orthomosaicLabel: analysis?.areaProfile?.localParcels ? "Parcelario fino local" : "Sin ortomosaico local cargado",
+  };
+}
+
+function handleDigitalCadastreFichaInput(event) {
+  const target = event.target;
+  if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement)) {
+    return;
+  }
+  const field = target.dataset.cadastreField;
+  if (!field) {
+    return;
+  }
+  updateDigitalCadastreFichaDraft({
+    [field]: target.value,
+  });
+}
+
+function handleDigitalCadastreFichaAction(event) {
+  const button = event.target.closest("[data-cadastre-review-status]");
+  if (!button) {
+    return;
+  }
+  updateDigitalCadastreFichaDraft({
+    reviewStatus: button.dataset.cadastreReviewStatus || "gabinete",
+  });
+  renderDigitalCadastreFichaBoard(state.digitalCadastreData);
+}
+
+function handleDigitalCadastreBatchAction(event) {
+  const button = event.target.closest("[data-cadastre-action]");
+  if (!button) {
+    return;
+  }
+  const action = button.dataset.cadastreAction;
+  if (action === "save-batch") {
+    saveDigitalCadastreBatchRecords();
+    return;
+  }
+  if (action === "export-geojson") {
+    exportDigitalCadastreGeoJson({ batch: true });
+    return;
+  }
+  if (action === "export-csv") {
+    exportDigitalCadastreCsv({ batch: true });
+    return;
+  }
+  if (action === "export-package") {
+    exportDigitalCadastrePackage({ batch: true });
+    return;
+  }
+  if (action === "print-report") {
+    openDigitalCadastreReport({ autoPrint: true, batch: true });
+  }
+}
+
+function buildDigitalCadastreHistoryEntry({ feature, candidate, analysis, draft, quality, geometryAudit, previousComparison, integrationSummary }) {
+  const metrics = captureDigitalCadastreFeatureMetrics(feature);
+  return {
+    savedAt: new Date().toISOString(),
+    savedBy: draft.technicianName || state.userProfile.name || "Usuario publico",
+    qualityId: quality.id,
+    qualityLabel: quality.label,
+    reviewStatus: draft.reviewStatus,
+    areaHa: metrics.areaHa,
+    perimeterM: metrics.perimeterM,
+    confidenceScore: candidate?.confidenceScore || analysis?.summary?.meanConfidence || 0,
+    supportLabel: candidate?.supportLabel || analysis?.summary?.supportLabel || getDigitalCadastreAreaProfile().supportLabel,
+    geometryStatus: geometryAudit.status.label,
+    previousComparison,
+    integrationSummary,
+  };
+}
+
+function buildDigitalCadastreProjectRecord({ feature, candidate, analysis, draft, preferredId = null, name = null, note = null, existingRecord = null }) {
+  const { quality, note: qualityNote } = getDigitalCadastreRecordSummary(candidate, analysis);
+  const geometryAudit = buildDigitalCadastreGeometryAudit(feature, candidate, analysis);
+  const boundaryInsights = buildDigitalCadastreBoundaryInsights(candidate, analysis);
+  const comparisonBase = existingRecord?.currentPlot?.geometry
+    ? buildDigitalCadastrePreviousComparison(feature, existingRecord)
+    : buildDigitalCadastrePreviousComparison(feature, getDigitalCadastrePreviousRecord(candidate, analysis));
+  const integrationSummary = buildDigitalCadastreIntegrationSummary(candidate, analysis);
+  const baseSnapshot = buildProjectSnapshot();
+  const history = Array.isArray(existingRecord?.cadastreMeta?.history) ? existingRecord.cadastreMeta.history.slice(0, 24) : [];
+  const nextDraft = draft || ensureDigitalCadastreFichaDraft(candidate, analysis);
+  const historyEntry = buildDigitalCadastreHistoryEntry({
+    feature,
+    candidate,
+    analysis,
+    draft: nextDraft,
+    quality,
+    geometryAudit,
+    previousComparison: comparisonBase,
+    integrationSummary,
+  });
+  return normalizeProjectRecord({
+    ...baseSnapshot,
+    id: preferredId || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `project-${Date.now()}`),
+    name: name || buildDigitalCadastreSnapshotName(candidate, analysis),
+    owner: state.userProfile.name || "Usuario publico",
+    note: note || `${qualityNote}. ${geometryAudit.status.label}.`,
+    route: "catastro",
+    currentPlot: cloneFeature(feature),
+    currentPlotLabel: candidate?.title || state.currentPlotLabel || "Predio digitalizado",
+    cadastreMeta: {
+      candidateId: candidate?.id || null,
+      candidateTitle: candidate?.title || state.currentPlotLabel || "Predio digitalizado",
+      cadastralCode: nextDraft.cadastralCode || candidate?.cadastralCode || null,
+      lotNumber: candidate?.lotNumber || null,
+      ownerName: nextDraft.ownerName || "",
+      landUse: nextDraft.landUse || "Sin definir",
+      sourceType: nextDraft.sourceType || "Imagen satelital + ajuste tecnico",
+      technicianName: nextDraft.technicianName || state.userProfile.name || "Usuario publico",
+      observations: nextDraft.observations || "",
+      reviewStatus: nextDraft.reviewStatus || "gabinete",
+      confidenceNote: nextDraft.confidenceNote || `${candidate?.confidenceScore || analysis?.summary?.meanConfidence || 0}/100`,
+      legalCheck: nextDraft.legalCheck || "requiere contraste",
+      confidenceScore: candidate?.confidenceScore || analysis?.summary?.meanConfidence || 0,
+      supportLabel: candidate?.supportLabel || analysis?.summary?.supportLabel || getDigitalCadastreAreaProfile().supportLabel,
+      qualityId: quality.id,
+      qualityLabel: quality.label,
+      qualityTone: quality.tone,
+      geometryAudit,
+      previousComparison: comparisonBase,
+      boundaryInsights,
+      integrationSummary,
+      savedBy: state.userProfile.name || "Usuario publico",
+      savedAt: new Date().toISOString(),
+      adjustmentSnapshot: state.digitalCadastreAdjustmentSnapshot,
+      history: [historyEntry, ...history].slice(0, 25),
+    },
+    completedModules: {
+      ...baseSnapshot.completedModules,
+      cadastre: true,
+    },
+  });
+}
+
 function recordDigitalCadastreActivity(title, copy, options = {}) {
   return recordDecisionLogEntry({
     title,
@@ -34199,37 +34976,22 @@ async function saveDigitalCadastreRecord(options = {}) {
   }
 
   const candidate = getDigitalCadastreActiveCandidate();
-  const { quality, note } = getDigitalCadastreRecordSummary(candidate, state.digitalCadastreData);
   const preferredId = options.forceNewId
     ? null
     : (options.projectId || state.digitalCadastreLastSavedRecordId || state.platformData.activeProjectId || null);
-  const snapshot = normalizeProjectRecord({
-    ...buildProjectSnapshot(),
-    id: preferredId || (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : `project-${Date.now()}`),
-    name: options.name || buildDigitalCadastreSnapshotName(candidate, state.digitalCadastreData),
-    owner: state.userProfile.name || "Usuario publico",
-    note: options.note || note,
-    route: "catastro",
-    currentPlot: cloneFeature(state.currentPlot),
-    currentPlotLabel: state.currentPlotLabel,
-    cadastreMeta: {
-      candidateId: candidate?.id || null,
-      candidateTitle: candidate?.title || state.currentPlotLabel || "Predio digitalizado",
-      cadastralCode: candidate?.cadastralCode || null,
-      lotNumber: candidate?.lotNumber || null,
-      confidenceScore: candidate?.confidenceScore || state.digitalCadastreData.summary?.meanConfidence || 0,
-      supportLabel: candidate?.supportLabel || state.digitalCadastreData.summary?.supportLabel || getDigitalCadastreAreaProfile().supportLabel,
-      qualityId: quality.id,
-      qualityLabel: quality.label,
-      qualityTone: quality.tone,
-      savedBy: state.userProfile.name || "Usuario publico",
-      savedAt: new Date().toISOString(),
-      adjustmentSnapshot: state.digitalCadastreAdjustmentSnapshot,
-    },
-    completedModules: {
-      ...buildProjectSnapshot().completedModules,
-      cadastre: true,
-    },
+  const existingRecord = preferredId
+    ? (state.platformData.projects || []).find((item) => item.id === preferredId) || null
+    : null;
+  const draft = ensureDigitalCadastreFichaDraft(candidate, state.digitalCadastreData);
+  const snapshot = buildDigitalCadastreProjectRecord({
+    feature: state.currentPlot,
+    candidate,
+    analysis: state.digitalCadastreData,
+    draft,
+    preferredId,
+    name: options.name,
+    note: options.note,
+    existingRecord,
   });
 
   const projects = [...(state.platformData.projects || []).filter((item) => item.id !== snapshot.id)];
@@ -34264,6 +35026,49 @@ async function saveDigitalCadastreRecord(options = {}) {
   }
 
   return snapshot;
+}
+
+async function saveDigitalCadastreBatchRecords() {
+  const analysis = state.digitalCadastreData;
+  if (!analysis?.candidates?.length) {
+    setStatus("No hay una cola de predios lista para guardar.");
+    return [];
+  }
+  if (!canAccessRole("tecnico")) {
+    setStatus("Este perfil no puede guardar la cola catastral.");
+    return [];
+  }
+  const nextProjects = [...(state.platformData.projects || [])];
+  const savedSnapshots = analysis.candidates.map((candidate, index) => {
+    const draft = getDefaultDigitalCadastreFichaDraft(candidate, analysis);
+    const snapshot = buildDigitalCadastreProjectRecord({
+      feature: candidate.feature,
+      candidate,
+      analysis,
+      draft: {
+        ...draft,
+        observations: `${draft.observations} Cola AOI ${analysis.context.scopeLabel}.`.trim(),
+      },
+      preferredId: null,
+      name: `${candidate.title} ${formatDateInput(new Date())} #${index + 1}`,
+      note: `${candidate.summary} Cola masiva asistida por AOI y soporte local.`,
+      existingRecord: null,
+    });
+    return snapshot;
+  });
+  const merged = [...savedSnapshots, ...nextProjects].slice(0, 120);
+  state.platformData.projects = merged;
+  state.platformData.activeProjectId = savedSnapshots[0]?.id || state.platformData.activeProjectId;
+  state.digitalCadastreLastSavedRecordId = savedSnapshots[0]?.id || state.digitalCadastreLastSavedRecordId;
+  renderProjectRegistryCard();
+  await persistProjectCollection();
+  recordDigitalCadastreActivity(
+    `Cola catastral guardada: ${analysis.context.scopeLabel}`,
+    `${savedSnapshots.length} predios asistidos quedaron registrados como fichas individuales listas para gabinete, campo o exportacion.`,
+    { silentStatus: true }
+  );
+  setStatus(`${savedSnapshots.length} predios guardados desde la cola catastral.`);
+  return savedSnapshots;
 }
 
 function focusAdjacentDigitalCadastreCandidate(direction = 1, options = {}) {
@@ -34625,9 +35430,32 @@ function renderDigitalCadastreFichaBoard(analysis = state.digitalCadastreData) {
     return;
   }
 
+  const draft = ensureDigitalCadastreFichaDraft(activeCandidate, analysis);
   const quality = getDigitalCadastreQualityProfile(activeCandidate, analysis);
   const metrics = captureDigitalCadastreFeatureMetrics(state.currentPlot || activeCandidate.feature);
-  const savedRecord = (state.platformData.projects || []).find((project) => project.id === state.digitalCadastreLastSavedRecordId) || null;
+  const geometryAudit = buildDigitalCadastreGeometryAudit(state.currentPlot || activeCandidate.feature, activeCandidate, analysis);
+  const boundaryInsights = buildDigitalCadastreBoundaryInsights(activeCandidate, analysis);
+  const reviewProfile = getDigitalCadastreReviewStatusProfile(draft.reviewStatus);
+  const integrationSummary = buildDigitalCadastreIntegrationSummary(activeCandidate, analysis);
+  const previousComparison = buildDigitalCadastrePreviousComparison(state.currentPlot || activeCandidate.feature, getDigitalCadastrePreviousRecord(activeCandidate, analysis));
+  const savedRecord = getDigitalCadastreRelevantRecord(activeCandidate, analysis) || null;
+  const history = Array.isArray(savedRecord?.cadastreMeta?.history) ? savedRecord.cadastreMeta.history.slice(0, 4) : [];
+  const reviewOptions = [
+    { id: "gabinete", label: "Gabinete" },
+    { id: "listo", label: "Listo" },
+    { id: "campo", label: "Campo" },
+    { id: "validado_campo", label: "Validado campo" },
+    { id: "observado", label: "Observado" },
+  ];
+  const landUseOptions = ["Sin definir", "Residencial", "Agricola", "Mixto", "Equipamiento", "Industrial", "Proteccion"];
+  const sourceOptions = [
+    "Parcelario calibrado + imagen",
+    "Imagen satelital + ajuste tecnico",
+    "Ortofoto + ajuste tecnico",
+    "Drone / ortomosaico",
+    "RTK / GPS de campo",
+  ];
+  const legalOptions = ["revision tecnica", "requiere contraste", "requiere revision legal", "validado"];
 
   dom.digitalCadastreFichaBoard.classList.remove("empty-state");
   dom.digitalCadastreFichaBoard.classList.add("has-data");
@@ -34657,14 +35485,110 @@ function renderDigitalCadastreFichaBoard(analysis = state.digitalCadastreData) {
           <span>Soporte</span>
           <strong>${escapeHtmlContent(activeCandidate.supportLabel)}</strong>
         </article>
+        <article class="territorial-sector-metric">
+          <span>Semaforo tecnico</span>
+          <strong>${escapeHtmlContent(geometryAudit.status.shortLabel)}</strong>
+        </article>
+        <article class="territorial-sector-metric">
+          <span>Revision</span>
+          <strong>${escapeHtmlContent(reviewProfile.shortLabel)}</strong>
+        </article>
       </div>
       <p class="territorial-readout-copy">
-        ${escapeHtmlContent(quality.copy)}
+        ${escapeHtmlContent(quality.copy)} ${escapeHtmlContent(reviewProfile.copy)}
       </p>
       <div class="territorial-export-pills">
-        <span class="planning-pill emphasis">${escapeHtmlContent(activeCandidate.cadastralCode || activeCandidate.lotNumber || "Sin codigo local")}</span>
-        <span class="planning-pill emphasis">Digitalizo: ${escapeHtmlContent(state.userProfile.name || "Usuario publico")}</span>
+        <span class="planning-pill emphasis">${escapeHtmlContent(draft.cadastralCode || activeCandidate.cadastralCode || activeCandidate.lotNumber || "Sin codigo local")}</span>
+        <span class="planning-pill emphasis">${escapeHtmlContent(draft.sourceType || "Sin fuente")}</span>
+        <span class="planning-pill emphasis">${escapeHtmlContent(draft.legalCheck || "requiere contraste")}</span>
         <span class="planning-pill emphasis">${savedRecord?.cadastreMeta?.savedAt ? new Date(savedRecord.cadastreMeta.savedAt).toLocaleString("es-EC") : "Sin guardar aun"}</span>
+      </div>
+      <div class="planning-toolbar">
+        <label class="field">
+          <span>Clave catastral</span>
+          <input data-cadastre-field="cadastralCode" type="text" value="${escapeHtmlContent(draft.cadastralCode || "")}">
+        </label>
+        <label class="field">
+          <span>Propietario o referencia</span>
+          <input data-cadastre-field="ownerName" type="text" value="${escapeHtmlContent(draft.ownerName || "")}">
+        </label>
+        <label class="field">
+          <span>Uso predial</span>
+          <select data-cadastre-field="landUse">
+            ${landUseOptions.map((option) => `<option value="${escapeHtmlContent(option)}" ${draft.landUse === option ? "selected" : ""}>${escapeHtmlContent(option)}</option>`).join("")}
+          </select>
+        </label>
+        <label class="field">
+          <span>Fuente de delimitacion</span>
+          <select data-cadastre-field="sourceType">
+            ${sourceOptions.map((option) => `<option value="${escapeHtmlContent(option)}" ${draft.sourceType === option ? "selected" : ""}>${escapeHtmlContent(option)}</option>`).join("")}
+          </select>
+        </label>
+        <label class="field">
+          <span>Tecnico responsable</span>
+          <input data-cadastre-field="technicianName" type="text" value="${escapeHtmlContent(draft.technicianName || state.userProfile.name || "Usuario publico")}">
+        </label>
+        <label class="field">
+          <span>Control legal</span>
+          <select data-cadastre-field="legalCheck">
+            ${legalOptions.map((option) => `<option value="${escapeHtmlContent(option)}" ${draft.legalCheck === option ? "selected" : ""}>${escapeHtmlContent(option)}</option>`).join("")}
+          </select>
+        </label>
+        <label class="field">
+          <span>Nota de confianza</span>
+          <input data-cadastre-field="confidenceNote" type="text" value="${escapeHtmlContent(draft.confidenceNote || `${activeCandidate.confidenceScore}/100`)}">
+        </label>
+        <label class="field">
+          <span>Estado de revision</span>
+          <select data-cadastre-field="reviewStatus">
+            ${reviewOptions.map((option) => `<option value="${option.id}" ${draft.reviewStatus === option.id ? "selected" : ""}>${escapeHtmlContent(option.label)}</option>`).join("")}
+          </select>
+        </label>
+      </div>
+      <label class="field">
+        <span>Observaciones</span>
+        <textarea data-cadastre-field="observations">${escapeHtmlContent(draft.observations || "")}</textarea>
+      </label>
+      <div class="cadastre-review-actions">
+        ${reviewOptions.map((option) => `<button class="${draft.reviewStatus === option.id ? "secondary-button" : "ghost-button"}" type="button" data-cadastre-review-status="${option.id}">${escapeHtmlContent(option.label)}</button>`).join("")}
+      </div>
+      <div class="territorial-decision-grid">
+        ${geometryAudit.checks.map((check) => `
+          <article class="territorial-decision-card tone-${check.tone}">
+            <div class="territorial-decision-card-head">
+              <div>
+                <p class="candidate-rank">${escapeHtmlContent(check.label)}</p>
+                <h5>${escapeHtmlContent(check.value)}</h5>
+              </div>
+            </div>
+            <p class="territorial-decision-note">${escapeHtmlContent(check.copy)}</p>
+          </article>
+        `).join("")}
+      </div>
+      <div class="decision-grid compact">
+        ${boundaryInsights.map((item) => `
+          <article class="decision-card tone-${item.confidence >= 85 ? "low" : item.confidence >= 65 ? "mid" : "high"}">
+            <p class="candidate-rank">${escapeHtmlContent(item.label)}</p>
+            <h5>${item.confidence}/100</h5>
+            <p>${escapeHtmlContent(item.copy)}</p>
+          </article>
+        `).join("")}
+      </div>
+      <div class="territorial-export-pills">
+        <span class="planning-pill emphasis">${escapeHtmlContent(integrationSummary.gpsLabel)}</span>
+        <span class="planning-pill emphasis">${escapeHtmlContent(integrationSummary.geofenceLabel)}</span>
+        <span class="planning-pill emphasis">${escapeHtmlContent(integrationSummary.imageryLabel)}</span>
+        <span class="planning-pill emphasis">${escapeHtmlContent(integrationSummary.orthomosaicLabel)}</span>
+        ${previousComparison ? `<span class="planning-pill emphasis">Delta area ${previousComparison.deltaAreaHa >= 0 ? "+" : ""}${formatIrrigationNumber(previousComparison.deltaAreaHa, 4)} ha</span>` : ""}
+      </div>
+      <div class="cadastre-history-list">
+        ${history.length ? history.map((item) => `
+          <article class="cadastre-history-item">
+            <strong>${escapeHtmlContent(new Date(item.savedAt).toLocaleString("es-EC"))}</strong>
+            <p>${escapeHtmlContent(item.savedBy || "Usuario publico")} · ${escapeHtmlContent(item.reviewStatus || "gabinete")} · ${escapeHtmlContent(item.qualityLabel || geometryAudit.status.label)}</p>
+            <p>${formatIrrigationNumber(item.areaHa || metrics.areaHa, (item.areaHa || metrics.areaHa) >= 10 ? 1 : 2)} ha · ${Math.round(item.perimeterM || metrics.perimeterM)} m · ${escapeHtmlContent(item.supportLabel || activeCandidate.supportLabel)}</p>
+          </article>
+        `).join("") : `<article class="cadastre-history-item"><strong>Sin historial previo</strong><p>La ficha aun no tiene versiones guardadas en la cartera local.</p></article>`}
       </div>
     </article>
   `);
@@ -34674,8 +35598,20 @@ function renderDigitalCadastreCompareBoard() {
   if (!dom.digitalCadastreCompareBoard) {
     return;
   }
+  const analysis = state.digitalCadastreData;
+  const activeCandidate = getDigitalCadastreActiveCandidate(analysis);
   const snapshot = state.digitalCadastreAdjustmentSnapshot;
-  if (!snapshot) {
+  const previousComparison = activeCandidate
+    ? buildDigitalCadastrePreviousComparison(state.currentPlot || activeCandidate.feature, getDigitalCadastrePreviousRecord(activeCandidate, analysis))
+    : null;
+  const currentRecord = getDigitalCadastreRelevantRecord(activeCandidate, analysis) || null;
+  const history = Array.isArray(currentRecord?.cadastreMeta?.history) ? currentRecord.cadastreMeta.history.slice(0, 3) : [];
+  const compareTitle = snapshot?.title
+    || activeCandidate?.title
+    || currentRecord?.name
+    || state.currentPlotLabel
+    || "Predio digitalizado";
+  if (!snapshot && !previousComparison && !history.length) {
     dom.digitalCadastreCompareBoard.classList.add("empty-state");
     dom.digitalCadastreCompareBoard.classList.remove("has-data");
     setTextIfChanged(dom.digitalCadastreCompareBoard, "Aqui aparece la comparacion antes / despues cuando ajustes el contorno del predio.");
@@ -34689,33 +35625,63 @@ function renderDigitalCadastreCompareBoard() {
       <div class="territorial-export-head">
         <div>
           <p class="section-kicker">Comparacion de contorno</p>
-          <h4>${escapeHtmlContent(snapshot.title)}</h4>
+          <h4>${escapeHtmlContent(compareTitle)}</h4>
         </div>
-        <span class="planning-pill emphasis">${snapshot.snapApplied ? `Snap ${escapeHtmlContent(snapshot.snapLabel)}` : "Sin snap"}</span>
+        <span class="planning-pill emphasis">${snapshot?.snapApplied ? `Snap ${escapeHtmlContent(snapshot.snapLabel)}` : "Control de versiones"}</span>
       </div>
-      <div class="territorial-decision-grid">
-        <article class="territorial-sector-metric">
-          <span>Antes</span>
-          <strong>${formatIrrigationNumber(snapshot.before.areaHa, snapshot.before.areaHa >= 10 ? 1 : 2)} ha | ${Math.round(snapshot.before.perimeterM)} m</strong>
-        </article>
-        <article class="territorial-sector-metric">
-          <span>Despues</span>
-          <strong>${formatIrrigationNumber(snapshot.after.areaHa, snapshot.after.areaHa >= 10 ? 1 : 2)} ha | ${Math.round(snapshot.after.perimeterM)} m</strong>
-        </article>
-        <article class="territorial-sector-metric">
-          <span>Delta area</span>
-          <strong>${snapshot.deltaAreaHa >= 0 ? "+" : ""}${formatIrrigationNumber(snapshot.deltaAreaHa, 4)} ha</strong>
-        </article>
-        <article class="territorial-sector-metric">
-          <span>Delta perimetro</span>
-          <strong>${snapshot.deltaPerimeterM >= 0 ? "+" : ""}${Math.round(snapshot.deltaPerimeterM)} m</strong>
-        </article>
+      ${snapshot ? `
+        <div class="territorial-decision-grid">
+          <article class="territorial-sector-metric">
+            <span>Antes</span>
+            <strong>${formatIrrigationNumber(snapshot.before.areaHa, snapshot.before.areaHa >= 10 ? 1 : 2)} ha | ${Math.round(snapshot.before.perimeterM)} m</strong>
+          </article>
+          <article class="territorial-sector-metric">
+            <span>Despues</span>
+            <strong>${formatIrrigationNumber(snapshot.after.areaHa, snapshot.after.areaHa >= 10 ? 1 : 2)} ha | ${Math.round(snapshot.after.perimeterM)} m</strong>
+          </article>
+          <article class="territorial-sector-metric">
+            <span>Delta area</span>
+            <strong>${snapshot.deltaAreaHa >= 0 ? "+" : ""}${formatIrrigationNumber(snapshot.deltaAreaHa, 4)} ha</strong>
+          </article>
+          <article class="territorial-sector-metric">
+            <span>Delta perimetro</span>
+            <strong>${snapshot.deltaPerimeterM >= 0 ? "+" : ""}${Math.round(snapshot.deltaPerimeterM)} m</strong>
+          </article>
+        </div>
+        <p class="territorial-readout-copy">
+          ${snapshot.snapApplied
+            ? `El ajuste se alineo automaticamente con ${escapeHtmlContent(snapshot.snapLabel)} para reducir desviacion del contorno.`
+            : "El ajuste se guardo como contorno manual y queda listo para contraste tecnico o de campo."}
+        </p>` : ""}
+      ${previousComparison ? `
+        <div class="territorial-decision-grid">
+          <article class="territorial-sector-metric">
+            <span>Version previa</span>
+            <strong>${escapeHtmlContent(previousComparison.previousName)}</strong>
+          </article>
+          <article class="territorial-sector-metric">
+            <span>Fecha previa</span>
+            <strong>${escapeHtmlContent(new Date(previousComparison.previousDate).toLocaleDateString("es-EC"))}</strong>
+          </article>
+          <article class="territorial-sector-metric">
+            <span>Delta area vs previo</span>
+            <strong>${previousComparison.deltaAreaHa >= 0 ? "+" : ""}${formatIrrigationNumber(previousComparison.deltaAreaHa, 4)} ha</strong>
+          </article>
+          <article class="territorial-sector-metric">
+            <span>Delta perimetro vs previo</span>
+            <strong>${previousComparison.deltaPerimeterM >= 0 ? "+" : ""}${Math.round(previousComparison.deltaPerimeterM)} m</strong>
+          </article>
+        </div>
+        <p class="territorial-readout-copy">Se comparo el predio activo contra una ficha anterior del mismo ambito para detectar cambios de borde, division o ajuste geométrico.</p>` : ""}
+      <div class="cadastre-history-list">
+        ${history.length ? history.map((item) => `
+          <article class="cadastre-history-item">
+            <strong>${escapeHtmlContent(new Date(item.savedAt).toLocaleString("es-EC"))}</strong>
+            <p>${escapeHtmlContent(item.savedBy || "Usuario publico")} · ${escapeHtmlContent(item.reviewStatus || "gabinete")} · ${escapeHtmlContent(item.geometryStatus || "Sin control")}</p>
+            <p>${formatIrrigationNumber(item.areaHa || 0, item.areaHa >= 10 ? 1 : 2)} ha · ${Math.round(item.perimeterM || 0)} m · ${escapeHtmlContent(item.supportLabel || "Sin soporte")}</p>
+          </article>
+        `).join("") : `<article class="cadastre-history-item"><strong>Sin historial</strong><p>Aun no hay versiones guardadas para comparar la evolucion del predio.</p></article>`}
       </div>
-      <p class="territorial-readout-copy">
-        ${snapshot.snapApplied
-          ? `El ajuste se alineo automaticamente con ${escapeHtmlContent(snapshot.snapLabel)} para reducir desviacion del contorno.`
-          : "El ajuste se guardo como contorno manual y queda listo para contraste tecnico o de campo."}
-      </p>
     </article>
   `);
 }
@@ -34736,6 +35702,19 @@ function renderDigitalCadastreBatchBoard(analysis = state.digitalCadastreData) {
     accumulator[quality.id] = (accumulator[quality.id] || 0) + 1;
     return accumulator;
   }, {});
+  const reviewBuckets = analysis.candidates.reduce((accumulator, candidate) => {
+    const review = resolveDigitalCadastreFichaDraft(candidate, analysis).reviewStatus || "gabinete";
+    accumulator[review] = (accumulator[review] || 0) + 1;
+    return accumulator;
+  }, {});
+  const geometryBuckets = analysis.candidates.reduce((accumulator, candidate) => {
+    const status = buildDigitalCadastreGeometryAudit(candidate.feature, candidate, analysis).status.id;
+    accumulator[status] = (accumulator[status] || 0) + 1;
+    return accumulator;
+  }, {});
+  const integrationSummary = buildDigitalCadastreIntegrationSummary(getDigitalCadastreActiveCandidate(analysis), analysis);
+  const savedScopeCount = (state.platformData.projects || []).filter((project) => project.route === "catastro" && String(project.scopeLabel || "").toLowerCase() === String(analysis.context.scopeLabel || "").toLowerCase()).length;
+  const aoiAreaHa = Number((turf.area(analysis.context.feature) / 10000).toFixed(2));
 
   dom.digitalCadastreBatchBoard.classList.remove("empty-state");
   dom.digitalCadastreBatchBoard.classList.add("has-data");
@@ -34756,6 +35735,8 @@ function renderDigitalCadastreBatchBoard(analysis = state.digitalCadastreData) {
         <span class="planning-pill emphasis">${qualityBuckets.visible || 0} visibles</span>
         <span class="planning-pill emphasis">${qualityBuckets.doubtful || 0} dudosos</span>
         <span class="planning-pill emphasis">${qualityBuckets.field || 0} campo</span>
+        <span class="planning-pill emphasis">${reviewBuckets.validado_campo || 0} validados</span>
+        <span class="planning-pill emphasis">${reviewBuckets.observado || 0} observados</span>
       </div>
       <div class="territorial-decision-grid">
         <article class="territorial-sector-metric">
@@ -34767,12 +35748,48 @@ function renderDigitalCadastreBatchBoard(analysis = state.digitalCadastreData) {
           <strong>${analysis.summary.meanConfidence}/100</strong>
         </article>
         <article class="territorial-sector-metric">
+          <span>AOI activo</span>
+          <strong>${aoiAreaHa} ha</strong>
+        </article>
+        <article class="territorial-sector-metric">
           <span>Parcelario soporte</span>
           <strong>${analysis.summary.supportParcelCount || 0}</strong>
         </article>
         <article class="territorial-sector-metric">
-          <span>Salida</span>
-          <strong>Cola SHP lista</strong>
+          <span>Fichas guardadas</span>
+          <strong>${savedScopeCount}</strong>
+        </article>
+        <article class="territorial-sector-metric">
+          <span>Control geometrico</span>
+          <strong>${geometryBuckets.good || 0} estables</strong>
+        </article>
+        <article class="territorial-sector-metric">
+          <span>Soporte operativo</span>
+          <strong>${escapeHtmlContent(integrationSummary.geofenceLabel)}</strong>
+        </article>
+      </div>
+      <div class="cadastre-export-actions">
+        <button class="secondary-button" type="button" data-cadastre-action="save-batch">Guardar cola</button>
+        <button class="ghost-button" type="button" data-cadastre-action="export-geojson">Exportar GeoJSON</button>
+        <button class="ghost-button" type="button" data-cadastre-action="export-csv">Exportar CSV</button>
+        <button class="ghost-button" type="button" data-cadastre-action="export-package">Paquete ZIP</button>
+        <button class="ghost-button" type="button" data-cadastre-action="print-report">Imprimir / PDF</button>
+      </div>
+      <div class="decision-grid compact">
+        <article class="decision-card tone-${(geometryBuckets.critical || 0) ? "high" : (geometryBuckets.watch || 0) ? "mid" : "low"}">
+          <p class="candidate-rank">Semaforo tecnico</p>
+          <h5>${geometryBuckets.critical || 0} por corregir</h5>
+          <p>${geometryBuckets.watch || 0} requieren revision y ${geometryBuckets.good || 0} ya estan geométricamente estables.</p>
+        </article>
+        <article class="decision-card tone-${analysis.summary.meanConfidence >= 80 ? "low" : analysis.summary.meanConfidence >= 65 ? "mid" : "high"}">
+          <p class="candidate-rank">Cobertura visible</p>
+          <h5>${analysis.summary.meanConfidence}/100</h5>
+          <p>${escapeHtmlContent(analysis.summary.boundaryLabel)} con apoyo ${escapeHtmlContent(analysis.summary.supportLabel)}.</p>
+        </article>
+        <article class="decision-card tone-${integrationSummary.gpsTone === "good" ? "low" : integrationSummary.gpsTone === "watch" ? "mid" : integrationSummary.gpsTone === "critical" ? "high" : "base"}">
+          <p class="candidate-rank">GPS / RTK / dron</p>
+          <h5>${escapeHtmlContent(integrationSummary.gpsLabel)}</h5>
+          <p>${integrationSummary.gpsDistanceM == null ? "Sin punto en vivo ligado al predio." : `Distancia al lindero: ${Math.round(integrationSummary.gpsDistanceM)} m.`} ${escapeHtmlContent(integrationSummary.orthomosaicLabel)}</p>
         </article>
       </div>
     </article>

@@ -961,12 +961,28 @@ button {
   background: rgba(255, 255, 255, 0.74);
 }
 
+.field input[type="text"],
+.field input[type="number"],
+.field input[type="search"],
+.field textarea {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(47, 61, 50, 0.14);
+  background: rgba(255, 255, 255, 0.74);
+}
+
 .field select {
   width: 100%;
   padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid rgba(47, 61, 50, 0.14);
   background: rgba(255, 255, 255, 0.74);
+}
+
+.field textarea {
+  min-height: 108px;
+  resize: vertical;
 }
 
 .range-wrap {
@@ -3360,6 +3376,33 @@ button {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.cadastre-review-actions,
+.cadastre-export-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cadastre-history-list {
+  display: grid;
+  gap: 10px;
+}
+
+.cadastre-history-item {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(47, 61, 50, 0.08);
+  background: rgba(249, 248, 243, 0.82);
+}
+
+.cadastre-history-item p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
 }
 
 .project-registry-list,

@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="geoportal-version" content="20260518-1">
+  <meta name="geoportal-version" content="20260518-2">
   <title>Centro de Decisiones | Mejia y Quevedo</title>
   <meta
     name="description"
@@ -33,7 +33,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260518-1">
+  <link rel="stylesheet" href="./styles.css?v=20260518-2">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -158,7 +158,7 @@
           <span class="status-dot"></span>
           <div class="user-pill-copy">
             <strong id="userNameLabel">Usuario publico</strong>
-            <span id="userVersionLabel">v20260518-1</span>
+            <span id="userVersionLabel">v20260518-2</span>
           </div>
           <label class="user-role-field" for="userRoleSelect">
             <span>Rol</span>
@@ -1266,9 +1266,14 @@
                 <button id="saveDigitalCadastreAdjustBtn" class="secondary-button" type="button">Guardar ajuste</button>
                 <button id="cancelDigitalCadastreAdjustBtn" class="ghost-button" type="button">Cancelar ajuste</button>
                 <button id="saveDigitalCadastreRecordBtn" class="ghost-button" type="button">Guardar ficha</button>
+                <button id="saveDigitalCadastreBatchBtn" class="ghost-button" type="button">Guardar cola</button>
                 <button id="exportDigitalCadastreShpBtn" class="ghost-button" type="button">Exportar SHP</button>
                 <button id="exportDigitalCadastreKmlBtn" class="ghost-button" type="button">Exportar KML</button>
                 <button id="exportDigitalCadastreDxfBtn" class="ghost-button" type="button">Exportar DXF</button>
+                <button id="exportDigitalCadastreGeoJsonBtn" class="ghost-button" type="button">Exportar GeoJSON</button>
+                <button id="exportDigitalCadastreCsvBtn" class="ghost-button" type="button">Exportar CSV</button>
+                <button id="printDigitalCadastreReportBtn" class="ghost-button" type="button">Imprimir / PDF</button>
+                <button id="exportDigitalCadastrePackageBtn" class="ghost-button" type="button">Paquete ZIP</button>
                 <button id="exportDigitalCadastreBatchShpBtn" class="ghost-button" type="button">Exportar cola SHP</button>
                 <button id="clearDigitalCadastreBtn" class="ghost-button" type="button">Limpiar catastro</button>
               </div>
@@ -1918,6 +1923,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260518-1" defer></script>
+  <script src="./app.js?v=20260518-2" defer></script>
 </body>
 </html>
