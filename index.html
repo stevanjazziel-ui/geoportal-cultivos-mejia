@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="geoportal-version" content="20260518-3">
+  <meta name="geoportal-version" content="20260518-4">
   <title>Centro de Decisiones | Mejia y Quevedo</title>
   <meta
     name="description"
@@ -33,7 +33,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260518-3">
+  <link rel="stylesheet" href="./styles.css?v=20260518-4">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -158,7 +158,7 @@
           <span class="status-dot"></span>
           <div class="user-pill-copy">
             <strong id="userNameLabel">Usuario publico</strong>
-            <span id="userVersionLabel">v20260518-3</span>
+            <span id="userVersionLabel">v20260518-4</span>
           </div>
           <label class="user-role-field" for="userRoleSelect">
             <span>Rol</span>
@@ -783,19 +783,24 @@
                   <strong>Vivienda</strong>
                   <span>Mercado y tipologias</span>
                 </button>
-                <button id="planningQuickCadastreBtn" class="planning-command-button" type="button">
+                <button id="planningQuickClimateBtn" class="planning-command-button" type="button">
                   <span class="planning-command-step">8</span>
+                  <strong>Clima urbano</strong>
+                  <span>Ventilacion y enfriamiento</span>
+                </button>
+                <button id="planningQuickCadastreBtn" class="planning-command-button" type="button">
+                  <span class="planning-command-step">9</span>
                   <strong>Catastro</strong>
                   <span>Predios y contornos</span>
                 </button>
                 <button id="planningQuick3dBtn" class="planning-command-button accent" type="button">
-                  <span class="planning-command-step">9</span>
+                  <span class="planning-command-step">10</span>
                   <strong>Validar en 3D</strong>
                   <span>Volumen, sombra y lote</span>
                 </button>
               </div>
               <div class="planning-command-note">
-                Flujo recomendado: aptitud, riesgo, catastro asistido, zonificacion, vivienda, estrategia y cierre 3D.
+                Flujo recomendado: aptitud, riesgo, clima urbano, catastro asistido, zonificacion, vivienda, estrategia y cierre 3D.
               </div>
             </article>
 
@@ -1007,6 +1012,35 @@
               <div class="action-row analysis-actions">
                 <button id="focusRiskBtn" class="secondary-button" type="button">Centrar riesgo</button>
                 <button id="clearRiskBtn" class="ghost-button" type="button">Limpiar riesgo</button>
+              </div>
+            </article>
+
+            <article id="urbanClimateCard" class="module-card planning-card hidden" data-module-track="planificacion">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Clima urbano</p>
+                  <h3>Ventilacion, enfriamiento y retencion termica</h3>
+                </div>
+                <button id="runUrbanClimateBtn" class="secondary-button" type="button">Modelar clima</button>
+              </div>
+              <p class="module-copy">
+                Modela corredores de aire frio, reservas de ventilacion y zonas que retienen calor para proteger el enfriamiento natural del valle y ordenar mejor la implantacion urbana.
+              </p>
+              <div id="urbanClimateResults" class="metrics-grid empty-state">
+                Ejecuta para ver corredores de aire frio, reservas de ventilacion y sectores con retencion termica sobre el nucleo territorial.
+              </div>
+              <div id="urbanClimateReadout" class="territorial-readout empty-state">
+                Aqui aparecera la lectura integrada del clima urbano, el rol del relieve y las decisiones para no bloquear las corrientes de aire frio.
+              </div>
+              <div id="urbanClimateDrivers" class="planning-pills empty-state">
+                Aqui se resumiran ventilacion, enfriamiento, obstruccion, relieve y soporte hidrico del estudio.
+              </div>
+              <div id="urbanClimateSectors" class="land-change-sectors empty-state">
+                Aqui se listaran corredores prioritarios, reservas de ventilacion y sectores que concentran retencion termica.
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="focusUrbanClimateBtn" class="secondary-button" type="button">Centrar clima</button>
+                <button id="clearUrbanClimateBtn" class="ghost-button" type="button">Limpiar clima</button>
               </div>
             </article>
 
@@ -1747,6 +1781,10 @@
           <input id="planning3dShadowsToggle" type="checkbox">
           <span>Sombras</span>
         </label>
+        <label class="planning-3d-check">
+          <input id="planning3dClimateToggle" type="checkbox" checked>
+          <span>Clima</span>
+        </label>
         <label class="field planning-3d-territory-field">
           <span>Nucleo 3D</span>
           <select id="planning3dTerritorySelect">
@@ -1923,6 +1961,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260518-3" defer></script>
+  <script src="./app.js?v=20260518-4" defer></script>
 </body>
 </html>

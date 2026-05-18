@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260518-3";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260518-4";
 
 const layerCatalog = [
   {
@@ -3733,6 +3733,8 @@ const state = {
   mobilityHighlightId: null,
   riskData: null,
   riskHighlightId: null,
+  urbanClimateData: null,
+  urbanClimateHighlightId: null,
   zoningPatternsData: null,
   zoningPatternsHighlightId: null,
   housingPatternsData: null,
@@ -3863,6 +3865,9 @@ const mapState = {
   riskLayer: null,
   riskHotspotLayer: null,
   riskBufferLayer: null,
+  urbanClimateZoneLayer: null,
+  urbanClimateCorridorLayer: null,
+  urbanClimateNodeLayer: null,
   zoningPatternsLayer: null,
   zoningPatternsHotspotLayer: null,
   housingPatternsLayer: null,
@@ -3916,6 +3921,7 @@ const planning3dState = {
   parcelsVisible: false,
   heightScale: 1,
   shadowsVisible: false,
+  urbanClimateVisible: true,
   viewMode: "perspective",
   panelCollapsed: true,
   sunDate: "",
@@ -3967,6 +3973,7 @@ const planning3dState = {
     parcels: null,
     candidates: null,
     shadows: null,
+    urbanClimate: null,
   },
   forceVisualFallback: false,
   visualReady: false,
@@ -4365,6 +4372,9 @@ function setTerritorialArea(areaId = state.territorialAreaId, options = {}) {
     }
     if (state.riskData) {
       runRiskAnalysis(true);
+    }
+    if (state.urbanClimateData) {
+      runUrbanClimateAnalysis(true);
     }
     if (state.zoningPatternsData) {
       runZoningPatternsAnalysis(true);
@@ -5636,11 +5646,12 @@ const workflowGuideCatalog = {
   planificacion: {
     badge: "Ruta sugerida",
     title: "Secuencia corta para decidir y validar",
-    defaultCopy: "Aptitud, cobertura, riesgo, agua, estrategia y validacion 3D.",
+    defaultCopy: "Aptitud, cobertura, riesgo, clima urbano, agua, estrategia y validacion 3D.",
     steps: [
       { id: "aptitude", title: "Aptitud base", pending: "Corre la primera lectura multivariable." },
       { id: "mobility", title: "Movilidad y accesibilidad", pending: "Mide cobertura, tiempos y conectividad." },
       { id: "risk", title: "Riesgo compuesto", pending: "Cruza amenaza, exposicion y contencion." },
+      { id: "climate", title: "Clima urbano", pending: "Protege corredores de aire frio y reservas de ventilacion." },
       { id: "footprint", title: "Huella y expansion", pending: "Mide como cambia el suelo rural." },
       { id: "water", title: "Seguridad hidrica", pending: "Contrasta oferta, demanda y resiliencia." },
       { id: "strategy", title: "Estrategia FODA + CAME", pending: "Convierte el diagnostico en acciones." },
@@ -5650,6 +5661,7 @@ const workflowGuideCatalog = {
       { id: "planning-aptitude", label: "Evaluar aptitud", tone: "secondary" },
       { id: "planning-mobility", label: "Evaluar movilidad", tone: "ghost" },
       { id: "planning-risk", label: "Evaluar riesgo", tone: "ghost" },
+      { id: "planning-climate", label: "Clima urbano", tone: "ghost" },
       { id: "planning-official", label: "Fuentes oficiales", tone: "ghost" },
       { id: "planning-footprint", label: "Analizar huella", tone: "ghost" },
       { id: "planning-water", label: "Simular agua", tone: "ghost" },
@@ -5900,6 +5912,9 @@ function cacheDom() {
   dom.runRiskBtn = document.querySelector("#runRiskBtn");
   dom.focusRiskBtn = document.querySelector("#focusRiskBtn");
   dom.clearRiskBtn = document.querySelector("#clearRiskBtn");
+  dom.runUrbanClimateBtn = document.querySelector("#runUrbanClimateBtn");
+  dom.focusUrbanClimateBtn = document.querySelector("#focusUrbanClimateBtn");
+  dom.clearUrbanClimateBtn = document.querySelector("#clearUrbanClimateBtn");
   dom.runZoningPatternsBtn = document.querySelector("#runZoningPatternsBtn");
   dom.focusZoningPatternsBtn = document.querySelector("#focusZoningPatternsBtn");
   dom.clearZoningPatternsBtn = document.querySelector("#clearZoningPatternsBtn");
@@ -5973,6 +5988,10 @@ function cacheDom() {
   dom.riskResults = document.querySelector("#riskResults");
   dom.riskDrivers = document.querySelector("#riskDrivers");
   dom.riskSectors = document.querySelector("#riskSectors");
+  dom.urbanClimateResults = document.querySelector("#urbanClimateResults");
+  dom.urbanClimateReadout = document.querySelector("#urbanClimateReadout");
+  dom.urbanClimateDrivers = document.querySelector("#urbanClimateDrivers");
+  dom.urbanClimateSectors = document.querySelector("#urbanClimateSectors");
   dom.zoningPatternsResults = document.querySelector("#zoningPatternsResults");
   dom.zoningPatternsReadout = document.querySelector("#zoningPatternsReadout");
   dom.zoningPatternsClusters = document.querySelector("#zoningPatternsClusters");
@@ -5995,6 +6014,7 @@ function cacheDom() {
   dom.hydrologyCard = document.querySelector("#hydrologyCard");
   dom.mobilityCard = document.querySelector("#mobilityCard");
   dom.riskCard = document.querySelector("#riskCard");
+  dom.urbanClimateCard = document.querySelector("#urbanClimateCard");
   dom.zoningPatternsCard = document.querySelector("#zoningPatternsCard");
   dom.housingPatternsCard = document.querySelector("#housingPatternsCard");
   dom.fieldEvidenceCard = document.querySelector("#fieldEvidenceCard");
@@ -6024,6 +6044,7 @@ function cacheDom() {
   dom.planning3dBuildingsToggle = document.querySelector("#planning3dBuildingsToggle");
   dom.planning3dParcelsToggle = document.querySelector("#planning3dParcelsToggle");
   dom.planning3dShadowsToggle = document.querySelector("#planning3dShadowsToggle");
+  dom.planning3dClimateToggle = document.querySelector("#planning3dClimateToggle");
   dom.planning3dTerritorySelect = document.querySelector("#planning3dTerritorySelect");
   dom.planning3dDate = document.querySelector("#planning3dDate");
   dom.planning3dTime = document.querySelector("#planning3dTime");
@@ -6064,6 +6085,7 @@ function cacheDom() {
   dom.wizardAssistantStatus = document.querySelector("#wizardAssistantStatus");
   dom.wizardSummary = document.querySelector("#wizardSummary");
   dom.baseButtons = Array.from(document.querySelectorAll("[data-base]"));
+  dom.planningQuickClimateBtn = document.querySelector("#planningQuickClimateBtn");
 }
 
 function bootstrapApp() {
@@ -6484,6 +6506,7 @@ function bindUI() {
   dom.hydrologySectors?.addEventListener("click", handleHydrologySectorsInteraction);
   dom.mobilitySectors?.addEventListener("click", handleMobilitySectorsInteraction);
   dom.riskSectors?.addEventListener("click", handleRiskSectorsInteraction);
+  dom.urbanClimateSectors?.addEventListener("click", handleUrbanClimateSectorsInteraction);
   dom.zoningPatternsSectors?.addEventListener("click", handleZoningPatternsSectorsInteraction);
   dom.housingPatternsSectors?.addEventListener("click", handleHousingPatternsSectorsInteraction);
   dom.fieldEvidenceSectors?.addEventListener("click", handleFieldEvidenceInteraction);
@@ -6799,6 +6822,7 @@ function bindUI() {
   dom.planningQuickMobilityBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-mobility"));
   dom.planningQuickWaterBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-water"));
   dom.planningQuickStrategyBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-strategy"));
+  dom.planningQuickClimateBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-climate"));
   dom.planningQuickZoningBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-zoning"));
   dom.planningQuickHousingBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-housing"));
   dom.planningQuickCadastreBtn?.addEventListener("click", () => runWorkflowGuideAction("planning-cadastre"));
@@ -6940,6 +6964,16 @@ function bindUI() {
   });
   dom.focusRiskBtn?.addEventListener("click", focusRiskStudy);
   dom.clearRiskBtn?.addEventListener("click", clearRiskAnalysis);
+  dom.runUrbanClimateBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.urbanClimateResults, "Modelando ventilacion, enfriamiento y retencion termica del nucleo urbano...", [
+      { target: dom.urbanClimateReadout, message: "Preparando lectura del relieve, corredores de aire frio y zonas de enfriamiento..." },
+      { target: dom.urbanClimateDrivers, message: "Resumiendo ventilacion, obstruccion, soporte hidrico y reserva de enfriamiento..." },
+      { target: dom.urbanClimateSectors, message: "Priorizando corredores, reservas y sectores con retencion termica..." },
+    ]);
+    return runModuleAction(dom.runUrbanClimateBtn, "Modelando clima...", () => runUrbanClimateAnalysis());
+  });
+  dom.focusUrbanClimateBtn?.addEventListener("click", focusUrbanClimateStudy);
+  dom.clearUrbanClimateBtn?.addEventListener("click", clearUrbanClimateAnalysis);
   dom.runZoningPatternsBtn?.addEventListener("click", () => {
     setModulePendingState(dom.zoningPatternsResults, "Leyendo patrones territoriales, vitalidad y contrastes espaciales...", [
       { target: dom.zoningPatternsReadout, message: "Interpretando patron dominante, vitalidad urbana y sentido territorial de la corrida..." },
@@ -7150,6 +7184,12 @@ function bindUI() {
   dom.planning3dShadowsToggle?.addEventListener("change", () => {
     planning3dState.shadowsVisible = !!dom.planning3dShadowsToggle.checked;
     updatePlanning3dSunModel();
+  });
+  dom.planning3dClimateToggle?.addEventListener("change", () => {
+    planning3dState.urbanClimateVisible = !!dom.planning3dClimateToggle.checked;
+    syncPlanning3dLayerVisibility();
+    renderPlanning3dQuickSummary();
+    renderPlanning3dSummary();
   });
   dom.planning3dDate?.addEventListener("change", () => {
     planning3dState.sunDate = dom.planning3dDate.value || planning3dState.sunDate;
@@ -7363,7 +7403,7 @@ function handleFieldEvidenceInteraction(event) {
 }
 
 function handleTerritorialSectorSheetsInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-digital-cadastre-id], [data-cadastre-draw], [data-cadastre-open], [data-land-change-sector-id], [data-hydrology-sector-id], [data-zoning-sector-id], [data-housing-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
+  const button = event.target.closest("[data-candidate-id], [data-digital-cadastre-id], [data-cadastre-draw], [data-cadastre-open], [data-land-change-sector-id], [data-hydrology-sector-id], [data-zoning-sector-id], [data-housing-sector-id], [data-urban-climate-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
   if (!button || !dom.territorialSectorSheets?.contains(button)) {
     return;
   }
@@ -7400,6 +7440,10 @@ function handleTerritorialSectorSheetsInteraction(event) {
     focusHousingPatternsSector(button.dataset.housingSectorId);
     return;
   }
+  if (button.dataset.urbanClimateSectorId) {
+    focusUrbanClimateSector(button.dataset.urbanClimateSectorId);
+    return;
+  }
   if (button.dataset.fieldSectorId) {
     focusFieldEvidenceItem("sector", button.dataset.fieldSectorId);
     return;
@@ -7426,7 +7470,7 @@ function handleTerritorialSectorSheetsInteraction(event) {
 }
 
 function handleTerritorialAlertInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-digital-cadastre-id], [data-cadastre-draw], [data-cadastre-open], [data-land-change-sector-id], [data-hydrology-sector-id], [data-zoning-sector-id], [data-housing-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
+  const button = event.target.closest("[data-candidate-id], [data-digital-cadastre-id], [data-cadastre-draw], [data-cadastre-open], [data-land-change-sector-id], [data-hydrology-sector-id], [data-zoning-sector-id], [data-housing-sector-id], [data-urban-climate-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
   if (!button || !dom.territorialAlertsPanel?.contains(button)) {
     return;
   }
@@ -7463,6 +7507,10 @@ function handleTerritorialAlertInteraction(event) {
     focusHousingPatternsSector(button.dataset.housingSectorId);
     return;
   }
+  if (button.dataset.urbanClimateSectorId) {
+    focusUrbanClimateSector(button.dataset.urbanClimateSectorId);
+    return;
+  }
   if (button.dataset.fieldSectorId) {
     focusFieldEvidenceItem("sector", button.dataset.fieldSectorId);
     return;
@@ -7489,7 +7537,7 @@ function handleTerritorialAlertInteraction(event) {
 }
 
 function handleTerritorialOpsInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-hydrology-sector-id], [data-mobility-sector-id], [data-risk-sector-id], [data-zoning-sector-id], [data-housing-sector-id], [data-territorial-ops-action]");
+  const button = event.target.closest("[data-candidate-id], [data-hydrology-sector-id], [data-mobility-sector-id], [data-risk-sector-id], [data-zoning-sector-id], [data-housing-sector-id], [data-urban-climate-sector-id], [data-territorial-ops-action]");
   if (!button || !dom.territorialOpsBoard?.contains(button)) {
     return;
   }
@@ -7516,6 +7564,10 @@ function handleTerritorialOpsInteraction(event) {
   }
   if (button.dataset.housingSectorId) {
     focusHousingPatternsSector(button.dataset.housingSectorId);
+    return;
+  }
+  if (button.dataset.urbanClimateSectorId) {
+    focusUrbanClimateSector(button.dataset.urbanClimateSectorId);
     return;
   }
   if (button.dataset.territorialOpsAction === "service-gap") {
@@ -8252,6 +8304,7 @@ function getModuleCardLabel(card) {
     hydrologyCard: "Agua",
     mobilityCard: "Movilidad",
     riskCard: "Riesgo",
+    urbanClimateCard: "Clima urbano",
     zoningPatternsCard: "Zonificacion",
     housingPatternsCard: "Vivienda",
     landChangeCard: "Huella",
@@ -8362,6 +8415,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
         { id: "planning-aptitude", label: "Aptitud", copy: "Suelo y candidatos", tone: "neutral" },
         { id: "planning-risk", label: "Riesgo", copy: "Restriccion y contencion", tone: "neutral" },
         { id: "planning-mobility", label: "Movilidad", copy: "Cobertura y tiempos", tone: "neutral" },
+        { id: "planning-climate", label: "Clima urbano", copy: "Ventilacion y enfriamiento", tone: "neutral" },
         { id: "planning-official", label: "Oficiales", copy: "Vialidad y servicios", tone: "neutral" },
         { id: "planning-water", label: "Agua", copy: "Oferta y resiliencia", tone: "neutral" },
         { id: "planning-cadastre", label: "Catastro", copy: "Predios y contornos", tone: "neutral" },
@@ -8375,7 +8429,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
         { id: "all", label: "Todo" },
         { id: "core", label: "Base" },
         { id: "official", label: "Oficiales" },
-        { id: "risk", label: "Riesgo + agua" },
+        { id: "risk", label: "Riesgo + clima" },
         { id: "growth", label: "Huella + movilidad" },
         { id: "strategy", label: "Estrategia" },
         { id: "validation", label: "3D" },
@@ -8419,9 +8473,9 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
   const planningFilters = {
     core: new Set(["planningCommandCard", "territorialOpsCard", "planningCard", "planningResultsCard"]),
     official: new Set(["officialDataCard", "digitalCadastreCard"]),
-    risk: new Set(["riskCard", "hydrologyCard", "territorialReadoutCard"]),
-    growth: new Set(["mobilityCard", "landChangeCard", "territorialScenarioCard", "zoningPatternsCard", "housingPatternsCard"]),
-    strategy: new Set(["fodaCameCard", "territorialDecisionCard", "territorialAlertsCard", "aiGeoCard", "zoningPatternsCard", "housingPatternsCard"]),
+    risk: new Set(["riskCard", "urbanClimateCard", "hydrologyCard", "territorialReadoutCard"]),
+    growth: new Set(["mobilityCard", "landChangeCard", "territorialScenarioCard", "zoningPatternsCard", "housingPatternsCard", "urbanClimateCard"]),
+    strategy: new Set(["fodaCameCard", "territorialDecisionCard", "territorialAlertsCard", "aiGeoCard", "zoningPatternsCard", "housingPatternsCard", "urbanClimateCard"]),
     validation: new Set(["planning3dCard", "digitalCadastreCard"]),
     product: new Set(["executiveDashboardCard", "reportCenterCard", "scenarioLabCard", "timeSeriesCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard"]),
   };
@@ -8499,6 +8553,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
       territorialScenarioCard: true,
       mobilityCard: true,
       riskCard: true,
+      urbanClimateCard: true,
       zoningPatternsCard: true,
       housingPatternsCard: true,
       hydrologyCard: true,
@@ -9288,6 +9343,12 @@ function runWorkflowGuideAction(actionId) {
       openSidebarWorkingPanel("modulos");
       dom.runRiskBtn?.click();
       focusModuleCard(dom.riskCard);
+      return;
+    case "planning-climate":
+      openSidebarWorkingPanel("modulos");
+      dom.runUrbanClimateBtn?.click();
+      focusModuleCard(dom.urbanClimateCard);
+      setStatus("Clima urbano listo para proteger corredores de aire frio, reservas de ventilacion y sectores de retencion termica.");
       return;
     case "planning-official":
       openSidebarWorkingPanel("modulos");
@@ -19305,6 +19366,50 @@ function renderPlanning3dQuickSummary() {
   `);
 }
 
+function renderPlanning3dQuickSummary() {
+  if (!dom.planning3dQuickSummary) {
+    return;
+  }
+
+  const areaProfile = getPlanning3dAreaProfile();
+  const manifest = getPlanning3dManifest();
+  const buildingStatus = planning3dState.datasetStatus?.buildings || null;
+  const date = getPlanning3dSunDateTime();
+  const sunPosition = computePlanning3dSunPosition(date, areaProfile.center?.[1], areaProfile.center?.[0]);
+  const buildingLabel = buildingStatus?.loaded
+    ? formatPlanning3dCount(buildingStatus.loaded)
+    : manifest.buildings?.available
+      ? formatPlanning3dCount(manifest.buildings.recordCount)
+      : "Preparando";
+  const solarLabel = sunPosition?.daylight ? `${sunPosition.elevation} deg` : "Sin sol";
+  const climateLabel = state.urbanClimateData
+    ? `${state.urbanClimateData.summary.priorityCorridorCount} corr.`
+    : "Sin lectura";
+
+  setHtmlIfChanged(dom.planning3dQuickSummary, `
+    <article class="planning-3d-quick-chip">
+      <span>Nucleo</span>
+      <strong>${areaProfile.label}</strong>
+    </article>
+    <article class="planning-3d-quick-chip">
+      <span>Construcciones</span>
+      <strong>${buildingLabel}</strong>
+    </article>
+    <article class="planning-3d-quick-chip">
+      <span>Vista</span>
+      <strong>${planning3dState.viewMode === "orthographic" ? "Ortogonal" : "Volumen 3D"}</strong>
+    </article>
+    <article class="planning-3d-quick-chip">
+      <span>Sol</span>
+      <strong>${solarLabel}</strong>
+    </article>
+    <article class="planning-3d-quick-chip">
+      <span>Clima</span>
+      <strong>${climateLabel}</strong>
+    </article>
+  `);
+}
+
 async function hydratePlanning3dManifest(force = false) {
   if (planning3dState.manifestPromise && !force) {
     return planning3dState.manifestPromise;
@@ -19866,6 +19971,10 @@ function addPlanning3dRuntimeLayers() {
     type: "geojson",
     data: planning3dState.sourceData.shadows || emptyCollection,
   });
+  planning3dState.map.addSource("planning3d-urban-climate", {
+    type: "geojson",
+    data: planning3dState.sourceData.urbanClimate || emptyCollection,
+  });
 
   planning3dState.map.addLayer({
     id: "planning3d-shadows-fill",
@@ -19905,6 +20014,89 @@ function addPlanning3dRuntimeLayers() {
         1.1,
       ],
       "line-opacity": 0.44,
+    },
+  });
+
+  planning3dState.map.addLayer({
+    id: "planning3d-climate-zones",
+    type: "fill",
+    source: "planning3d-urban-climate",
+    filter: ["==", ["get", "climateGeometryType"], "zone"],
+    layout: {
+      visibility: planning3dState.urbanClimateVisible ? "visible" : "none",
+    },
+    paint: {
+      "fill-color": [
+        "match",
+        ["get", "classLabel"],
+        "Corredor frio prioritario", "#3a86b5",
+        "Reserva de ventilacion", "#58a77d",
+        "Transicion termica", "#d7b468",
+        "Retencion termica", "#c46a58",
+        "#86aeb6",
+      ],
+      "fill-opacity": 0.16,
+    },
+  });
+
+  planning3dState.map.addLayer({
+    id: "planning3d-climate-corridors",
+    type: "line",
+    source: "planning3d-urban-climate",
+    filter: ["==", ["get", "climateGeometryType"], "corridor"],
+    layout: {
+      visibility: planning3dState.urbanClimateVisible ? "visible" : "none",
+    },
+    paint: {
+      "line-color": [
+        "match",
+        ["get", "classLabel"],
+        "Corredor frio prioritario", "#2c7da0",
+        "Reserva de ventilacion", "#3b9c72",
+        "Transicion termica", "#d1a457",
+        "Retencion termica", "#b75d4a",
+        "#6b8f9b",
+      ],
+      "line-width": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        11, 1.8,
+        15, 3.4,
+        18, 5.2,
+      ],
+      "line-opacity": 0.8,
+    },
+  });
+
+  planning3dState.map.addLayer({
+    id: "planning3d-climate-nodes",
+    type: "circle",
+    source: "planning3d-urban-climate",
+    filter: ["==", ["get", "climateGeometryType"], "node"],
+    layout: {
+      visibility: planning3dState.urbanClimateVisible ? "visible" : "none",
+    },
+    paint: {
+      "circle-color": [
+        "match",
+        ["get", "classLabel"],
+        "Corredor frio prioritario", "#2c7da0",
+        "Reserva de ventilacion", "#3b9c72",
+        "Transicion termica", "#d1a457",
+        "Retencion termica", "#b75d4a",
+        "#6b8f9b",
+      ],
+      "circle-stroke-color": "#f7f6f1",
+      "circle-stroke-width": 1.2,
+      "circle-radius": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        11, 3.6,
+        16, 6.8,
+      ],
+      "circle-opacity": 0.92,
     },
   });
 
@@ -20089,6 +20281,7 @@ function hydratePlanning3dRuntimeLayers() {
     updatePlanning3dBasemapStyle();
     addPlanning3dRuntimeLayers();
     updatePlanning3dCandidateSource();
+    updatePlanning3dUrbanClimateSource();
     syncPlanning3dLayerVisibility();
     updatePlanning3dHeightScale();
     updatePlanning3dSunModel();
@@ -21683,6 +21876,15 @@ function syncPlanning3dLayerVisibility() {
       planning3dState.parcelsVisible ? "visible" : "none"
     );
   }
+  ["planning3d-climate-zones", "planning3d-climate-corridors", "planning3d-climate-nodes"].forEach((layerId) => {
+    if (planning3dState.map?.getLayer(layerId)) {
+      planning3dState.map.setLayoutProperty(
+        layerId,
+        "visibility",
+        planning3dState.urbanClimateVisible ? "visible" : "none"
+      );
+    }
+  });
 
   syncPlanning3dShadowLayerVisibility();
   queuePlanning3dShadowSync();
@@ -21734,6 +21936,7 @@ function renderPlanning3dSummary(force = false) {
   const buildingStatus = planning3dState.datasetStatus.buildings;
   const textureCatalog = planning3dState.textureCatalog || getPlanning3dFallbackTextureCatalog();
   const sunPosition = planning3dState.sunPosition;
+  const urbanClimate = state.urbanClimateData;
   const shadowCount = planning3dState.sourceData.shadows?.features?.length || 0;
   const visualSnapshot = planning3dState.visualSnapshot || getPlanning3dVisualStateSnapshot();
   const solarStamp = `${planning3dState.sunDate || formatDateInput(getPlanning3dSunDateTime())} ${planning3dState.sunTime || "09:00"}`;
@@ -21821,6 +22024,10 @@ function renderPlanning3dSummary(force = false) {
         <span>Render</span>
         <strong>${planning3dState.visualReady ? "Visible" : "Afinando"}</strong>
       </article>
+      <article class="planning-3d-chip">
+        <span>Clima</span>
+        <strong>${urbanClimate ? `${urbanClimate.summary.priorityCorridorCount} corr.` : "Sin lectura"}</strong>
+      </article>
     </div>
     <p class="planning-3d-copy-small">
       ${manifest.viaBackend
@@ -21854,6 +22061,9 @@ function renderPlanning3dSummary(force = false) {
         ? sunPosition.daylight
           ? ` Sol ${solarStamp}: ${formatPlanning3dCount(shadowCount, "0")} sombras visibles.`
           : ` Para ${solarStamp} no se proyectan sombras.`
+        : ""}
+      ${urbanClimate
+        ? ` Clima urbano activo con ${urbanClimate.summary.priorityCorridorCount} corredores frios y ${urbanClimate.summary.heatRetentionAreaHa} ha de retencion termica.`
         : ""}
       ${candidateCount ? ` ${candidateCount} candidatos territoriales visibles.` : ""}
     </p>
@@ -22139,6 +22349,36 @@ function updatePlanning3dCandidateSource() {
   renderPlanning3dSummary();
 }
 
+function getPlanning3dUrbanClimateCollection() {
+  if (!state.urbanClimateData) {
+    return getPlanning3dEmptyCollection();
+  }
+  const collections = [
+    state.urbanClimateData.zoneCollection,
+    state.urbanClimateData.corridorCollection,
+    state.urbanClimateData.nodeCollection,
+  ];
+  const features = [];
+  collections.forEach((collection) => {
+    (collection?.features || []).forEach((feature) => {
+      features.push(cloneFeature(feature));
+    });
+  });
+  return {
+    type: "FeatureCollection",
+    features,
+  };
+}
+
+function updatePlanning3dUrbanClimateSource() {
+  planning3dState.sourceData.urbanClimate = getPlanning3dUrbanClimateCollection();
+  const source = planning3dState.map?.getSource("planning3d-urban-climate");
+  if (source) {
+    source.setData(planning3dState.sourceData.urbanClimate);
+  }
+  renderPlanning3dSummary();
+}
+
 function focusPlanning3dDemoView() {
   if (!planning3dState.map || !planning3dState.sourceData.buildings?.features?.length) {
     return false;
@@ -22380,6 +22620,7 @@ async function reloadPlanning3dData() {
   planning3dState.sourceData.buildings = null;
   planning3dState.sourceData.parcels = null;
   planning3dState.sourceData.candidates = getPlanning3dEmptyCollection();
+  planning3dState.sourceData.urbanClimate = getPlanning3dEmptyCollection();
   clearPlanning3dSelection();
   renderPlanning3dPanel();
   renderPlanning3dSummary();
@@ -22393,6 +22634,9 @@ async function reloadPlanning3dData() {
   if (planning3dState.map?.getSource("planning3d-candidates")) {
     planning3dState.map.getSource("planning3d-candidates").setData(getPlanning3dEmptyCollection());
   }
+  if (planning3dState.map?.getSource("planning3d-urban-climate")) {
+    planning3dState.map.getSource("planning3d-urban-climate").setData(getPlanning3dEmptyCollection());
+  }
 
   await hydratePlanning3dManifest(true);
   if (planning3dState.modalOpen) {
@@ -22401,6 +22645,7 @@ async function reloadPlanning3dData() {
       await ensurePlanning3dDataset("parcels", true);
     }
     updatePlanning3dCandidateSource();
+    updatePlanning3dUrbanClimateSource();
     focusPlanning3dDataset();
   }
 }
@@ -22509,6 +22754,7 @@ function renderPlanningModule() {
   renderFodaCameModule();
   renderMobilityModule();
   renderRiskModule();
+  renderUrbanClimateModule();
   renderZoningPatternsModule();
   renderHousingPatternsModule();
   renderLandChangeModule();
@@ -22637,6 +22883,12 @@ function renderPlanningModule() {
   if (dom.clearRiskBtn) {
     dom.clearRiskBtn.disabled = !state.riskData;
   }
+  if (dom.focusUrbanClimateBtn) {
+    dom.focusUrbanClimateBtn.disabled = !(state.urbanClimateData?.prioritySectors?.length);
+  }
+  if (dom.clearUrbanClimateBtn) {
+    dom.clearUrbanClimateBtn.disabled = !state.urbanClimateData;
+  }
   if (dom.focusZoningPatternsBtn) {
     dom.focusZoningPatternsBtn.disabled = !(state.zoningPatternsData?.prioritySectors?.length);
   }
@@ -22663,6 +22915,9 @@ function renderPlanningModule() {
   }
   if (dom.territorialSolarTime) {
     dom.territorialSolarTime.value = planning3dState.sunTime;
+  }
+  if (dom.planning3dClimateToggle) {
+    dom.planning3dClimateToggle.checked = planning3dState.urbanClimateVisible;
   }
   if (dom.focusHydrologyBtn) {
     dom.focusHydrologyBtn.disabled = !(state.hydrologyData?.prioritySectors?.length);
@@ -25413,6 +25668,653 @@ function handleRiskSectorsInteraction(event) {
     return;
   }
   focusRiskSector(button.dataset.riskSectorId);
+}
+
+function getUrbanClimateClassPalette(label = "") {
+  const palette = {
+    "Corredor frio prioritario": { color: "#2f7f8a", fill: "#9fd2d5", tone: "low" },
+    "Reserva de ventilacion": { color: "#4c8f78", fill: "#bfe2d1", tone: "mid" },
+    "Transicion termica": { color: "#b5984d", fill: "#ead7a2", tone: "mid" },
+    "Retencion termica": { color: "#a35f4a", fill: "#dfb0a4", tone: "high" },
+  };
+  return palette[label] || { color: "#75858a", fill: "#d7e0e3", tone: "mid" };
+}
+
+function getUrbanClimateLabel(rank = 0) {
+  if (rank >= 80) {
+    return "Proteccion alta";
+  }
+  if (rank >= 62) {
+    return "Proteccion media";
+  }
+  return "Mitigacion activa";
+}
+
+function classifyUrbanClimateSector(metrics) {
+  if (metrics.ventilationScore >= 74 && metrics.coolingScore >= 66 && metrics.obstructionScore <= 50) {
+    return {
+      label: "Corredor frio prioritario",
+      actionLabel: "Proteger",
+      recommendation: "Proteger el eje de ventilacion, evitar cierres volumetricos y conservar continuidad con calles, cauces y espacio abierto.",
+    };
+  }
+  if (metrics.ventilationScore >= 62 && metrics.obstructionScore <= 64) {
+    return {
+      label: "Reserva de ventilacion",
+      actionLabel: "Reservar",
+      recommendation: "Reservar franjas de aire frio, limitar barreras en primera linea y cuidar perfiles viales con arbolado compatible.",
+    };
+  }
+  if (metrics.retentionScore >= 70 || metrics.obstructionScore >= 72) {
+    return {
+      label: "Retencion termica",
+      actionLabel: "Mitigar",
+      recommendation: "Mitigar calor con arbolado, sombra, control volumetrico, superficies permeables y aperturas de ventilacion urbana.",
+    };
+  }
+  return {
+    label: "Transicion termica",
+    actionLabel: "Ajustar",
+    recommendation: "Ajustar mezcla de volumen, vegetacion y apertura para no bloquear corredores y mejorar enfriamiento barrial.",
+  };
+}
+
+function buildUrbanClimateAnalysis() {
+  const target = getCurrentTerritorialTarget();
+  const planning = isCurrentTerritorialAnalysis(state.planningData, target)
+    ? state.planningData
+    : buildPlanningAnalysis({ target });
+  const mobility = isCurrentTerritorialAnalysis(state.mobilityData, target)
+    ? state.mobilityData
+    : buildMobilityAnalysis();
+  const risk = isCurrentTerritorialAnalysis(state.riskData, target)
+    ? state.riskData
+    : buildRiskAnalysis();
+  const hydrology = isCurrentTerritorialAnalysis(state.hydrologyData, target)
+    ? state.hydrologyData
+    : buildHydrologyAnalysis();
+  const evidenceProfiles = getTerritorialEvidenceProfiles(target.feature);
+  const officialSummary = state.officialData.planificacion?.activeLayerCount
+    ? state.officialData.planificacion
+    : buildOfficialDataSummary("planificacion");
+  const roadFeatures = filterFeaturesByTerritorialArea(geoSources.vias?.features, state.territorialAreaId);
+  const hydroLineFeatures = filterFeaturesByTerritorialArea(
+    [
+      ...(geoSources.rios?.features || []),
+      ...(geoSources.acequias?.features || []),
+      ...(geoSources.quebradas?.features || []),
+      ...(geoSources.canales?.features || []),
+      ...(geoSources.riegoEstatal?.features || []),
+    ],
+    state.territorialAreaId
+  );
+  const hydroAreaFeatures = filterFeaturesByTerritorialArea(
+    [
+      ...(geoSources.hidrozonas?.features || []),
+      ...(geoSources.coberturaMAATE?.features || []),
+    ],
+    state.territorialAreaId
+  );
+  const urbanFeatures = filterFeaturesByTerritorialArea(geoSources.manchaUrbana?.features, state.territorialAreaId);
+  const cellSizeKm = target.scopeType === "studyArea" ? 1.45 : 0.62;
+  const targetCentroid = turf.centroid(target.feature).geometry.coordinates;
+  const sectors = buildTerritorialStudyGrid(target, cellSizeKm).slice(0, 64).map((cell, index) => {
+    const centroid = turf.centroid(cell);
+    const [lon, lat] = centroid.geometry.coordinates;
+    const road = getNearestFeatureMatch(centroid, roadFeatures);
+    const hydro = getNearestFeatureMatch(
+      centroid,
+      hydroLineFeatures.length ? hydroLineFeatures : hydroAreaFeatures
+    );
+    const urban = getNearestFeatureMatch(centroid, urbanFeatures);
+    const planningMatch = getNearestFeatureMatch(centroid, planning.surface?.features || []);
+    const mobilityMatch = getNearestFeatureMatch(
+      centroid,
+      (mobility.sectors || []).map((sector) => pointFeature(sector.id, sector.centroid, sector))
+    );
+    const riskMatch = getNearestFeatureMatch(
+      centroid,
+      (risk.sectors || []).map((sector) => pointFeature(sector.id, sector.centroid, sector))
+    );
+    const hydrologyMatch = getNearestFeatureMatch(
+      centroid,
+      (hydrology.sectors || []).map((sector) => pointFeature(sector.id, sector.centroid, sector))
+    );
+    const insideUrban = urbanFeatures.some((feature) => safeBooleanIntersects(feature, cell));
+    const planningProps = planningMatch.feature?.properties || {};
+    const mobilityProps = mobilityMatch.feature?.properties || {};
+    const riskProps = riskMatch.feature?.properties || {};
+    const hydrologyProps = hydrologyMatch.feature?.properties || {};
+    const evidence = computeTerritorialEvidenceImpact(cell, evidenceProfiles, {
+      stationDistanceKm: 4.8,
+      historyDistanceKm: 4.4,
+    });
+    const slopePct = Number(computePlanningSlope(lon, lat, road.distanceKm || 0, hydro.distanceKm || 0, insideUrban).toFixed(1));
+    const urbanDistanceKm = Number((Number(planningProps.urbanDistanceKm) || urban.distanceKm || 0).toFixed(2));
+    const hydroDistanceKm = Number((hydro.distanceKm || 0).toFixed(2));
+    const roadDistanceKm = Number((road.distanceKm || 0).toFixed(2));
+    const valleySignal = clamp(
+      Math.max(0, 1 - Math.abs(hydroDistanceKm - 0.28) / 0.88) * 0.34
+      + Math.max(0, 1 - roadDistanceKm / 2.3) * 0.14
+      + clamp((18 - slopePct) / 18, 0, 1) * 0.18
+      + (insideUrban ? 0.08 : 0.16)
+      + evidence.hydricSectorCount * 0.06
+      + evidence.stationSupport * 0.18,
+      0,
+      1
+    );
+    const coolingScore = Math.round(clamp(
+      (Number(hydrologyProps.resilience) || hydrology.summary.meanResilience || 56) * 0.34
+      + valleySignal * 100 * 0.24
+      + Math.max(0, 24 - hydroDistanceKm * 30)
+      + evidence.stationSupport * 100 * 0.12
+      + (insideUrban ? 5 : 12)
+      - (Number(riskProps.score) || risk.summary.meanScore || 44) * 0.06,
+      10,
+      98
+    ));
+    const ventilationScore = Math.round(clamp(
+      valleySignal * 100 * 0.42
+      + Math.max(0, 22 - roadDistanceKm * 11)
+      + Math.max(0, 18 - Math.abs(urbanDistanceKm - 0.72) * 15)
+      + (insideUrban ? 10 : 16)
+      + evidence.fieldSignal * 100 * 0.18,
+      12,
+      98
+    ));
+    const obstructionScore = Math.round(clamp(
+      (insideUrban ? 36 : 14)
+      + (Number(mobilityProps.score) || mobility.summary.meanScore || 52) * 0.16
+      + Math.max(0, 18 - roadDistanceKm * 8)
+      + (Number(planningProps.serviceScore) || 0) * 0.18
+      + Math.max(0, slopePct - 6) * 1.15
+      - Math.max(0, 14 - hydroDistanceKm * 12),
+      8,
+      96
+    ));
+    const retentionScore = Math.round(clamp(
+      obstructionScore * 0.48
+      + (insideUrban ? 18 : 0)
+      + Math.max(0, 16 - coolingScore * 0.12)
+      + Math.max(0, 16 - ventilationScore * 0.1)
+      + Math.max(0, (Number(riskProps.score) || 0) - 50) * 0.18,
+      10,
+      97
+    ));
+    const classification = classifyUrbanClimateSector({
+      coolingScore,
+      ventilationScore,
+      obstructionScore,
+      retentionScore,
+    });
+    const classPalette = getUrbanClimateClassPalette(classification.label);
+    const overallClimateScore = Math.round(clamp(
+      ventilationScore * 0.34
+      + coolingScore * 0.28
+      + Math.max(0, 100 - retentionScore) * 0.24
+      + Math.max(0, 100 - obstructionScore) * 0.14,
+      0,
+      100
+    ));
+    const priorityScore = Math.round(clamp(
+      classification.actionLabel === "Proteger"
+        ? ventilationScore * 0.42 + coolingScore * 0.26 + Math.max(0, 100 - obstructionScore) * 0.16 + evidence.supportScore * 0.16
+        : classification.actionLabel === "Reservar"
+          ? ventilationScore * 0.34 + coolingScore * 0.24 + evidence.supportScore * 0.18 + Math.max(0, 100 - retentionScore) * 0.24
+          : classification.actionLabel === "Mitigar"
+            ? retentionScore * 0.42 + obstructionScore * 0.24 + (Number(riskProps.score) || risk.summary.meanScore || 44) * 0.14 + (insideUrban ? 14 : 0)
+            : overallClimateScore,
+      0,
+      100
+    ));
+    const areaHa = turf.area(cell) / 10000;
+    const directionLabel = getRelativeDirectionLabel(targetCentroid, centroid.geometry.coordinates);
+    const supportLabel = officialSummary.activeLayerCount
+      ? `${officialSummary.activeLayerCount} capas oficiales`
+      : "Base territorial";
+    const summary = classification.label === "Retencion termica"
+      ? `${classification.label} con ventilacion ${ventilationScore}/100, retencion ${retentionScore}/100 y obstruccion ${obstructionScore}/100.`
+      : `${classification.label} con ventilacion ${ventilationScore}/100, enfriamiento ${coolingScore}/100 y soporte ${supportLabel.toLowerCase()}.`;
+    return {
+      id: `urban-climate-${index + 1}`,
+      name: `Sector ${index + 1} ${directionLabel}`,
+      feature: cell,
+      centroid: centroid.geometry.coordinates,
+      areaHa: Number(areaHa.toFixed(1)),
+      classLabel: classification.label,
+      tone: classPalette.tone,
+      actionLabel: classification.actionLabel,
+      ventilationScore,
+      coolingScore,
+      obstructionScore,
+      retentionScore,
+      overallClimateScore,
+      priorityScore,
+      slopePct,
+      insideUrban,
+      roadDistanceKm,
+      hydroDistanceKm,
+      urbanDistanceKm,
+      supportLabel,
+      label: getUrbanClimateLabel(priorityScore),
+      summary,
+      recommendation: classification.recommendation,
+      dimensions: {
+        ventilationScore,
+        coolingScore,
+        obstructionScore,
+        retentionScore,
+      },
+      tags: [
+        `${ventilationScore}/100 ventilacion`,
+        `${coolingScore}/100 enfriamiento`,
+        `${retentionScore}/100 retencion`,
+        insideUrban ? "Trama urbana" : "Borde abierto",
+      ],
+    };
+  });
+
+  const prioritySectors = sectors
+    .slice()
+    .sort((left, right) => right.priorityScore - left.priorityScore)
+    .slice(0, 6)
+    .map((sector, index) => ({ ...sector, rank: index + 1 }));
+  const dominantLabel = Object.entries(sectors.reduce((accumulator, sector) => {
+    accumulator[sector.classLabel] = (accumulator[sector.classLabel] || 0) + 1;
+    return accumulator;
+  }, {})).sort((left, right) => right[1] - left[1])[0]?.[0] || "Sin lectura dominante";
+  const corridorCount = sectors.filter((sector) => sector.classLabel === "Corredor frio prioritario").length;
+  const reserveCount = sectors.filter((sector) => sector.classLabel === "Reserva de ventilacion").length;
+  const retentionCount = sectors.filter((sector) => sector.classLabel === "Retencion termica").length;
+  const coolingAreaHa = Number(
+    sectors
+      .filter((sector) => sector.classLabel === "Corredor frio prioritario" || sector.classLabel === "Reserva de ventilacion")
+      .reduce((sum, sector) => sum + sector.areaHa, 0)
+      .toFixed(1)
+  );
+  const heatRetentionAreaHa = Number(
+    sectors
+      .filter((sector) => sector.classLabel === "Retencion termica")
+      .reduce((sum, sector) => sum + sector.areaHa, 0)
+      .toFixed(1)
+  );
+  const meanVentilation = Math.round(sectors.reduce((sum, sector) => sum + sector.ventilationScore, 0) / Math.max(sectors.length, 1));
+  const meanRetention = Math.round(sectors.reduce((sum, sector) => sum + sector.retentionScore, 0) / Math.max(sectors.length, 1));
+  const climateReadinessScore = Math.round(clamp(
+    meanVentilation * 0.38
+    + Math.max(0, 100 - meanRetention) * 0.24
+    + Math.min(coolingAreaHa, 180) * 0.14
+    + Math.min(corridorCount, 8) * 3.2
+    + Math.min(officialSummary.activeLayerCount || 0, 8) * 2.1,
+    0,
+    100
+  ));
+  const corridorSectors = prioritySectors.filter((sector) => sector.classLabel === "Corredor frio prioritario" || sector.classLabel === "Reserva de ventilacion");
+  const corridorCollection = {
+    type: "FeatureCollection",
+    features: corridorSectors.map((sector, index) => {
+      const angleBase = state.territorialAreaId === "quevedo" ? 108 : 132;
+      const angle = angleBase + pseudoNoise(sector.centroid[0] * 5.4, sector.centroid[1] * 6.2, 181 + index * 9) * 26;
+      const halfKm = sector.classLabel === "Corredor frio prioritario" ? 1.18 : 0.86;
+      const start = turf.destination(turf.point(sector.centroid), halfKm, angle + 180, { units: "kilometers" });
+      const end = turf.destination(turf.point(sector.centroid), halfKm, angle, { units: "kilometers" });
+      return lineFeature(
+        `${sector.name} corredor`,
+        [
+          start.geometry.coordinates,
+          sector.centroid,
+          end.geometry.coordinates,
+        ],
+        {
+          urbanClimateSectorId: sector.id,
+          classLabel: sector.classLabel,
+          priorityScore: sector.priorityScore,
+          summary: sector.summary,
+          climateGeometryType: "corridor",
+        }
+      );
+    }),
+  };
+  const zoneCollection = {
+    type: "FeatureCollection",
+    features: sectors.map((sector) => {
+      const feature = cloneFeature(sector.feature);
+      feature.properties = {
+        ...(feature.properties || {}),
+        urbanClimateSectorId: sector.id,
+        classLabel: sector.classLabel,
+        priorityScore: sector.priorityScore,
+        overallClimateScore: sector.overallClimateScore,
+        ventilationScore: sector.ventilationScore,
+        coolingScore: sector.coolingScore,
+        obstructionScore: sector.obstructionScore,
+        retentionScore: sector.retentionScore,
+        summary: sector.summary,
+        climateGeometryType: "zone",
+      };
+      return feature;
+    }),
+  };
+  const nodeCollection = {
+    type: "FeatureCollection",
+    features: prioritySectors.map((sector) => pointFeature(sector.name, sector.centroid, {
+      urbanClimateSectorId: sector.id,
+      classLabel: sector.classLabel,
+      priorityScore: sector.priorityScore,
+      summary: sector.summary,
+      climateGeometryType: "node",
+    })),
+  };
+
+  return {
+    context: target,
+    sourceStudy: {
+      label: "Clima urbano y corredores de aire frio",
+      methodLabel: "Gemelo territorial sintetico con relieve, hidrologia y obstruccion urbana",
+      variablesLabel: "Ventilacion, enfriamiento, retencion termica, soporte hidrico y tejido urbano",
+    },
+    sectors,
+    prioritySectors,
+    zoneCollection,
+    corridorCollection,
+    nodeCollection,
+    summary: {
+      climateReadinessScore,
+      corridorCount,
+      reserveCount,
+      retentionCount,
+      priorityCorridorCount: corridorSectors.length,
+      coolingAreaHa,
+      heatRetentionAreaHa,
+      meanVentilation,
+      meanRetention,
+      dominantLabel,
+      supportLabel: officialSummary.activeLayerCount
+        ? `${officialSummary.activeLayerCount} capas oficiales`
+        : "Base territorial",
+      readout: `${dominantLabel} domina la lectura de ${target.scopeLabel}. Se identifican ${corridorCount} corredores frios, ${reserveCount} reservas de ventilacion y ${heatRetentionAreaHa} ha con retencion termica relativa.`,
+      recommendation: corridorSectors.length
+        ? `Protege ${corridorSectors[0].name} y reserva aperturas de ventilacion antes de consolidar volumen en los ejes criticos.`
+        : "Prioriza sombra, vegetacion y apertura vial en sectores de retencion termica antes de densificar.",
+    },
+  };
+}
+
+function renderUrbanClimateModule() {
+  const areaProfile = getTerritorialAreaProfile();
+  if (!state.urbanClimateData) {
+    resetMetricGrid(dom.urbanClimateResults, `Ejecuta el estudio para leer corredores de aire frio, reservas de ventilacion y retencion termica en ${areaProfile.scopeLabel}.`);
+    dom.urbanClimateReadout?.classList.add("empty-state");
+    dom.urbanClimateReadout?.classList.remove("has-data");
+    if (dom.urbanClimateReadout) {
+      setTextIfChanged(dom.urbanClimateReadout, "Aqui apareceran los corredores frios, la retencion termica y la recomendacion de proteccion o mitigacion.");
+    }
+    dom.urbanClimateDrivers?.classList.add("empty-state");
+    dom.urbanClimateDrivers?.classList.remove("has-data");
+    if (dom.urbanClimateDrivers) {
+      setTextIfChanged(dom.urbanClimateDrivers, "Aqui se resumiran ventilacion, enfriamiento, relieve, soporte hidrico y capas oficiales de apoyo.");
+    }
+    dom.urbanClimateSectors?.classList.add("empty-state");
+    dom.urbanClimateSectors?.classList.remove("has-data");
+    if (dom.urbanClimateSectors) {
+      setTextIfChanged(dom.urbanClimateSectors, "Aqui apareceran los sectores donde conviene proteger corredores o mitigar retencion termica.");
+    }
+    return;
+  }
+
+  const analysis = state.urbanClimateData;
+  paintMetricGrid(dom.urbanClimateResults, [
+    {
+      label: "Preparacion climatica",
+      value: `${analysis.summary.climateReadinessScore}/100`,
+      copy: `Lectura integrada de ventilacion y enfriamiento sobre ${analysis.context.scopeLabel}.`,
+      highlight: true,
+    },
+    {
+      label: "Corredores frios",
+      value: `${analysis.summary.corridorCount}`,
+      copy: `${analysis.summary.priorityCorridorCount} ejes priorizados para proteccion o reserva.`,
+    },
+    {
+      label: "Reserva de ventilacion",
+      value: `${analysis.summary.reserveCount}`,
+      copy: `${analysis.summary.coolingAreaHa} ha con aporte de enfriamiento o ventilacion urbana.`,
+    },
+    {
+      label: "Retencion termica",
+      value: `${analysis.summary.heatRetentionAreaHa} ha`,
+      copy: `${analysis.summary.retentionCount} sectores piden mitigacion o ajuste volumetrico.`,
+    },
+  ]);
+
+  dom.urbanClimateReadout?.classList.remove("empty-state");
+  dom.urbanClimateReadout?.classList.add("has-data");
+  if (dom.urbanClimateReadout) {
+    setHtmlIfChanged(dom.urbanClimateReadout, `
+      <div class="territorial-readout-head">
+        <div>
+          <p class="section-kicker">Clima urbano</p>
+          <h4>Corredores de aire frio y calor retenido</h4>
+        </div>
+        <span class="planning-pill emphasis">${escapeHtmlContent(analysis.summary.dominantLabel)}</span>
+      </div>
+      <p class="territorial-readout-copy">${escapeHtmlContent(analysis.summary.readout)}</p>
+      <p class="territorial-readout-copy">${escapeHtmlContent(analysis.summary.recommendation)}</p>
+    `);
+  }
+
+  dom.urbanClimateDrivers?.classList.remove("empty-state");
+  dom.urbanClimateDrivers?.classList.add("has-data");
+  if (dom.urbanClimateDrivers) {
+    const pills = [
+      analysis.sourceStudy.label,
+      `${analysis.summary.meanVentilation}/100 ventilacion`,
+      `${analysis.summary.meanRetention}/100 retencion`,
+      `${analysis.summary.coolingAreaHa} ha enfriamiento`,
+      analysis.summary.supportLabel,
+    ];
+    setHtmlIfChanged(dom.urbanClimateDrivers, pills.map((item) => `<span class="planning-pill emphasis">${escapeHtmlContent(item)}</span>`).join(""));
+  }
+
+  dom.urbanClimateSectors?.classList.remove("empty-state");
+  dom.urbanClimateSectors?.classList.add("has-data");
+  if (dom.urbanClimateSectors) {
+    setHtmlIfChanged(dom.urbanClimateSectors, analysis.prioritySectors.map((sector) => `
+      <article class="field-evidence-card ${sector.id === state.urbanClimateHighlightId ? "active" : ""}">
+        <div class="field-evidence-head">
+          <div>
+            <p class="candidate-rank">${escapeHtmlContent(sector.actionLabel)}</p>
+            <h4>${escapeHtmlContent(sector.name)}</h4>
+          </div>
+          <span class="planning-pill emphasis">${escapeHtmlContent(sector.classLabel)}</span>
+        </div>
+        <p class="territorial-readout-copy">${escapeHtmlContent(sector.summary)}</p>
+        <div class="field-evidence-metrics">
+          <span>${sector.ventilationScore}/100 ventilacion</span>
+          <span>${sector.coolingScore}/100 enfriamiento</span>
+          <span>${sector.retentionScore}/100 retencion</span>
+          <span>${escapeHtmlContent(sector.label)}</span>
+        </div>
+        <div class="land-change-sector-tags">
+          ${sector.tags.map((tag) => `<span>${escapeHtmlContent(tag)}</span>`).join("")}
+        </div>
+        <p class="land-change-sector-note">${escapeHtmlContent(sector.recommendation)}</p>
+        <button class="ghost-button" type="button" data-urban-climate-sector-id="${sector.id}">Ver en mapa</button>
+      </article>
+    `).join(""));
+  }
+}
+
+async function runUrbanClimateAnalysis(silent = false) {
+  try {
+    await runOfficialDataAnalysis(true);
+    if (!isCurrentTerritorialAnalysis(state.planningData)) {
+      await runPlanningAnalysis(true);
+    }
+    if (!isCurrentTerritorialAnalysis(state.mobilityData)) {
+      state.mobilityData = buildMobilityAnalysis();
+      state.mobilityHighlightId = state.mobilityData.prioritySectors[0]?.id || null;
+    }
+    if (!isCurrentTerritorialAnalysis(state.riskData)) {
+      state.riskData = buildRiskAnalysis();
+      state.riskHighlightId = state.riskData.prioritySectors[0]?.id || null;
+    }
+    if (!isCurrentTerritorialAnalysis(state.hydrologyData)) {
+      state.hydrologyData = buildHydrologyAnalysis();
+      state.hydrologyHighlightId = state.hydrologyData.prioritySectors[0]?.id || null;
+    }
+    const analysis = buildUrbanClimateAnalysis();
+    state.urbanClimateData = analysis;
+    state.urbanClimateHighlightId = analysis.prioritySectors[0]?.id || null;
+    state.territorialFocus = "urbanClimate";
+    renderUrbanClimateModule();
+    renderUrbanClimateOverlay(analysis);
+    renderPlanningModule();
+    updatePlanning3dUrbanClimateSource();
+    syncPlanning3dLayerVisibility();
+    renderPlanning3dQuickSummary();
+    renderPlanning3dSummary();
+    updateMapSummary();
+    if (!silent) {
+      setStatus(`Clima urbano listo para ${analysis.context.scopeLabel}: ${analysis.summary.corridorCount} corredores frios, ${analysis.summary.reserveCount} reservas y ${analysis.summary.heatRetentionAreaHa} ha con retencion termica.`);
+    }
+    return analysis;
+  } catch (error) {
+    console.warn("Fallo el estudio de clima urbano.", error);
+    state.urbanClimateData = null;
+    state.urbanClimateHighlightId = null;
+    clearUrbanClimateOverlay();
+    resetTerritorialModuleState(dom.urbanClimateResults, "No se pudo modelar el clima urbano en esta corrida.", [
+      { target: dom.urbanClimateReadout, message: "No fue posible reconstruir corredores de aire frio ni sectores de retencion." },
+      { target: dom.urbanClimateDrivers, message: "No fue posible sintetizar ventilacion, enfriamiento y soporte territorial." },
+      { target: dom.urbanClimateSectors, message: "No fue posible priorizar sectores de proteccion o mitigacion." },
+    ]);
+    updatePlanning3dUrbanClimateSource();
+    renderPlanning3dQuickSummary();
+    renderPlanning3dSummary();
+    updateMapSummary();
+    if (!silent) {
+      setStatus(`Clima urbano: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    return null;
+  }
+}
+
+function clearUrbanClimateAnalysis() {
+  state.urbanClimateData = null;
+  state.urbanClimateHighlightId = null;
+  clearUrbanClimateOverlay();
+  renderPlanningModule();
+  updatePlanning3dUrbanClimateSource();
+  renderPlanning3dQuickSummary();
+  renderPlanning3dSummary();
+  updateMapSummary();
+  setStatus(`Clima urbano limpiado para ${getTerritorialAreaProfile().scopeLabel}.`);
+}
+
+function renderUrbanClimateOverlay(analysis) {
+  clearUrbanClimateOverlay();
+  if (!mapState.map || !analysis?.sectors?.length || state.entryRoute !== "planificacion") {
+    return;
+  }
+
+  mapState.urbanClimateZoneLayer = L.geoJSON(analysis.zoneCollection, {
+    style: (feature) => {
+      const active = feature.properties?.urbanClimateSectorId === state.urbanClimateHighlightId;
+      const palette = getUrbanClimateClassPalette(feature.properties?.classLabel);
+      return {
+        color: palette.color,
+        weight: active ? 2.8 : 1.5,
+        fillColor: palette.fill,
+        fillOpacity: active ? 0.3 : 0.16,
+        dashArray: feature.properties?.classLabel === "Reserva de ventilacion" ? "7 7" : null,
+      };
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.classLabel || "Clima urbano"}</h3><p class="popup-copy">${feature.properties?.summary || ""}</p>`);
+    },
+  }).addTo(mapState.map);
+
+  mapState.urbanClimateCorridorLayer = L.geoJSON(analysis.corridorCollection, {
+    style: (feature) => {
+      const active = feature.properties?.urbanClimateSectorId === state.urbanClimateHighlightId;
+      const palette = getUrbanClimateClassPalette(feature.properties?.classLabel);
+      return {
+        color: palette.color,
+        weight: active ? 4.8 : 3.1,
+        opacity: active ? 0.96 : 0.82,
+        dashArray: feature.properties?.classLabel === "Reserva de ventilacion" ? "10 8" : null,
+      };
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.classLabel || "Corredor"}</h3><p class="popup-copy">${feature.properties?.summary || ""}</p>`);
+    },
+  }).addTo(mapState.map);
+
+  mapState.urbanClimateNodeLayer = L.geoJSON(analysis.nodeCollection, {
+    pointToLayer: (feature, latlng) => {
+      const palette = getUrbanClimateClassPalette(feature.properties?.classLabel);
+      return L.circleMarker(latlng, {
+        radius: 7,
+        color: "#f8fbfb",
+        weight: 2,
+        fillColor: palette.color,
+        fillOpacity: 0.95,
+      });
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Nodo"}</h3><p class="popup-copy">${feature.properties?.classLabel || "Clima urbano"} · ${feature.properties?.summary || ""}</p>`);
+    },
+  }).addTo(mapState.map);
+
+  mapState.urbanClimateZoneLayer?.bringToFront?.();
+  mapState.urbanClimateCorridorLayer?.bringToFront?.();
+  mapState.urbanClimateNodeLayer?.bringToFront?.();
+}
+
+function clearUrbanClimateOverlay() {
+  ["urbanClimateZoneLayer", "urbanClimateCorridorLayer", "urbanClimateNodeLayer"].forEach((layerName) => {
+    if (mapState[layerName]) {
+      mapState.map?.removeLayer(mapState[layerName]);
+      mapState[layerName] = null;
+    }
+  });
+}
+
+function focusUrbanClimateStudy() {
+  if (!mapState.map || (!mapState.urbanClimateZoneLayer && !mapState.urbanClimateCorridorLayer)) {
+    return;
+  }
+  state.territorialFocus = "urbanClimate";
+  renderUrbanClimateModule();
+  renderUrbanClimateOverlay(state.urbanClimateData);
+  updateMapSummary();
+  const bounds = mapState.urbanClimateZoneLayer?.getBounds?.() || mapState.urbanClimateCorridorLayer?.getBounds?.();
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 12 });
+  }
+}
+
+function focusUrbanClimateSector(sectorId) {
+  const sector = state.urbanClimateData?.sectors?.find((item) => item.id === sectorId);
+  if (!sector || !mapState.map) {
+    return;
+  }
+  state.urbanClimateHighlightId = sectorId;
+  state.territorialFocus = "urbanClimate";
+  renderUrbanClimateModule();
+  renderUrbanClimateOverlay(state.urbanClimateData);
+  updateMapSummary();
+  const bounds = L.geoJSON(sector.feature).getBounds();
+  mapState.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 13 });
+}
+
+function handleUrbanClimateSectorsInteraction(event) {
+  const button = event.target.closest("[data-urban-climate-sector-id]");
+  if (!button || !dom.urbanClimateSectors?.contains(button)) {
+    return;
+  }
+  focusUrbanClimateSector(button.dataset.urbanClimateSectorId);
 }
 
 function isCurrentTerritorialAnalysis(data, target = getCurrentTerritorialTarget()) {
@@ -29907,6 +30809,20 @@ function buildTerritorialDecisionSnapshot() {
     });
   }
 
+  if (state.urbanClimateData) {
+    const urbanClimate = state.urbanClimateData;
+    const score = clamp(urbanClimate.summary.climateReadinessScore, 0, 100);
+    items.push({
+      id: "urbanClimate",
+      score,
+      signal: getTerritorialSignalState(score),
+      title: "Clima urbano",
+      metric: `${urbanClimate.summary.priorityCorridorCount} corredores`,
+      copy: `${urbanClimate.summary.dominantLabel} domina la lectura. ${urbanClimate.summary.coolingAreaHa} ha ayudan al enfriamiento y ${urbanClimate.summary.heatRetentionAreaHa} ha piden mitigacion.`,
+      note: `${urbanClimate.sourceStudy.methodLabel} con ${urbanClimate.sourceStudy.variablesLabel}.`,
+    });
+  }
+
   if (state.zoningPatternsData) {
     const zoning = state.zoningPatternsData;
     const score = clamp(zoning.summary.meanVitality, 0, 100);
@@ -30116,6 +31032,28 @@ function buildTerritorialSectorSheets() {
           { label: "Tension", value: sector.tensionLabel },
         ],
         actionAttr: `data-housing-sector-id="${sector.id}"`,
+      });
+    });
+  }
+
+  if (state.urbanClimateData?.prioritySectors?.length) {
+    state.urbanClimateData.prioritySectors.slice(0, 2).forEach((sector) => {
+      sheets.push({
+        id: sector.id,
+        module: "Clima urbano",
+        title: sector.name,
+        tone: sector.tone,
+        kicker: `${sector.classLabel} / ${sector.actionLabel}`,
+        summary: sector.summary,
+        note: sector.recommendation,
+        metrics: [
+          { label: "Ventilacion", value: `${sector.ventilationScore}/100` },
+          { label: "Enfriamiento", value: `${sector.coolingScore}/100` },
+          { label: "Retencion", value: `${sector.retentionScore}/100` },
+          { label: "Area", value: `${formatLandChangeHa(sector.areaHa)} ha` },
+          { label: "Prioridad", value: sector.label },
+        ],
+        actionAttr: `data-urban-climate-sector-id="${sector.id}"`,
       });
     });
   }
@@ -30356,6 +31294,30 @@ function buildTerritorialAlerts() {
     });
   }
 
+  if (state.urbanClimateData?.prioritySectors?.length) {
+    state.urbanClimateData.prioritySectors.slice(0, 3).forEach((sector) => {
+      if (sector.classLabel === "Retencion termica" || sector.retentionScore >= 72) {
+        alerts.push({
+          id: `alert-urban-climate-${sector.id}`,
+          tone: "critical",
+          module: "Clima urbano",
+          title: `${sector.name}: calor retenido`,
+          copy: `${sector.classLabel} con retencion ${sector.retentionScore}/100 y obstruccion ${sector.obstructionScore}/100. Conviene abrir ventilacion y bajar carga termica.`,
+          actionAttr: `data-urban-climate-sector-id="${sector.id}"`,
+        });
+      } else if (sector.classLabel === "Corredor frio prioritario" || sector.classLabel === "Reserva de ventilacion") {
+        alerts.push({
+          id: `alert-urban-climate-protect-${sector.id}`,
+          tone: "watch",
+          module: "Clima urbano",
+          title: `${sector.name}: corredor a proteger`,
+          copy: `${sector.classLabel} con ventilacion ${sector.ventilationScore}/100. Evita cierres volumetricos o barreras en este eje de enfriamiento.`,
+          actionAttr: `data-urban-climate-sector-id="${sector.id}"`,
+        });
+      }
+    });
+  }
+
   if (state.fodaCameData?.priorityZones?.length) {
     state.fodaCameData.priorityZones.slice(0, 3).forEach((zone) => {
       if (zone.came.id === "afrontar" || zone.scores.threatScore >= 70) {
@@ -30401,30 +31363,33 @@ function buildTerritorialOpsAnalysis() {
   const mobility = state.mobilityData;
   const risk = state.riskData;
   const hydrology = state.hydrologyData;
+  const urbanClimate = state.urbanClimateData;
   const zoning = state.zoningPatternsData;
   const housing = state.housingPatternsData;
   const official = state.officialData.planificacion;
   const decision = buildTerritorialDecisionSnapshot();
   const alerts = buildTerritorialAlerts();
 
-  if (!planning && !mobility && !risk && !hydrology && !zoning && !housing && !official?.activeLayerCount && !decision) {
+  if (!planning && !mobility && !risk && !hydrology && !urbanClimate && !zoning && !housing && !official?.activeLayerCount && !decision) {
     return null;
   }
 
-  const context = planning?.context || mobility?.context || risk?.context || hydrology?.context || zoning?.context || housing?.context || getCurrentTerritorialTarget();
+  const context = planning?.context || mobility?.context || risk?.context || hydrology?.context || urbanClimate?.context || zoning?.context || housing?.context || getCurrentTerritorialTarget();
   const weakestService = planning?.serviceCoverage?.items?.slice?.().sort((left, right) => left.coveragePct - right.coveragePct)[0] || null;
   const primaryCandidate = planning?.candidates?.[0] || null;
   const mobilitySector = mobility?.prioritySectors?.[0] || null;
   const riskSector = risk?.prioritySectors?.[0] || null;
   const hydrologySector = hydrology?.prioritySectors?.[0] || null;
+  const urbanClimateSector = urbanClimate?.prioritySectors?.[0] || null;
   const zoningSector = zoning?.prioritySectors?.[0] || null;
   const housingSector = housing?.prioritySectors?.[0] || null;
   const overallScore = Math.round(clamp(
-    (planning?.summary?.meanScore || 0) * 0.28
-    + (mobility?.summary?.meanScore || 0) * 0.18
-    + (100 - (risk?.summary?.meanScore || 0)) * 0.18
-    + (hydrology?.summary?.meanResilience || 0) * 0.16
-    + (planning?.serviceCoverage?.overallCoverage || 0) * 0.12
+    (planning?.summary?.meanScore || 0) * 0.24
+    + (mobility?.summary?.meanScore || 0) * 0.16
+    + (100 - (risk?.summary?.meanScore || 0)) * 0.16
+    + (hydrology?.summary?.meanResilience || 0) * 0.14
+    + (urbanClimate?.summary?.climateReadinessScore || 0) * 0.12
+    + (planning?.serviceCoverage?.overallCoverage || 0) * 0.1
     + ((official?.activeLayerCount || 0) ? clamp(42 + official.activeLayerCount * 4, 42, 92) : 38) * 0.08,
     0,
     100
@@ -30460,6 +31425,12 @@ function buildTerritorialOpsAnalysis() {
       tone: hydrology.summary.balanceHm3 >= 0 ? "low" : hydrology.summary.meanResilience >= 58 ? "mid" : "high",
       value: `${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3`,
       copy: `${hydrology.summary.criticalSectorLabel} como frente hidrico principal.`,
+    } : null,
+    urbanClimate ? {
+      label: "Clima",
+      tone: urbanClimate.summary.climateReadinessScore >= 70 ? "low" : urbanClimate.summary.climateReadinessScore >= 55 ? "mid" : "high",
+      value: `${urbanClimate.summary.climateReadinessScore}/100`,
+      copy: `${urbanClimate.summary.priorityCorridorCount} corredores y ${urbanClimate.summary.heatRetentionAreaHa} ha en vigilancia termica.`,
     } : null,
     zoning ? {
       label: "Patrones",
@@ -30517,6 +31488,13 @@ function buildTerritorialOpsAnalysis() {
       copy: `${hydrologySector.balanceLabel} · ${hydrologySector.summary}`,
       actionAttr: `data-hydrology-sector-id="${hydrologySector.id}"`,
     } : null,
+    urbanClimateSector ? {
+      title: "Corredor o calor",
+      tone: urbanClimateSector.tone,
+      value: urbanClimateSector.name,
+      copy: `${urbanClimateSector.classLabel} · ${urbanClimateSector.summary}`,
+      actionAttr: `data-urban-climate-sector-id="${urbanClimateSector.id}"`,
+    } : null,
     zoningSector ? {
       title: "Patron clave",
       tone: zoningSector.tone,
@@ -30549,6 +31527,7 @@ function buildTerritorialOpsAnalysis() {
     mobilitySector,
     riskSector,
     hydrologySector,
+    urbanClimateSector,
     zoningSector,
     housingSector,
   };
@@ -30635,6 +31614,7 @@ async function runTerritorialOpsAnalysis(silent = false) {
     await runMobilityAnalysis(true);
     await runRiskAnalysis(true);
     await runHydrologyAnalysis(true);
+    await runUrbanClimateAnalysis(true);
     await runZoningPatternsAnalysis(true);
     await runHousingPatternsAnalysis(true);
     const analysis = buildTerritorialOpsAnalysis();
@@ -30924,6 +31904,12 @@ function buildTerritorialGeoJsonExport() {
     });
   }
 
+  if (state.urbanClimateData) {
+    pushFeatures(state.urbanClimateData.zoneCollection, "clima_urbano", "zonas_termicas");
+    pushFeatures(state.urbanClimateData.corridorCollection, "clima_urbano", "corredores_frios");
+    pushFeatures(state.urbanClimateData.nodeCollection, "clima_urbano", "nodos_prioritarios");
+  }
+
   if (state.zoningPatternsData) {
     state.zoningPatternsData.sectors.forEach((sector) => {
       const clone = cloneFeature(sector.feature);
@@ -31020,6 +32006,11 @@ function buildTerritorialJsonExport() {
       demand: state.hydrologyData.demand,
       summary: state.hydrologyData.summary,
       prioritySectors: state.hydrologyData.prioritySectors,
+    } : null,
+    climaUrbano: state.urbanClimateData ? {
+      sourceStudy: state.urbanClimateData.sourceStudy,
+      summary: state.urbanClimateData.summary,
+      prioritySectors: state.urbanClimateData.prioritySectors,
     } : null,
     patronesTerritoriales: state.zoningPatternsData ? {
       sourceStudy: state.zoningPatternsData.sourceStudy,
@@ -31167,6 +32158,30 @@ function buildTerritorialReportHtml(options = {}) {
               <p class="kicker">Asoleamiento</p>
               <div class="metric">${escapeHtmlContent(state.planningData.solarReadout.solarLabel)}</div>
               <p>${escapeHtmlContent(state.planningData.solarReadout.copy)}</p>
+            </article>
+          </div>
+        </section>
+      ` : ""}
+      ${state.urbanClimateData ? `
+        <section>
+          <p class="kicker">Clima urbano</p>
+          <h2>Corredores de aire frio y retencion termica</h2>
+          <p>${escapeHtmlContent(state.urbanClimateData.summary.readout)}</p>
+          <div class="grid">
+            <article class="card">
+              <p class="kicker">Preparacion climatica</p>
+              <div class="metric">${escapeHtmlContent(`${state.urbanClimateData.summary.climateReadinessScore}/100`)}</div>
+              <p>${escapeHtmlContent(state.urbanClimateData.summary.recommendation)}</p>
+            </article>
+            <article class="card">
+              <p class="kicker">Corredores y reservas</p>
+              <div class="metric">${escapeHtmlContent(String(state.urbanClimateData.summary.priorityCorridorCount))}</div>
+              <p>${escapeHtmlContent(`${state.urbanClimateData.summary.corridorCount} corredores frios y ${state.urbanClimateData.summary.reserveCount} reservas de ventilacion visibles.`)}</p>
+            </article>
+            <article class="card">
+              <p class="kicker">Retencion termica</p>
+              <div class="metric">${escapeHtmlContent(`${formatLandChangeHa(state.urbanClimateData.summary.heatRetentionAreaHa)} ha`)}</div>
+              <p>${escapeHtmlContent(`${state.urbanClimateData.summary.retentionCount} sectores con retencion y ventilacion media ${state.urbanClimateData.summary.meanVentilation}/100.`)}</p>
             </article>
           </div>
         </section>
@@ -38846,6 +39861,7 @@ function updateMapSummary(force = false) {
     const aiGeo = state.aiGeoData;
     const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
+    const urbanClimate = state.urbanClimateData;
     const officialData = state.officialData.planificacion?.activeLayerCount ? state.officialData.planificacion : null;
     const digitalCadastre = state.digitalCadastreData;
     const territorialOps = state.territorialOpsData;
@@ -38862,6 +39878,7 @@ function updateMapSummary(force = false) {
     const showAiGeo = state.territorialFocus === "aiGeo" && aiGeo?.mode === "territorial";
     const showLandChange = state.territorialFocus === "landChange" && landChange;
     const showHydrology = state.territorialFocus === "hydrology" && hydrology;
+    const showUrbanClimate = state.territorialFocus === "urbanClimate" && urbanClimate;
     const showOfficial = state.territorialFocus === "official" && officialData;
     const showDigitalCadastre = state.territorialFocus === "digitalCadastre" && digitalCadastre;
     const showOps = state.territorialFocus === "ops" && territorialOps;
@@ -38911,6 +39928,13 @@ function updateMapSummary(force = false) {
         dom.mapSubtitle,
         `${hydrologyClimate.shortLabel} · ${hydrologyHorizon.shortLabel} · ${hydrologyDemand.shortLabel}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio y ${hydrology.prioritySectors.length} prioridades.`
       );
+    } else if (showUrbanClimate) {
+      setTextIfChanged(dom.overlayIndex, "Clima");
+      setTextIfChanged(dom.mapTitle, `Clima urbano sobre ${urbanClimate.context.scopeLabel}`);
+      setTextIfChanged(
+        dom.mapSubtitle,
+        `${urbanClimate.summary.dominantLabel} - ${urbanClimate.summary.priorityCorridorCount} corredores prioritarios - ${urbanClimate.summary.heatRetentionAreaHa} ha en retencion termica.`
+      );
     } else if (showZoningPatterns) {
       setTextIfChanged(dom.overlayIndex, "Patrones");
       setTextIfChanged(dom.mapTitle, `Patrones territoriales sobre ${zoningPatterns.context.scopeLabel}`);
@@ -38954,6 +39978,10 @@ function updateMapSummary(force = false) {
       setTextIfChanged(dom.overlayIndex, "Balance");
       setTextIfChanged(dom.mapTitle, "Estudio hidrico de Mejia listo");
       setTextIfChanged(dom.mapSubtitle, `${hydrology.climate.shortLabel} · ${hydrology.horizon.shortLabel} · ${hydrology.demand.shortLabel}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio.`);
+    } else if (urbanClimate) {
+      setTextIfChanged(dom.overlayIndex, "Clima");
+      setTextIfChanged(dom.mapTitle, "Clima urbano listo");
+      setTextIfChanged(dom.mapSubtitle, `${urbanClimate.summary.dominantLabel} - ${urbanClimate.summary.priorityCorridorCount} corredores sobre ${urbanClimate.context.scopeLabel}.`);
     } else if (landChange) {
       setTextIfChanged(dom.overlayIndex, "Huella");
       setTextIfChanged(dom.mapTitle, "Estudio de transformacion del suelo listo");
@@ -39107,6 +40135,7 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
     const aiGeo = state.aiGeoData;
     const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
+    const urbanClimate = state.urbanClimateData;
     const digitalCadastre = state.digitalCadastreData;
     const officialData = state.officialData.planificacion?.activeLayerCount ? state.officialData.planificacion : null;
     const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
@@ -39255,6 +40284,33 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
           {
             tone: "neutral",
             label: `${hydrology.prioritySectors.length} prioridades`,
+          },
+        ]
+      : state.territorialFocus === "urbanClimate" && urbanClimate
+      ? [
+          {
+            tone: "analysis",
+            label: "Clima",
+          },
+          {
+            tone: "neutral",
+            label: urbanClimate.summary.dominantLabel,
+          },
+          {
+            tone: urbanClimate.summary.climateReadinessScore >= 76
+              ? "exact"
+              : urbanClimate.summary.climateReadinessScore >= 60
+                ? "preview"
+                : "compare",
+            label: `${urbanClimate.summary.climateReadinessScore}/100`,
+          },
+          {
+            tone: "neutral",
+            label: `${urbanClimate.summary.priorityCorridorCount} corredores`,
+          },
+          {
+            tone: "neutral",
+            label: `${urbanClimate.summary.heatRetentionAreaHa} ha calor`,
           },
         ]
       : state.territorialFocus === "official" && officialData
