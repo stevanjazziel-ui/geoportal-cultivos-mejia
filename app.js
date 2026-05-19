@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260519-3";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260519-4";
 
 const layerCatalog = [
   {
@@ -40038,6 +40038,38 @@ function clearFieldEvidenceOverlay() {
   }
 }
 
+function getDigitalCadastreCandidateStyle(feature, options = {}) {
+  const confidenceScore = Number(feature?.properties?.confidenceScore) || 0;
+  const isActive = options.active ?? (feature?.properties?.digitalCadastreId === state.digitalCadastreHighlightId);
+  const isPreview = Boolean(options.preview) && !isActive;
+  const stroke = isActive
+    ? "#fff7ef"
+    : isPreview
+      ? "#f4d35e"
+      : confidenceScore >= 84
+        ? "#2f7f5f"
+        : confidenceScore >= 68
+          ? "#c28a34"
+          : "#a5544b";
+  const fill = isActive
+    ? "#f6d67b"
+    : isPreview
+      ? "#f4d35e"
+      : confidenceScore >= 84
+        ? "#7bbd9a"
+        : confidenceScore >= 68
+          ? "#e6c46f"
+          : "#d99688";
+  return {
+    color: stroke,
+    weight: isActive ? 3.4 : isPreview ? 3.1 : 2.1,
+    fillColor: fill,
+    fillOpacity: isActive ? 0.46 : isPreview ? 0.38 : 0.22,
+    opacity: isActive ? 0.98 : isPreview ? 0.96 : 0.84,
+    dashArray: isPreview ? null : undefined,
+  };
+}
+
 function renderDigitalCadastreOverlay(analysis) {
   clearDigitalCadastreOverlay();
   if (!mapState.map || !analysis) {
@@ -40088,6 +40120,7 @@ function renderDigitalCadastreOverlay(analysis) {
 
   if (analysis.guideCollection?.features?.length) {
     mapState.digitalCadastreGuideLayer = L.geoJSON(analysis.guideCollection, {
+      pane: "analysisOverlayPane",
       style: (feature) => ({
         color: feature.properties?.guideKind === "hidrica"
           ? "#5f9077"
@@ -40102,16 +40135,8 @@ function renderDigitalCadastreOverlay(analysis) {
   }
 
   mapState.digitalCadastreLayer = L.geoJSON(analysis.candidateCollection, {
-    style: (feature) => {
-      const active = feature.properties?.digitalCadastreId === state.digitalCadastreHighlightId;
-      const confidenceScore = Number(feature.properties?.confidenceScore) || 0;
-      return {
-        color: active ? "#fff7ef" : confidenceScore >= 84 ? "#2f7f5f" : confidenceScore >= 68 ? "#c28a34" : "#a5544b",
-        weight: active ? 2.8 : 1.9,
-        fillColor: confidenceScore >= 84 ? "#7bbd9a" : confidenceScore >= 68 ? "#e6c46f" : "#d99688",
-        fillOpacity: active ? 0.34 : 0.2,
-      };
-    },
+    pane: "plotOverlayPane",
+    style: (feature) => getDigitalCadastreCandidateStyle(feature),
     onEachFeature: (feature, layer) => {
       const title = feature.properties?.digitalCadastreTitle || "Predio asistido";
       const confidenceScore = Number(feature.properties?.confidenceScore) || 0;
@@ -40121,12 +40146,29 @@ function renderDigitalCadastreOverlay(analysis) {
       layer.bindPopup(
         `<h3 class="popup-title">${escapeHtmlContent(title)}</h3><p class="popup-copy">${escapeHtmlContent(getDigitalCadastreConfidenceLabel(confidenceScore))} - ${areaHa.toFixed(areaHa >= 10 ? 1 : 2)} ha - ${Math.round(perimeterM)} m. ${escapeHtmlContent(supportLabel)}. Haz clic para digitalizarlo como lote activo.</p>`
       );
-      layer.bindTooltip(`${title} - ${getDigitalCadastreConfidenceLabel(confidenceScore)} - clic para digitalizar`, { sticky: true });
+      layer.bindTooltip(`${title} - ${getDigitalCadastreConfidenceLabel(confidenceScore)} - clic para digitalizar`, {
+        sticky: true,
+        direction: "top",
+        opacity: 0.96,
+        className: "digital-cadastre-preview-tooltip",
+      });
       layer.on("mouseover", () => {
         const previewId = feature.properties?.digitalCadastreId;
+        layer.setStyle(getDigitalCadastreCandidateStyle(feature, { preview: true }));
+        layer.bringToFront?.();
+        layer.openTooltip?.();
+        if (mapState.map?.getContainer) {
+          mapState.map.getContainer().style.cursor = "pointer";
+        }
         if (previewId && previewId !== state.digitalCadastreHighlightId) {
-          state.digitalCadastreHighlightId = previewId;
-          renderDigitalCadastreModule();
+          setStatus(`Predio detectado: ${title}. Haz clic para digitalizarlo.`);
+        }
+      });
+      layer.on("mouseout", () => {
+        layer.setStyle(getDigitalCadastreCandidateStyle(feature));
+        layer.closeTooltip?.();
+        if (mapState.map?.getContainer) {
+          mapState.map.getContainer().style.cursor = "";
         }
       });
       layer.on("click", () => {
@@ -40139,9 +40181,9 @@ function renderDigitalCadastreOverlay(analysis) {
   }).addTo(mapState.map);
 
   mapState.digitalCadastreSupportLayer?.bringToBack?.();
-  mapState.digitalCadastreGuideLayer?.bringToBack?.();
-  mapState.digitalCadastreLayer?.bringToFront?.();
   mapState.currentPlotLayer?.bringToFront?.();
+  mapState.digitalCadastreGuideLayer?.bringToFront?.();
+  mapState.digitalCadastreLayer?.bringToFront?.();
 }
 
 function clearDigitalCadastreOverlay() {

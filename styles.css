@@ -4651,6 +4651,21 @@ button {
   color: var(--muted);
 }
 
+.digital-cadastre-preview-tooltip {
+  padding: 8px 12px;
+  border: 1px solid rgba(47, 61, 50, 0.12);
+  border-radius: 14px;
+  background: rgba(252, 253, 249, 0.98);
+  color: var(--ink);
+  box-shadow: 0 14px 28px rgba(24, 40, 30, 0.14);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.digital-cadastre-preview-tooltip:before {
+  border-top-color: rgba(252, 253, 249, 0.98) !important;
+}
+
 .planning-3d-entry {
   display: grid;
   gap: 14px;
