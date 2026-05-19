@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260519-4";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260519-5";
 
 const layerCatalog = [
   {
@@ -13334,7 +13334,7 @@ function renderCurrentPlotLayer(fitBounds = false) {
   const plotAreaHa = Number.isFinite(plotAreaM2) ? plotAreaM2 / 10000 : null;
   const plotLabel = state.currentPlotLabel || "Lote activo";
   const plotTooltip = plotAreaHa
-    ? `${plotLabel} · ${formatIrrigationNumber(plotAreaHa, plotAreaHa >= 10 ? 1 : 2)} ha`
+    ? `${plotLabel} | ${formatIrrigationNumber(plotAreaHa, plotAreaHa >= 10 ? 1 : 2)} ha`
     : plotLabel;
 
   mapState.currentPlotLayer = L.geoJSON(state.currentPlot, {
@@ -13349,7 +13349,7 @@ function renderCurrentPlotLayer(fitBounds = false) {
       layer.bindPopup(`
         <h3 class="popup-title">${escapeHtmlContent(plotLabel)}</h3>
         <p class="popup-copy">
-          AOI de trabajo listo para imagen satelital, riego, clima y aptitud${plotAreaHa ? ` · ${formatIrrigationNumber(plotAreaHa, plotAreaHa >= 10 ? 1 : 2)} ha` : ""}${plotAreaM2 ? ` (${formatIrrigationNumber(plotAreaM2, 0)} m2)` : ""}.
+          AOI de trabajo listo para imagen satelital, riego, clima y aptitud${plotAreaHa ? ` | ${formatIrrigationNumber(plotAreaHa, plotAreaHa >= 10 ? 1 : 2)} ha` : ""}${plotAreaM2 ? ` (${formatIrrigationNumber(plotAreaM2, 0)} m2)` : ""}.
         </p>
       `);
       layer.bindTooltip(plotTooltip, { sticky: true });
@@ -19445,45 +19445,8 @@ function getPlanning3dActiveModeSummary() {
   }
   return {
     count: labels.length,
-    label: labels.length ? labels.join(" · ") : "Base 3D",
+    label: labels.length ? labels.join(" | ") : "Base 3D",
   };
-}
-
-function renderPlanning3dQuickSummaryLegacy() {
-  if (!dom.planning3dQuickSummary) {
-    return;
-  }
-
-  const areaProfile = getPlanning3dAreaProfile();
-  const manifest = getPlanning3dManifest();
-  const buildingStatus = planning3dState.datasetStatus?.buildings || null;
-  const date = getPlanning3dSunDateTime();
-  const sunPosition = computePlanning3dSunPosition(date, areaProfile.center?.[1], areaProfile.center?.[0]);
-  const buildingLabel = buildingStatus?.loaded
-    ? formatPlanning3dCount(buildingStatus.loaded)
-    : manifest.buildings?.available
-      ? formatPlanning3dCount(manifest.buildings.recordCount)
-      : "Preparando";
-  const solarLabel = sunPosition?.daylight ? `${sunPosition.elevation}°` : "Sin sol";
-
-  setHtmlIfChanged(dom.planning3dQuickSummary, `
-    <article class="planning-3d-quick-chip">
-      <span>Nucleo</span>
-      <strong>${areaProfile.label}</strong>
-    </article>
-    <article class="planning-3d-quick-chip">
-      <span>Construcciones</span>
-      <strong>${buildingLabel}</strong>
-    </article>
-    <article class="planning-3d-quick-chip">
-      <span>Vista</span>
-      <strong>${planning3dState.viewMode === "orthographic" ? "Ortogonal" : "Volumen 3D"}</strong>
-    </article>
-    <article class="planning-3d-quick-chip">
-      <span>Sol</span>
-      <strong>${solarLabel}</strong>
-    </article>
-  `);
 }
 
 function renderPlanning3dQuickSummary() {
@@ -19501,7 +19464,7 @@ function renderPlanning3dQuickSummary() {
     : manifest.buildings?.available
       ? formatPlanning3dCount(manifest.buildings.recordCount)
       : "Preparando";
-  const solarLabel = sunPosition?.daylight ? `${sunPosition.elevation}°` : "Sin sol";
+  const solarLabel = sunPosition?.daylight ? `${sunPosition.elevation} grados` : "Sin sol";
   const climateLabel = state.urbanClimateData
     ? `${state.urbanClimateData.summary.priorityCorridorCount} corr.`
     : "Sin lectura";
@@ -22995,16 +22958,13 @@ function setPlanning3dHoverFeature(feature, lngLat) {
     insight?.zoningLabel || "Sin patron",
     insight?.mobilityLabel || "Sin movilidad",
     insight?.climateLabel || "Sin clima",
+    insight?.riskLabel || "Sin riesgo",
   ].filter(Boolean).join(" | ");
   const hoverSupport = [
     insight?.nearestFacilityName || "Sin equipamiento",
     insight?.proposalLabel || "Sin propuesta",
   ].filter(Boolean).join(" | ");
-  let hoverHtml = `
-    <p class="popup-title">Construccion ${escapeHtmlContent(feature.properties?.buildingId || feature.properties?.recordIndex + 1 || "urbana")}</p>
-    <p class="popup-copy">${escapeHtmlContent(insight?.zoningLabel || "Sin patron")} · ${escapeHtmlContent(insight?.riskLabel || "Sin riesgo")} · ${escapeHtmlContent(insight?.climateLabel || "Sin clima")}</p>
-  `;
-  hoverHtml = `
+  const hoverHtml = `
     <p class="popup-title">Construccion ${escapeHtmlContent(feature.properties?.buildingId || feature.properties?.recordIndex + 1 || "urbana")}</p>
     <p class="popup-copy">${escapeHtmlContent(hoverFacts)}</p>
     <p class="popup-copy">${escapeHtmlContent(hoverSupport)}</p>
@@ -23095,13 +23055,8 @@ async function selectPlanning3dBuilding(feature, lngLat = null) {
     offset: 18,
   })
     .setLngLat(lngLat)
-    .setHTML(`
-      <p class="popup-title">Construccion ${feature.properties?.buildingId || feature.properties?.recordIndex + 1}</p>
-      <p class="popup-copy">${feature.properties?.floors || 1} pisos | ${feature.properties?.heightM || 4.2} m | huella aprox. ${feature.properties?.footprintM2 || 0} m2</p>
-      <p class="popup-copy">${escapeHtmlContent(planning3dState.selectedInsight?.zoningLabel || "Sin patron")} · ${escapeHtmlContent(planning3dState.selectedInsight?.mobilityLabel || "Sin movilidad")} · ${escapeHtmlContent(planning3dState.selectedInsight?.riskLabel || "Sin riesgo")}</p>
-    `)
+    .setHTML(popupHtml)
     .addTo(planning3dState.map);
-  planning3dState.popup.setHTML(popupHtml);
 
   await loadPlanning3dNearbyPhotos(feature);
 }
