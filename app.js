@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260519-1";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260519-2";
 
 const layerCatalog = [
   {
@@ -3692,6 +3692,7 @@ const state = {
   currentPlotEditLabelBackup: null,
   digitalCadastreAdjustmentSnapshot: null,
   digitalCadastreFichaDraft: null,
+  digitalCadastreFieldSupport: null,
   agronomyAreaId: "mejia",
   baseLayer: "satellite",
   backendChecked: false,
@@ -5879,6 +5880,9 @@ function cacheDom() {
   dom.digitalCadastreModeSelect = document.querySelector("#digitalCadastreModeSelect");
   dom.digitalCadastreSupportInput = document.querySelector("#digitalCadastreSupportInput");
   dom.digitalCadastreSourceNote = document.querySelector("#digitalCadastreSourceNote");
+  dom.digitalCadastreFieldSupportFileInput = document.querySelector("#digitalCadastreFieldSupportFileInput");
+  dom.openDigitalCadastreFieldSupportBtn = document.querySelector("#openDigitalCadastreFieldSupportBtn");
+  dom.clearDigitalCadastreFieldSupportBtn = document.querySelector("#clearDigitalCadastreFieldSupportBtn");
   dom.digitalCadastreResults = document.querySelector("#digitalCadastreResults");
   dom.digitalCadastreReadout = document.querySelector("#digitalCadastreReadout");
   dom.digitalCadastreChecklist = document.querySelector("#digitalCadastreChecklist");
@@ -6903,6 +6907,9 @@ function bindUI() {
   dom.focusDigitalCadastreBtn?.addEventListener("click", focusDigitalCadastreStudy);
   dom.previousDigitalCadastreBtn?.addEventListener("click", () => focusAdjacentDigitalCadastreCandidate(-1));
   dom.nextDigitalCadastreBtn?.addEventListener("click", () => focusAdjacentDigitalCadastreCandidate(1));
+  dom.openDigitalCadastreFieldSupportBtn?.addEventListener("click", () => dom.digitalCadastreFieldSupportFileInput?.click());
+  dom.clearDigitalCadastreFieldSupportBtn?.addEventListener("click", clearDigitalCadastreFieldSupport);
+  dom.digitalCadastreFieldSupportFileInput?.addEventListener("change", handleDigitalCadastreFieldSupportSelection);
   dom.adjustDigitalCadastreBtn?.addEventListener("click", enableCurrentPlotEditing);
   dom.saveDigitalCadastreAdjustBtn?.addEventListener("click", saveCurrentPlotAdjustment);
   dom.cancelDigitalCadastreAdjustBtn?.addEventListener("click", cancelCurrentPlotAdjustment);
@@ -20258,11 +20265,36 @@ function addPlanning3dRuntimeLayers() {
       "fill-color": [
         "match",
         ["get", "publicSpaceType"],
-        "corredor", "#d7b29a",
-        "equipamiento", "#cbdccf",
+        "corredor-primario", "#d8b08e",
+        "corredor-secundario", "#e6cbb2",
+        "plaza-equipamiento", "#cbdccf",
         "#dfe6e3",
       ],
-      "fill-opacity": 0.18,
+      "fill-opacity": 0.2,
+    },
+  });
+
+  planning3dState.map.addLayer({
+    id: "planning3d-public-space-line",
+    type: "line",
+    source: "planning3d-public-space",
+    paint: {
+      "line-color": [
+        "match",
+        ["get", "publicSpaceType"],
+        "corredor-primario", "#b98256",
+        "corredor-secundario", "#c9a27a",
+        "plaza-equipamiento", "#8caf95",
+        "#ccd5d1",
+      ],
+      "line-width": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        12, 0.8,
+        16, 1.8,
+      ],
+      "line-opacity": 0.72,
     },
   });
 
@@ -20321,6 +20353,23 @@ function addPlanning3dRuntimeLayers() {
   });
 
   planning3dState.map.addLayer({
+    id: "planning3d-roads-casing",
+    type: "line",
+    source: "planning3d-roads",
+    paint: {
+      "line-color": "rgba(255, 255, 255, 0.98)",
+      "line-width": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        12, 3.6,
+        16, 8.8,
+      ],
+      "line-opacity": 0.92,
+    },
+  });
+
+  planning3dState.map.addLayer({
     id: "planning3d-roads-glow",
     type: "line",
     source: "planning3d-roads",
@@ -20361,21 +20410,70 @@ function addPlanning3dRuntimeLayers() {
   });
 
   planning3dState.map.addLayer({
-    id: "planning3d-trees-circle",
+    id: "planning3d-roads-transit",
+    type: "line",
+    source: "planning3d-roads",
+    filter: ["!=", ["get", "planning3dRoadTier"], "local"],
+    paint: {
+      "line-color": [
+        "match",
+        ["get", "planning3dTransitPriority"],
+        "alta", "#f4d35e",
+        "media", "#f2c57c",
+        "#e8dac2",
+      ],
+      "line-width": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        12, 0.7,
+        16, 1.5,
+      ],
+      "line-opacity": 0.94,
+      "line-dasharray": [1, 1.3],
+    },
+  });
+
+  planning3dState.map.addLayer({
+    id: "planning3d-trees-shadow",
     type: "circle",
     source: "planning3d-trees",
     paint: {
-      "circle-color": "#5e8b69",
+      "circle-color": "rgba(36, 57, 43, 0.18)",
+      "circle-radius": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        12, ["coalesce", ["get", "shadowRadius"], 3.2],
+        17, ["*", ["coalesce", ["get", "shadowRadius"], 3.2], 0.8],
+      ],
+      "circle-translate": [1.6, 2.6],
+      "circle-opacity": 0.72,
+    },
+  });
+
+  planning3dState.map.addLayer({
+    id: "planning3d-trees-canopy",
+    type: "circle",
+    source: "planning3d-trees",
+    paint: {
+      "circle-color": [
+        "match",
+        ["get", "size"],
+        "large", "#5a8a63",
+        "medium", "#6b986f",
+        "#87aa83",
+      ],
       "circle-stroke-color": "#f5f3ec",
       "circle-stroke-width": 0.9,
       "circle-radius": [
         "interpolate",
         ["linear"],
         ["zoom"],
-        12, 1.8,
-        17, 4.6,
+        12, ["coalesce", ["get", "canopyRadius"], 2.2],
+        17, ["*", ["coalesce", ["get", "canopyRadius"], 2.2], 0.62],
       ],
-      "circle-opacity": 0.84,
+      "circle-opacity": 0.9,
     },
   });
 
@@ -20406,6 +20504,23 @@ function addPlanning3dRuntimeLayers() {
         16, 2.4,
       ],
       "line-opacity": 0.82,
+    },
+  });
+
+  planning3dState.map.addLayer({
+    id: "planning3d-facilities-halo",
+    type: "circle",
+    source: "planning3d-facilities",
+    paint: {
+      "circle-color": "rgba(255, 250, 242, 0.88)",
+      "circle-radius": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        12, 6.2,
+        16, 12.6,
+      ],
+      "circle-opacity": 0.74,
     },
   });
 
@@ -22224,9 +22339,13 @@ function syncPlanning3dLayerVisibility() {
   }
   [
     "planning3d-public-space-fill",
+    "planning3d-public-space-line",
+    "planning3d-roads-casing",
     "planning3d-roads-glow",
     "planning3d-roads-core",
-    "planning3d-trees-circle",
+    "planning3d-roads-transit",
+    "planning3d-trees-shadow",
+    "planning3d-trees-canopy",
   ].forEach((layerId) => {
     if (planning3dState.map?.getLayer(layerId)) {
       planning3dState.map.setLayoutProperty(
@@ -22257,13 +22376,15 @@ function syncPlanning3dLayerVisibility() {
       planning3dState.riskVisible ? "visible" : "none"
     );
   }
-  if (planning3dState.map?.getLayer("planning3d-facilities-circle")) {
-    planning3dState.map.setLayoutProperty(
-      "planning3d-facilities-circle",
-      "visibility",
-      planning3dState.facilitiesVisible ? "visible" : "none"
-    );
-  }
+  ["planning3d-facilities-halo", "planning3d-facilities-circle"].forEach((layerId) => {
+    if (planning3dState.map?.getLayer(layerId)) {
+      planning3dState.map.setLayoutProperty(
+        layerId,
+        "visibility",
+        planning3dState.facilitiesVisible ? "visible" : "none"
+      );
+    }
+  });
   ["planning3d-proposals-fill", "planning3d-proposals-line"].forEach((layerId) => {
     if (planning3dState.map?.getLayer(layerId)) {
       planning3dState.map.setLayoutProperty(
@@ -22723,9 +22844,23 @@ function setPlanning3dHoverFeature(feature, lngLat) {
     { hovered: true }
   );
   const insight = getPlanning3dBuildingInsight(feature);
-  const hoverHtml = `
+  const hoverFacts = [
+    insight?.zoningLabel || "Sin patron",
+    insight?.mobilityLabel || "Sin movilidad",
+    insight?.climateLabel || "Sin clima",
+  ].filter(Boolean).join(" | ");
+  const hoverSupport = [
+    insight?.nearestFacilityName || "Sin equipamiento",
+    insight?.proposalLabel || "Sin propuesta",
+  ].filter(Boolean).join(" | ");
+  let hoverHtml = `
     <p class="popup-title">Construccion ${escapeHtmlContent(feature.properties?.buildingId || feature.properties?.recordIndex + 1 || "urbana")}</p>
     <p class="popup-copy">${escapeHtmlContent(insight?.zoningLabel || "Sin patron")} · ${escapeHtmlContent(insight?.riskLabel || "Sin riesgo")} · ${escapeHtmlContent(insight?.climateLabel || "Sin clima")}</p>
+  `;
+  hoverHtml = `
+    <p class="popup-title">Construccion ${escapeHtmlContent(feature.properties?.buildingId || feature.properties?.recordIndex + 1 || "urbana")}</p>
+    <p class="popup-copy">${escapeHtmlContent(hoverFacts)}</p>
+    <p class="popup-copy">${escapeHtmlContent(hoverSupport)}</p>
   `;
   if (!planning3dState.hoverPopup) {
     planning3dState.hoverPopup = new window.maplibregl.Popup({
@@ -22791,6 +22926,21 @@ async function selectPlanning3dBuilding(feature, lngLat = null) {
     const [lon, lat] = feature.properties?.centroid || [-78.59, -0.503];
     lngLat = { lng: lon, lat };
   }
+  const popupFacts = [
+    planning3dState.selectedInsight?.zoningLabel || "Sin patron",
+    planning3dState.selectedInsight?.mobilityLabel || "Sin movilidad",
+    planning3dState.selectedInsight?.riskLabel || "Sin riesgo",
+  ].filter(Boolean).join(" | ");
+  const popupSupport = [
+    planning3dState.selectedInsight?.nearestFacilityName || "Sin equipamiento",
+    planning3dState.selectedInsight?.proposalLabel || "Sin propuesta",
+  ].filter(Boolean).join(" | ");
+  const popupHtml = `
+      <p class="popup-title">Construccion ${feature.properties?.buildingId || feature.properties?.recordIndex + 1}</p>
+      <p class="popup-copy">${feature.properties?.floors || 1} pisos | ${feature.properties?.heightM || 4.2} m | huella aprox. ${feature.properties?.footprintM2 || 0} m2</p>
+      <p class="popup-copy">${escapeHtmlContent(popupFacts)}</p>
+      <p class="popup-copy">${escapeHtmlContent(popupSupport)}</p>
+    `;
 
   planning3dState.popup?.remove();
   planning3dState.popup = new window.maplibregl.Popup({
@@ -22804,6 +22954,7 @@ async function selectPlanning3dBuilding(feature, lngLat = null) {
       <p class="popup-copy">${escapeHtmlContent(planning3dState.selectedInsight?.zoningLabel || "Sin patron")} · ${escapeHtmlContent(planning3dState.selectedInsight?.mobilityLabel || "Sin movilidad")} · ${escapeHtmlContent(planning3dState.selectedInsight?.riskLabel || "Sin riesgo")}</p>
     `)
     .addTo(planning3dState.map);
+  planning3dState.popup.setHTML(popupHtml);
 
   await loadPlanning3dNearbyPhotos(feature);
 }
@@ -22862,6 +23013,153 @@ function getPlanning3dUrbanClimateCollection() {
   return {
     type: "FeatureCollection",
     features,
+  };
+}
+
+function parseDigitalCadastreSupportGeoJson(text = "") {
+  return parseGpsGeofenceGeoJson(text);
+}
+
+function parseDigitalCadastreSupportKml(text = "") {
+  const parser = new DOMParser();
+  const xml = parser.parseFromString(text, "application/xml");
+  const parseError = xml.getElementsByTagName("parsererror")[0];
+  if (parseError) {
+    throw new Error("No se pudo leer el soporte de campo en KML.");
+  }
+
+  const placemarks = getXmlElementsByLocalName(xml, "Placemark");
+  const containers = placemarks.length ? placemarks : [xml.documentElement];
+  const features = [];
+
+  containers.forEach((placemark, placemarkIndex) => {
+    const baseName = getFirstXmlElementText(placemark, "name") || `Soporte ${placemarkIndex + 1}`;
+
+    getXmlElementsByLocalName(placemark, "Point").forEach((pointNode, pointIndex) => {
+      const coordinates = parseDelimitedCoordinatePairs(getFirstXmlElementText(pointNode, "coordinates"));
+      if (coordinates.length) {
+        features.push({
+          type: "Feature",
+          properties: {
+            name: pointIndex ? `${baseName} punto ${pointIndex + 1}` : baseName,
+          },
+          geometry: {
+            type: "Point",
+            coordinates: coordinates[0],
+          },
+        });
+      }
+    });
+
+    getXmlElementsByLocalName(placemark, "LineString").forEach((lineNode, lineIndex) => {
+      const coordinates = parseDelimitedCoordinatePairs(getFirstXmlElementText(lineNode, "coordinates"));
+      if (coordinates.length >= 2) {
+        features.push({
+          type: "Feature",
+          properties: {
+            name: lineIndex ? `${baseName} ${lineIndex + 1}` : baseName,
+          },
+          geometry: {
+            type: "LineString",
+            coordinates,
+          },
+        });
+      }
+    });
+
+    getXmlElementsByLocalName(placemark, "Polygon").forEach((polygonNode, polygonIndex) => {
+      const outerBoundary = getXmlElementsByLocalName(polygonNode, "outerBoundaryIs")[0] || polygonNode;
+      const ringNode = getXmlElementsByLocalName(outerBoundary, "LinearRing")[0] || outerBoundary;
+      const ring = ensurePolygonRingClosed(parseDelimitedCoordinatePairs(getFirstXmlElementText(ringNode, "coordinates")));
+      if (ring.length >= 4) {
+        features.push({
+          type: "Feature",
+          properties: {
+            name: polygonIndex ? `${baseName} area ${polygonIndex + 1}` : baseName,
+          },
+          geometry: {
+            type: "Polygon",
+            coordinates: [ring],
+          },
+        });
+      }
+    });
+  });
+
+  return {
+    type: "FeatureCollection",
+    features,
+  };
+}
+
+function inferDigitalCadastreFieldSupportRole(feature) {
+  const raw = `${feature?.properties?.name || ""} ${feature?.properties?.type || ""} ${feature?.properties?.role || ""}`
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (/rtk|gnss|gps|punto de control|control point/.test(raw)) {
+    return { id: "rtk", label: "RTK / GPS" };
+  }
+  if (/dron|drone|uav|ortomosaico|ortho/.test(raw)) {
+    return { id: "dron", label: "Dron / ortomosaico" };
+  }
+  if (/cerramiento|muro|lindero|fence|boundary|mojon/.test(raw)) {
+    return { id: "lindero", label: "Lindero visible" };
+  }
+  if (/via|road|street|camino|calle/.test(raw)) {
+    return { id: "vial", label: "Borde vial" };
+  }
+  if (/canal|acequia|rio|quebrada|hidric|drenaje/.test(raw)) {
+    return { id: "hidrico", label: "Borde hidrico" };
+  }
+  return { id: "campo", label: "Soporte de campo" };
+}
+
+function getSupportedDigitalCadastreFieldSupportFeatures(collection = null) {
+  const features = Array.isArray(collection?.features) ? collection.features : [];
+  return features
+    .map((feature) => cloneFeature(feature))
+    .filter((feature) => ["Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon"].includes(feature?.geometry?.type));
+}
+
+function normalizeDigitalCadastreFieldSupportCollection(collection = null, options = {}) {
+  const sourceName = String(options.sourceName || "soporte-campo").trim() || "soporte-campo";
+  const sourceLabel = sourceName.replace(/\.[^.]+$/u, "") || "Soporte de campo";
+  const normalizedFeatures = getSupportedDigitalCadastreFieldSupportFeatures(collection).map((feature, index) => {
+    const role = inferDigitalCadastreFieldSupportRole(feature);
+    const cloned = cloneFeature(feature);
+    let bounds = null;
+    try {
+      bounds = turf.bbox(cloned);
+    } catch (_) {
+      bounds = null;
+    }
+    cloned.properties = {
+      ...(cloned.properties || {}),
+      fieldSupportId: cloned.properties?.fieldSupportId || `field-support-${index + 1}`,
+      fieldSupportRoleId: cloned.properties?.fieldSupportRoleId || role.id,
+      fieldSupportRole: cloned.properties?.fieldSupportRole || role.label,
+      fieldSupportSourceName: sourceName,
+      fieldSupportSourceLabel: sourceLabel,
+      bounds,
+    };
+    return cloned;
+  });
+
+  const roleLabels = [...new Set(normalizedFeatures.map((feature) => feature.properties?.fieldSupportRole).filter(Boolean))];
+  return {
+    id: `digital-cadastre-field-support-${Date.now()}`,
+    sourceName,
+    label: sourceLabel,
+    roleLabels,
+    featureCount: normalizedFeatures.length,
+    collection: {
+      type: "FeatureCollection",
+      features: normalizedFeatures,
+    },
+    summary: `${sourceLabel} | ${normalizedFeatures.length} soportes`,
+    shortLabel: `${normalizedFeatures.length} soportes`,
+    uploadedAt: new Date().toISOString(),
   };
 }
 
@@ -22976,11 +23274,15 @@ function getPlanning3dRoadCollection() {
     filterFeaturesByTerritorialArea(geoSources.vias?.features, state.territorialAreaId),
     { limit: 42 }
   ).map((feature, index) => {
+    const tier = estimatePlanning3dRoadTier(feature);
     feature.properties = {
       ...(feature.properties || {}),
-      planning3dRoadTier: estimatePlanning3dRoadTier(feature),
+      planning3dRoadTier: tier,
       planning3dRoadId: feature.properties?.roadId || feature.properties?.id || `road-${index + 1}`,
       planning3dLabel: feature.properties?.name || `Via ${index + 1}`,
+      planning3dRoadWidth: tier === "primary" ? 1 : tier === "secondary" ? 0.72 : 0.46,
+      planning3dTransitPriority: tier === "primary" ? "alta" : tier === "secondary" ? "media" : "baja",
+      planning3dPublicSpaceRole: tier === "primary" ? "corredor estructurante" : tier === "secondary" ? "eje de soporte" : "malla local",
     };
     return feature;
   });
@@ -23016,10 +23318,10 @@ function getPlanning3dPublicSpaceCollection(roadCollection = getPlanning3dRoadCo
     .slice(0, 18)
     .map((feature) => {
       try {
-        const widthKm = feature.properties?.planning3dRoadTier === "primary" ? 0.018 : 0.012;
+        const widthKm = feature.properties?.planning3dRoadTier === "primary" ? 0.022 : 0.015;
         const buffer = turf.buffer(feature, widthKm, { units: "kilometers" });
         buffer.properties = {
-          publicSpaceType: "corredor",
+          publicSpaceType: feature.properties?.planning3dRoadTier === "primary" ? "corredor-primario" : "corredor-secundario",
           planning3dRoadTier: feature.properties?.planning3dRoadTier,
           summary: `Corredor ${feature.properties?.planning3dRoadTier === "primary" ? "estructurante" : "de soporte"} sobre ${feature.properties?.planning3dLabel || "via local"}.`,
         };
@@ -23033,9 +23335,9 @@ function getPlanning3dPublicSpaceCollection(roadCollection = getPlanning3dRoadCo
     .slice(0, 12)
     .map((feature) => {
       try {
-        const buffer = turf.buffer(feature, 0.036, { units: "kilometers" });
+        const buffer = turf.buffer(feature, 0.045, { units: "kilometers" });
         buffer.properties = {
-          publicSpaceType: "equipamiento",
+          publicSpaceType: "plaza-equipamiento",
           summary: `Espacio publico de apoyo alrededor de ${feature.properties?.name || "equipamiento"}.`,
           facilityType: feature.properties?.facilityType || "equipamiento",
         };
@@ -23063,14 +23365,17 @@ function getPlanning3dTreeCollection(roadCollection = getPlanning3dRoadCollectio
       } catch (error) {
         lengthKm = 0;
       }
-      const stepKm = feature.properties?.planning3dRoadTier === "primary" ? 0.065 : 0.09;
+      const isPrimary = feature.properties?.planning3dRoadTier === "primary";
+      const stepKm = isPrimary ? 0.045 : 0.072;
       for (let currentKm = stepKm * 0.5; currentKm < lengthKm && features.length < 180; currentKm += stepKm) {
         try {
           const point = turf.along(feature, currentKm, { units: "kilometers" });
           point.properties = {
             treeIndex: features.length + 1,
             roadIndex: roadIndex + 1,
-            size: feature.properties?.planning3dRoadTier === "primary" ? "medium" : "small",
+            size: isPrimary ? "large" : "medium",
+            canopyRadius: isPrimary ? 7.8 : 5.4,
+            shadowRadius: isPrimary ? 10.6 : 7.2,
             summary: `Arbol de alineacion sobre ${feature.properties?.planning3dLabel || "eje vial"}.`,
           };
           features.push(point);
@@ -23773,6 +24078,9 @@ function renderPlanningModule() {
   }
   if (dom.clearDigitalCadastreBtn) {
     dom.clearDigitalCadastreBtn.disabled = !state.digitalCadastreData;
+  }
+  if (dom.clearDigitalCadastreFieldSupportBtn) {
+    dom.clearDigitalCadastreFieldSupportBtn.disabled = !state.digitalCadastreFieldSupport;
   }
   if (dom.digitalCadastreModeSelect) {
     dom.digitalCadastreModeSelect.value = state.digitalCadastreModeId;
@@ -36026,6 +36334,18 @@ function boundsIntersect(leftBounds, rightBounds) {
   );
 }
 
+function isCoordinateWithinBounds(coordinates, bounds) {
+  if (!Array.isArray(coordinates) || coordinates.length < 2 || !Array.isArray(bounds) || bounds.length !== 4) {
+    return false;
+  }
+  return (
+    coordinates[0] >= bounds[0]
+    && coordinates[0] <= bounds[2]
+    && coordinates[1] >= bounds[1]
+    && coordinates[1] <= bounds[3]
+  );
+}
+
 function getDigitalCadastreSupportPoint(referencePoint, feature) {
   if (!referencePoint?.geometry || !feature?.geometry) {
     return null;
@@ -36605,6 +36925,24 @@ function buildDigitalCadastreGeometryAudit(feature = state.currentPlot, candidat
   const dimensions = getDigitalCadastreMinDimensions(feature);
   const overlap = getDigitalCadastreOverlapSummary(feature, analysis, candidate);
   const roadDistanceM = Number(((candidate?.roadDistanceKm || 0) * 1000).toFixed(1));
+  const fieldSupportDistanceM = Number(((candidate?.fieldSupportDistanceKm || 0) * 1000).toFixed(1));
+  const rawAlignmentDistanceM = Math.min(
+    Number.isFinite(fieldSupportDistanceM) && fieldSupportDistanceM > 0 ? fieldSupportDistanceM : Number.POSITIVE_INFINITY,
+    Number.isFinite(roadDistanceM) && roadDistanceM > 0 ? roadDistanceM : Number.POSITIVE_INFINITY,
+    Number.isFinite((candidate?.hydroDistanceKm || 0) * 1000) ? (candidate?.hydroDistanceKm || 0) * 1000 : Number.POSITIVE_INFINITY
+  );
+  const alignmentDistanceM = Number.isFinite(rawAlignmentDistanceM)
+    ? Number(rawAlignmentDistanceM.toFixed(1))
+    : null;
+  const outerRing = Array.isArray(feature?.geometry?.coordinates?.[0]) ? feature.geometry.coordinates[0] : [];
+  const normalizedVertices = outerRing
+    .slice(0, Math.max(0, outerRing.length - 1))
+    .map((coordinate) => Array.isArray(coordinate) ? `${Number(coordinate[0]).toFixed(6)}:${Number(coordinate[1]).toFixed(6)}` : "")
+    .filter(Boolean);
+  const duplicateVertexCount = Math.max(0, normalizedVertices.length - new Set(normalizedVertices).size);
+  const compactness = metrics.perimeterM > 0
+    ? clamp((4 * Math.PI * (metrics.areaHa * 10000)) / Math.max(metrics.perimeterM ** 2, 1), 0, 1)
+    : 0;
   const checks = [
     {
       id: "topology",
@@ -36639,11 +36977,48 @@ function buildDigitalCadastreGeometryAudit(feature = state.currentPlot, candidat
         : "No se detectaron solapes importantes con otros candidatos.",
     },
     {
+      id: "vertices",
+      label: "Vertices",
+      value: duplicateVertexCount ? `${duplicateVertexCount} duplicado(s)` : `${Math.max(0, outerRing.length - 1)} nodos`,
+      tone: duplicateVertexCount ? "watch" : "good",
+      copy: duplicateVertexCount
+        ? "Hay vertices repetidos; conviene simplificar el lindero antes de guardar."
+        : "La secuencia de vertices luce consistente para gabinete.",
+    },
+    {
+      id: "shape",
+      label: "Forma",
+      value: `${Math.round(compactness * 100)}/100`,
+      tone: compactness >= 0.34 ? "good" : compactness >= 0.18 ? "watch" : "critical",
+      copy: compactness >= 0.34
+        ? "La forma es estable para un predio visible."
+        : compactness >= 0.18
+          ? "La forma es alargada o irregular; revisa linderos visibles."
+          : "La geometria es muy forzada o delgada y requiere correccion.",
+    },
+    {
       id: "area",
       label: "Area",
       value: `${formatIrrigationNumber(metrics.areaHa, metrics.areaHa >= 10 ? 1 : 2)} ha`,
       tone: metrics.areaHa >= 0.01 ? "good" : "watch",
       copy: `Perimetro ${Math.round(metrics.perimeterM)} m y caja minima ${Math.round(dimensions.minEdgeM)} m.`,
+    },
+    {
+      id: "support",
+      label: "Alineacion",
+      value: Number.isFinite(alignmentDistanceM) ? `${Math.round(alignmentDistanceM)} m` : "Sin soporte",
+      tone: !Number.isFinite(alignmentDistanceM)
+        ? "pending"
+        : alignmentDistanceM <= 12
+          ? "good"
+          : alignmentDistanceM <= 28
+            ? "watch"
+            : "critical",
+      copy: candidate?.fieldSupportRole
+        ? `${candidate.fieldSupportRole} apoya el contorno a ${formatDistanceKm(candidate.fieldSupportDistanceKm)}.`
+        : roadDistanceM <= 120
+          ? `El apoyo principal del lindero sigue siendo vial o hidrico.`
+          : "No hay soporte cercano suficiente; conviene campo o mejor parcelario.",
     },
     {
       id: "legal",
@@ -36678,7 +37053,7 @@ function buildDigitalCadastreBoundaryInsights(candidate = getDigitalCadastreActi
     return [];
   }
   const supportLabel = analysis?.summary?.supportLabel || getDigitalCadastreAreaProfile().supportLabel;
-  return [
+  const items = [
     {
       id: "vial",
       label: "Borde vial",
@@ -36710,6 +37085,17 @@ function buildDigitalCadastreBoundaryInsights(candidate = getDigitalCadastreActi
       copy: `${supportLabel} respalda la lectura y permite ajustar el predio con mejor criterio de gabinete.`,
     },
   ];
+  if (analysis?.summary?.fieldSupportCount) {
+    items.push({
+      id: "campo",
+      label: "Campo / RTK / dron",
+      confidence: candidate.fieldSupportDistanceKm <= 0.03 ? 96 : candidate.fieldSupportDistanceKm <= 0.08 ? 84 : 58,
+      copy: candidate.fieldSupportDistanceKm <= 0.12
+        ? `${candidate.fieldSupportRole || "Soporte de campo"} aparece a ${formatDistanceKm(candidate.fieldSupportDistanceKm)} del lindero activo.`
+        : `${analysis.summary.fieldSupportCount} soporte(s) de campo estan cargados, pero no amarran este predio de forma inmediata.`,
+    });
+  }
+  return items;
 }
 
 function getDigitalCadastrePreviousRecord(candidate = getDigitalCadastreActiveCandidate(), analysis = state.digitalCadastreData) {
@@ -36770,6 +37156,10 @@ function buildDigitalCadastreIntegrationSummary(candidate = getDigitalCadastreAc
     geofenceTone: geofence ? "good" : "pending",
     imageryLabel: analysis?.imageryProfile?.label || getPlanningImageryProfile().label,
     orthomosaicLabel: analysis?.areaProfile?.localParcels ? "Parcelario fino local" : "Sin ortomosaico local cargado",
+    fieldSupportLabel: analysis?.summary?.fieldSupportCount
+      ? `${analysis.summary.fieldSupportCount} soporte(s) campo`
+      : "Sin soporte campo",
+    fieldSupportTone: analysis?.summary?.fieldSupportCount ? "good" : "pending",
   };
 }
 
@@ -36933,6 +37323,8 @@ function buildDigitalCadastreProjectRecord({ feature, candidate, analysis, draft
       legalCheck: nextDraft.legalCheck || "requiere contraste",
       confidenceScore: candidate?.confidenceScore || analysis?.summary?.meanConfidence || 0,
       supportLabel: candidate?.supportLabel || analysis?.summary?.supportLabel || getDigitalCadastreAreaProfile().supportLabel,
+      fieldSupportLabel: analysis?.summary?.fieldSupportLabel || null,
+      fieldSupportCount: analysis?.summary?.fieldSupportCount || 0,
       qualityId: quality.id,
       qualityLabel: quality.label,
       qualityTone: quality.tone,
@@ -37072,6 +37464,77 @@ async function saveDigitalCadastreBatchRecords() {
   return savedSnapshots;
 }
 
+function getDigitalCadastreFieldSupportLabel() {
+  const imported = state.digitalCadastreFieldSupport;
+  if (!imported) {
+    return null;
+  }
+  const roles = Array.isArray(imported.roleLabels) && imported.roleLabels.length
+    ? imported.roleLabels.slice(0, 2).join(" + ")
+    : "Soporte de campo";
+  return `${imported.label} | ${roles}`;
+}
+
+function readTextFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () => reject(new Error(`No se pudo leer ${file?.name || "el archivo"}.`));
+    reader.readAsText(file);
+  });
+}
+
+async function handleDigitalCadastreFieldSupportSelection(event) {
+  const input = event?.target;
+  const file = input?.files?.[0];
+  if (!file) {
+    return;
+  }
+
+  try {
+    const text = await readTextFile(file);
+    const extension = (file.name.split(".").pop() || "").toLowerCase();
+    const parsed = extension === "kml"
+      ? parseDigitalCadastreSupportKml(text)
+      : parseDigitalCadastreSupportGeoJson(text);
+    const imported = normalizeDigitalCadastreFieldSupportCollection(parsed, {
+      sourceName: file.name,
+    });
+    if (!imported.collection.features.length) {
+      throw new Error("El soporte cargado no trae puntos, lineas o poligonos utilizables para catastro.");
+    }
+    state.digitalCadastreFieldSupport = imported;
+    if (state.digitalCadastreData) {
+      await runDigitalCadastreAnalysis(true);
+    } else {
+      renderDigitalCadastreModule();
+      updateMapSummary();
+    }
+    setStatus(`Soporte de campo cargado: ${imported.label} con ${imported.featureCount} geometria(s).`);
+  } catch (error) {
+    console.warn("No se pudo cargar el soporte de campo para catastro.", error);
+    setStatus(error?.message || "No se pudo cargar el soporte de campo para catastro.");
+  } finally {
+    if (input) {
+      input.value = "";
+    }
+  }
+}
+
+function clearDigitalCadastreFieldSupport() {
+  if (!state.digitalCadastreFieldSupport) {
+    return;
+  }
+  state.digitalCadastreFieldSupport = null;
+  if (state.digitalCadastreData) {
+    runDigitalCadastreAnalysis(true);
+  } else {
+    renderDigitalCadastreModule();
+    updateMapSummary();
+  }
+  setStatus("Soporte de campo retirado del catastro asistido.");
+}
+
 function focusAdjacentDigitalCadastreCandidate(direction = 1, options = {}) {
   const analysis = state.digitalCadastreData;
   if (!analysis?.candidates?.length) {
@@ -37095,9 +37558,11 @@ function buildDigitalCadastreCandidate(feature, index, context) {
   const road = getNearestFeatureMatch(centroid, context.roadFeatures);
   const hydro = getNearestFeatureMatch(centroid, context.hydroFeatures);
   const urban = getNearestFeatureMatch(centroid, context.urbanFeatures);
+  const fieldSupport = getNearestFeatureMatch(centroid, context.fieldSupportFeatures || []);
   const roadDistanceKm = Number((road.distanceKm || 0).toFixed(2));
   const hydroDistanceKm = Number((hydro.distanceKm || 0).toFixed(2));
   const urbanDistanceKm = Number((urban.distanceKm || 0).toFixed(2));
+  const fieldSupportDistanceKm = Number((fieldSupport.distanceKm || 0).toFixed(3));
   const props = feature.properties || {};
   const areaHa = Number((props.areaHa || turf.area(feature) / 10000).toFixed(3));
   const boundaryLine = geometryToBoundaryLine(feature.geometry);
@@ -37107,11 +37572,14 @@ function buildDigitalCadastreCandidate(feature, index, context) {
     roadDistanceKm <= 0.08,
     hydroDistanceKm <= 0.12,
     insideUrban || urbanDistanceKm <= 0.18,
+    fieldSupportDistanceKm <= 0.045,
   ].filter(Boolean).length;
+  const fieldSupportRole = fieldSupport?.feature?.properties?.fieldSupportRole || null;
   const confidenceScore = Math.round(clamp(
     context.mode.confidenceBase
       + (context.areaProfile.localParcels ? 10 : 0)
       + visibleHits * 7
+      + (fieldSupportDistanceKm <= 0.02 ? 8 : fieldSupportDistanceKm <= 0.06 ? 4 : 0)
       + (props.cadastralCode ? 4 : 0)
       + (context.scopeType === "plot" ? 4 : 0)
       - (roadDistanceKm > 0.5 ? 8 : 0)
@@ -37131,6 +37599,9 @@ function buildDigitalCadastreCandidate(feature, index, context) {
   }
   if (insideUrban || urbanDistanceKm <= 0.24) {
     supportParts.push(insideUrban ? "borde urbano dentro del poligono" : `borde urbano ${formatDistanceKm(urbanDistanceKm)}`);
+  }
+  if (fieldSupportDistanceKm <= 0.12) {
+    supportParts.push(`${(fieldSupportRole || "campo").toLowerCase()} ${formatDistanceKm(fieldSupportDistanceKm)}`);
   }
   const supportLabel = supportParts.length ? supportParts.join(" - ") : "Sin apoyo visible claro";
   const rankScore = confidenceScore + visibleHits * 3 - Math.min(roadDistanceKm, 1.5) * 6 - Math.min(hydroDistanceKm, 1.5) * 4;
@@ -37156,6 +37627,8 @@ function buildDigitalCadastreCandidate(feature, index, context) {
     roadDistanceKm,
     hydroDistanceKm,
     urbanDistanceKm,
+    fieldSupportDistanceKm,
+    fieldSupportRole,
     insideUrban,
     visibleHits,
     boundaryLabel,
@@ -37174,6 +37647,7 @@ function buildDigitalCadastreCandidate(feature, index, context) {
     guideFeatures: [
       buildDigitalCadastreGuideFeature({ id: `digital-cadastre-${context.areaProfile.id}-${index + 1}`, centroid: centroid.geometry.coordinates, title: titleBase }, road, "via"),
       buildDigitalCadastreGuideFeature({ id: `digital-cadastre-${context.areaProfile.id}-${index + 1}`, centroid: centroid.geometry.coordinates, title: titleBase }, hydro, "hidrica"),
+      buildDigitalCadastreGuideFeature({ id: `digital-cadastre-${context.areaProfile.id}-${index + 1}`, centroid: centroid.geometry.coordinates, title: titleBase }, fieldSupport, "campo"),
     ].filter(Boolean),
     rankScore,
   };
@@ -37196,6 +37670,31 @@ async function buildDigitalCadastreAnalysis() {
   const urbanFeatures = filterFeaturesByTerritorialArea(geoSources.manchaUrbana?.features || [], state.territorialAreaId).map(cloneFeature);
   const targetAreaHa = Number((turf.area(target.feature) / 10000).toFixed(3));
   const targetBounds = turf.bbox(target.feature);
+  const importedFieldSupport = Array.isArray(state.digitalCadastreFieldSupport?.collection?.features)
+    ? state.digitalCadastreFieldSupport.collection.features
+        .map(cloneFeature)
+        .filter((feature) => {
+          if (!feature?.geometry) {
+            return false;
+          }
+          const featureBounds = Array.isArray(feature.properties?.bounds)
+            ? feature.properties.bounds
+            : (() => {
+                try {
+                  return turf.bbox(feature);
+                } catch (_) {
+                  return null;
+                }
+              })();
+          if (Array.isArray(featureBounds) && !boundsIntersect(featureBounds, targetBounds)) {
+            return false;
+          }
+          const anchor = getPlanning3dFeatureAnchor(feature);
+          return feature.geometry.type === "Point"
+            ? isCoordinateWithinBounds(anchor, targetBounds)
+            : safeBooleanIntersects(feature, target.feature) || !!(featureBounds && boundsIntersect(featureBounds, targetBounds));
+        })
+    : [];
   const sharedChecklist = [
     "Representar el predio como poligono cerrado y georreferenciado.",
     "Usar SIRGAS Ecuador / UTM como referencia geometrica de trabajo.",
@@ -37262,6 +37761,15 @@ async function buildDigitalCadastreAnalysis() {
     baseFeatures = [cloneFeature(state.currentPlot)];
   }
 
+  const mergedSupportFeatures = [
+    ...(supportCollection.features || []).map(cloneFeature),
+    ...importedFieldSupport,
+  ];
+  supportCollection = {
+    type: "FeatureCollection",
+    features: mergedSupportFeatures,
+  };
+
   const context = {
     ...target,
     areaProfile,
@@ -37272,6 +37780,7 @@ async function buildDigitalCadastreAnalysis() {
     roadFeatures,
     hydroFeatures,
     urbanFeatures,
+    fieldSupportFeatures: importedFieldSupport,
   };
 
   const candidates = baseFeatures
@@ -37321,7 +37830,11 @@ async function buildDigitalCadastreAnalysis() {
     areaProfile.localParcels
       ? `Parcelario local disponible para ${areaProfile.label}.`
       : `Sin parcelario local en ${areaProfile.label}; el modulo se apoya en imagen y contornos visibles.`,
+    importedFieldSupport.length
+      ? `${importedFieldSupport.length} soportes de campo, RTK o dron reforzaron la lectura dentro del ambito activo.`
+      : "Aun no se cargo soporte extra de campo para reforzar el ajuste del predio.",
   ];
+  const fieldSupportSummaryLabel = getDigitalCadastreFieldSupportLabel();
 
   return {
     context: target,
@@ -37331,8 +37844,8 @@ async function buildDigitalCadastreAnalysis() {
     imageryProfile,
     officialSummary,
     sourceNote: effectiveMode.id === "calibrado"
-      ? `Modo calibrado con ${areaProfile.supportLabel.toLowerCase()} sobre ${target.scopeLabel}. Se usa imagen ${imageryProfile.shortLabel} como apoyo visual y la revision final sigue siendo tecnica.`
-      : `Modo asistido sobre ${target.scopeLabel}. La delimitacion se apoya en contornos visibles, soporte ${areaProfile.sourceLabel.toLowerCase()} y requiere validacion posterior.`,
+      ? `Modo calibrado con ${areaProfile.supportLabel.toLowerCase()} sobre ${target.scopeLabel}. Se usa imagen ${imageryProfile.shortLabel} como apoyo visual${fieldSupportSummaryLabel ? ` y ${fieldSupportSummaryLabel.toLowerCase()}` : ""}, y la revision final sigue siendo tecnica.`
+      : `Modo asistido sobre ${target.scopeLabel}. La delimitacion se apoya en contornos visibles, soporte ${areaProfile.sourceLabel.toLowerCase()}${fieldSupportSummaryLabel ? ` y ${fieldSupportSummaryLabel.toLowerCase()}` : ""}, y requiere validacion posterior.`,
     readout: {
       headline: effectiveMode.id === "calibrado"
         ? `Predios visibles calibrados sobre ${target.scopeLabel}`
@@ -37366,9 +37879,15 @@ async function buildDigitalCadastreAnalysis() {
       localParcels: areaProfile.localParcels,
       checklistCount: checklist.length,
       activeSupportLayers: officialSummary?.activeLayerCount || 0,
-      supportParcelCount: supportCollection.features?.length || 0,
+      supportParcelCount: (supportCollection.features || []).filter((feature) => !feature.properties?.fieldSupportId).length || 0,
+      fieldSupportCount: importedFieldSupport.length,
+      fieldSupportLabel: fieldSupportSummaryLabel,
     },
     supportCollection,
+    fieldSupportCollection: {
+      type: "FeatureCollection",
+      features: importedFieldSupport,
+    },
   };
 }
 
@@ -37580,6 +38099,7 @@ function renderDigitalCadastreFichaBoard(analysis = state.digitalCadastreData) {
         <span class="planning-pill emphasis">${escapeHtmlContent(integrationSummary.geofenceLabel)}</span>
         <span class="planning-pill emphasis">${escapeHtmlContent(integrationSummary.imageryLabel)}</span>
         <span class="planning-pill emphasis">${escapeHtmlContent(integrationSummary.orthomosaicLabel)}</span>
+        <span class="planning-pill emphasis">${escapeHtmlContent(integrationSummary.fieldSupportLabel)}</span>
         ${previousComparison ? `<span class="planning-pill emphasis">Delta area ${previousComparison.deltaAreaHa >= 0 ? "+" : ""}${formatIrrigationNumber(previousComparison.deltaAreaHa, 4)} ha</span>` : ""}
       </div>
       <div class="cadastre-history-list">
@@ -37790,7 +38310,7 @@ function renderDigitalCadastreBatchBoard(analysis = state.digitalCadastreData) {
         <article class="decision-card tone-${integrationSummary.gpsTone === "good" ? "low" : integrationSummary.gpsTone === "watch" ? "mid" : integrationSummary.gpsTone === "critical" ? "high" : "base"}">
           <p class="candidate-rank">GPS / RTK / dron</p>
           <h5>${escapeHtmlContent(integrationSummary.gpsLabel)}</h5>
-          <p>${integrationSummary.gpsDistanceM == null ? "Sin punto en vivo ligado al predio." : `Distancia al lindero: ${Math.round(integrationSummary.gpsDistanceM)} m.`} ${escapeHtmlContent(integrationSummary.orthomosaicLabel)}</p>
+          <p>${integrationSummary.gpsDistanceM == null ? "Sin punto en vivo ligado al predio." : `Distancia al lindero: ${Math.round(integrationSummary.gpsDistanceM)} m.`} ${escapeHtmlContent(integrationSummary.orthomosaicLabel)} · ${escapeHtmlContent(integrationSummary.fieldSupportLabel)}</p>
         </article>
       </div>
     </article>
@@ -37805,11 +38325,12 @@ function renderDigitalCadastreModule() {
   const areaProfile = getDigitalCadastreAreaProfile();
   const requestedMode = getDigitalCadastreModeProfile();
   const effectiveMode = areaProfile.localParcels ? requestedMode : getDigitalCadastreModeProfile("asistido");
+  const fieldSupportLabel = getDigitalCadastreFieldSupportLabel();
   if (dom.digitalCadastreModeSelect) {
     dom.digitalCadastreModeSelect.value = requestedMode.id;
   }
   if (dom.digitalCadastreSupportInput) {
-    setValueIfChanged(dom.digitalCadastreSupportInput, areaProfile.supportLabel);
+    setValueIfChanged(dom.digitalCadastreSupportInput, fieldSupportLabel ? `${areaProfile.supportLabel} + campo` : areaProfile.supportLabel);
   }
 
   if (!state.digitalCadastreData) {
@@ -37850,7 +38371,7 @@ function renderDigitalCadastreModule() {
       setTextIfChanged(dom.digitalCadastreBatchBoard, "Aqui aparece la cola masiva por AOI, el semaforo general y la salida asistida por soporte local.");
     }
     if (dom.digitalCadastreSourceNote) {
-      setTextIfChanged(dom.digitalCadastreSourceNote, `Base preparada para ${areaProfile.label}. ${effectiveMode.note}`);
+      setTextIfChanged(dom.digitalCadastreSourceNote, `Base preparada para ${areaProfile.label}. ${effectiveMode.note}${fieldSupportLabel ? ` Soporte cargado: ${fieldSupportLabel}.` : ""}`);
     }
     return;
   }
@@ -37878,7 +38399,7 @@ function renderDigitalCadastreModule() {
     {
       label: "Soporte",
       value: analysis.summary.supportLabel,
-      copy: `${analysis.summary.activeSupportLayers || 0} capas oficiales activas, ${analysis.summary.supportParcelCount || 0} predios de apoyo y lectura ${analysis.imageryProfile.shortLabel}.`,
+      copy: `${analysis.summary.activeSupportLayers || 0} capas oficiales activas, ${analysis.summary.supportParcelCount || 0} predios de apoyo${analysis.summary.fieldSupportCount ? `, ${analysis.summary.fieldSupportCount} soporte(s) de campo` : ""} y lectura ${analysis.imageryProfile.shortLabel}.`,
     },
     {
       label: "Geometria estable",
@@ -37902,6 +38423,7 @@ function renderDigitalCadastreModule() {
       <p class="territorial-readout-copy">${escapeHtmlContent(analysis.readout.copy)}</p>
       <p class="territorial-readout-copy">${escapeHtmlContent(analysis.readout.recommendation)}</p>
       ${analysis.areaProfile.localParcels ? `<p class="territorial-readout-copy"><strong>Parcelario fino local:</strong> ${escapeHtmlContent(String(analysis.summary.supportParcelCount || 0))} predios de apoyo cargados para contraste visual y ajuste.</p>` : ""}
+      ${analysis.summary.fieldSupportCount ? `<p class="territorial-readout-copy"><strong>Soporte campo / RTK / dron:</strong> ${escapeHtmlContent(String(analysis.summary.fieldSupportCount))} geometria(s) activas para reforzar snap, control geometrico y revision tecnica.</p>` : ""}
       ${activeCandidate ? `<p class="territorial-readout-copy"><strong>Predio activo:</strong> ${escapeHtmlContent(activeCandidate.title)}. Pasa el cursor para inspeccionarlo y haz clic para digitalizarlo como lote actual.</p>` : ""}
     `);
   }
@@ -37914,6 +38436,9 @@ function renderDigitalCadastreModule() {
       analysis.sourceStudy.label,
       ...analysis.normativeRefs,
     ];
+    if (analysis.summary.fieldSupportLabel) {
+      pills.push(`Soporte de campo: ${analysis.summary.fieldSupportLabel}`);
+    }
     setHtmlIfChanged(dom.digitalCadastreChecklist, pills.map((item) => `<span class="planning-pill emphasis">${escapeHtmlContent(item)}</span>`).join(""));
   }
 
@@ -39340,12 +39865,35 @@ function renderDigitalCadastreOverlay(analysis) {
   if (analysis.supportCollection?.features?.length) {
     mapState.digitalCadastreSupportLayer = L.geoJSON(analysis.supportCollection, {
       pane: "analysisOverlayPane",
-      style: {
-        color: "#8e887e",
+      style: (feature) => ({
+        color: feature.properties?.fieldSupportId
+          ? feature.properties?.fieldSupportRoleId === "hidrico"
+            ? "#5f9077"
+            : feature.properties?.fieldSupportRoleId === "vial"
+              ? "#9f8b64"
+              : "#4f7ea7"
+          : "#8e887e",
+        weight: feature.properties?.fieldSupportId ? 1.6 : 1.1,
+        opacity: feature.properties?.fieldSupportId ? 0.72 : 0.34,
+        fillOpacity: feature.properties?.fieldSupportId ? 0.04 : 0,
+        dashArray: feature.properties?.fieldSupportId ? "6 5" : null,
+      }),
+      pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
+        pane: "analysisOverlayPane",
+        radius: feature.properties?.fieldSupportRoleId === "rtk" ? 6.8 : feature.properties?.fieldSupportRoleId === "dron" ? 5.8 : 4.8,
+        color: "#ffffff",
         weight: 1.1,
-        opacity: 0.34,
-        fillOpacity: 0,
-      },
+        fillColor: feature.properties?.fieldSupportRoleId === "rtk"
+          ? "#2f7f5f"
+          : feature.properties?.fieldSupportRoleId === "dron"
+            ? "#4f7ea7"
+            : feature.properties?.fieldSupportRoleId === "hidrico"
+              ? "#5f9077"
+              : "#8f7658",
+        fillOpacity: 0.9,
+        opacity: 0.95,
+        interactive: false,
+      }),
       interactive: false,
     }).addTo(mapState.map);
   }
@@ -39359,7 +39907,11 @@ function renderDigitalCadastreOverlay(analysis) {
   if (analysis.guideCollection?.features?.length) {
     mapState.digitalCadastreGuideLayer = L.geoJSON(analysis.guideCollection, {
       style: (feature) => ({
-        color: feature.properties?.guideKind === "hidrica" ? "#5f9077" : "#9f8b64",
+        color: feature.properties?.guideKind === "hidrica"
+          ? "#5f9077"
+          : feature.properties?.guideKind === "campo"
+            ? "#4f7ea7"
+            : "#9f8b64",
         weight: feature.properties?.digitalCadastreId === state.digitalCadastreHighlightId ? 2.1 : 1.3,
         opacity: feature.properties?.digitalCadastreId === state.digitalCadastreHighlightId ? 0.88 : 0.58,
         dashArray: "7 6",
