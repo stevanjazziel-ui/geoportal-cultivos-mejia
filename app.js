@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260519-5";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260519-6";
 
 const layerCatalog = [
   {
@@ -4124,7 +4124,13 @@ function setTextIfChanged(element, text) {
     return false;
   }
 
-  const normalized = text == null ? "" : String(text);
+  const normalized = text == null
+    ? ""
+    : String(text)
+      .replace(/Â·/g, " | ")
+      .replace(/\s*·\s*/g, " | ")
+      .replace(/Â/g, "")
+      .replace(/\uFFFD/g, "");
   if (uiRenderCache.text.get(element) === normalized) {
     return false;
   }
@@ -20241,7 +20247,7 @@ function addPlanning3dRuntimeLayers() {
         "plaza-equipamiento", "#cbdccf",
         "#dfe6e3",
       ],
-      "fill-opacity": 0.24,
+      "fill-opacity": 0.34,
     },
   });
 
@@ -20262,10 +20268,10 @@ function addPlanning3dRuntimeLayers() {
         "interpolate",
         ["linear"],
         ["zoom"],
-        12, 1.1,
-        16, 2.4,
+        12, 1.4,
+        16, 2.9,
       ],
-      "line-opacity": 0.72,
+      "line-opacity": 0.84,
     },
   });
 
@@ -20286,11 +20292,11 @@ function addPlanning3dRuntimeLayers() {
         "interpolate",
         ["linear"],
         ["zoom"],
-        12, 0.4,
-        16, 1.2,
+        12, 0.6,
+        16, 1.5,
       ],
-      "line-opacity": 0.86,
-      "line-dasharray": [1.4, 1.6],
+      "line-opacity": 0.9,
+      "line-dasharray": [1.2, 1.4],
     },
   });
 
@@ -20337,7 +20343,7 @@ function addPlanning3dRuntimeLayers() {
         "Fragilidad territorial", "#ddb0a5",
         "#d5dee2",
       ],
-      "fill-opacity": 0.16,
+      "fill-opacity": 0.24,
     },
   });
 
@@ -20354,7 +20360,7 @@ function addPlanning3dRuntimeLayers() {
         "Riesgo bajo", "#b7d5c6",
         "#d8ddd8",
       ],
-      "fill-opacity": 0.2,
+      "fill-opacity": 0.24,
     },
   });
 
@@ -20371,7 +20377,7 @@ function addPlanning3dRuntimeLayers() {
         "Cobertura baja", "#d9a18f",
         "#d8ddd8",
       ],
-      "fill-opacity": 0.16,
+      "fill-opacity": 0.22,
     },
   });
 
@@ -20385,10 +20391,10 @@ function addPlanning3dRuntimeLayers() {
         "interpolate",
         ["linear"],
         ["zoom"],
-        12, 3.6,
-        16, 8.8,
+        12, 4.2,
+        16, 10.4,
       ],
-      "line-opacity": 0.92,
+      "line-opacity": 0.95,
     },
   });
 
@@ -20397,15 +20403,15 @@ function addPlanning3dRuntimeLayers() {
     type: "line",
     source: "planning3d-roads",
     paint: {
-      "line-color": "rgba(255, 255, 255, 0.82)",
+      "line-color": "rgba(255, 255, 255, 0.86)",
       "line-width": [
         "interpolate",
         ["linear"],
         ["zoom"],
-        12, 2.8,
-        16, 7.4,
+        12, 3.4,
+        16, 8.6,
       ],
-      "line-opacity": 0.7,
+      "line-opacity": 0.78,
     },
   });
 
@@ -20425,8 +20431,8 @@ function addPlanning3dRuntimeLayers() {
         "interpolate",
         ["linear"],
         ["zoom"],
-        12, 1.5,
-        16, 4.2,
+        12, 1.9,
+        16, 4.8,
       ],
       "line-opacity": 0.96,
     },
@@ -20449,8 +20455,8 @@ function addPlanning3dRuntimeLayers() {
         "interpolate",
         ["linear"],
         ["zoom"],
-        12, 0.7,
-        16, 1.5,
+        12, 0.9,
+        16, 1.8,
       ],
       "line-opacity": 0.94,
       "line-dasharray": [1, 1.3],
@@ -20491,7 +20497,7 @@ function addPlanning3dRuntimeLayers() {
     type: "circle",
     source: "planning3d-trees",
     paint: {
-      "circle-color": "rgba(36, 57, 43, 0.18)",
+      "circle-color": "rgba(31, 49, 38, 0.24)",
       "circle-radius": [
         "interpolate",
         ["linear"],
@@ -20499,8 +20505,8 @@ function addPlanning3dRuntimeLayers() {
         12, ["coalesce", ["get", "shadowRadius"], 3.2],
         17, ["*", ["coalesce", ["get", "shadowRadius"], 3.2], 0.8],
       ],
-      "circle-translate": [1.6, 2.6],
-      "circle-opacity": 0.72,
+      "circle-translate": [1.8, 3.0],
+      "circle-opacity": 0.78,
     },
   });
 
@@ -20509,7 +20515,7 @@ function addPlanning3dRuntimeLayers() {
     type: "circle",
     source: "planning3d-trees",
     paint: {
-      "circle-color": "rgba(88, 70, 53, 0.72)",
+      "circle-color": "rgba(92, 72, 53, 0.8)",
       "circle-radius": [
         "interpolate",
         ["linear"],
@@ -20517,7 +20523,7 @@ function addPlanning3dRuntimeLayers() {
         12, 0.8,
         17, 1.7,
       ],
-      "circle-opacity": 0.82,
+      "circle-opacity": 0.88,
     },
   });
 
@@ -20531,10 +20537,10 @@ function addPlanning3dRuntimeLayers() {
         ["get", "size"],
         "large", "#5a8a63",
         "medium", "#6b986f",
-        "#87aa83",
+        "#89ad86",
       ],
       "circle-stroke-color": "#f5f3ec",
-      "circle-stroke-width": 0.9,
+      "circle-stroke-width": 1,
       "circle-radius": [
         "interpolate",
         ["linear"],
@@ -20542,7 +20548,7 @@ function addPlanning3dRuntimeLayers() {
         12, ["coalesce", ["get", "canopyRadius"], 2.2],
         17, ["*", ["coalesce", ["get", "canopyRadius"], 2.2], 0.62],
       ],
-      "circle-opacity": 0.9,
+      "circle-opacity": 0.94,
     },
   });
 
@@ -20553,8 +20559,8 @@ function addPlanning3dRuntimeLayers() {
     paint: {
       "fill-extrusion-height": ["coalesce", ["get", "proposalHeightM"], 18],
       "fill-extrusion-base": 0,
-      "fill-extrusion-color": "#87a7c4",
-      "fill-extrusion-opacity": 0.32,
+      "fill-extrusion-color": "#7f9fbe",
+      "fill-extrusion-opacity": 0.4,
       "fill-extrusion-vertical-gradient": true,
     },
   });
@@ -20564,15 +20570,15 @@ function addPlanning3dRuntimeLayers() {
     type: "line",
     source: "planning3d-proposals",
     paint: {
-      "line-color": "rgba(88, 119, 147, 0.86)",
+      "line-color": "rgba(84, 114, 142, 0.92)",
       "line-width": [
         "interpolate",
         ["linear"],
         ["zoom"],
-        12, 1.2,
-        16, 2.4,
+        12, 1.3,
+        16, 2.7,
       ],
-      "line-opacity": 0.82,
+      "line-opacity": 0.9,
     },
   });
 
