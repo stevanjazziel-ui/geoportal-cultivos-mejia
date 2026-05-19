@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260519-2";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260519-3";
 
 const layerCatalog = [
   {
@@ -19506,6 +19506,14 @@ function renderPlanning3dQuickSummary() {
     ? `${state.urbanClimateData.summary.priorityCorridorCount} corr.`
     : "Sin lectura";
   const modeSummary = getPlanning3dActiveModeSummary();
+  const activeModesLabel = [
+    planning3dState.corridorVisible ? "Corredor" : null,
+    planning3dState.zoningVisible ? "Zonificar" : null,
+    planning3dState.mobilityVisible ? "Movilidad" : null,
+    planning3dState.riskVisible ? "Riesgo" : null,
+    planning3dState.facilitiesVisible ? "Equip." : null,
+    planning3dState.proposalVisible ? "Propuesta" : null,
+  ].filter(Boolean).join(" | ");
 
   setHtmlIfChanged(dom.planning3dQuickSummary, `
     <article class="planning-3d-quick-chip">
@@ -19530,7 +19538,7 @@ function renderPlanning3dQuickSummary() {
     </article>
     <article class="planning-3d-quick-chip">
       <span>Escenarios</span>
-      <strong>${modeSummary.count ? `${modeSummary.count} activos` : "Base"}</strong>
+      <strong>${modeSummary.count ? activeModesLabel : "Base"}</strong>
     </article>
   `);
 }
@@ -20270,7 +20278,7 @@ function addPlanning3dRuntimeLayers() {
         "plaza-equipamiento", "#cbdccf",
         "#dfe6e3",
       ],
-      "fill-opacity": 0.2,
+      "fill-opacity": 0.24,
     },
   });
 
@@ -20291,10 +20299,62 @@ function addPlanning3dRuntimeLayers() {
         "interpolate",
         ["linear"],
         ["zoom"],
-        12, 0.8,
-        16, 1.8,
+        12, 1.1,
+        16, 2.4,
       ],
       "line-opacity": 0.72,
+    },
+  });
+
+  planning3dState.map.addLayer({
+    id: "planning3d-public-space-core",
+    type: "line",
+    source: "planning3d-public-space",
+    filter: ["!=", ["get", "publicSpaceType"], "plaza-equipamiento"],
+    paint: {
+      "line-color": [
+        "match",
+        ["get", "publicSpaceType"],
+        "corredor-primario", "#f2e4d1",
+        "corredor-secundario", "#f5ece0",
+        "#eef2ef",
+      ],
+      "line-width": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        12, 0.4,
+        16, 1.2,
+      ],
+      "line-opacity": 0.86,
+      "line-dasharray": [1.4, 1.6],
+    },
+  });
+
+  planning3dState.map.addLayer({
+    id: "planning3d-public-space-labels",
+    type: "symbol",
+    source: "planning3d-public-space",
+    minzoom: 13,
+    filter: ["!=", ["get", "publicSpaceType"], "corredor-secundario"],
+    layout: {
+      "text-field": ["coalesce", ["get", "publicSpaceLabel"], ""],
+      "text-size": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        13, 10,
+        17, 13,
+      ],
+      "text-letter-spacing": 0.04,
+      "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+      "symbol-sort-key": ["case", ["==", ["get", "publicSpaceType"], "plaza-equipamiento"], 2, 1],
+    },
+    paint: {
+      "text-color": "rgba(77, 91, 85, 0.86)",
+      "text-halo-color": "rgba(255, 252, 247, 0.9)",
+      "text-halo-width": 1.2,
+      "text-opacity": 0.92,
     },
   });
 
@@ -20435,6 +20495,35 @@ function addPlanning3dRuntimeLayers() {
   });
 
   planning3dState.map.addLayer({
+    id: "planning3d-roads-labels",
+    type: "symbol",
+    source: "planning3d-roads",
+    minzoom: 14,
+    filter: ["!=", ["get", "planning3dRoadTier"], "local"],
+    layout: {
+      "symbol-placement": "line",
+      "text-field": ["coalesce", ["get", "planning3dUrbanLabel"], ["get", "planning3dLabel"]],
+      "text-size": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        14, 10,
+        17, 13,
+      ],
+      "text-letter-spacing": 0.08,
+      "text-font": ["Open Sans Bold", "Arial Unicode MS Bold"],
+      "text-max-angle": 35,
+      "text-padding": 8,
+    },
+    paint: {
+      "text-color": "rgba(98, 72, 51, 0.86)",
+      "text-halo-color": "rgba(255, 253, 249, 0.94)",
+      "text-halo-width": 1.4,
+      "text-opacity": 0.88,
+    },
+  });
+
+  planning3dState.map.addLayer({
     id: "planning3d-trees-shadow",
     type: "circle",
     source: "planning3d-trees",
@@ -20449,6 +20538,23 @@ function addPlanning3dRuntimeLayers() {
       ],
       "circle-translate": [1.6, 2.6],
       "circle-opacity": 0.72,
+    },
+  });
+
+  planning3dState.map.addLayer({
+    id: "planning3d-trees-trunk",
+    type: "circle",
+    source: "planning3d-trees",
+    paint: {
+      "circle-color": "rgba(88, 70, 53, 0.72)",
+      "circle-radius": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        12, 0.8,
+        17, 1.7,
+      ],
+      "circle-opacity": 0.82,
     },
   });
 
@@ -20547,6 +20653,33 @@ function addPlanning3dRuntimeLayers() {
         16, 7.2,
       ],
       "circle-opacity": 0.94,
+    },
+  });
+
+  planning3dState.map.addLayer({
+    id: "planning3d-facilities-label",
+    type: "symbol",
+    source: "planning3d-facilities",
+    minzoom: 14,
+    layout: {
+      "text-field": ["coalesce", ["get", "name"], ["get", "planning3dLabel"], "Equipamiento"],
+      "text-size": [
+        "interpolate",
+        ["linear"],
+        ["zoom"],
+        14, 10,
+        17, 12,
+      ],
+      "text-offset": [0, 1.15],
+      "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
+      "text-letter-spacing": 0.03,
+      "text-anchor": "top",
+    },
+    paint: {
+      "text-color": "rgba(56, 73, 68, 0.9)",
+      "text-halo-color": "rgba(255, 253, 249, 0.95)",
+      "text-halo-width": 1.3,
+      "text-opacity": 0.92,
     },
   });
 
@@ -20680,6 +20813,16 @@ function addPlanning3dRuntimeLayers() {
       "circle-stroke-width": 1.2,
       "circle-opacity": 0.92,
     },
+  });
+
+  [
+    "planning3d-public-space-labels",
+    "planning3d-roads-labels",
+    "planning3d-facilities-label",
+  ].forEach((layerId) => {
+    if (planning3dState.map.getLayer(layerId)) {
+      planning3dState.map.moveLayer(layerId);
+    }
   });
 
   if (!planning3dState.eventsBound) {
@@ -22340,11 +22483,15 @@ function syncPlanning3dLayerVisibility() {
   [
     "planning3d-public-space-fill",
     "planning3d-public-space-line",
+    "planning3d-public-space-core",
+    "planning3d-public-space-labels",
     "planning3d-roads-casing",
     "planning3d-roads-glow",
     "planning3d-roads-core",
     "planning3d-roads-transit",
+    "planning3d-roads-labels",
     "planning3d-trees-shadow",
+    "planning3d-trees-trunk",
     "planning3d-trees-canopy",
   ].forEach((layerId) => {
     if (planning3dState.map?.getLayer(layerId)) {
@@ -22376,7 +22523,7 @@ function syncPlanning3dLayerVisibility() {
       planning3dState.riskVisible ? "visible" : "none"
     );
   }
-  ["planning3d-facilities-halo", "planning3d-facilities-circle"].forEach((layerId) => {
+  ["planning3d-facilities-halo", "planning3d-facilities-circle", "planning3d-facilities-label"].forEach((layerId) => {
     if (planning3dState.map?.getLayer(layerId)) {
       planning3dState.map.setLayoutProperty(
         layerId,
@@ -23275,14 +23422,21 @@ function getPlanning3dRoadCollection() {
     { limit: 42 }
   ).map((feature, index) => {
     const tier = estimatePlanning3dRoadTier(feature);
+    const label = feature.properties?.name || `Via ${index + 1}`;
     feature.properties = {
       ...(feature.properties || {}),
       planning3dRoadTier: tier,
       planning3dRoadId: feature.properties?.roadId || feature.properties?.id || `road-${index + 1}`,
-      planning3dLabel: feature.properties?.name || `Via ${index + 1}`,
+      planning3dLabel: label,
+      planning3dLabelRank: tier === "primary" ? 3 : tier === "secondary" ? 2 : 1,
       planning3dRoadWidth: tier === "primary" ? 1 : tier === "secondary" ? 0.72 : 0.46,
       planning3dTransitPriority: tier === "primary" ? "alta" : tier === "secondary" ? "media" : "baja",
       planning3dPublicSpaceRole: tier === "primary" ? "corredor estructurante" : tier === "secondary" ? "eje de soporte" : "malla local",
+      planning3dUrbanLabel: tier === "primary"
+        ? `Corredor ${label}`
+        : tier === "secondary"
+          ? `Eje ${label}`
+          : label,
     };
     return feature;
   });
@@ -23320,9 +23474,13 @@ function getPlanning3dPublicSpaceCollection(roadCollection = getPlanning3dRoadCo
       try {
         const widthKm = feature.properties?.planning3dRoadTier === "primary" ? 0.022 : 0.015;
         const buffer = turf.buffer(feature, widthKm, { units: "kilometers" });
+        const label = feature.properties?.planning3dRoadTier === "primary"
+          ? `Corredor ${feature.properties?.planning3dLabel || "urbano"}`
+          : `Espacio publico ${feature.properties?.planning3dLabel || "de soporte"}`;
         buffer.properties = {
           publicSpaceType: feature.properties?.planning3dRoadTier === "primary" ? "corredor-primario" : "corredor-secundario",
           planning3dRoadTier: feature.properties?.planning3dRoadTier,
+          publicSpaceLabel: label,
           summary: `Corredor ${feature.properties?.planning3dRoadTier === "primary" ? "estructurante" : "de soporte"} sobre ${feature.properties?.planning3dLabel || "via local"}.`,
         };
         return buffer;
@@ -23338,6 +23496,7 @@ function getPlanning3dPublicSpaceCollection(roadCollection = getPlanning3dRoadCo
         const buffer = turf.buffer(feature, 0.045, { units: "kilometers" });
         buffer.properties = {
           publicSpaceType: "plaza-equipamiento",
+          publicSpaceLabel: `Plaza ${feature.properties?.name || "de equipamiento"}`,
           summary: `Espacio publico de apoyo alrededor de ${feature.properties?.name || "equipamiento"}.`,
           facilityType: feature.properties?.facilityType || "equipamiento",
         };
@@ -23382,6 +23541,29 @@ function getPlanning3dTreeCollection(roadCollection = getPlanning3dRoadCollectio
         } catch (error) {
           break;
         }
+      }
+    });
+  getPlanning3dFacilitiesCollection().features
+    .slice(0, 12)
+    .forEach((feature, facilityIndex) => {
+      const [lon, lat] = feature.geometry?.coordinates || [];
+      if (!Number.isFinite(lon) || !Number.isFinite(lat)) {
+        return;
+      }
+      const ringCount = 6;
+      for (let index = 0; index < ringCount && features.length < 240; index += 1) {
+        const angle = (Math.PI * 2 * index) / ringCount;
+        const eastM = Math.cos(angle) * 12;
+        const northM = Math.sin(angle) * 12;
+        const coordinates = projectPlanning3dCoordinate(lon, lat, eastM, northM);
+        features.push(pointFeature(`Arbol plaza ${facilityIndex + 1}-${index + 1}`, coordinates, {
+          treeIndex: features.length + 1,
+          roadIndex: null,
+          size: "medium",
+          canopyRadius: 6.2,
+          shadowRadius: 8.4,
+          summary: `Arbolado de apoyo alrededor de ${feature.properties?.name || "equipamiento"}.`,
+        }));
       }
     });
   return {
