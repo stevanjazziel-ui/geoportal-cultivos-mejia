@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-1";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-2";
 
 const layerCatalog = [
   {
@@ -3993,6 +3993,9 @@ const planning3dState = {
     facilities: null,
     proposals: null,
   },
+  urbanSceneCacheSignature: "",
+  urbanSceneCache: null,
+  analyticalScenePromise: null,
   forceVisualFallback: false,
   visualReady: false,
   visualSnapshot: null,
@@ -7206,16 +7209,20 @@ function bindUI() {
   dom.planning3dResetViewBtn?.addEventListener("click", focusPlanning3dDataset);
   dom.planning3dBuildingsToggle?.addEventListener("change", () => {
     planning3dState.buildingsVisible = !!dom.planning3dBuildingsToggle.checked;
-    syncPlanning3dLayerVisibility();
-    refreshPlanning3dVisualState({ allowRecovery: true, updateSummary: true });
+    syncPlanning3dLayerVisibility({ refreshSummary: true, allowRecovery: true });
   });
   dom.planning3dParcelsToggle?.addEventListener("change", async () => {
     planning3dState.parcelsVisible = !!dom.planning3dParcelsToggle.checked;
     if (planning3dState.parcelsVisible) {
       await ensurePlanning3dDataset("parcels");
     }
-    syncPlanning3dLayerVisibility();
-    refreshPlanning3dVisualState({ allowRecovery: true, updateSummary: true });
+    syncPlanning3dLayerVisibility({
+      refreshScene: false,
+      refreshMarkers: false,
+      refreshShadows: false,
+      refreshSummary: true,
+      allowRecovery: true,
+    });
   });
   dom.planning3dShadowsToggle?.addEventListener("change", () => {
     planning3dState.shadowsVisible = !!dom.planning3dShadowsToggle.checked;
@@ -7223,51 +7230,72 @@ function bindUI() {
   });
   dom.planning3dClimateToggle?.addEventListener("change", () => {
     planning3dState.urbanClimateVisible = !!dom.planning3dClimateToggle.checked;
-    syncPlanning3dLayerVisibility();
-    renderPlanning3dQuickSummary();
-    renderPlanning3dSummary();
+    syncPlanning3dLayerVisibility({
+      refreshScene: false,
+      refreshMarkers: false,
+      refreshShadows: false,
+      refreshSummary: true,
+    });
   });
-  dom.planning3dCorridorBtn?.addEventListener("click", async () => {
+  dom.planning3dCorridorBtn?.addEventListener("click", () => {
     planning3dState.corridorVisible = !planning3dState.corridorVisible;
-    await primePlanning3dSceneData();
-    syncPlanning3dLayerVisibility();
-    renderPlanning3dQuickSummary();
-    renderPlanning3dSummary();
+    syncPlanning3dScenarioButtons();
+    syncPlanning3dLayerVisibility({
+      refreshScene: false,
+      refreshMarkers: false,
+      refreshShadows: false,
+      refreshSummary: true,
+    });
   });
-  dom.planning3dZoningBtn?.addEventListener("click", async () => {
+  dom.planning3dZoningBtn?.addEventListener("click", () => {
     planning3dState.zoningVisible = !planning3dState.zoningVisible;
-    await primePlanning3dSceneData();
-    syncPlanning3dLayerVisibility();
-    renderPlanning3dQuickSummary();
-    renderPlanning3dSummary();
+    syncPlanning3dScenarioButtons();
+    syncPlanning3dLayerVisibility({
+      refreshScene: false,
+      refreshMarkers: false,
+      refreshShadows: false,
+      refreshSummary: true,
+    });
   });
-  dom.planning3dMobilityBtn?.addEventListener("click", async () => {
+  dom.planning3dMobilityBtn?.addEventListener("click", () => {
     planning3dState.mobilityVisible = !planning3dState.mobilityVisible;
-    await primePlanning3dSceneData();
-    syncPlanning3dLayerVisibility();
-    renderPlanning3dQuickSummary();
-    renderPlanning3dSummary();
+    syncPlanning3dScenarioButtons();
+    syncPlanning3dLayerVisibility({
+      refreshScene: false,
+      refreshMarkers: false,
+      refreshShadows: false,
+      refreshSummary: true,
+    });
   });
-  dom.planning3dRiskBtn?.addEventListener("click", async () => {
+  dom.planning3dRiskBtn?.addEventListener("click", () => {
     planning3dState.riskVisible = !planning3dState.riskVisible;
-    await primePlanning3dSceneData();
-    syncPlanning3dLayerVisibility();
-    renderPlanning3dQuickSummary();
-    renderPlanning3dSummary();
+    syncPlanning3dScenarioButtons();
+    syncPlanning3dLayerVisibility({
+      refreshScene: false,
+      refreshMarkers: false,
+      refreshShadows: false,
+      refreshSummary: true,
+    });
   });
-  dom.planning3dFacilitiesBtn?.addEventListener("click", async () => {
+  dom.planning3dFacilitiesBtn?.addEventListener("click", () => {
     planning3dState.facilitiesVisible = !planning3dState.facilitiesVisible;
-    await primePlanning3dSceneData();
-    syncPlanning3dLayerVisibility();
-    renderPlanning3dQuickSummary();
-    renderPlanning3dSummary();
+    syncPlanning3dScenarioButtons();
+    syncPlanning3dLayerVisibility({
+      refreshScene: false,
+      refreshMarkers: false,
+      refreshShadows: false,
+      refreshSummary: true,
+    });
   });
-  dom.planning3dProposalBtn?.addEventListener("click", async () => {
+  dom.planning3dProposalBtn?.addEventListener("click", () => {
     planning3dState.proposalVisible = !planning3dState.proposalVisible;
-    await primePlanning3dSceneData();
-    syncPlanning3dLayerVisibility();
-    renderPlanning3dQuickSummary();
-    renderPlanning3dSummary();
+    syncPlanning3dScenarioButtons();
+    syncPlanning3dLayerVisibility({
+      refreshScene: false,
+      refreshMarkers: false,
+      refreshShadows: false,
+      refreshSummary: true,
+    });
   });
   dom.planning3dDate?.addEventListener("change", () => {
     planning3dState.sunDate = dom.planning3dDate.value || planning3dState.sunDate;
@@ -21772,7 +21800,7 @@ function getPlanning3dFeatureAnchor(feature) {
   }
 }
 
-function getPlanning3dDomMarkerFeatures(limit = 420) {
+function getPlanning3dDomMarkerFeatures(limit = 260) {
   const features = planning3dState.sourceData.buildings?.features || [];
   if (features.length <= limit) {
     return features;
@@ -21947,11 +21975,11 @@ function getPlanning3dPrimaryRing(geometry) {
 function getPlanning3dRenderableFeatureLimit() {
   const zoom = planning3dState.map?.getZoom?.() || 15;
   const orthographic = isPlanning3dOrthographicView();
-  if (zoom >= 17.3) return orthographic ? 2600 : 2200;
-  if (zoom >= 16.6) return orthographic ? 1800 : 1500;
-  if (zoom >= 15.8) return orthographic ? 1200 : 900;
-  if (zoom >= 14.8) return orthographic ? 760 : 540;
-  return orthographic ? 420 : 320;
+  if (zoom >= 17.3) return orthographic ? 1800 : 1400;
+  if (zoom >= 16.6) return orthographic ? 1200 : 900;
+  if (zoom >= 15.8) return orthographic ? 760 : 560;
+  if (zoom >= 14.8) return orthographic ? 460 : 320;
+  return orthographic ? 260 : 180;
 }
 
 function getPlanning3dSvgSceneFeatures() {
@@ -22243,10 +22271,11 @@ function renderPlanning3dSvgScene() {
 
   const useDetailedMaterials = shouldUsePlanning3dDetailedSvgScene();
   const orthographic = isPlanning3dOrthographicView();
+  const fragment = document.createDocumentFragment();
   if (useDetailedMaterials) {
     const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
     defs.innerHTML = createPlanning3dTextureDefsMarkup();
-    overlay.appendChild(defs);
+    fragment.appendChild(defs);
   }
 
   const features = getPlanning3dSvgSceneFeatures()
@@ -22320,8 +22349,10 @@ function renderPlanning3dSvgScene() {
       }
     });
 
-    overlay.appendChild(group);
+    fragment.appendChild(group);
   });
+
+  overlay.appendChild(fragment);
 
   refreshPlanning3dVisualState({ allowRecovery: false });
 }
@@ -22435,10 +22466,11 @@ function renderPlanning3dDomMarkers() {
   }
 
   const features = getPlanning3dDomMarkerFeatures();
+  const fragment = document.createDocumentFragment();
   planning3dState.domMarkers = features.map((feature) => {
     const element = buildPlanning3dDomMarkerElement(feature);
     const anchor = getPlanning3dFeatureAnchor(feature);
-    overlay.appendChild(element);
+    fragment.appendChild(element);
 
     return {
       featureId: feature?.id ?? feature?.properties?.recordIndex ?? null,
@@ -22447,12 +22479,21 @@ function renderPlanning3dDomMarkers() {
       feature,
     };
   });
+  overlay.appendChild(fragment);
   syncPlanning3dDomMarkerSelection();
   queuePlanning3dDomMarkerPositionSync();
   refreshPlanning3dVisualState({ allowRecovery: false });
 }
 
-function syncPlanning3dLayerVisibility() {
+function syncPlanning3dLayerVisibility(options = {}) {
+  const {
+    refreshScene = true,
+    refreshMarkers = true,
+    refreshSummary = false,
+    refreshShadows = true,
+    refreshVisualState = true,
+    allowRecovery = false,
+  } = options;
   const showBuildings = planning3dState.buildingsVisible;
   const orthographic = isPlanning3dOrthographicView();
   const showFootprints = showBuildings && (orthographic || planning3dState.forceVisualFallback);
@@ -22566,10 +22607,25 @@ function syncPlanning3dLayerVisibility() {
   });
 
   syncPlanning3dShadowLayerVisibility();
-  queuePlanning3dShadowSync();
-  queuePlanning3dSvgSceneSync();
-  renderPlanning3dDomMarkers();
-  renderPlanning3dSummary();
+  if (refreshShadows) {
+    queuePlanning3dShadowSync();
+  }
+  if (refreshScene) {
+    queuePlanning3dSvgSceneSync();
+  }
+  if (refreshMarkers) {
+    renderPlanning3dDomMarkers();
+  } else if (planning3dState.domMarkers?.length) {
+    queuePlanning3dDomMarkerPositionSync();
+  }
+  if (refreshSummary) {
+    renderPlanning3dQuickSummary();
+    renderPlanning3dSummary();
+    renderPlanning3dSelection();
+  }
+  if (refreshVisualState) {
+    refreshPlanning3dVisualState({ allowRecovery, updateSummary: false });
+  }
 }
 
 function updatePlanning3dHeightScale() {
@@ -23862,19 +23918,70 @@ function getPlanning3dProposalCollection() {
   };
 }
 
-function updatePlanning3dUrbanSceneSources() {
-  const roads = getPlanning3dRoadCollection();
-  const facilities = getPlanning3dFacilitiesCollection();
-  const publicSpace = getPlanning3dPublicSpaceCollection(roads, facilities);
-  const trees = getPlanning3dTreeCollection(roads, facilities, publicSpace);
-  planning3dState.sourceData.roads = roads;
-  planning3dState.sourceData.facilities = facilities;
-  planning3dState.sourceData.publicSpace = publicSpace;
-  planning3dState.sourceData.trees = trees;
-  planning3dState.sourceData.zoning = getPlanning3dZoningCollection();
-  planning3dState.sourceData.mobility = getPlanning3dMobilityCollection();
-  planning3dState.sourceData.risk = getPlanning3dRiskCollection();
-  planning3dState.sourceData.proposals = getPlanning3dProposalCollection();
+function getPlanning3dUrbanSceneSignature() {
+  const areaId = planning3dState.areaId || state.territorialAreaId || "machachi";
+  const candidates = (state.planningData?.candidates || []).slice(0, 8).map((candidate) => ({
+    id: candidate.id || candidate.title || "",
+    score: Number(candidate.score || 0).toFixed(2),
+  }));
+  const climate = (state.urbanClimateData?.prioritySectors || []).slice(0, 8).map((sector) => ({
+    id: sector.id || "",
+    label: sector.classLabel || "",
+  }));
+  const zoning = (state.zoningPatternsData?.sectors || []).slice(0, 10).map((sector) => ({
+    id: sector.id || "",
+    label: sector.patternLabel || "",
+  }));
+  const mobility = (state.mobilityData?.prioritySectors || []).slice(0, 8).map((sector) => ({
+    id: sector.id || "",
+    label: sector.coverageLabel || "",
+  }));
+  const risk = (state.riskData?.prioritySectors || []).slice(0, 8).map((sector) => ({
+    id: sector.id || "",
+    label: sector.riskLabel || "",
+  }));
+  return JSON.stringify({ areaId, candidates, climate, zoning, mobility, risk });
+}
+
+function updatePlanning3dUrbanSceneSources(force = false) {
+  const sceneSignature = getPlanning3dUrbanSceneSignature();
+  const canReuseCache = !force
+    && planning3dState.urbanSceneCache
+    && planning3dState.urbanSceneCacheSignature === sceneSignature;
+  if (canReuseCache) {
+    planning3dState.sourceData.roads = planning3dState.urbanSceneCache.roads;
+    planning3dState.sourceData.facilities = planning3dState.urbanSceneCache.facilities;
+    planning3dState.sourceData.publicSpace = planning3dState.urbanSceneCache.publicSpace;
+    planning3dState.sourceData.trees = planning3dState.urbanSceneCache.trees;
+    planning3dState.sourceData.zoning = planning3dState.urbanSceneCache.zoning;
+    planning3dState.sourceData.mobility = planning3dState.urbanSceneCache.mobility;
+    planning3dState.sourceData.risk = planning3dState.urbanSceneCache.risk;
+    planning3dState.sourceData.proposals = planning3dState.urbanSceneCache.proposals;
+  } else {
+    const roads = getPlanning3dRoadCollection();
+    const facilities = getPlanning3dFacilitiesCollection();
+    const publicSpace = getPlanning3dPublicSpaceCollection(roads, facilities);
+    const trees = getPlanning3dTreeCollection(roads, facilities, publicSpace);
+    planning3dState.sourceData.roads = roads;
+    planning3dState.sourceData.facilities = facilities;
+    planning3dState.sourceData.publicSpace = publicSpace;
+    planning3dState.sourceData.trees = trees;
+    planning3dState.sourceData.zoning = getPlanning3dZoningCollection();
+    planning3dState.sourceData.mobility = getPlanning3dMobilityCollection();
+    planning3dState.sourceData.risk = getPlanning3dRiskCollection();
+    planning3dState.sourceData.proposals = getPlanning3dProposalCollection();
+    planning3dState.urbanSceneCacheSignature = sceneSignature;
+    planning3dState.urbanSceneCache = {
+      roads: planning3dState.sourceData.roads,
+      facilities: planning3dState.sourceData.facilities,
+      publicSpace: planning3dState.sourceData.publicSpace,
+      trees: planning3dState.sourceData.trees,
+      zoning: planning3dState.sourceData.zoning,
+      mobility: planning3dState.sourceData.mobility,
+      risk: planning3dState.sourceData.risk,
+      proposals: planning3dState.sourceData.proposals,
+    };
+  }
   [
     ["planning3d-roads", planning3dState.sourceData.roads],
     ["planning3d-public-space", planning3dState.sourceData.publicSpace],
@@ -23898,7 +24005,13 @@ function refreshPlanning3dAnalyticalScene() {
   updatePlanning3dUrbanClimateSource();
   updatePlanning3dUrbanSceneSources();
   if (planning3dState.map || planning3dState.modalOpen) {
-    syncPlanning3dLayerVisibility();
+    syncPlanning3dLayerVisibility({
+      refreshScene: false,
+      refreshMarkers: false,
+      refreshShadows: false,
+      refreshSummary: false,
+      refreshVisualState: false,
+    });
     renderPlanning3dQuickSummary();
     renderPlanning3dSummary();
     renderPlanning3dSelection();
@@ -23957,6 +24070,10 @@ function getPlanning3dBuildingInsight(feature) {
 }
 
 async function primePlanning3dSceneData(force = false) {
+  if (!force && planning3dState.analyticalScenePromise) {
+    return planning3dState.analyticalScenePromise;
+  }
+  const task = (async () => {
   const needsData = force
     || !state.planningData
     || !state.mobilityData
@@ -23970,6 +24087,15 @@ async function primePlanning3dSceneData(force = false) {
   updatePlanning3dCandidateSource();
   updatePlanning3dUrbanClimateSource();
   updatePlanning3dUrbanSceneSources();
+  })();
+  planning3dState.analyticalScenePromise = task;
+  try {
+    await task;
+  } finally {
+    if (planning3dState.analyticalScenePromise === task) {
+      planning3dState.analyticalScenePromise = null;
+    }
+  }
 }
 
 function focusPlanning3dDemoView() {
@@ -24061,24 +24187,24 @@ function stabilizePlanning3dViewport({ focus = false } = {}) {
     return;
   }
 
-  const run = () => {
+  const run = ({ focusNow = false, rerenderMarkers = false } = {}) => {
     planning3dState.map?.resize?.();
     planning3dState.map?.triggerRepaint?.();
-    if (focus) {
+    if (focusNow) {
       focusPlanning3dDataset();
     }
     queuePlanning3dSvgSceneSync();
     queuePlanning3dDomMarkerPositionSync();
-    renderPlanning3dDomMarkers();
+    if (rerenderMarkers) {
+      renderPlanning3dDomMarkers();
+    }
     refreshPlanning3dVisualState({ allowRecovery: true, updateSummary: true });
   };
 
-  run();
+  run({ focusNow: focus, rerenderMarkers: true });
   if (typeof window !== "undefined") {
-    window.setTimeout(run, 160);
-    window.setTimeout(run, 420);
-    window.setTimeout(run, 760);
-    window.setTimeout(run, 1180);
+    window.setTimeout(() => run({ focusNow: false, rerenderMarkers: false }), 220);
+    window.setTimeout(() => run({ focusNow: focus, rerenderMarkers: false }), 760);
   }
 }
 
@@ -24146,11 +24272,9 @@ async function openPlanning3dViewer() {
       await ensurePlanning3dDataset("parcels", !planning3dState.sourceData.parcels?.features?.length);
     }
     await mapPromise;
-    await scenePromise;
     planning3dState.map?.resize();
     hydratePlanning3dRuntimeLayers();
-    refreshPlanning3dAnalyticalScene();
-    syncPlanning3dLayerVisibility();
+    syncPlanning3dLayerVisibility({ refreshSummary: false, allowRecovery: true });
     updatePlanning3dHeightScale();
     renderPlanning3dSvgScene();
     renderPlanning3dDomMarkers();
@@ -24161,6 +24285,29 @@ async function openPlanning3dViewer() {
     renderPlanning3dSelection(true);
     renderPlanning3dProgress(true);
     refreshPlanning3dVisualState({ allowRecovery: true, updateSummary: true });
+    Promise.resolve(scenePromise)
+      .then(() => {
+        if (!planning3dState.modalOpen) {
+          return;
+        }
+        refreshPlanning3dAnalyticalScene();
+        syncPlanning3dLayerVisibility({
+          refreshScene: false,
+          refreshMarkers: false,
+          refreshShadows: false,
+          refreshSummary: false,
+          refreshVisualState: true,
+          allowRecovery: true,
+        });
+        renderPlanning3dQuickSummary();
+        renderPlanning3dSummary(true);
+        renderPlanning3dSelection(true);
+      })
+      .catch((error) => {
+        if (planning3dState.modalOpen) {
+          setPlanning3dStatus(`El visor 3D abrio, pero no termino de cargar toda la escena urbana: ${error.message}`, "demo");
+        }
+      });
   } catch (error) {
     renderPlanning3dSvgScene();
     renderPlanning3dDomMarkers();
@@ -24226,6 +24373,9 @@ async function reloadPlanning3dData() {
   planning3dState.sourceData.risk = getPlanning3dEmptyCollection();
   planning3dState.sourceData.facilities = getPlanning3dEmptyCollection();
   planning3dState.sourceData.proposals = getPlanning3dEmptyCollection();
+  planning3dState.urbanSceneCacheSignature = "";
+  planning3dState.urbanSceneCache = null;
+  planning3dState.analyticalScenePromise = null;
   clearPlanning3dSelection();
   renderPlanning3dPanel();
   renderPlanning3dSummary();
@@ -24308,7 +24458,7 @@ function getPlanning3dVisualStateSnapshot() {
   const canvasHeight = canvas?.height || canvas?.clientHeight || 0;
   const svgCount = planning3dState.svgOverlay?.querySelectorAll?.(".planning-3d-svg-building")?.length || 0;
   const domMarkerCount = getPlanning3dVisibleDomMarkerCount();
-  const footprintCount = getPlanning3dVisibleFootprintCount();
+  const footprintCount = (svgCount || domMarkerCount) ? 0 : getPlanning3dVisibleFootprintCount();
   const visibleSceneCount = Math.max(svgCount, domMarkerCount, footprintCount);
   return {
     canvasReady: canvasWidth > 0 && canvasHeight > 0,
@@ -24330,15 +24480,19 @@ function schedulePlanning3dVisualRecovery() {
     return;
   }
 
-  planning3dState.visualRecoveryTimers = [260, 920, 1680].map((delay) => window.setTimeout(() => {
+  planning3dState.visualRecoveryTimers = [360, 1240].map((delay) => window.setTimeout(() => {
     if (!planning3dState.modalOpen || planning3dState.visualReady) {
       return;
     }
     planning3dState.forceVisualFallback = true;
-    syncPlanning3dLayerVisibility();
-    renderPlanning3dSvgScene();
-    renderPlanning3dDomMarkers();
-    stabilizePlanning3dViewport({ focus: delay >= 920 });
+    syncPlanning3dLayerVisibility({
+      refreshScene: true,
+      refreshMarkers: delay >= 1240,
+      refreshShadows: false,
+      refreshSummary: false,
+      refreshVisualState: false,
+    });
+    stabilizePlanning3dViewport({ focus: delay >= 1240 });
     refreshPlanning3dVisualState({ allowRecovery: false, updateSummary: true });
   }, delay));
 }
