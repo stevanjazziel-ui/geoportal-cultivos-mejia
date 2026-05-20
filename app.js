@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-5";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-6";
 
 const layerCatalog = [
   {
@@ -3929,6 +3929,7 @@ const planning3dState = {
   riskVisible: false,
   facilitiesVisible: false,
   proposalVisible: false,
+  focusMode: "corridor",
   viewMode: "perspective",
   panelCollapsed: true,
   sunDate: "",
@@ -6067,6 +6068,8 @@ function cacheDom() {
   dom.planning3dResetViewBtn = document.querySelector("#planning3dResetViewBtn");
   dom.planning3dStatus = document.querySelector("#planning3dStatus");
   dom.planning3dProgress = document.querySelector("#planning3dProgress");
+  dom.planning3dModeReadout = document.querySelector("#planning3dModeReadout");
+  dom.planning3dLegend = document.querySelector("#planning3dLegend");
   dom.planning3dSummary = document.querySelector("#planning3dSummary");
   dom.planning3dSelection = document.querySelector("#planning3dSelection");
   dom.planning3dQuickSummary = document.querySelector("#planning3dQuickSummary");
@@ -7233,6 +7236,7 @@ function bindUI() {
   });
   dom.planning3dClimateToggle?.addEventListener("change", () => {
     planning3dState.urbanClimateVisible = !!dom.planning3dClimateToggle.checked;
+    setPlanning3dFocusMode(planning3dState.urbanClimateVisible ? "climate" : null);
     syncPlanning3dLayerVisibility({
       refreshScene: false,
       refreshMarkers: false,
@@ -7245,6 +7249,7 @@ function bindUI() {
   });
   dom.planning3dCorridorBtn?.addEventListener("click", () => {
     planning3dState.corridorVisible = !planning3dState.corridorVisible;
+    setPlanning3dFocusMode(planning3dState.corridorVisible ? "corridor" : null);
     syncPlanning3dScenarioButtons();
     syncPlanning3dLayerVisibility({
       refreshScene: false,
@@ -7258,6 +7263,7 @@ function bindUI() {
   });
   dom.planning3dZoningBtn?.addEventListener("click", () => {
     planning3dState.zoningVisible = !planning3dState.zoningVisible;
+    setPlanning3dFocusMode(planning3dState.zoningVisible ? "zoning" : null);
     syncPlanning3dScenarioButtons();
     syncPlanning3dLayerVisibility({
       refreshScene: false,
@@ -7271,6 +7277,7 @@ function bindUI() {
   });
   dom.planning3dMobilityBtn?.addEventListener("click", () => {
     planning3dState.mobilityVisible = !planning3dState.mobilityVisible;
+    setPlanning3dFocusMode(planning3dState.mobilityVisible ? "mobility" : null);
     syncPlanning3dScenarioButtons();
     syncPlanning3dLayerVisibility({
       refreshScene: false,
@@ -7284,6 +7291,7 @@ function bindUI() {
   });
   dom.planning3dRiskBtn?.addEventListener("click", () => {
     planning3dState.riskVisible = !planning3dState.riskVisible;
+    setPlanning3dFocusMode(planning3dState.riskVisible ? "risk" : null);
     syncPlanning3dScenarioButtons();
     syncPlanning3dLayerVisibility({
       refreshScene: false,
@@ -7297,6 +7305,7 @@ function bindUI() {
   });
   dom.planning3dFacilitiesBtn?.addEventListener("click", () => {
     planning3dState.facilitiesVisible = !planning3dState.facilitiesVisible;
+    setPlanning3dFocusMode(planning3dState.facilitiesVisible ? "facilities" : null);
     syncPlanning3dScenarioButtons();
     syncPlanning3dLayerVisibility({
       refreshScene: false,
@@ -7310,6 +7319,7 @@ function bindUI() {
   });
   dom.planning3dProposalBtn?.addEventListener("click", () => {
     planning3dState.proposalVisible = !planning3dState.proposalVisible;
+    setPlanning3dFocusMode(planning3dState.proposalVisible ? "proposal" : null);
     syncPlanning3dScenarioButtons();
     syncPlanning3dLayerVisibility({
       refreshScene: false,
@@ -19378,26 +19388,57 @@ function setPlanning3dStatus(message, tone = "loading") {
 
 function syncPlanning3dScenarioButtons() {
   const bindings = [
-    [dom.planning3dCorridorBtn, planning3dState.corridorVisible],
-    [dom.planning3dZoningBtn, planning3dState.zoningVisible],
-    [dom.planning3dMobilityBtn, planning3dState.mobilityVisible],
-    [dom.planning3dRiskBtn, planning3dState.riskVisible],
-    [dom.planning3dFacilitiesBtn, planning3dState.facilitiesVisible],
-    [dom.planning3dProposalBtn, planning3dState.proposalVisible],
+    [dom.planning3dCorridorBtn, planning3dState.corridorVisible, "corridor"],
+    [dom.planning3dZoningBtn, planning3dState.zoningVisible, "zoning"],
+    [dom.planning3dMobilityBtn, planning3dState.mobilityVisible, "mobility"],
+    [dom.planning3dRiskBtn, planning3dState.riskVisible, "risk"],
+    [dom.planning3dFacilitiesBtn, planning3dState.facilitiesVisible, "facilities"],
+    [dom.planning3dProposalBtn, planning3dState.proposalVisible, "proposal"],
   ];
-  bindings.forEach(([button, active]) => {
+  bindings.forEach(([button, active, modeId]) => {
     if (!button) {
       return;
     }
     button.classList.toggle("active", !!active);
+    button.classList.toggle("focus", planning3dState.focusMode === modeId);
     button.setAttribute("aria-pressed", active ? "true" : "false");
   });
+}
+
+function getPlanning3dVisibleModeIds() {
+  return [
+    planning3dState.urbanClimateVisible ? "climate" : null,
+    planning3dState.corridorVisible ? "corridor" : null,
+    planning3dState.zoningVisible ? "zoning" : null,
+    planning3dState.mobilityVisible ? "mobility" : null,
+    planning3dState.riskVisible ? "risk" : null,
+    planning3dState.facilitiesVisible ? "facilities" : null,
+    planning3dState.proposalVisible ? "proposal" : null,
+  ].filter(Boolean);
+}
+
+function resolvePlanning3dFocusMode() {
+  const visibleModes = getPlanning3dVisibleModeIds();
+  if (visibleModes.includes(planning3dState.focusMode)) {
+    return planning3dState.focusMode;
+  }
+  return visibleModes[0] || null;
+}
+
+function setPlanning3dFocusMode(modeId = null) {
+  const visibleModes = getPlanning3dVisibleModeIds();
+  planning3dState.focusMode = visibleModes.includes(modeId)
+    ? modeId
+    : (visibleModes[0] || modeId || "corridor");
+  syncPlanning3dScenarioButtons();
+  renderPlanning3dModeReadout();
 }
 
 function renderPlanning3dPanel() {
   if (!dom.planning3dAvailability) {
     renderPlanning3dProgress();
     renderPlanning3dQuickSummary();
+    renderPlanning3dModeReadout();
     return;
   }
   const areaProfile = getPlanning3dAreaProfile();
@@ -19479,6 +19520,251 @@ function renderPlanning3dPanel() {
   renderPlanning3dSelection();
   renderPlanning3dProgress();
   renderPlanning3dQuickSummary();
+  renderPlanning3dModeReadout();
+}
+
+function getPlanning3dModeDescriptor() {
+  const focusMode = resolvePlanning3dFocusMode();
+  const roadCount = planning3dState.sourceData.roads?.features?.length || 0;
+  const publicSpaceCount = planning3dState.sourceData.publicSpace?.features?.length || 0;
+  const treeCount = planning3dState.sourceData.trees?.features?.length || 0;
+  const facilityCount = planning3dState.sourceData.facilities?.features?.length || 0;
+  const civicSpaceCount = (planning3dState.sourceData.publicSpace?.features || []).filter((feature) => (
+    ["plaza-equipamiento", "centralidad-civica", "parque-barrial", "reserva-ventilacion"].includes(feature.properties?.publicSpaceType)
+  )).length;
+  const urbanClimate = state.urbanClimateData;
+  const zoning = state.zoningPatternsData;
+  const mobility = state.mobilityData;
+  const risk = state.riskData;
+  const proposals = state.planningData?.candidates || [];
+
+  if (!focusMode) {
+    return {
+      id: "base",
+      label: "Base 3D",
+      kicker: "Modo base",
+      title: "Lectura urbana ligera",
+      copy: "Activa Clima, Corredor, Zonificacion, Equipamientos, Movilidad, Riesgo o Propuesta para leer una capa tematica en el visor.",
+      recommendation: "Empieza con Corredor para estructura urbana o con Clima para ventilacion y calor.",
+      metrics: [
+        { label: "Construcciones", value: formatPlanning3dCount(planning3dState.sourceData.buildings?.features?.length || 0, "0") },
+        { label: "Base", value: planning3dState.currentBase === "satellite" ? "Urbana" : "Clara" },
+      ],
+      legend: [],
+    };
+  }
+
+  if (focusMode === "climate") {
+    return {
+      id: "climate",
+      label: "Clima urbano",
+      kicker: "Modo clima",
+      title: urbanClimate?.summary?.dominantLabel || "Corredores y retencion termica",
+      copy: urbanClimate?.summary?.readout || "Lee ventilacion, enfriamiento, reservas y sectores con retencion de calor para no bloquear corrientes frias.",
+      recommendation: urbanClimate?.summary?.recommendation || "Protege corredores frios, evita cerrar reservas de ventilacion y mitiga sectores con retencion termica.",
+      metrics: [
+        { label: "Corredores", value: String(urbanClimate?.summary?.priorityCorridorCount || 0) },
+        { label: "Retencion", value: `${urbanClimate?.summary?.heatRetentionAreaHa || 0} ha` },
+        { label: "Preparacion", value: `${urbanClimate?.summary?.climateReadinessScore || 0}/100` },
+      ],
+      legend: [
+        { label: "Corredor frio prioritario", color: "#2c7da0" },
+        { label: "Reserva de ventilacion", color: "#3b9c72" },
+        { label: "Transicion termica", color: "#d1a457" },
+        { label: "Retencion termica", color: "#b75d4a" },
+      ],
+    };
+  }
+
+  if (focusMode === "corridor") {
+    return {
+      id: "corridor",
+      label: "Corredor urbano",
+      kicker: "Modo corredor",
+      title: "Calles, espacio publico y arbolado estructurante",
+      copy: roadCount
+        ? `Se priorizan ${formatPlanning3dCount(roadCount)} calles, ${formatPlanning3dCount(publicSpaceCount)} piezas de espacio publico y ${formatPlanning3dCount(treeCount)} arboles para leer continuidad, estancia y ventilacion.`
+        : "Muestra la estructura vial principal, el espacio publico y el arbolado para entender continuidad urbana.",
+      recommendation: "Usa este modo para ver ejes a consolidar, tramos a coser y corredores donde el arbolado debe reforzar sombra y estancia.",
+      metrics: [
+        { label: "Calles", value: formatPlanning3dCount(roadCount, "0") },
+        { label: "Espacio publico", value: formatPlanning3dCount(publicSpaceCount, "0") },
+        { label: "Arboles", value: formatPlanning3dCount(treeCount, "0") },
+      ],
+      legend: [
+        { label: "Corredor primario", color: "#b98256" },
+        { label: "Corredor secundario", color: "#c9a27a" },
+        { label: "Borde verde", color: "#8da984" },
+        { label: "Arbolado", color: "#6b986f" },
+      ],
+    };
+  }
+
+  if (focusMode === "zoning") {
+    return {
+      id: "zoning",
+      label: "Zonificacion",
+      kicker: "Modo zonificacion",
+      title: zoning?.summary?.dominantPatternLabel || "Patrones y vitalidad urbana",
+      copy: zoning?.readout || "Muestra el patron dominante del tejido, su vitalidad y las zonas donde conviene consolidar, densificar o reordenar.",
+      recommendation: zoning?.summary?.recommendation || "Usa este modo para entender vocacion del tejido y compatibilidad con nuevas implantaciones.",
+      metrics: [
+        { label: "Vitalidad", value: `${zoning?.summary?.meanVitality || 0}/100` },
+        { label: "Sectores", value: String(zoning?.prioritySectors?.length || 0) },
+        { label: "Patron", value: zoning?.summary?.dominantPatternLabel || "Sin lectura" },
+      ],
+      legend: [
+        { label: "Centralidad diversa", color: "#76b692" },
+        { label: "Residencial consolidado", color: "#b8d8c5" },
+        { label: "Mixto en transicion", color: "#d8c28f" },
+        { label: "Borde sensible", color: "#d39b82" },
+      ],
+    };
+  }
+
+  if (focusMode === "facilities") {
+    return {
+      id: "facilities",
+      label: "Equipamientos",
+      kicker: "Modo equipamientos",
+      title: facilityCount ? `${formatPlanning3dCount(facilityCount)} equipamientos visibles` : "Cobertura y soporte urbano",
+      copy: facilityCount
+        ? `El visor destaca nodos de salud, educacion, social y centralidades de apoyo. ${formatPlanning3dCount(civicSpaceCount)} plazas o reservas completan la lectura de cobertura.`
+        : "Mide cercania a equipamientos, soporte civico y deficit de cobertura en el entorno urbano.",
+      recommendation: "Usa este modo para ver soporte de servicios, centralidades y sectores donde conviene reforzar equipamiento publico.",
+      metrics: [
+        { label: "Equipamientos", value: formatPlanning3dCount(facilityCount, "0") },
+        { label: "Centralidades", value: formatPlanning3dCount(civicSpaceCount, "0") },
+        { label: "Cobertura", value: facilityCount ? "Activa" : "Pendiente" },
+      ],
+      legend: [
+        { label: "Halo de cobertura", color: "#7fc7a1" },
+        { label: "Nodo de servicio", color: "#2f7f5f" },
+        { label: "Etiqueta de equipamiento", color: "#384944" },
+      ],
+    };
+  }
+
+  if (focusMode === "mobility") {
+    return {
+      id: "mobility",
+      label: "Movilidad",
+      kicker: "Modo movilidad",
+      title: mobility?.summary?.dominantCoverageLabel || "Cobertura y tiempos",
+      copy: mobility?.readout || "Resalta sectores con mejor o peor accesibilidad para leer cobertura, tiempos y conectividad territorial.",
+      recommendation: mobility?.summary?.recommendation || "Usa este modo para priorizar conexiones, transporte y accesibilidad a servicios.",
+      metrics: [
+        { label: "Cobertura", value: mobility?.summary?.dominantCoverageLabel || "Sin lectura" },
+        { label: "Sectores", value: String(mobility?.prioritySectors?.length || 0) },
+      ],
+      legend: [
+        { label: "Cobertura alta", color: "#68a881" },
+        { label: "Cobertura media", color: "#d2b15b" },
+        { label: "Cobertura baja", color: "#c46a58" },
+      ],
+    };
+  }
+
+  if (focusMode === "risk") {
+    return {
+      id: "risk",
+      label: "Riesgo",
+      kicker: "Modo riesgo",
+      title: risk?.summary?.dominantRiskLabel || "Restricciones y exposicion",
+      copy: risk?.readout || "Lee sectores con mayor restriccion, fragilidad o necesidad de mitigacion.",
+      recommendation: risk?.summary?.recommendation || "Usa este modo para restringir implantaciones o definir medidas de mitigacion.",
+      metrics: [
+        { label: "Riesgo", value: risk?.summary?.dominantRiskLabel || "Sin lectura" },
+        { label: "Sectores", value: String(risk?.prioritySectors?.length || 0) },
+      ],
+      legend: [
+        { label: "Riesgo bajo", color: "#68a881" },
+        { label: "Riesgo medio", color: "#d2b15b" },
+        { label: "Riesgo alto", color: "#c46a58" },
+      ],
+    };
+  }
+
+  return {
+    id: "proposal",
+    label: "Propuesta",
+    kicker: "Modo propuesta",
+    title: proposals.length ? `${proposals.length} implantaciones comparables` : "Implantacion y norma",
+    copy: proposals.length
+      ? "Los volumenes transparentes contrastan la situacion actual con candidatos o implantaciones sugeridas."
+      : "Muestra masas de propuesta para revisar implantacion, altura y compatibilidad con el tejido.",
+    recommendation: "Usa este modo para comparar la ciudad actual con una implantacion sugerida antes de tomar una decision.",
+    metrics: [
+      { label: "Propuestas", value: String(proposals.length || 0) },
+      { label: "Volumen", value: proposals.length ? "Transparente" : "Sin corrida" },
+    ],
+    legend: [
+      { label: "Volumen propuesto", color: "#7f9fbe" },
+      { label: "Borde de implantacion", color: "#57718d" },
+    ],
+  };
+}
+
+function renderPlanning3dModeReadout(force = false) {
+  if (!force) {
+    scheduleUiTask("planning3d-mode-readout", () => renderPlanning3dModeReadout(true));
+    return;
+  }
+
+  if (!dom.planning3dModeReadout || !dom.planning3dLegend) {
+    return;
+  }
+
+  const descriptor = getPlanning3dModeDescriptor();
+  if (!descriptor) {
+    dom.planning3dModeReadout.classList.add("empty-state");
+    dom.planning3dModeReadout.classList.remove("has-data");
+    dom.planning3dModeReadout.textContent = "Activa un modo para leer que presenta la escena 3D.";
+    dom.planning3dLegend.classList.add("hidden");
+    return;
+  }
+
+  dom.planning3dModeReadout.classList.remove("empty-state");
+  dom.planning3dModeReadout.classList.add("has-data");
+  setHtmlIfChanged(dom.planning3dModeReadout, `
+    <div class="planning-3d-mode-head">
+      <p class="planning-3d-mode-kicker">${escapeHtmlContent(descriptor.kicker)}</p>
+      <h4>${escapeHtmlContent(descriptor.title)}</h4>
+      <p class="planning-3d-mode-copy">${escapeHtmlContent(descriptor.copy)}</p>
+    </div>
+    <div class="planning-3d-mode-metrics">
+      ${(descriptor.metrics || []).map((metric) => `
+        <article class="planning-3d-mode-metric">
+          <span>${escapeHtmlContent(metric.label)}</span>
+          <strong>${escapeHtmlContent(metric.value)}</strong>
+        </article>
+      `).join("")}
+    </div>
+    <p class="planning-3d-note">${escapeHtmlContent(descriptor.recommendation)}</p>
+  `);
+
+  if (!descriptor.legend?.length) {
+    dom.planning3dLegend.classList.add("hidden");
+    dom.planning3dLegend.classList.remove("has-data");
+    dom.planning3dLegend.innerHTML = "";
+    return;
+  }
+
+  dom.planning3dLegend.classList.remove("hidden", "empty-state");
+  dom.planning3dLegend.classList.add("has-data");
+  setHtmlIfChanged(dom.planning3dLegend, `
+    <div class="planning-3d-legend-head">
+      <strong>Leyenda ${escapeHtmlContent(descriptor.label)}</strong>
+    </div>
+    <div class="planning-3d-legend-list">
+      ${descriptor.legend.map((item) => `
+        <span class="planning-3d-legend-item">
+          <i style="background:${escapeHtmlContent(item.color)}"></i>
+          ${escapeHtmlContent(item.label)}
+        </span>
+      `).join("")}
+    </div>
+  `);
 }
 
 function getPlanning3dActiveModeSummary() {
@@ -20420,7 +20706,7 @@ function addPlanning3dRuntimeLayers() {
     id: "planning3d-public-space-labels",
     type: "symbol",
     source: "planning3d-public-space",
-    minzoom: 13,
+    minzoom: 15,
     filter: ["in", ["get", "publicSpaceType"], ["literal", ["corredor-primario", "plaza-equipamiento", "centralidad-civica", "parque-barrial", "reserva-ventilacion"]]],
     layout: {
       "text-field": ["coalesce", ["get", "publicSpaceLabel"], ""],
@@ -20588,7 +20874,7 @@ function addPlanning3dRuntimeLayers() {
     id: "planning3d-roads-labels",
     type: "symbol",
     source: "planning3d-roads",
-    minzoom: 14,
+    minzoom: 15,
     filter: ["!=", ["get", "planning3dRoadTier"], "local"],
     layout: {
       "symbol-placement": "line",
@@ -20761,7 +21047,7 @@ function addPlanning3dRuntimeLayers() {
     id: "planning3d-facilities-label",
     type: "symbol",
     source: "planning3d-facilities",
-    minzoom: 14,
+    minzoom: 15,
     layout: {
       "text-field": ["coalesce", ["get", "name"], ["get", "planning3dLabel"], "Equipamiento"],
       "text-size": [
@@ -22779,6 +23065,7 @@ function renderPlanning3dSummary(force = false) {
       ? `Cargando visor 3D: ${getPlanning3dLoadLabel(buildingStatus)}${buildingStatus.total ? ` (${formatPlanning3dCount(buildingStatus.loaded)}/${formatPlanning3dCount(buildingStatus.total)})` : ""}.`
       : "Aqui veras el resumen operativo del nucleo 3D.");
     renderPlanning3dQuickSummary();
+    renderPlanning3dModeReadout();
     return;
   }
 
@@ -22909,6 +23196,7 @@ function renderPlanning3dSummary(force = false) {
     </p>
   `);
   renderPlanning3dQuickSummary();
+  renderPlanning3dModeReadout();
 }
 
 function renderPlanning3dSelection(force = false) {
@@ -22926,6 +23214,7 @@ function renderPlanning3dSelection(force = false) {
     dom.planning3dSelection.classList.add("empty-state");
     dom.planning3dSelection.classList.remove("has-data");
     setTextIfChanged(dom.planning3dSelection, "Selecciona una construccion para revisar altura, bloque y fotos cercanas.");
+    renderPlanning3dModeReadout();
     return;
   }
 
@@ -24044,40 +24333,53 @@ function updatePlanning3dUrbanSceneSources(force = false) {
   const canReuseCache = !force
     && planning3dState.urbanSceneCache
     && planning3dState.urbanSceneCacheSignature === sceneSignature;
-  if (canReuseCache) {
-    planning3dState.sourceData.roads = planning3dState.urbanSceneCache.roads;
-    planning3dState.sourceData.facilities = planning3dState.urbanSceneCache.facilities;
-    planning3dState.sourceData.publicSpace = planning3dState.urbanSceneCache.publicSpace;
-    planning3dState.sourceData.trees = planning3dState.urbanSceneCache.trees;
-    planning3dState.sourceData.zoning = planning3dState.urbanSceneCache.zoning;
-    planning3dState.sourceData.mobility = planning3dState.urbanSceneCache.mobility;
-    planning3dState.sourceData.risk = planning3dState.urbanSceneCache.risk;
-    planning3dState.sourceData.proposals = planning3dState.urbanSceneCache.proposals;
-  } else {
-    const roads = getPlanning3dRoadCollection();
-    const facilities = getPlanning3dFacilitiesCollection();
-    const publicSpace = getPlanning3dPublicSpaceCollection(roads, facilities);
-    const trees = getPlanning3dTreeCollection(roads, facilities, publicSpace);
-    planning3dState.sourceData.roads = roads;
-    planning3dState.sourceData.facilities = facilities;
-    planning3dState.sourceData.publicSpace = publicSpace;
-    planning3dState.sourceData.trees = trees;
-    planning3dState.sourceData.zoning = getPlanning3dZoningCollection();
-    planning3dState.sourceData.mobility = getPlanning3dMobilityCollection();
-    planning3dState.sourceData.risk = getPlanning3dRiskCollection();
-    planning3dState.sourceData.proposals = getPlanning3dProposalCollection();
+  if (!canReuseCache) {
     planning3dState.urbanSceneCacheSignature = sceneSignature;
-    planning3dState.urbanSceneCache = {
-      roads: planning3dState.sourceData.roads,
-      facilities: planning3dState.sourceData.facilities,
-      publicSpace: planning3dState.sourceData.publicSpace,
-      trees: planning3dState.sourceData.trees,
-      zoning: planning3dState.sourceData.zoning,
-      mobility: planning3dState.sourceData.mobility,
-      risk: planning3dState.sourceData.risk,
-      proposals: planning3dState.sourceData.proposals,
-    };
+    planning3dState.urbanSceneCache = {};
   }
+  const cache = planning3dState.urbanSceneCache || {};
+  const emptyCollection = getPlanning3dEmptyCollection();
+  const needsSelectionSupport = !!planning3dState.selectedBuilding;
+  const needsCorridorScene = planning3dState.corridorVisible || needsSelectionSupport;
+  const needsFacilities = planning3dState.facilitiesVisible || needsCorridorScene || needsSelectionSupport;
+  const needsZoning = planning3dState.zoningVisible || needsSelectionSupport;
+  const needsMobility = planning3dState.mobilityVisible || needsSelectionSupport;
+  const needsRisk = planning3dState.riskVisible || needsSelectionSupport;
+  const needsProposal = planning3dState.proposalVisible || needsSelectionSupport;
+
+  const roads = needsCorridorScene
+    ? (cache.roads || (cache.roads = getPlanning3dRoadCollection()))
+    : emptyCollection;
+  const facilities = needsFacilities
+    ? (cache.facilities || (cache.facilities = getPlanning3dFacilitiesCollection()))
+    : emptyCollection;
+  const publicSpace = needsCorridorScene
+    ? (cache.publicSpace || (cache.publicSpace = getPlanning3dPublicSpaceCollection(roads, facilities)))
+    : emptyCollection;
+  const trees = needsCorridorScene
+    ? (cache.trees || (cache.trees = getPlanning3dTreeCollection(roads, facilities, publicSpace)))
+    : emptyCollection;
+  const zoning = needsZoning
+    ? (cache.zoning || (cache.zoning = getPlanning3dZoningCollection()))
+    : emptyCollection;
+  const mobility = needsMobility
+    ? (cache.mobility || (cache.mobility = getPlanning3dMobilityCollection()))
+    : emptyCollection;
+  const risk = needsRisk
+    ? (cache.risk || (cache.risk = getPlanning3dRiskCollection()))
+    : emptyCollection;
+  const proposals = needsProposal
+    ? (cache.proposals || (cache.proposals = getPlanning3dProposalCollection()))
+    : emptyCollection;
+
+  planning3dState.sourceData.roads = roads;
+  planning3dState.sourceData.facilities = facilities;
+  planning3dState.sourceData.publicSpace = publicSpace;
+  planning3dState.sourceData.trees = trees;
+  planning3dState.sourceData.zoning = zoning;
+  planning3dState.sourceData.mobility = mobility;
+  planning3dState.sourceData.risk = risk;
+  planning3dState.sourceData.proposals = proposals;
   [
     ["planning3d-roads", planning3dState.sourceData.roads],
     ["planning3d-public-space", planning3dState.sourceData.publicSpace],
@@ -35281,6 +35583,7 @@ function renderExecutiveDashboardCard() {
       `).join("")}
     </div>
   `);
+  renderPlanning3dModeReadout();
 }
 
 function handleExecutiveDashboardInteraction(event) {

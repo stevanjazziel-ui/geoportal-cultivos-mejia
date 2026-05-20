@@ -5239,7 +5239,7 @@ button {
   position: relative;
   width: auto;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr) minmax(0, 1fr);
   align-content: stretch;
   gap: 8px;
   min-height: 0;
@@ -5249,6 +5249,8 @@ button {
   overflow: hidden;
 }
 
+.planning-3d-mode-readout,
+.planning-3d-legend,
 .planning-3d-summary,
 .planning-3d-selection {
   padding: 10px;
@@ -5261,6 +5263,11 @@ button {
   min-height: 0;
 }
 
+.planning-3d-mode-readout,
+.planning-3d-legend {
+  overflow: hidden;
+}
+
 .planning-3d-summary {
   max-height: none;
 }
@@ -5269,10 +5276,95 @@ button {
   max-height: none;
 }
 
+.planning-3d-mode-readout.has-data,
+.planning-3d-legend.has-data,
 .planning-3d-summary.has-data,
 .planning-3d-selection.has-data {
   display: grid;
   gap: 12px;
+}
+
+.planning-3d-mode-head {
+  display: grid;
+  gap: 8px;
+}
+
+.planning-3d-mode-kicker,
+.planning-3d-legend-head strong {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--leaf-deep);
+}
+
+.planning-3d-mode-head h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.12rem;
+}
+
+.planning-3d-mode-copy {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.planning-3d-mode-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 8px;
+}
+
+.planning-3d-mode-metric {
+  display: grid;
+  gap: 4px;
+  padding: 10px 12px;
+  border-radius: 16px;
+  background: rgba(246, 243, 236, 0.9);
+  border: 1px solid rgba(47, 61, 50, 0.08);
+}
+
+.planning-3d-mode-metric span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+}
+
+.planning-3d-mode-metric strong {
+  font-family: var(--font-display);
+  font-size: 0.98rem;
+}
+
+.planning-3d-legend-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.planning-3d-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: rgba(246, 243, 236, 0.9);
+  border: 1px solid rgba(47, 61, 50, 0.08);
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.planning-3d-legend-item i {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  flex: 0 0 10px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
 }
 
 .planning-3d-panel > .service-banner {
@@ -5387,6 +5479,10 @@ button {
   margin: 0;
   font-family: var(--font-display);
   font-size: 1.08rem;
+}
+
+.planning-3d-mode-button.focus {
+  box-shadow: 0 0 0 2px rgba(47, 127, 95, 0.14);
 }
 
 .planning-3d-selection-grid {
@@ -5926,7 +6022,9 @@ button {
   }
 
   .planning-3d-panel > .service-banner,
-  .planning-3d-panel > .planning-3d-progress {
+  .planning-3d-panel > .planning-3d-progress,
+  .planning-3d-panel > .planning-3d-mode-readout,
+  .planning-3d-panel > .planning-3d-legend {
     grid-column: 1 / -1;
   }
 

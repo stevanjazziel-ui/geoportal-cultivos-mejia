@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="geoportal-version" content="20260520-5">
+  <meta name="geoportal-version" content="20260520-6">
   <title>Centro de Decisiones | Mejia y Quevedo</title>
   <meta
     name="description"
@@ -33,7 +33,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260520-5">
+  <link rel="stylesheet" href="./styles.css?v=20260520-6">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -158,7 +158,7 @@
           <span class="status-dot"></span>
           <div class="user-pill-copy">
             <strong id="userNameLabel">Usuario publico</strong>
-              <span id="userVersionLabel">v20260520-5</span>
+              <span id="userVersionLabel">v20260520-6</span>
           </div>
           <label class="user-role-field" for="userRoleSelect">
             <span>Rol</span>
@@ -1771,8 +1771,8 @@
 
       <div class="planning-3d-toolbar">
         <div class="planning-3d-switch" role="group" aria-label="Mapa base 3D">
-          <button id="planning3dSatelliteBtn" class="base-button active" type="button" data-planning-base="satellite">Base urbana</button>
-          <button id="planning3dLightBtn" class="base-button" type="button" data-planning-base="light">Plano claro</button>
+          <button id="planning3dSatelliteBtn" class="base-button" type="button" data-planning-base="satellite">Base urbana</button>
+          <button id="planning3dLightBtn" class="base-button active" type="button" data-planning-base="light">Plano claro</button>
         </div>
         <label class="planning-3d-check">
           <input id="planning3dBuildingsToggle" type="checkbox" checked>
@@ -1787,7 +1787,7 @@
           <span>Sombras</span>
         </label>
         <label class="planning-3d-check">
-          <input id="planning3dClimateToggle" type="checkbox" checked>
+          <input id="planning3dClimateToggle" type="checkbox">
           <span>Clima</span>
         </label>
         <label class="field planning-3d-territory-field">
@@ -1815,11 +1815,11 @@
       </div>
 
       <div class="planning-3d-modebar" role="group" aria-label="Escenarios urbanos 3D">
-        <button id="planning3dCorridorBtn" class="planning-3d-mode-button active" type="button" aria-pressed="true">
+        <button id="planning3dCorridorBtn" class="planning-3d-mode-button" type="button" aria-pressed="false">
           <span>Fase 1</span>
           <strong>Corredor urbano</strong>
         </button>
-        <button id="planning3dZoningBtn" class="planning-3d-mode-button active" type="button" aria-pressed="true">
+        <button id="planning3dZoningBtn" class="planning-3d-mode-button" type="button" aria-pressed="false">
           <span>Fase 2</span>
           <strong>Zonificacion</strong>
         </button>
@@ -1831,11 +1831,11 @@
           <span>Fase 2</span>
           <strong>Riesgo</strong>
         </button>
-        <button id="planning3dFacilitiesBtn" class="planning-3d-mode-button active" type="button" aria-pressed="true">
+        <button id="planning3dFacilitiesBtn" class="planning-3d-mode-button" type="button" aria-pressed="false">
           <span>Fase 2</span>
           <strong>Equipamientos</strong>
         </button>
-        <button id="planning3dProposalBtn" class="planning-3d-mode-button active" type="button" aria-pressed="true">
+        <button id="planning3dProposalBtn" class="planning-3d-mode-button" type="button" aria-pressed="false">
           <span>Fase 3</span>
           <strong>Propuesta</strong>
         </button>
@@ -1884,6 +1884,10 @@
             </div>
             <p class="planning-3d-progress-copy">Montando la primera vista operativa.</p>
           </div>
+          <div id="planning3dModeReadout" class="planning-3d-mode-readout empty-state">
+            Activa un modo para leer que presenta la escena 3D.
+          </div>
+          <div id="planning3dLegend" class="planning-3d-legend hidden" aria-live="polite"></div>
           <div id="planning3dSummary" class="planning-3d-summary empty-state">
             Aqui veras el resumen operativo del nucleo 3D.
           </div>
@@ -1993,6 +1997,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260520-5" defer></script>
+  <script src="./app.js?v=20260520-6" defer></script>
 </body>
 </html>
