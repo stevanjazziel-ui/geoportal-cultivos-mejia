@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260519-6";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-1";
 
 const layerCatalog = [
   {
@@ -19474,6 +19474,9 @@ function renderPlanning3dQuickSummary() {
   const climateLabel = state.urbanClimateData
     ? `${state.urbanClimateData.summary.priorityCorridorCount} corr.`
     : "Sin lectura";
+  const greenLabel = planning3dState.sourceData.trees?.features?.length
+    ? `${formatPlanning3dCount(planning3dState.sourceData.trees.features.length)} arb.`
+    : "Preparando";
   const modeSummary = getPlanning3dActiveModeSummary();
   const activeModesLabel = [
     planning3dState.corridorVisible ? "Corredor" : null,
@@ -19504,6 +19507,10 @@ function renderPlanning3dQuickSummary() {
     <article class="planning-3d-quick-chip">
       <span>Clima</span>
       <strong>${climateLabel}</strong>
+    </article>
+    <article class="planning-3d-quick-chip">
+      <span>Verde</span>
+      <strong>${greenLabel}</strong>
     </article>
     <article class="planning-3d-quick-chip">
       <span>Escenarios</span>
@@ -20244,10 +20251,20 @@ function addPlanning3dRuntimeLayers() {
         ["get", "publicSpaceType"],
         "corredor-primario", "#d8b08e",
         "corredor-secundario", "#e6cbb2",
+        "borde-verde", "#d3e1cf",
         "plaza-equipamiento", "#cbdccf",
+        "centralidad-civica", "#d8e3d4",
+        "parque-barrial", "#d1e3d0",
+        "reserva-ventilacion", "#c9ddd9",
         "#dfe6e3",
       ],
-      "fill-opacity": 0.34,
+      "fill-opacity": [
+        "match",
+        ["get", "publicSpaceType"],
+        "borde-verde", 0.26,
+        "reserva-ventilacion", 0.22,
+        0.34,
+      ],
     },
   });
 
@@ -20261,15 +20278,19 @@ function addPlanning3dRuntimeLayers() {
         ["get", "publicSpaceType"],
         "corredor-primario", "#b98256",
         "corredor-secundario", "#c9a27a",
+        "borde-verde", "#8da984",
         "plaza-equipamiento", "#8caf95",
+        "centralidad-civica", "#88a488",
+        "parque-barrial", "#7fa186",
+        "reserva-ventilacion", "#6f9a92",
         "#ccd5d1",
       ],
       "line-width": [
         "interpolate",
         ["linear"],
         ["zoom"],
-        12, 1.4,
-        16, 2.9,
+        12, 1.2,
+        16, 3.2,
       ],
       "line-opacity": 0.84,
     },
@@ -20279,13 +20300,15 @@ function addPlanning3dRuntimeLayers() {
     id: "planning3d-public-space-core",
     type: "line",
     source: "planning3d-public-space",
-    filter: ["!=", ["get", "publicSpaceType"], "plaza-equipamiento"],
+    filter: ["in", ["get", "publicSpaceType"], ["literal", ["corredor-primario", "corredor-secundario", "borde-verde", "reserva-ventilacion"]]],
     paint: {
       "line-color": [
         "match",
         ["get", "publicSpaceType"],
         "corredor-primario", "#f2e4d1",
         "corredor-secundario", "#f5ece0",
+        "borde-verde", "#eef6e9",
+        "reserva-ventilacion", "#e8f4f1",
         "#eef2ef",
       ],
       "line-width": [
@@ -20293,10 +20316,16 @@ function addPlanning3dRuntimeLayers() {
         ["linear"],
         ["zoom"],
         12, 0.6,
-        16, 1.5,
+        16, 1.7,
       ],
       "line-opacity": 0.9,
-      "line-dasharray": [1.2, 1.4],
+      "line-dasharray": [
+        "match",
+        ["get", "publicSpaceType"],
+        "borde-verde", ["literal", [0.6, 1.2]],
+        "reserva-ventilacion", ["literal", [1.1, 1.4]],
+        ["literal", [1.2, 1.4]],
+      ],
     },
   });
 
@@ -20305,7 +20334,7 @@ function addPlanning3dRuntimeLayers() {
     type: "symbol",
     source: "planning3d-public-space",
     minzoom: 13,
-    filter: ["!=", ["get", "publicSpaceType"], "corredor-secundario"],
+    filter: ["in", ["get", "publicSpaceType"], ["literal", ["corredor-primario", "plaza-equipamiento", "centralidad-civica", "parque-barrial", "reserva-ventilacion"]]],
     layout: {
       "text-field": ["coalesce", ["get", "publicSpaceLabel"], ""],
       "text-size": [
@@ -20317,7 +20346,12 @@ function addPlanning3dRuntimeLayers() {
       ],
       "text-letter-spacing": 0.04,
       "text-font": ["Open Sans Semibold", "Arial Unicode MS Bold"],
-      "symbol-sort-key": ["case", ["==", ["get", "publicSpaceType"], "plaza-equipamiento"], 2, 1],
+      "symbol-sort-key": [
+        "case",
+        ["==", ["get", "publicSpaceType"], "centralidad-civica"], 3,
+        ["==", ["get", "publicSpaceType"], "plaza-equipamiento"], 2,
+        1,
+      ],
     },
     paint: {
       "text-color": "rgba(77, 91, 85, 0.86)",
@@ -20391,8 +20425,8 @@ function addPlanning3dRuntimeLayers() {
         "interpolate",
         ["linear"],
         ["zoom"],
-        12, 4.2,
-        16, 10.4,
+        12, 4.8,
+        16, 11.6,
       ],
       "line-opacity": 0.95,
     },
@@ -20408,8 +20442,8 @@ function addPlanning3dRuntimeLayers() {
         "interpolate",
         ["linear"],
         ["zoom"],
-        12, 3.4,
-        16, 8.6,
+        12, 3.9,
+        16, 9.4,
       ],
       "line-opacity": 0.78,
     },
@@ -20431,8 +20465,8 @@ function addPlanning3dRuntimeLayers() {
         "interpolate",
         ["linear"],
         ["zoom"],
-        12, 1.9,
-        16, 4.8,
+        12, 2.1,
+        16, 5.2,
       ],
       "line-opacity": 0.96,
     },
@@ -20503,10 +20537,10 @@ function addPlanning3dRuntimeLayers() {
         ["linear"],
         ["zoom"],
         12, ["coalesce", ["get", "shadowRadius"], 3.2],
-        17, ["*", ["coalesce", ["get", "shadowRadius"], 3.2], 0.8],
+        17, ["*", ["coalesce", ["get", "shadowRadius"], 3.2], 0.86],
       ],
       "circle-translate": [1.8, 3.0],
-      "circle-opacity": 0.78,
+      "circle-opacity": 0.84,
     },
   });
 
@@ -20534,10 +20568,21 @@ function addPlanning3dRuntimeLayers() {
     paint: {
       "circle-color": [
         "match",
-        ["get", "size"],
-        "large", "#5a8a63",
-        "medium", "#6b986f",
-        "#89ad86",
+        ["get", "treeRole"],
+        "bulevar", "#56825f",
+        "plaza", "#6d9767",
+        "parque", "#73a06f",
+        "reserva", "#5f9a88",
+        "median", "#6f9360",
+        "alineacion", "#6b986f",
+        [
+          "match",
+          ["get", "size"],
+          "large", "#5a8a63",
+          "medium", "#6b986f",
+          "small", "#89ad86",
+          "#89ad86"
+        ]
       ],
       "circle-stroke-color": "#f5f3ec",
       "circle-stroke-width": 1,
@@ -20546,9 +20591,9 @@ function addPlanning3dRuntimeLayers() {
         ["linear"],
         ["zoom"],
         12, ["coalesce", ["get", "canopyRadius"], 2.2],
-        17, ["*", ["coalesce", ["get", "canopyRadius"], 2.2], 0.62],
+        17, ["*", ["coalesce", ["get", "canopyRadius"], 2.2], 0.68],
       ],
-      "circle-opacity": 0.94,
+      "circle-opacity": 0.96,
     },
   });
 
@@ -22573,7 +22618,11 @@ function renderPlanning3dSummary(force = false) {
   const urbanClimate = state.urbanClimateData;
   const shadowCount = planning3dState.sourceData.shadows?.features?.length || 0;
   const roadCount = planning3dState.sourceData.roads?.features?.length || 0;
+  const publicSpaceCount = planning3dState.sourceData.publicSpace?.features?.length || 0;
   const treeCount = planning3dState.sourceData.trees?.features?.length || 0;
+  const civicSpaceCount = (planning3dState.sourceData.publicSpace?.features || []).filter((feature) => (
+    ["plaza-equipamiento", "centralidad-civica", "parque-barrial", "reserva-ventilacion"].includes(feature.properties?.publicSpaceType)
+  )).length;
   const facilityCount = planning3dState.sourceData.facilities?.features?.length || 0;
   const proposalCount = planning3dState.sourceData.proposals?.features?.length || 0;
   const visualSnapshot = planning3dState.visualSnapshot || getPlanning3dVisualStateSnapshot();
@@ -22671,6 +22720,10 @@ function renderPlanning3dSummary(force = false) {
         <strong>${formatPlanning3dCount(roadCount, "0")}</strong>
       </article>
       <article class="planning-3d-chip">
+        <span>Espacio publico</span>
+        <strong>${formatPlanning3dCount(publicSpaceCount, "0")}</strong>
+      </article>
+      <article class="planning-3d-chip">
         <span>Arboles</span>
         <strong>${formatPlanning3dCount(treeCount, "0")}</strong>
       </article>
@@ -22719,7 +22772,8 @@ function renderPlanning3dSummary(force = false) {
       ${urbanClimate
         ? ` Clima urbano activo con ${urbanClimate.summary.priorityCorridorCount} corredores frios y ${urbanClimate.summary.heatRetentionAreaHa} ha de retencion termica.`
         : ""}
-      ${roadCount ? ` ${formatPlanning3dCount(roadCount)} calles priorizadas y ${formatPlanning3dCount(treeCount, "0")} arboles estructuran el corredor urbano del visor.` : ""}
+      ${roadCount ? ` ${formatPlanning3dCount(roadCount)} calles priorizadas, ${formatPlanning3dCount(publicSpaceCount, "0")} piezas de espacio publico y ${formatPlanning3dCount(treeCount, "0")} arboles estructuran el corredor urbano del visor.` : ""}
+      ${civicSpaceCount ? ` ${formatPlanning3dCount(civicSpaceCount)} plazas, reservas o centralidades verdes ya quedan destacadas para leer estancia y ventilacion urbana.` : ""}
       ${facilityCount ? ` ${formatPlanning3dCount(facilityCount)} equipamientos visibles para leer cobertura y centralidad.` : ""}
       ${proposalCount ? ` ${formatPlanning3dCount(proposalCount)} volumenes transparentes de propuesta permiten contrastar implantacion y restriccion.` : ""}
       ${candidateCount ? ` ${candidateCount} candidatos territoriales visibles.` : ""}
@@ -22788,6 +22842,14 @@ function renderPlanning3dSelection(force = false) {
   setHtmlIfChanged(dom.planning3dSelection, `
     <h4>Construccion ${props.buildingId || props.recordIndex + 1}</h4>
     <div class="planning-3d-selection-grid">
+      <article class="planning-3d-chip">
+        <span>Corredor</span>
+        <strong>${insight?.nearestRoadLabel || "Sin corredor"}</strong>
+      </article>
+      <article class="planning-3d-chip">
+        <span>Espacio publico</span>
+        <strong>${insight?.publicSpaceLabel || "Sin espacio publico"}</strong>
+      </article>
       <article class="planning-3d-chip">
         <span>Bloque</span>
         <strong>${props.blockId || "Sin bloque"}</strong>
@@ -22962,11 +23024,13 @@ function setPlanning3dHoverFeature(feature, lngLat) {
   const insight = getPlanning3dBuildingInsight(feature);
   const hoverFacts = [
     insight?.zoningLabel || "Sin patron",
+    insight?.nearestRoadLabel || "Sin corredor",
     insight?.mobilityLabel || "Sin movilidad",
     insight?.climateLabel || "Sin clima",
     insight?.riskLabel || "Sin riesgo",
   ].filter(Boolean).join(" | ");
   const hoverSupport = [
+    insight?.publicSpaceLabel || "Sin espacio publico",
     insight?.nearestFacilityName || "Sin equipamiento",
     insight?.proposalLabel || "Sin propuesta",
   ].filter(Boolean).join(" | ");
@@ -23041,10 +23105,12 @@ async function selectPlanning3dBuilding(feature, lngLat = null) {
   }
   const popupFacts = [
     planning3dState.selectedInsight?.zoningLabel || "Sin patron",
+    planning3dState.selectedInsight?.nearestRoadLabel || "Sin corredor",
     planning3dState.selectedInsight?.mobilityLabel || "Sin movilidad",
     planning3dState.selectedInsight?.riskLabel || "Sin riesgo",
   ].filter(Boolean).join(" | ");
   const popupSupport = [
+    planning3dState.selectedInsight?.publicSpaceLabel || "Sin espacio publico",
     planning3dState.selectedInsight?.nearestFacilityName || "Sin equipamiento",
     planning3dState.selectedInsight?.proposalLabel || "Sin propuesta",
   ].filter(Boolean).join(" | ");
@@ -23380,7 +23446,7 @@ function estimatePlanning3dRoadTier(feature) {
 function getPlanning3dRoadCollection() {
   const roads = filterFeaturesByPlanning3dBounds(
     filterFeaturesByTerritorialArea(geoSources.vias?.features, state.territorialAreaId),
-    { limit: 42 }
+    { limit: 56 }
   ).map((feature, index) => {
     const tier = estimatePlanning3dRoadTier(feature);
     const label = feature.properties?.name || `Via ${index + 1}`;
@@ -23391,6 +23457,9 @@ function getPlanning3dRoadCollection() {
       planning3dLabel: label,
       planning3dLabelRank: tier === "primary" ? 3 : tier === "secondary" ? 2 : 1,
       planning3dRoadWidth: tier === "primary" ? 1 : tier === "secondary" ? 0.72 : 0.46,
+      planning3dMedianWidthM: tier === "primary" ? 5.5 : tier === "secondary" ? 3.4 : 0,
+      planning3dSidePlantingM: tier === "primary" ? 10.5 : tier === "secondary" ? 7.2 : 4.8,
+      planning3dTreeSpacingM: tier === "primary" ? 32 : tier === "secondary" ? 48 : 64,
       planning3dTransitPriority: tier === "primary" ? "alta" : tier === "secondary" ? "media" : "baja",
       planning3dPublicSpaceRole: tier === "primary" ? "corredor estructurante" : tier === "secondary" ? "eje de soporte" : "malla local",
       planning3dUrbanLabel: tier === "primary"
@@ -23430,10 +23499,10 @@ function getPlanning3dFacilitiesCollection() {
 function getPlanning3dPublicSpaceCollection(roadCollection = getPlanning3dRoadCollection(), facilityCollection = getPlanning3dFacilitiesCollection()) {
   const roadBuffers = (roadCollection?.features || [])
     .filter((feature) => feature.properties?.planning3dRoadTier !== "local")
-    .slice(0, 18)
+    .slice(0, 22)
     .map((feature) => {
       try {
-        const widthKm = feature.properties?.planning3dRoadTier === "primary" ? 0.022 : 0.015;
+        const widthKm = feature.properties?.planning3dRoadTier === "primary" ? 0.026 : 0.017;
         const buffer = turf.buffer(feature, widthKm, { units: "kilometers" });
         const label = feature.properties?.planning3dRoadTier === "primary"
           ? `Corredor ${feature.properties?.planning3dLabel || "urbano"}`
@@ -23450,11 +23519,32 @@ function getPlanning3dPublicSpaceCollection(roadCollection = getPlanning3dRoadCo
       }
     })
     .filter(Boolean);
+  const greenEdges = (roadCollection?.features || [])
+    .filter((feature) => feature.properties?.planning3dRoadTier !== "local")
+    .slice(0, 16)
+    .map((feature) => {
+      try {
+        const widthKm = feature.properties?.planning3dRoadTier === "primary" ? 0.0105 : 0.0072;
+        const buffer = turf.buffer(feature, widthKm, { units: "kilometers" });
+        buffer.properties = {
+          publicSpaceType: "borde-verde",
+          planning3dRoadTier: feature.properties?.planning3dRoadTier,
+          publicSpaceLabel: feature.properties?.planning3dRoadTier === "primary"
+            ? `Paseo arbolado ${feature.properties?.planning3dLabel || "principal"}`
+            : `Borde verde ${feature.properties?.planning3dLabel || "barrial"}`,
+          summary: `Franja verde de acompaniamiento peatonal y sombra sobre ${feature.properties?.planning3dLabel || "eje vial"}.`,
+        };
+        return buffer;
+      } catch (error) {
+        return null;
+      }
+    })
+    .filter(Boolean);
   const facilityBuffers = (facilityCollection?.features || [])
     .slice(0, 12)
     .map((feature) => {
       try {
-        const buffer = turf.buffer(feature, 0.045, { units: "kilometers" });
+        const buffer = turf.buffer(feature, 0.05, { units: "kilometers" });
         buffer.properties = {
           publicSpaceType: "plaza-equipamiento",
           publicSpaceLabel: `Plaza ${feature.properties?.name || "de equipamiento"}`,
@@ -23467,17 +23557,89 @@ function getPlanning3dPublicSpaceCollection(roadCollection = getPlanning3dRoadCo
       }
     })
     .filter(Boolean);
+  const urbanCommons = filterFeaturesByPlanning3dBounds(
+    filterFeaturesByTerritorialArea(geoSources.manchaUrbana?.features, state.territorialAreaId),
+    { limit: 10, requireIntersection: false }
+  ).map((feature, index) => {
+    try {
+      const hierarchy = String(feature.properties?.hierarchy || "barrial").toLowerCase();
+      const centroid = turf.centroid(feature);
+      const radiusKm = hierarchy === "primario" ? 0.032 : hierarchy === "subcentro" ? 0.024 : 0.018;
+      const commons = turf.buffer(centroid, radiusKm, { units: "kilometers" });
+      commons.properties = {
+        publicSpaceType: hierarchy === "primario" ? "centralidad-civica" : "parque-barrial",
+        publicSpaceLabel: hierarchy === "primario"
+          ? `Centralidad ${feature.properties?.name || `urbana ${index + 1}`}`
+          : `Parque ${feature.properties?.name || `barrial ${index + 1}`}`,
+        summary: hierarchy === "primario"
+          ? "Espacio civico y de estancia asociado a la centralidad principal."
+          : "Espacio barrial de estancia, juego y transicion verde.",
+        hierarchy,
+      };
+      return commons;
+    } catch (error) {
+      return null;
+    }
+  }).filter(Boolean);
+  const climateGreens = filterFeaturesByPlanning3dBounds(
+    (state.urbanClimateData?.prioritySectors || [])
+      .filter((sector) => /corredor frio prioritario|reserva de ventilacion/i.test(sector.classLabel || ""))
+      .map((sector) => {
+        const feature = cloneFeature(sector.feature);
+        feature.properties = {
+          ...(feature.properties || {}),
+          publicSpaceType: "reserva-ventilacion",
+          publicSpaceLabel: sector.classLabel || "Reserva de ventilacion",
+          summary: sector.recommendation || "Franja abierta para sostener ventilacion y refrescamiento urbano.",
+        };
+        return feature;
+      }),
+    { limit: 8, requireIntersection: false }
+  );
+  const coverGreens = filterFeaturesByPlanning3dBounds(
+    filterFeaturesByTerritorialArea(geoSources.coberturaMAATE?.features, state.territorialAreaId)
+      .filter((feature) => /proteccion|vegetacion|verde/i.test(String(feature.properties?.coverClass || "")))
+      .map((feature) => {
+        const green = cloneFeature(feature);
+        green.properties = {
+          ...(green.properties || {}),
+          publicSpaceType: "reserva-ventilacion",
+          publicSpaceLabel: green.properties?.name || "Reserva verde",
+          summary: green.properties?.summary || "Bolsa verde de proteccion y amortiguacion urbana.",
+        };
+        return green;
+      }),
+    { limit: 6, requireIntersection: false }
+  );
   return {
     type: "FeatureCollection",
-    features: [...roadBuffers, ...facilityBuffers],
+    features: [...roadBuffers, ...greenEdges, ...facilityBuffers, ...urbanCommons, ...climateGreens, ...coverGreens],
   };
 }
 
-function getPlanning3dTreeCollection(roadCollection = getPlanning3dRoadCollection()) {
+function getPlanning3dTreeCollection(
+  roadCollection = getPlanning3dRoadCollection(),
+  facilityCollection = getPlanning3dFacilitiesCollection(),
+  publicSpaceCollection = getPlanning3dPublicSpaceCollection(roadCollection, facilityCollection)
+) {
   const features = [];
+  const pushTree = (coordinates, properties = {}) => {
+    if (!Array.isArray(coordinates) || coordinates.length < 2 || features.length >= 420) {
+      return;
+    }
+    features.push(pointFeature(`Arbol urbano ${features.length + 1}`, coordinates, {
+      treeIndex: features.length + 1,
+      size: "medium",
+      treeRole: "alineacion",
+      canopyRadius: 6.2,
+      shadowRadius: 8.4,
+      summary: "Arbolado urbano de apoyo al corredor.",
+      ...properties,
+    }));
+  };
   (roadCollection?.features || [])
     .filter((feature) => feature.properties?.planning3dRoadTier !== "local")
-    .slice(0, 18)
+    .slice(0, 22)
     .forEach((feature, roadIndex) => {
       let lengthKm = 0;
       try {
@@ -23486,45 +23648,116 @@ function getPlanning3dTreeCollection(roadCollection = getPlanning3dRoadCollectio
         lengthKm = 0;
       }
       const isPrimary = feature.properties?.planning3dRoadTier === "primary";
-      const stepKm = isPrimary ? 0.045 : 0.072;
-      for (let currentKm = stepKm * 0.5; currentKm < lengthKm && features.length < 180; currentKm += stepKm) {
+      const stepM = Number(feature.properties?.planning3dTreeSpacingM) || (isPrimary ? 32 : 48);
+      const stepKm = stepM / 1000;
+      const sideOffsetM = Number(feature.properties?.planning3dSidePlantingM) || (isPrimary ? 10.5 : 7.2);
+      const medianOffsetM = Number(feature.properties?.planning3dMedianWidthM) || 0;
+      for (let currentKm = stepKm * 0.5; currentKm < lengthKm && features.length < 320; currentKm += stepKm) {
         try {
           const point = turf.along(feature, currentKm, { units: "kilometers" });
-          point.properties = {
-            treeIndex: features.length + 1,
+          const before = turf.along(feature, Math.max(currentKm - stepKm * 0.24, 0), { units: "kilometers" });
+          const after = turf.along(feature, Math.min(currentKm + stepKm * 0.24, lengthKm), { units: "kilometers" });
+          const bearing = turf.bearing(before, after);
+          const leftBearingRad = ((bearing - 90) * Math.PI) / 180;
+          const rightBearingRad = ((bearing + 90) * Math.PI) / 180;
+          const [lon, lat] = point.geometry.coordinates;
+          pushTree(projectPlanning3dCoordinate(
+            lon,
+            lat,
+            Math.sin(leftBearingRad) * sideOffsetM,
+            Math.cos(leftBearingRad) * sideOffsetM
+          ), {
             roadIndex: roadIndex + 1,
             size: isPrimary ? "large" : "medium",
-            canopyRadius: isPrimary ? 7.8 : 5.4,
-            shadowRadius: isPrimary ? 10.6 : 7.2,
-            summary: `Arbol de alineacion sobre ${feature.properties?.planning3dLabel || "eje vial"}.`,
-          };
-          features.push(point);
+            treeRole: isPrimary ? "bulevar" : "alineacion",
+            canopyRadius: isPrimary ? 7.8 : 5.6,
+            shadowRadius: isPrimary ? 10.8 : 7.4,
+            summary: `Arbol de alineacion lateral sobre ${feature.properties?.planning3dLabel || "eje vial"}.`,
+          });
+          pushTree(projectPlanning3dCoordinate(
+            lon,
+            lat,
+            Math.sin(rightBearingRad) * sideOffsetM,
+            Math.cos(rightBearingRad) * sideOffsetM
+          ), {
+            roadIndex: roadIndex + 1,
+            size: isPrimary ? "large" : "medium",
+            treeRole: isPrimary ? "bulevar" : "alineacion",
+            canopyRadius: isPrimary ? 7.8 : 5.6,
+            shadowRadius: isPrimary ? 10.8 : 7.4,
+            summary: `Arbol de alineacion lateral sobre ${feature.properties?.planning3dLabel || "eje vial"}.`,
+          });
+          if (isPrimary && medianOffsetM > 0 && Math.round(currentKm / stepKm) % 2 === 0) {
+            pushTree([lon, lat], {
+              roadIndex: roadIndex + 1,
+              size: "small",
+              treeRole: "median",
+              canopyRadius: 4.8,
+              shadowRadius: 6.4,
+              summary: `Arbol central de mediana sobre ${feature.properties?.planning3dLabel || "corredor primario"}.`,
+            });
+          }
         } catch (error) {
           break;
         }
       }
     });
-  getPlanning3dFacilitiesCollection().features
+  (facilityCollection?.features || [])
     .slice(0, 12)
     .forEach((feature, facilityIndex) => {
       const [lon, lat] = feature.geometry?.coordinates || [];
       if (!Number.isFinite(lon) || !Number.isFinite(lat)) {
         return;
       }
-      const ringCount = 6;
-      for (let index = 0; index < ringCount && features.length < 240; index += 1) {
+      const ringCount = 8;
+      for (let index = 0; index < ringCount && features.length < 420; index += 1) {
         const angle = (Math.PI * 2 * index) / ringCount;
-        const eastM = Math.cos(angle) * 12;
-        const northM = Math.sin(angle) * 12;
-        const coordinates = projectPlanning3dCoordinate(lon, lat, eastM, northM);
-        features.push(pointFeature(`Arbol plaza ${facilityIndex + 1}-${index + 1}`, coordinates, {
-          treeIndex: features.length + 1,
+        const radiusM = feature.properties?.facilityType === "hospital" ? 16 : 12;
+        const coordinates = projectPlanning3dCoordinate(lon, lat, Math.cos(angle) * radiusM, Math.sin(angle) * radiusM);
+        pushTree(coordinates, {
           roadIndex: null,
           size: "medium",
-          canopyRadius: 6.2,
-          shadowRadius: 8.4,
+          treeRole: "plaza",
+          canopyRadius: 6.6,
+          shadowRadius: 8.8,
           summary: `Arbolado de apoyo alrededor de ${feature.properties?.name || "equipamiento"}.`,
-        }));
+        });
+      }
+      pushTree([lon, lat], {
+        roadIndex: null,
+        size: "large",
+        treeRole: "plaza",
+        canopyRadius: 7.2,
+        shadowRadius: 9.6,
+        summary: `Arbol focal en el atrio o plaza de ${feature.properties?.name || "equipamiento"}.`,
+      });
+    });
+  (publicSpaceCollection?.features || [])
+    .filter((feature) => ["centralidad-civica", "parque-barrial", "reserva-ventilacion"].includes(feature.properties?.publicSpaceType))
+    .slice(0, 12)
+    .forEach((feature, index) => {
+      let centroid = null;
+      try {
+        centroid = turf.centroid(feature);
+      } catch (error) {
+        centroid = null;
+      }
+      const [lon, lat] = centroid?.geometry?.coordinates || [];
+      if (!Number.isFinite(lon) || !Number.isFinite(lat)) {
+        return;
+      }
+      const ringCount = feature.properties?.publicSpaceType === "centralidad-civica" ? 10 : 7;
+      const radiusM = feature.properties?.publicSpaceType === "centralidad-civica" ? 18 : feature.properties?.publicSpaceType === "parque-barrial" ? 14 : 11;
+      for (let ringIndex = 0; ringIndex < ringCount && features.length < 420; ringIndex += 1) {
+        const angle = (Math.PI * 2 * ringIndex) / ringCount;
+        pushTree(projectPlanning3dCoordinate(lon, lat, Math.cos(angle) * radiusM, Math.sin(angle) * radiusM), {
+          roadIndex: null,
+          size: feature.properties?.publicSpaceType === "centralidad-civica" ? "large" : "medium",
+          treeRole: feature.properties?.publicSpaceType === "reserva-ventilacion" ? "reserva" : "parque",
+          canopyRadius: feature.properties?.publicSpaceType === "centralidad-civica" ? 7.6 : 6.1,
+          shadowRadius: feature.properties?.publicSpaceType === "centralidad-civica" ? 10.2 : 8.2,
+          summary: `Arbolado estructurante en ${feature.properties?.publicSpaceLabel || `espacio publico ${index + 1}`}.`,
+        });
       }
     });
   return {
@@ -23633,7 +23866,7 @@ function updatePlanning3dUrbanSceneSources() {
   const roads = getPlanning3dRoadCollection();
   const facilities = getPlanning3dFacilitiesCollection();
   const publicSpace = getPlanning3dPublicSpaceCollection(roads, facilities);
-  const trees = getPlanning3dTreeCollection(roads);
+  const trees = getPlanning3dTreeCollection(roads, facilities, publicSpace);
   planning3dState.sourceData.roads = roads;
   planning3dState.sourceData.facilities = facilities;
   planning3dState.sourceData.publicSpace = publicSpace;
@@ -23701,6 +23934,8 @@ function getPlanning3dBuildingInsight(feature) {
   const climate = findPlanning3dSectorMatch(centroid, state.urbanClimateData?.sectors || []);
   const housing = findPlanning3dSectorMatch(centroid, state.housingPatternsData?.sectors || []);
   const facilityMatch = getNearestFeatureMatch(centroid, planning3dState.sourceData.facilities?.features || []);
+  const roadMatch = getNearestFeatureMatch(centroid, planning3dState.sourceData.roads?.features || []);
+  const publicSpaceMatch = getNearestFeatureMatch(centroid, planning3dState.sourceData.publicSpace?.features || []);
   const proposal = (state.planningData?.candidates || []).find((candidate) => safeBooleanIntersects(candidate.feature, feature)) || null;
   return {
     zoningLabel: zoning?.patternLabel || "Sin patron",
@@ -23712,6 +23947,10 @@ function getPlanning3dBuildingInsight(feature) {
     housingLabel: housing?.typologyLabel || "Sin tipologia",
     nearestFacilityName: facilityMatch?.feature?.properties?.name || "Sin equipamiento cercano",
     nearestFacilityDistanceKm: facilityMatch?.distanceKm || null,
+    nearestRoadLabel: roadMatch?.feature?.properties?.planning3dUrbanLabel || roadMatch?.feature?.properties?.planning3dLabel || "Sin corredor cercano",
+    nearestRoadDistanceKm: roadMatch?.distanceKm || null,
+    publicSpaceLabel: publicSpaceMatch?.feature?.properties?.publicSpaceLabel || "Sin espacio publico cercano",
+    publicSpaceDistanceKm: publicSpaceMatch?.distanceKm || null,
     proposalLabel: proposal?.title || "Sin propuesta",
     recommendation: proposal?.recommendation || zoning?.recommendation || climate?.recommendation || risk?.recommendation || "Revisar relacion entre forma urbana, acceso y soporte territorial.",
   };
