@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-4";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-5";
 
 const layerCatalog = [
   {
@@ -3903,7 +3903,7 @@ const mapState = {
 
 const planning3dState = {
   modalOpen: false,
-  currentBase: "satellite",
+  currentBase: "light",
   statusMessage: "Preparando datasets 3D...",
   statusTone: "loading",
   manifest: null,
@@ -3922,13 +3922,13 @@ const planning3dState = {
   parcelsVisible: false,
   heightScale: 1,
   shadowsVisible: false,
-  urbanClimateVisible: true,
-  corridorVisible: true,
-  zoningVisible: true,
+  urbanClimateVisible: false,
+  corridorVisible: false,
+  zoningVisible: false,
   mobilityVisible: false,
   riskVisible: false,
-  facilitiesVisible: true,
-  proposalVisible: true,
+  facilitiesVisible: false,
+  proposalVisible: false,
   viewMode: "perspective",
   panelCollapsed: true,
   sunDate: "",
@@ -7239,6 +7239,9 @@ function bindUI() {
       refreshShadows: false,
       refreshSummary: true,
     });
+    if (planning3dState.urbanClimateVisible) {
+      requestPlanning3dAnalyticalScene();
+    }
   });
   dom.planning3dCorridorBtn?.addEventListener("click", () => {
     planning3dState.corridorVisible = !planning3dState.corridorVisible;
@@ -7249,6 +7252,9 @@ function bindUI() {
       refreshShadows: false,
       refreshSummary: true,
     });
+    if (planning3dState.corridorVisible) {
+      requestPlanning3dAnalyticalScene();
+    }
   });
   dom.planning3dZoningBtn?.addEventListener("click", () => {
     planning3dState.zoningVisible = !planning3dState.zoningVisible;
@@ -7259,6 +7265,9 @@ function bindUI() {
       refreshShadows: false,
       refreshSummary: true,
     });
+    if (planning3dState.zoningVisible) {
+      requestPlanning3dAnalyticalScene();
+    }
   });
   dom.planning3dMobilityBtn?.addEventListener("click", () => {
     planning3dState.mobilityVisible = !planning3dState.mobilityVisible;
@@ -7269,6 +7278,9 @@ function bindUI() {
       refreshShadows: false,
       refreshSummary: true,
     });
+    if (planning3dState.mobilityVisible) {
+      requestPlanning3dAnalyticalScene();
+    }
   });
   dom.planning3dRiskBtn?.addEventListener("click", () => {
     planning3dState.riskVisible = !planning3dState.riskVisible;
@@ -7279,6 +7291,9 @@ function bindUI() {
       refreshShadows: false,
       refreshSummary: true,
     });
+    if (planning3dState.riskVisible) {
+      requestPlanning3dAnalyticalScene();
+    }
   });
   dom.planning3dFacilitiesBtn?.addEventListener("click", () => {
     planning3dState.facilitiesVisible = !planning3dState.facilitiesVisible;
@@ -7289,6 +7304,9 @@ function bindUI() {
       refreshShadows: false,
       refreshSummary: true,
     });
+    if (planning3dState.facilitiesVisible) {
+      requestPlanning3dAnalyticalScene();
+    }
   });
   dom.planning3dProposalBtn?.addEventListener("click", () => {
     planning3dState.proposalVisible = !planning3dState.proposalVisible;
@@ -7299,6 +7317,9 @@ function bindUI() {
       refreshShadows: false,
       refreshSummary: true,
     });
+    if (planning3dState.proposalVisible) {
+      requestPlanning3dAnalyticalScene();
+    }
   });
   dom.planning3dDate?.addEventListener("change", () => {
     planning3dState.sunDate = dom.planning3dDate.value || planning3dState.sunDate;
@@ -19647,10 +19668,10 @@ function formatPlanning3dDistance(distanceM) {
 function buildPlanning3dBasemapWarmupUrls(baseId = "satellite") {
   if (baseId === "satellite") {
     return [
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/17/65721/36930",
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/17/65721/36931",
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/17/65722/36930",
-      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/17/65722/36931",
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/16/32860/18465",
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/16/32860/18466",
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/16/32861/18465",
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/16/32861/18466",
     ];
   }
 
@@ -19697,6 +19718,7 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
           "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         ],
         tileSize: 256,
+        maxzoom: agronomyMapNativeZoomLimits.satellite,
         attribution: "Esri World Imagery",
       },
       "planning3d-basemap-light": {
@@ -24128,6 +24150,43 @@ function schedulePlanning3dAnalyticalPrime(force = false) {
   });
 }
 
+function planning3dHasAnalyticalLayersEnabled() {
+  return !!(
+    planning3dState.urbanClimateVisible
+    || planning3dState.corridorVisible
+    || planning3dState.zoningVisible
+    || planning3dState.mobilityVisible
+    || planning3dState.riskVisible
+    || planning3dState.facilitiesVisible
+    || planning3dState.proposalVisible
+  );
+}
+
+function requestPlanning3dAnalyticalScene(force = false) {
+  if (!force && !planning3dHasAnalyticalLayersEnabled()) {
+    return Promise.resolve(false);
+  }
+  return Promise.resolve(schedulePlanning3dAnalyticalPrime(force))
+    .then(() => {
+      if (!planning3dState.modalOpen) {
+        return false;
+      }
+      refreshPlanning3dAnalyticalScene();
+      syncPlanning3dLayerVisibility({
+        refreshScene: false,
+        refreshMarkers: false,
+        refreshShadows: false,
+        refreshSummary: false,
+        refreshVisualState: true,
+        allowRecovery: true,
+      });
+      renderPlanning3dQuickSummary();
+      renderPlanning3dSummary(true);
+      renderPlanning3dSelection(true);
+      return true;
+    });
+}
+
 function findPlanning3dSectorMatch(point, sectors = []) {
   if (!point?.geometry || !Array.isArray(sectors) || !sectors.length) {
     return null;
@@ -24366,7 +24425,7 @@ async function openPlanning3dViewer() {
   renderPlanning3dSummary();
 
   try {
-    const scenePromise = schedulePlanning3dAnalyticalPrime();
+    const scenePromise = requestPlanning3dAnalyticalScene();
     const manifestPromise = hydratePlanning3dManifest();
     preloadPlanning3dBasemap(planning3dState.currentBase);
     const mapPromise = initializePlanning3dMap();
@@ -24401,22 +24460,13 @@ async function openPlanning3dViewer() {
     renderPlanning3dProgress(true);
     refreshPlanning3dVisualState({ allowRecovery: true, updateSummary: true });
     Promise.resolve(scenePromise)
-      .then(() => {
+      .then((loaded) => {
+        if (!loaded) {
+          return;
+        }
         if (!planning3dState.modalOpen) {
           return;
         }
-        refreshPlanning3dAnalyticalScene();
-        syncPlanning3dLayerVisibility({
-          refreshScene: false,
-          refreshMarkers: false,
-          refreshShadows: false,
-          refreshSummary: false,
-          refreshVisualState: true,
-          allowRecovery: true,
-        });
-        renderPlanning3dQuickSummary();
-        renderPlanning3dSummary(true);
-        renderPlanning3dSelection(true);
       })
       .catch((error) => {
         if (planning3dState.modalOpen) {
