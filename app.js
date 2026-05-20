@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-3";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-4";
 
 const layerCatalog = [
   {
@@ -3996,6 +3996,7 @@ const planning3dState = {
   urbanSceneCacheSignature: "",
   urbanSceneCache: null,
   analyticalScenePromise: null,
+  analyticalPrimeTimer: null,
   forceVisualFallback: false,
   visualReady: false,
   visualSnapshot: null,
@@ -20961,12 +20962,20 @@ function hydratePlanning3dRuntimeLayers() {
 
     updatePlanning3dBasemapStyle();
     addPlanning3dRuntimeLayers();
-    updatePlanning3dCandidateSource();
-    updatePlanning3dUrbanClimateSource();
-    updatePlanning3dUrbanSceneSources();
-    syncPlanning3dLayerVisibility();
+    syncPlanning3dCurrentSourceDataToMap();
+    syncPlanning3dLayerVisibility({
+      refreshScene: false,
+      refreshMarkers: false,
+      refreshSummary: false,
+      refreshVisualState: false,
+      refreshShadows: false,
+    });
     updatePlanning3dHeightScale();
-    updatePlanning3dSunModel();
+    if (planning3dState.sunPosition) {
+      queuePlanning3dShadowSync();
+    } else {
+      updatePlanning3dSunModel();
+    }
     renderPlanning3dSvgScene();
     renderPlanning3dDomMarkers();
     return true;
@@ -23444,6 +23453,29 @@ function updatePlanning3dUrbanClimateSource() {
   renderPlanning3dSummary();
 }
 
+function syncPlanning3dCurrentSourceDataToMap() {
+  [
+    ["planning3d-buildings", planning3dState.sourceData.buildings],
+    ["planning3d-parcels", planning3dState.sourceData.parcels],
+    ["planning3d-candidates", planning3dState.sourceData.candidates],
+    ["planning3d-shadows", planning3dState.sourceData.shadows],
+    ["planning3d-urban-climate", planning3dState.sourceData.urbanClimate],
+    ["planning3d-roads", planning3dState.sourceData.roads],
+    ["planning3d-public-space", planning3dState.sourceData.publicSpace],
+    ["planning3d-trees", planning3dState.sourceData.trees],
+    ["planning3d-zoning", planning3dState.sourceData.zoning],
+    ["planning3d-mobility", planning3dState.sourceData.mobility],
+    ["planning3d-risk", planning3dState.sourceData.risk],
+    ["planning3d-facilities", planning3dState.sourceData.facilities],
+    ["planning3d-proposals", planning3dState.sourceData.proposals],
+  ].forEach(([sourceId, collection]) => {
+    const source = planning3dState.map?.getSource(sourceId);
+    if (source?.setData) {
+      source.setData(collection || getPlanning3dEmptyCollection());
+    }
+  });
+}
+
 function getPlanning3dAreaBounds() {
   return getPlanning3dAreaProfile().bounds || planning3dPublishedBounds;
 }
@@ -23544,7 +23576,7 @@ function estimatePlanning3dRoadTier(feature) {
 function getPlanning3dRoadCollection() {
   const roads = filterFeaturesByPlanning3dBounds(
     filterFeaturesByTerritorialArea(geoSources.vias?.features, state.territorialAreaId),
-    { limit: 56 }
+    { limit: 36 }
   ).map((feature, index) => {
     const tier = estimatePlanning3dRoadTier(feature);
     const label = feature.properties?.name || `Via ${index + 1}`;
@@ -23597,7 +23629,7 @@ function getPlanning3dFacilitiesCollection() {
 function getPlanning3dPublicSpaceCollection(roadCollection = getPlanning3dRoadCollection(), facilityCollection = getPlanning3dFacilitiesCollection()) {
   const roadBuffers = (roadCollection?.features || [])
     .filter((feature) => feature.properties?.planning3dRoadTier !== "local")
-    .slice(0, 22)
+    .slice(0, 14)
     .map((feature) => {
       try {
         const widthKm = feature.properties?.planning3dRoadTier === "primary" ? 0.026 : 0.017;
@@ -23619,7 +23651,7 @@ function getPlanning3dPublicSpaceCollection(roadCollection = getPlanning3dRoadCo
     .filter(Boolean);
   const greenEdges = (roadCollection?.features || [])
     .filter((feature) => feature.properties?.planning3dRoadTier !== "local")
-    .slice(0, 16)
+    .slice(0, 10)
     .map((feature) => {
       try {
         const widthKm = feature.properties?.planning3dRoadTier === "primary" ? 0.0105 : 0.0072;
@@ -23639,7 +23671,7 @@ function getPlanning3dPublicSpaceCollection(roadCollection = getPlanning3dRoadCo
     })
     .filter(Boolean);
   const facilityBuffers = (facilityCollection?.features || [])
-    .slice(0, 12)
+    .slice(0, 8)
     .map((feature) => {
       try {
         const buffer = turf.buffer(feature, 0.05, { units: "kilometers" });
@@ -23657,7 +23689,7 @@ function getPlanning3dPublicSpaceCollection(roadCollection = getPlanning3dRoadCo
     .filter(Boolean);
   const urbanCommons = filterFeaturesByPlanning3dBounds(
     filterFeaturesByTerritorialArea(geoSources.manchaUrbana?.features, state.territorialAreaId),
-    { limit: 10, requireIntersection: false }
+    { limit: 6, requireIntersection: false }
   ).map((feature, index) => {
     try {
       const hierarchy = String(feature.properties?.hierarchy || "barrial").toLowerCase();
@@ -23692,7 +23724,7 @@ function getPlanning3dPublicSpaceCollection(roadCollection = getPlanning3dRoadCo
         };
         return feature;
       }),
-    { limit: 8, requireIntersection: false }
+    { limit: 5, requireIntersection: false }
   );
   const coverGreens = filterFeaturesByPlanning3dBounds(
     filterFeaturesByTerritorialArea(geoSources.coberturaMAATE?.features, state.territorialAreaId)
@@ -23707,7 +23739,7 @@ function getPlanning3dPublicSpaceCollection(roadCollection = getPlanning3dRoadCo
         };
         return green;
       }),
-    { limit: 6, requireIntersection: false }
+    { limit: 4, requireIntersection: false }
   );
   return {
     type: "FeatureCollection",
@@ -23722,7 +23754,7 @@ function getPlanning3dTreeCollection(
 ) {
   const features = [];
   const pushTree = (coordinates, properties = {}) => {
-    if (!Array.isArray(coordinates) || coordinates.length < 2 || features.length >= 420) {
+    if (!Array.isArray(coordinates) || coordinates.length < 2 || features.length >= 260) {
       return;
     }
     features.push(pointFeature(`Arbol urbano ${features.length + 1}`, coordinates, {
@@ -23737,7 +23769,7 @@ function getPlanning3dTreeCollection(
   };
   (roadCollection?.features || [])
     .filter((feature) => feature.properties?.planning3dRoadTier !== "local")
-    .slice(0, 22)
+    .slice(0, 14)
     .forEach((feature, roadIndex) => {
       let lengthKm = 0;
       try {
@@ -23750,7 +23782,7 @@ function getPlanning3dTreeCollection(
       const stepKm = stepM / 1000;
       const sideOffsetM = Number(feature.properties?.planning3dSidePlantingM) || (isPrimary ? 10.5 : 7.2);
       const medianOffsetM = Number(feature.properties?.planning3dMedianWidthM) || 0;
-      for (let currentKm = stepKm * 0.5; currentKm < lengthKm && features.length < 320; currentKm += stepKm) {
+      for (let currentKm = stepKm * 0.5; currentKm < lengthKm && features.length < 180; currentKm += stepKm) {
         try {
           const point = turf.along(feature, currentKm, { units: "kilometers" });
           const before = turf.along(feature, Math.max(currentKm - stepKm * 0.24, 0), { units: "kilometers" });
@@ -23801,14 +23833,14 @@ function getPlanning3dTreeCollection(
       }
     });
   (facilityCollection?.features || [])
-    .slice(0, 12)
+    .slice(0, 8)
     .forEach((feature, facilityIndex) => {
       const [lon, lat] = feature.geometry?.coordinates || [];
       if (!Number.isFinite(lon) || !Number.isFinite(lat)) {
         return;
       }
       const ringCount = 8;
-      for (let index = 0; index < ringCount && features.length < 420; index += 1) {
+      for (let index = 0; index < ringCount && features.length < 220; index += 1) {
         const angle = (Math.PI * 2 * index) / ringCount;
         const radiusM = feature.properties?.facilityType === "hospital" ? 16 : 12;
         const coordinates = projectPlanning3dCoordinate(lon, lat, Math.cos(angle) * radiusM, Math.sin(angle) * radiusM);
@@ -23832,7 +23864,7 @@ function getPlanning3dTreeCollection(
     });
   (publicSpaceCollection?.features || [])
     .filter((feature) => ["centralidad-civica", "parque-barrial", "reserva-ventilacion"].includes(feature.properties?.publicSpaceType))
-    .slice(0, 12)
+    .slice(0, 6)
     .forEach((feature, index) => {
       let centroid = null;
       try {
@@ -23846,7 +23878,7 @@ function getPlanning3dTreeCollection(
       }
       const ringCount = feature.properties?.publicSpaceType === "centralidad-civica" ? 10 : 7;
       const radiusM = feature.properties?.publicSpaceType === "centralidad-civica" ? 18 : feature.properties?.publicSpaceType === "parque-barrial" ? 14 : 11;
-      for (let ringIndex = 0; ringIndex < ringCount && features.length < 420; ringIndex += 1) {
+      for (let ringIndex = 0; ringIndex < ringCount && features.length < 260; ringIndex += 1) {
         const angle = (Math.PI * 2 * ringIndex) / ringCount;
         pushTree(projectPlanning3dCoordinate(lon, lat, Math.cos(angle) * radiusM, Math.sin(angle) * radiusM), {
           roadIndex: null,
@@ -24058,6 +24090,42 @@ function refreshPlanning3dAnalyticalScene() {
     renderPlanning3dSummary();
     renderPlanning3dSelection();
   }
+}
+
+function clearPlanning3dAnalyticalPrimeTimer() {
+  if (!planning3dState.analyticalPrimeTimer) {
+    return;
+  }
+  if (typeof window !== "undefined" && typeof window.cancelIdleCallback === "function") {
+    window.cancelIdleCallback(planning3dState.analyticalPrimeTimer);
+  } else {
+    window.clearTimeout(planning3dState.analyticalPrimeTimer);
+  }
+  planning3dState.analyticalPrimeTimer = null;
+}
+
+function schedulePlanning3dAnalyticalPrime(force = false) {
+  if (!force && planning3dState.analyticalScenePromise) {
+    return planning3dState.analyticalScenePromise;
+  }
+
+  clearPlanning3dAnalyticalPrimeTimer();
+  return new Promise((resolve, reject) => {
+    const run = () => {
+      planning3dState.analyticalPrimeTimer = null;
+      Promise.resolve()
+        .then(() => primePlanning3dSceneData(force))
+        .then(resolve)
+        .catch(reject);
+    };
+
+    if (typeof window !== "undefined" && typeof window.requestIdleCallback === "function") {
+      planning3dState.analyticalPrimeTimer = window.requestIdleCallback(run, { timeout: 1200 });
+      return;
+    }
+
+    planning3dState.analyticalPrimeTimer = window.setTimeout(run, 220);
+  });
 }
 
 function findPlanning3dSectorMatch(point, sectors = []) {
@@ -24298,7 +24366,7 @@ async function openPlanning3dViewer() {
   renderPlanning3dSummary();
 
   try {
-    const scenePromise = primePlanning3dSceneData();
+    const scenePromise = schedulePlanning3dAnalyticalPrime();
     const manifestPromise = hydratePlanning3dManifest();
     preloadPlanning3dBasemap(planning3dState.currentBase);
     const mapPromise = initializePlanning3dMap();
@@ -24371,6 +24439,7 @@ function closePlanning3dViewer(silent = false) {
   clearPlanning3dHoverFeature();
   clearPlanning3dVisualRecoveryTimers();
   clearPlanning3dBaseReadinessTimer();
+  clearPlanning3dAnalyticalPrimeTimer();
   clearPlanning3dPublicUpgradeTimer("buildings");
   clearPlanning3dPublicUpgradeTimer("parcels");
   dom.planning3dModal?.classList.add("hidden");
@@ -24427,6 +24496,7 @@ async function reloadPlanning3dData() {
   planning3dState.analyticalScenePromise = null;
   planning3dState.baseSourceLoaded = false;
   clearPlanning3dBaseReadinessTimer();
+  clearPlanning3dAnalyticalPrimeTimer();
   clearPlanning3dSelection();
   renderPlanning3dPanel();
   renderPlanning3dSummary();
