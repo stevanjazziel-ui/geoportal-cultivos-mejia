@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-2";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-3";
 
 const layerCatalog = [
   {
@@ -4000,6 +4000,8 @@ const planning3dState = {
   visualReady: false,
   visualSnapshot: null,
   visualRecoveryTimers: [],
+  baseSourceLoaded: false,
+  baseReadinessTimer: null,
   resizeObserver: null,
 };
 
@@ -19644,10 +19646,10 @@ function formatPlanning3dDistance(distanceM) {
 function buildPlanning3dBasemapWarmupUrls(baseId = "satellite") {
   if (baseId === "satellite") {
     return [
-      "https://a.tile.openstreetmap.org/17/36930/65721.png",
-      "https://b.tile.openstreetmap.org/17/36931/65721.png",
-      "https://c.tile.openstreetmap.org/17/36930/65722.png",
-      "https://a.tile.openstreetmap.org/17/36931/65722.png",
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/17/65721/36930",
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/17/65721/36931",
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/17/65722/36930",
+      "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/17/65722/36931",
     ];
   }
 
@@ -19691,12 +19693,10 @@ function createPlanning3dStyle(baseId = planning3dState.currentBase) {
       "planning3d-basemap-satellite": {
         type: "raster",
         tiles: [
-          "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://b.tile.openstreetmap.org/{z}/{x}/{y}.png",
-          "https://c.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
         ],
         tileSize: 256,
-        attribution: "OpenStreetMap contributors",
+        attribution: "Esri World Imagery",
       },
       "planning3d-basemap-light": {
         type: "raster",
@@ -19789,6 +19789,42 @@ function updatePlanning3dBasemapStyle() {
       planning3dState.map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
     }
   });
+}
+
+function clearPlanning3dBaseReadinessTimer() {
+  if (planning3dState.baseReadinessTimer) {
+    window.clearTimeout(planning3dState.baseReadinessTimer);
+    planning3dState.baseReadinessTimer = null;
+  }
+}
+
+function markPlanning3dBaseSourceLoaded(sourceId) {
+  const expectedSourceId = planning3dState.currentBase === "satellite"
+    ? "planning3d-basemap-satellite"
+    : "planning3d-basemap-light";
+  if (sourceId !== expectedSourceId) {
+    return;
+  }
+  planning3dState.baseSourceLoaded = true;
+  clearPlanning3dBaseReadinessTimer();
+}
+
+function schedulePlanning3dBaseFallback() {
+  clearPlanning3dBaseReadinessTimer();
+  if (!planning3dState.modalOpen || planning3dState.baseSourceLoaded) {
+    return;
+  }
+  planning3dState.baseReadinessTimer = window.setTimeout(() => {
+    if (!planning3dState.modalOpen || planning3dState.baseSourceLoaded) {
+      return;
+    }
+    if (planning3dState.currentBase === "satellite") {
+      planning3dState.currentBase = "light";
+      syncPlanning3dBaseButtons();
+      updatePlanning3dBasemapStyle();
+      setPlanning3dStatus("La base urbana satelital tardo demasiado; cambiamos a plano claro para que el visor no se quede colgado.", "demo");
+    }
+  }, 2800);
 }
 
 function ensurePlanning3dImageBackdrop() {
@@ -20955,6 +20991,7 @@ async function initializePlanning3dMap() {
   }
 
   preloadPlanning3dBasemap(planning3dState.currentBase);
+  planning3dState.baseSourceLoaded = false;
   planning3dState.map = new window.maplibregl.Map({
     container: dom.planning3dMap,
     style: createPlanning3dStyle(),
@@ -20990,6 +21027,11 @@ async function initializePlanning3dMap() {
   planning3dState.map.on("move", queuePlanning3dDomMarkerPositionSync);
   planning3dState.map.on("zoom", queuePlanning3dDomMarkerPositionSync);
   planning3dState.map.on("resize", queuePlanning3dDomMarkerPositionSync);
+  planning3dState.map.on("sourcedata", (event) => {
+    if (event?.isSourceLoaded) {
+      markPlanning3dBaseSourceLoaded(event.sourceId);
+    }
+  });
   planning3dState.map.on("styledata", hydratePlanning3dRuntimeLayers);
   planning3dState.map.on("idle", () => {
     refreshPlanning3dVisualState({ allowRecovery: true, updateSummary: true });
@@ -24210,12 +24252,14 @@ function stabilizePlanning3dViewport({ focus = false } = {}) {
 
 function setPlanning3dBase(baseId = "satellite") {
   planning3dState.currentBase = baseId;
+  planning3dState.baseSourceLoaded = false;
   syncPlanning3dBaseButtons();
   preloadPlanning3dBasemap(baseId);
   if (!planning3dState.map) {
     return;
   }
   updatePlanning3dBasemapStyle();
+  schedulePlanning3dBaseFallback();
   queuePlanning3dSvgSceneSync();
   stabilizePlanning3dViewport({ focus: false });
 }
@@ -24233,7 +24277,9 @@ async function openPlanning3dViewer() {
   planning3dState.forceVisualFallback = false;
   planning3dState.visualReady = false;
   planning3dState.visualSnapshot = null;
+  planning3dState.baseSourceLoaded = false;
   clearPlanning3dVisualRecoveryTimers();
+  clearPlanning3dBaseReadinessTimer();
   const preferCompactOpening = typeof window !== "undefined" && window.innerWidth >= 1080;
   setPlanning3dPanelCollapsed(preferCompactOpening, { skipResize: true });
   dom.planning3dModal?.classList.remove("hidden");
@@ -24272,6 +24318,7 @@ async function openPlanning3dViewer() {
       await ensurePlanning3dDataset("parcels", !planning3dState.sourceData.parcels?.features?.length);
     }
     await mapPromise;
+    schedulePlanning3dBaseFallback();
     planning3dState.map?.resize();
     hydratePlanning3dRuntimeLayers();
     syncPlanning3dLayerVisibility({ refreshSummary: false, allowRecovery: true });
@@ -24320,8 +24367,10 @@ function closePlanning3dViewer(silent = false) {
   planning3dState.forceVisualFallback = false;
   planning3dState.visualReady = false;
   planning3dState.visualSnapshot = null;
+  planning3dState.baseSourceLoaded = false;
   clearPlanning3dHoverFeature();
   clearPlanning3dVisualRecoveryTimers();
+  clearPlanning3dBaseReadinessTimer();
   clearPlanning3dPublicUpgradeTimer("buildings");
   clearPlanning3dPublicUpgradeTimer("parcels");
   dom.planning3dModal?.classList.add("hidden");
@@ -24376,6 +24425,8 @@ async function reloadPlanning3dData() {
   planning3dState.urbanSceneCacheSignature = "";
   planning3dState.urbanSceneCache = null;
   planning3dState.analyticalScenePromise = null;
+  planning3dState.baseSourceLoaded = false;
+  clearPlanning3dBaseReadinessTimer();
   clearPlanning3dSelection();
   renderPlanning3dPanel();
   renderPlanning3dSummary();
