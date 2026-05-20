@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-10";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-11";
 
 const layerCatalog = [
   {
@@ -22588,10 +22588,7 @@ async function ensurePlanning3dDataset(datasetKey, force = false) {
 
 function syncPlanning3dSource(datasetKey) {
   const sourceId = datasetKey === "buildings" ? "planning3d-buildings" : "planning3d-parcels";
-  const source = planning3dState.map?.getSource(sourceId);
-  if (source) {
-    source.setData(planning3dState.sourceData[datasetKey] || getPlanning3dEmptyCollection());
-  }
+  syncPlanning3dGeoJsonSource(sourceId, planning3dState.sourceData[datasetKey] || getPlanning3dEmptyCollection());
   updatePlanning3dHeightScale();
   if (datasetKey === "buildings" && planning3dState.sourceData.buildings?.features?.length) {
     queuePlanning3dShadowSync();
@@ -22830,13 +22827,23 @@ function getPlanning3dPrimaryRing(geometry) {
 }
 
 function getPlanning3dRenderableFeatureLimit() {
+  const profile = getPlanning3dPerformanceProfile();
   const zoom = planning3dState.map?.getZoom?.() || 15;
   const orthographic = isPlanning3dOrthographicView();
-  if (zoom >= 17.3) return orthographic ? 1800 : 1400;
-  if (zoom >= 16.6) return orthographic ? 1200 : 900;
-  if (zoom >= 15.8) return orthographic ? 760 : 560;
-  if (zoom >= 14.8) return orthographic ? 460 : 320;
-  return orthographic ? 260 : 180;
+  let limit;
+  if (zoom >= 17.3) limit = orthographic ? 1800 : 1400;
+  else if (zoom >= 16.6) limit = orthographic ? 1200 : 900;
+  else if (zoom >= 15.8) limit = orthographic ? 760 : 560;
+  else if (zoom >= 14.8) limit = orthographic ? 460 : 320;
+  else limit = orthographic ? 260 : 180;
+
+  if (profile.id === "lite") {
+    return Math.max(80, Math.round(limit * 0.34));
+  }
+  if (profile.id === "standard") {
+    return Math.max(120, Math.round(limit * 0.62));
+  }
+  return limit;
 }
 
 function getPlanning3dSvgSceneFeatures() {
@@ -22894,12 +22901,19 @@ function isPlanning3dOrthographicView() {
 }
 
 function shouldRenderPlanning3dSvgScene() {
+  const profile = getPlanning3dPerformanceProfile();
   const buildingCount = planning3dState.sourceData.buildings?.features?.length || 0;
   const zoom = planning3dState.map?.getZoom?.() || 0;
   const orthographic = isPlanning3dOrthographicView();
   const minimumZoom = planning3dState.forceVisualFallback
     ? (orthographic ? 11.8 : 12.4)
     : (orthographic ? 12.9 : 13.9);
+  if (profile.id === "lite" && planning3dState.selectedFeatureId == null && !planning3dState.forceVisualFallback) {
+    return false;
+  }
+  if (profile.id === "standard" && !orthographic && planning3dState.selectedFeatureId == null && zoom < 16.2) {
+    return false;
+  }
   return Boolean(
     dom.planning3dMap
     && planning3dState.modalOpen
@@ -23291,6 +23305,12 @@ function queuePlanning3dDomMarkerPositionSync() {
     planning3dState.domSyncQueued = false;
     positionPlanning3dDomMarkers();
   };
+
+  const profile = getPlanning3dPerformanceProfile();
+  if (profile.id !== "high") {
+    window.setTimeout(run, profile.id === "lite" ? 96 : 56);
+    return;
+  }
 
   if (typeof window !== "undefined" && typeof window.requestAnimationFrame === "function") {
     window.requestAnimationFrame(run);
