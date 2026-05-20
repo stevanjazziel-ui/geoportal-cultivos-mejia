@@ -5311,6 +5311,25 @@ button {
   line-height: 1.55;
 }
 
+.planning-3d-mode-highlights {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.planning-3d-mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(241, 246, 242, 0.94);
+  border: 1px solid rgba(47, 61, 50, 0.08);
+  color: var(--leaf-deep);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 .planning-3d-mode-metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
@@ -5498,6 +5517,18 @@ button {
   background: rgba(241, 246, 242, 0.92);
   color: var(--muted);
   line-height: 1.55;
+}
+
+.planning-3d-mode-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.planning-3d-mode-actions .secondary-button,
+.planning-3d-mode-actions .ghost-button {
+  min-width: 0;
+  flex: 1 1 160px;
 }
 
 .planning-3d-photo-section {

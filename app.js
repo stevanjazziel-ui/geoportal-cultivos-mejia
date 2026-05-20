@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-6";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-7";
 
 const layerCatalog = [
   {
@@ -4775,15 +4775,39 @@ function getPlanning3dTextureProfileForFeature(feature, index = 0, catalog = pla
     : planning3dFallbackTextureCatalog.profiles;
   const props = feature?.properties || {};
   const floors = Math.max(1, Number(props.floors) || 1);
+  const footprintM2 = Math.max(0, Number(props.footprintM2) || 0);
+  const typology = classifyPlanning3dBuildingTypology({ floors, footprintM2 });
   const seed = [
     props.blockId || 0,
     props.buildingId || feature?.id || 0,
     props.recordIndex || index,
     floors,
+    typology.id,
   ].join("|");
 
   let pool = profiles;
-  if (floors >= 4) {
+  if (typology.id === "industrial-wide") {
+    const industrialProfiles = profiles.filter((profile) =>
+      ["Cubierta metalica", "Concreto"].includes(profile.material)
+    );
+    if (industrialProfiles.length) {
+      pool = industrialProfiles;
+    }
+  } else if (typology.id === "compact-tower") {
+    const verticalProfiles = profiles.filter((profile) =>
+      ["Concreto", "Fachada pintada"].includes(profile.material)
+    );
+    if (verticalProfiles.length) {
+      pool = verticalProfiles;
+    }
+  } else if (typology.id === "mixed-midrise") {
+    const mixedProfiles = profiles.filter((profile) =>
+      ["Bloque pintado", "Concreto", "Estuco"].includes(profile.material)
+    );
+    if (mixedProfiles.length) {
+      pool = mixedProfiles;
+    }
+  } else if (floors >= 4) {
     const denseProfiles = profiles.filter((profile) =>
       ["Concreto", "Cubierta metalica", "Fachada pintada", "Bloque pintado"].includes(profile.material)
     );
@@ -4807,11 +4831,16 @@ function applyPlanning3dTextureProfileToFeature(feature, index = 0, catalog = pl
     return feature;
   }
 
+  const floors = Math.max(1, Number(feature.properties.floors) || 1);
+  const footprintM2 = Math.max(0, Number(feature.properties.footprintM2) || 0);
+  const typology = classifyPlanning3dBuildingTypology({ floors, footprintM2 });
   const profile = getPlanning3dTextureProfileForFeature(feature, index, catalog);
   if (!profile) {
     return feature;
   }
 
+  feature.properties.facadeTypologyId = typology.id;
+  feature.properties.facadeTypology = typology.label;
   feature.properties.facadeProfileId = profile.id;
   feature.properties.facadeLabel = profile.label;
   feature.properties.facadeMaterial = profile.material;
@@ -4823,6 +4852,50 @@ function applyPlanning3dTextureProfileToFeature(feature, index = 0, catalog = pl
   feature.properties.facadeWindow = profile.windowColor;
   feature.properties.textureSource = catalog?.derivedFromPhotos ? "photo-analysis" : "fallback";
   return feature;
+}
+
+function classifyPlanning3dBuildingTypology({ floors = 1, footprintM2 = 0 } = {}) {
+  if (footprintM2 >= 420 && floors <= 2) {
+    return {
+      id: "industrial-wide",
+      label: "Bloque amplio o nave",
+    };
+  }
+  if (floors >= 6) {
+    return {
+      id: "compact-tower",
+      label: "Torre compacta",
+    };
+  }
+  if (floors >= 3) {
+    return {
+      id: "mixed-midrise",
+      label: "Bloque medio",
+    };
+  }
+  if (footprintM2 >= 180) {
+    return {
+      id: "wide-frontage",
+      label: "Frente amplio",
+    };
+  }
+  return {
+    id: "low-rise",
+    label: "Vivienda baja",
+  };
+}
+
+function getPlanning3dTextureMaterialSummary(features = planning3dState.sourceData.buildings?.features || []) {
+  if (!Array.isArray(features) || !features.length) {
+    return [];
+  }
+  return Object.entries(features.reduce((accumulator, feature) => {
+    const material = feature.properties?.facadeMaterial || "Base urbana";
+    accumulator[material] = (accumulator[material] || 0) + 1;
+    return accumulator;
+  }, {}))
+    .sort((left, right) => right[1] - left[1])
+    .map(([label, count]) => ({ label, count }));
 }
 
 function applyPlanning3dTextureCatalogToCollection(collection, catalog = planning3dState.textureCatalog) {
@@ -7347,6 +7420,7 @@ function bindUI() {
     updatePlanning3dHeightScale();
     queuePlanning3dShadowSync();
   });
+  dom.planning3dModeReadout?.addEventListener("click", handlePlanning3dModeReadoutInteraction);
   dom.planning3dBaseButtons?.forEach((button) => {
     button.addEventListener("click", () => {
       setPlanning3dBase(button.dataset.planningBase || "satellite");
@@ -19529,6 +19603,8 @@ function getPlanning3dModeDescriptor() {
   const publicSpaceCount = planning3dState.sourceData.publicSpace?.features?.length || 0;
   const treeCount = planning3dState.sourceData.trees?.features?.length || 0;
   const facilityCount = planning3dState.sourceData.facilities?.features?.length || 0;
+  const textureSummary = getPlanning3dTextureMaterialSummary();
+  const dominantMaterial = textureSummary[0];
   const civicSpaceCount = (planning3dState.sourceData.publicSpace?.features || []).filter((feature) => (
     ["plaza-equipamiento", "centralidad-civica", "parque-barrial", "reserva-ventilacion"].includes(feature.properties?.publicSpaceType)
   )).length;
@@ -19537,6 +19613,8 @@ function getPlanning3dModeDescriptor() {
   const mobility = state.mobilityData;
   const risk = state.riskData;
   const proposals = state.planningData?.candidates || [];
+  const mobilityLead = mobility?.prioritySectors?.[0] || null;
+  const riskLead = risk?.prioritySectors?.[0] || null;
 
   if (!focusMode) {
     return {
@@ -19549,7 +19627,9 @@ function getPlanning3dModeDescriptor() {
       metrics: [
         { label: "Construcciones", value: formatPlanning3dCount(planning3dState.sourceData.buildings?.features?.length || 0, "0") },
         { label: "Base", value: planning3dState.currentBase === "satellite" ? "Urbana" : "Clara" },
+        { label: "Material", value: dominantMaterial ? dominantMaterial.label : "Catalogo base" },
       ],
+      highlights: dominantMaterial ? [`${formatPlanning3dCount(dominantMaterial.count)} edificios con ${dominantMaterial.label.toLowerCase()}`] : [],
       legend: [],
     };
   }
@@ -19567,6 +19647,10 @@ function getPlanning3dModeDescriptor() {
         { label: "Retencion", value: `${urbanClimate?.summary?.heatRetentionAreaHa || 0} ha` },
         { label: "Preparacion", value: `${urbanClimate?.summary?.climateReadinessScore || 0}/100` },
       ],
+      highlights: [
+        urbanClimate?.prioritySectors?.[0] ? `${urbanClimate.prioritySectors[0].name}: ${urbanClimate.prioritySectors[0].actionLabel}` : null,
+        urbanClimate?.summary?.dominantLabel ? `Dominante: ${urbanClimate.summary.dominantLabel}` : null,
+      ].filter(Boolean),
       legend: [
         { label: "Corredor frio prioritario", color: "#2c7da0" },
         { label: "Reserva de ventilacion", color: "#3b9c72" },
@@ -19591,6 +19675,10 @@ function getPlanning3dModeDescriptor() {
         { label: "Espacio publico", value: formatPlanning3dCount(publicSpaceCount, "0") },
         { label: "Arboles", value: formatPlanning3dCount(treeCount, "0") },
       ],
+      highlights: [
+        civicSpaceCount ? `${formatPlanning3dCount(civicSpaceCount)} nodos civicos o verdes destacados` : null,
+        dominantMaterial ? `Material dominante: ${dominantMaterial.label}` : null,
+      ].filter(Boolean),
       legend: [
         { label: "Corredor primario", color: "#b98256" },
         { label: "Corredor secundario", color: "#c9a27a" },
@@ -19613,6 +19701,9 @@ function getPlanning3dModeDescriptor() {
         { label: "Sectores", value: String(zoning?.prioritySectors?.length || 0) },
         { label: "Patron", value: zoning?.summary?.dominantPatternLabel || "Sin lectura" },
       ],
+      highlights: [
+        zoning?.prioritySectors?.[0] ? `${zoning.prioritySectors[0].name}: ${zoning.prioritySectors[0].recommendation || zoning.prioritySectors[0].summary}` : null,
+      ].filter(Boolean),
       legend: [
         { label: "Centralidad diversa", color: "#76b692" },
         { label: "Residencial consolidado", color: "#b8d8c5" },
@@ -19637,6 +19728,10 @@ function getPlanning3dModeDescriptor() {
         { label: "Centralidades", value: formatPlanning3dCount(civicSpaceCount, "0") },
         { label: "Cobertura", value: facilityCount ? "Activa" : "Pendiente" },
       ],
+      highlights: [
+        facilityCount ? `${formatPlanning3dCount(facilityCount)} nodos de servicio cargados` : null,
+        civicSpaceCount ? `${formatPlanning3dCount(civicSpaceCount)} plazas o reservas de soporte` : null,
+      ].filter(Boolean),
       legend: [
         { label: "Halo de cobertura", color: "#7fc7a1" },
         { label: "Nodo de servicio", color: "#2f7f5f" },
@@ -19652,15 +19747,24 @@ function getPlanning3dModeDescriptor() {
       kicker: "Modo movilidad",
       title: mobility?.summary?.dominantCoverageLabel || "Cobertura y tiempos",
       copy: mobility?.readout || "Resalta sectores con mejor o peor accesibilidad para leer cobertura, tiempos y conectividad territorial.",
-      recommendation: mobility?.summary?.recommendation || "Usa este modo para priorizar conexiones, transporte y accesibilidad a servicios.",
+      recommendation: mobilityLead?.priorityLabel
+        ? `${mobilityLead.priorityLabel}: ${mobilityLead.summary}`
+        : (mobility?.summary?.recommendation || "Usa este modo para priorizar conexiones, transporte y accesibilidad a servicios."),
       metrics: [
-        { label: "Cobertura", value: mobility?.summary?.dominantCoverageLabel || "Sin lectura" },
-        { label: "Sectores", value: String(mobility?.prioritySectors?.length || 0) },
+        { label: "Cobertura", value: mobility?.summary?.coverageLabel || "Sin lectura" },
+        { label: "Tiempo medio", value: mobility?.summary?.meanTravelMinutes ? `${mobility.summary.meanTravelMinutes} min` : "Sin lectura" },
+        { label: "Brecha", value: mobility?.summary?.gapAreaHa != null ? `${mobility.summary.gapAreaHa} ha` : "Sin lectura" },
       ],
+      highlights: [
+        mobilityLead ? `${mobilityLead.name}: ${mobilityLead.coverageLabel} | ${mobilityLead.travelMinutes} min | ${mobilityLead.priorityLabel}` : null,
+        mobility?.summary?.accessibleAreaHa != null ? `${mobility.summary.accessibleAreaHa} ha con cobertura alta` : null,
+        mobilityLead?.nearestServiceName ? `Servicio critico: ${mobilityLead.nearestServiceName}` : null,
+      ].filter(Boolean),
       legend: [
         { label: "Cobertura alta", color: "#68a881" },
         { label: "Cobertura media", color: "#d2b15b" },
         { label: "Cobertura baja", color: "#c46a58" },
+        { label: "Eje de acceso", color: "#f4d35e" },
       ],
     };
   }
@@ -19670,17 +19774,27 @@ function getPlanning3dModeDescriptor() {
       id: "risk",
       label: "Riesgo",
       kicker: "Modo riesgo",
-      title: risk?.summary?.dominantRiskLabel || "Restricciones y exposicion",
-      copy: risk?.readout || "Lee sectores con mayor restriccion, fragilidad o necesidad de mitigacion.",
-      recommendation: risk?.summary?.recommendation || "Usa este modo para restringir implantaciones o definir medidas de mitigacion.",
+      title: risk?.summary?.riskLabel || "Restricciones y exposicion",
+      copy: riskLead
+        ? `${riskLead.summary} Pendiente media ${risk?.summary?.meanSlopePct || 0}% y ${risk?.summary?.criticalAreaHa || 0} ha quedan en vigilancia prioritaria.`
+        : (risk?.readout || "Lee sectores con mayor restriccion, fragilidad o necesidad de mitigacion."),
+      recommendation: riskLead?.recommendation
+        || risk?.summary?.dominantActionLabel
+        || "Usa este modo para restringir implantaciones o definir medidas de mitigacion.",
       metrics: [
-        { label: "Riesgo", value: risk?.summary?.dominantRiskLabel || "Sin lectura" },
-        { label: "Sectores", value: String(risk?.prioritySectors?.length || 0) },
+        { label: "Riesgo", value: risk?.summary?.riskLabel || "Sin lectura" },
+        { label: "Area critica", value: risk?.summary?.criticalAreaHa != null ? `${risk.summary.criticalAreaHa} ha` : "Sin lectura" },
+        { label: "Pendiente", value: risk?.summary?.meanSlopePct != null ? `${risk.summary.meanSlopePct}%` : "Sin lectura" },
       ],
+      highlights: [
+        riskLead ? `${riskLead.name}: ${riskLead.dominantThreat} | ${riskLead.riskLabel} | ${riskLead.dominantActionLabel}` : null,
+        risk?.summary?.nearestDrainLabel ? `Drenaje ${risk.summary.nearestDrainLabel.toLowerCase()} y exposicion ${risk.summary.exposureLabel?.toLowerCase?.() || "media"}` : null,
+      ].filter(Boolean),
       legend: [
         { label: "Riesgo bajo", color: "#68a881" },
         { label: "Riesgo medio", color: "#d2b15b" },
         { label: "Riesgo alto", color: "#c46a58" },
+        { label: "Contencion prioritaria", color: "#8c433a" },
       ],
     };
   }
@@ -19698,6 +19812,7 @@ function getPlanning3dModeDescriptor() {
       { label: "Propuestas", value: String(proposals.length || 0) },
       { label: "Volumen", value: proposals.length ? "Transparente" : "Sin corrida" },
     ],
+    highlights: proposals[0]?.title ? [`Prioridad: ${proposals[0].title}`] : [],
     legend: [
       { label: "Volumen propuesto", color: "#7f9fbe" },
       { label: "Borde de implantacion", color: "#57718d" },
@@ -19732,6 +19847,13 @@ function renderPlanning3dModeReadout(force = false) {
       <h4>${escapeHtmlContent(descriptor.title)}</h4>
       <p class="planning-3d-mode-copy">${escapeHtmlContent(descriptor.copy)}</p>
     </div>
+    ${(descriptor.highlights || []).length ? `
+      <div class="planning-3d-mode-highlights">
+        ${descriptor.highlights.map((item) => `
+          <span class="planning-3d-mode-pill">${escapeHtmlContent(item)}</span>
+        `).join("")}
+      </div>
+    ` : ""}
     <div class="planning-3d-mode-metrics">
       ${(descriptor.metrics || []).map((metric) => `
         <article class="planning-3d-mode-metric">
@@ -19741,6 +19863,10 @@ function renderPlanning3dModeReadout(force = false) {
       `).join("")}
     </div>
     <p class="planning-3d-note">${escapeHtmlContent(descriptor.recommendation)}</p>
+    <div class="planning-3d-mode-actions screen-only">
+      <button class="secondary-button" type="button" data-planning3d-report="html">Informe HTML</button>
+      <button class="ghost-button" type="button" data-planning3d-report="json">Resumen JSON</button>
+    </div>
   `);
 
   if (!descriptor.legend?.length) {
@@ -19765,6 +19891,196 @@ function renderPlanning3dModeReadout(force = false) {
       `).join("")}
     </div>
   `);
+}
+
+function buildPlanning3dModeReportPayload() {
+  const descriptor = getPlanning3dModeDescriptor();
+  const areaProfile = getPlanning3dAreaProfile();
+  const activeModes = getPlanning3dActiveModeSummary();
+  const buildings = planning3dState.sourceData.buildings?.features || [];
+  const materialSummary = getPlanning3dTextureMaterialSummary(buildings).slice(0, 4);
+  const selected = planning3dState.selectedBuilding?.properties || null;
+  const selectedInsight = planning3dState.selectedInsight || null;
+  return {
+    version: APP_VERSION,
+    generatedAt: new Date().toISOString(),
+    area: {
+      id: areaProfile.id,
+      label: areaProfile.label,
+      scopeLabel: areaProfile.scopeLabel,
+    },
+    view: {
+      mode: planning3dState.viewMode,
+      base: planning3dState.currentBase,
+      heightScale: planning3dState.heightScale,
+      sunDate: planning3dState.sunDate,
+      sunTime: planning3dState.sunTime,
+    },
+    focus: {
+      id: descriptor?.id || "base",
+      label: descriptor?.label || "Base 3D",
+      title: descriptor?.title || "Lectura urbana ligera",
+      kicker: descriptor?.kicker || "Modo base",
+      copy: descriptor?.copy || "",
+      recommendation: descriptor?.recommendation || "",
+      metrics: descriptor?.metrics || [],
+      highlights: descriptor?.highlights || [],
+      legend: descriptor?.legend || [],
+    },
+    activeModes,
+    scene: {
+      buildings: buildings.length,
+      roads: planning3dState.sourceData.roads?.features?.length || 0,
+      publicSpace: planning3dState.sourceData.publicSpace?.features?.length || 0,
+      trees: planning3dState.sourceData.trees?.features?.length || 0,
+      facilities: planning3dState.sourceData.facilities?.features?.length || 0,
+      proposals: planning3dState.sourceData.proposals?.features?.length || 0,
+      textureSource: planning3dState.textureSource || "fallback",
+      materialSummary,
+    },
+    selectedBuilding: selected ? {
+      buildingId: selected.buildingId || null,
+      floors: selected.floors || 1,
+      heightM: selected.heightM || 4.2,
+      footprintM2: selected.footprintM2 || 0,
+      typology: selected.facadeTypology || null,
+      material: selected.facadeMaterial || null,
+      facade: selected.facadeLabel || null,
+      insight: selectedInsight,
+    } : null,
+  };
+}
+
+function buildPlanning3dModeReportHtml() {
+  const payload = buildPlanning3dModeReportPayload();
+  const fileDate = formatDateInput(new Date(payload.generatedAt));
+  return `<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <title>${escapeHtmlContent(payload.focus.label)} | Centro 3D urbano</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+      body{font-family:Segoe UI,Arial,sans-serif;margin:28px;color:#1d2b24;background:#f7f4ee}
+      .wrap{max-width:980px;margin:0 auto;display:grid;gap:18px}
+      .card{background:#fff;border:1px solid rgba(47,61,50,.12);border-radius:18px;padding:20px;box-shadow:0 12px 28px rgba(22,31,27,.08)}
+      h1,h2,h3,p{margin:0}
+      .kicker{text-transform:uppercase;letter-spacing:.12em;font-size:.74rem;color:#2f5f4b;font-weight:700}
+      .title{font-size:1.9rem;font-weight:700;margin-top:6px}
+      .copy{color:#5b6b62;line-height:1.6;margin-top:10px}
+      .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px}
+      .metric{padding:14px;border-radius:16px;background:#f6f3ec;border:1px solid rgba(47,61,50,.08)}
+      .metric span{display:block;font-size:.76rem;text-transform:uppercase;letter-spacing:.08em;color:#6e7c73;font-weight:700;margin-bottom:6px}
+      .metric strong{font-size:1rem}
+      .pill-row{display:flex;flex-wrap:wrap;gap:8px}
+      .pill{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:#eef4ef;border:1px solid rgba(47,61,50,.08);font-weight:600;color:#274135}
+      .legend{display:grid;gap:8px}
+      .legend-item{display:flex;align-items:center;gap:10px;color:#32413a}
+      .legend-item i{width:12px;height:12px;border-radius:999px;display:inline-flex}
+      .toolbar{margin-top:8px}
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <section class="card">
+        <p class="kicker">Centro 3D urbano · ${escapeHtmlContent(payload.area.scopeLabel)}</p>
+        <h1 class="title">${escapeHtmlContent(payload.focus.title)}</h1>
+        <p class="copy">${escapeHtmlContent(payload.focus.copy)}</p>
+        <p class="copy"><strong>Recomendacion:</strong> ${escapeHtmlContent(payload.focus.recommendation)}</p>
+        <div class="toolbar screen-only"><button type="button" onclick="window.print()">Imprimir o guardar como PDF</button></div>
+      </section>
+      <section class="card">
+        <h2>Lectura rapida</h2>
+        <div class="grid" style="margin-top:14px">
+          ${(payload.focus.metrics || []).map((metric) => `
+            <article class="metric">
+              <span>${escapeHtmlContent(metric.label)}</span>
+              <strong>${escapeHtmlContent(metric.value)}</strong>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+      ${(payload.focus.highlights || []).length ? `
+        <section class="card">
+          <h2>Hallazgos</h2>
+          <div class="pill-row" style="margin-top:14px">
+            ${payload.focus.highlights.map((item) => `<span class="pill">${escapeHtmlContent(item)}</span>`).join("")}
+          </div>
+        </section>
+      ` : ""}
+      ${(payload.focus.legend || []).length ? `
+        <section class="card">
+          <h2>Leyenda</h2>
+          <div class="legend" style="margin-top:14px">
+            ${payload.focus.legend.map((item) => `
+              <div class="legend-item">
+                <i style="background:${escapeHtmlContent(item.color)}"></i>
+                <span>${escapeHtmlContent(item.label)}</span>
+              </div>
+            `).join("")}
+          </div>
+        </section>
+      ` : ""}
+      <section class="card">
+        <h2>Escena urbana</h2>
+        <div class="grid" style="margin-top:14px">
+          <article class="metric"><span>Construcciones</span><strong>${escapeHtmlContent(String(payload.scene.buildings))}</strong></article>
+          <article class="metric"><span>Calles</span><strong>${escapeHtmlContent(String(payload.scene.roads))}</strong></article>
+          <article class="metric"><span>Espacio publico</span><strong>${escapeHtmlContent(String(payload.scene.publicSpace))}</strong></article>
+          <article class="metric"><span>Arboles</span><strong>${escapeHtmlContent(String(payload.scene.trees))}</strong></article>
+          <article class="metric"><span>Equipamientos</span><strong>${escapeHtmlContent(String(payload.scene.facilities))}</strong></article>
+          <article class="metric"><span>Base</span><strong>${escapeHtmlContent(payload.view.base)}</strong></article>
+        </div>
+        ${(payload.scene.materialSummary || []).length ? `
+          <div class="pill-row" style="margin-top:14px">
+            ${payload.scene.materialSummary.map((item) => `<span class="pill">${escapeHtmlContent(item.label)} · ${escapeHtmlContent(String(item.count))}</span>`).join("")}
+          </div>
+        ` : ""}
+      </section>
+      ${payload.selectedBuilding ? `
+        <section class="card">
+          <h2>Construccion seleccionada</h2>
+          <div class="grid" style="margin-top:14px">
+            <article class="metric"><span>ID</span><strong>${escapeHtmlContent(String(payload.selectedBuilding.buildingId || "-"))}</strong></article>
+            <article class="metric"><span>Pisos</span><strong>${escapeHtmlContent(String(payload.selectedBuilding.floors))}</strong></article>
+            <article class="metric"><span>Altura</span><strong>${escapeHtmlContent(String(payload.selectedBuilding.heightM))} m</strong></article>
+            <article class="metric"><span>Huella</span><strong>${escapeHtmlContent(String(payload.selectedBuilding.footprintM2))} m²</strong></article>
+            <article class="metric"><span>Tipologia</span><strong>${escapeHtmlContent(payload.selectedBuilding.typology || "Sin tipologia")}</strong></article>
+            <article class="metric"><span>Material</span><strong>${escapeHtmlContent(payload.selectedBuilding.material || "Catalogo base")}</strong></article>
+          </div>
+          ${payload.selectedBuilding.insight?.recommendation ? `<p class="copy" style="margin-top:14px">${escapeHtmlContent(payload.selectedBuilding.insight.recommendation)}</p>` : ""}
+        </section>
+      ` : ""}
+      <section class="card">
+        <p class="copy">Version ${escapeHtmlContent(payload.version)} · ${escapeHtmlContent(fileDate)} · Modos activos: ${escapeHtmlContent(payload.activeModes.label)}</p>
+      </section>
+    </div>
+  </body>
+</html>`;
+}
+
+function downloadPlanning3dModeReport(format = "html") {
+  const payload = buildPlanning3dModeReportPayload();
+  const slug = [
+    payload.area.id,
+    payload.focus.id,
+    formatDateInput(new Date(payload.generatedAt)),
+  ].filter(Boolean).join("_").toLowerCase();
+  if (format === "json") {
+    downloadTerritorialFile(`${slug}_3d_resumen.json`, JSON.stringify(payload, null, 2), "application/json;charset=utf-8");
+    setStatus(`Resumen 3D listo en JSON para ${payload.focus.label.toLowerCase()}.`);
+    return;
+  }
+  downloadTerritorialFile(`${slug}_3d_informe.html`, buildPlanning3dModeReportHtml(), "text/html;charset=utf-8");
+  setStatus(`Mini informe 3D listo en HTML para ${payload.focus.label.toLowerCase()}.`);
+}
+
+function handlePlanning3dModeReadoutInteraction(event) {
+  const button = event.target.closest("[data-planning3d-report]");
+  if (!button || !dom.planning3dModeReadout?.contains(button)) {
+    return;
+  }
+  downloadPlanning3dModeReport(button.dataset.planning3dReport || "html");
 }
 
 function getPlanning3dActiveModeSummary() {
@@ -21076,12 +21392,7 @@ function addPlanning3dRuntimeLayers() {
     source: "planning3d-buildings",
     minzoom: 0,
     paint: {
-      "fill-color": [
-        "case",
-        ["boolean", ["feature-state", "selected"], false],
-        "#f4d35e",
-        ["coalesce", ["get", "facadeTop"], "#a8c0cf"],
-      ],
+      "fill-color": getPlanning3dBuildingFootprintColorExpression(),
       "fill-opacity": [
         "interpolate",
         ["linear"],
@@ -21142,7 +21453,7 @@ function addPlanning3dRuntimeLayers() {
     source: "planning3d-buildings",
     minzoom: 7.8,
     paint: {
-      "line-color": "rgba(33, 47, 40, 0.92)",
+      "line-color": getPlanning3dBuildingOutlineColorExpression(),
       "line-width": [
         "interpolate",
         ["linear"],
@@ -21244,16 +21555,30 @@ function getPlanning3dBuildingFillColorExpression() {
     ["boolean", ["feature-state", "selected"], false],
     "#f4d35e",
     ["boolean", ["feature-state", "hovered"], false],
-    "#92c5de",
-    [">=", ["coalesce", ["get", "floors"], 1], 7],
-    "#534335",
-    [">=", ["coalesce", ["get", "floors"], 1], 5],
-    "#6a5544",
-    [">=", ["coalesce", ["get", "floors"], 1], 3],
-    "#866e59",
-    [">=", ["coalesce", ["get", "floors"], 1], 2],
-    "#a68c74",
-    "#c1ad96",
+    ["coalesce", ["get", "facadeAccent"], "#92c5de"],
+    ["coalesce", ["get", "facadeFront"], "#c1ad96"],
+  ];
+}
+
+function getPlanning3dBuildingFootprintColorExpression() {
+  return [
+    "case",
+    ["boolean", ["feature-state", "selected"], false],
+    "#f4d35e",
+    ["boolean", ["feature-state", "hovered"], false],
+    ["coalesce", ["get", "facadeWindow"], "#9eb8c8"],
+    ["coalesce", ["get", "facadeTop"], "#a8c0cf"],
+  ];
+}
+
+function getPlanning3dBuildingOutlineColorExpression() {
+  return [
+    "case",
+    ["boolean", ["feature-state", "selected"], false],
+    "#6b4e1f",
+    ["boolean", ["feature-state", "hovered"], false],
+    "#355f7a",
+    ["coalesce", ["get", "facadeAccent"], "rgba(33, 47, 40, 0.92)"],
   ];
 }
 
@@ -23029,6 +23354,8 @@ function renderPlanning3dSummary(force = false) {
   const photoStatus = planning3dState.photoStatus;
   const buildingStatus = planning3dState.datasetStatus.buildings;
   const textureCatalog = planning3dState.textureCatalog || getPlanning3dFallbackTextureCatalog();
+  const textureSummary = getPlanning3dTextureMaterialSummary(buildings?.features || []);
+  const dominantMaterial = textureSummary[0] || null;
   const sunPosition = planning3dState.sunPosition;
   const urbanClimate = state.urbanClimateData;
   const shadowCount = planning3dState.sourceData.shadows?.features?.length || 0;
@@ -23108,6 +23435,10 @@ function renderPlanning3dSummary(force = false) {
         <strong>${textureLabel}</strong>
       </article>
       <article class="planning-3d-chip">
+        <span>Material</span>
+        <strong>${dominantMaterial ? dominantMaterial.label : "Catalogo base"}</strong>
+      </article>
+      <article class="planning-3d-chip">
         <span>Sol</span>
         <strong>${solarBadgeLabel}</strong>
       </article>
@@ -23180,6 +23511,9 @@ function renderPlanning3dSummary(force = false) {
       ${textureCatalog.derivedFromPhotos
         ? ` Fachadas derivadas de ${textureCatalog.sampledPhotos || textureCatalog.profiles.length} fotos reales.`
         : " Fachadas usando catalogo base urbano."}
+      ${dominantMaterial
+        ? ` Predomina ${dominantMaterial.label.toLowerCase()} en ${formatPlanning3dCount(dominantMaterial.count, "0")} edificios visibles.`
+        : ""}
       ${sunPosition
         ? sunPosition.daylight
           ? ` Sol ${solarStamp}: ${formatPlanning3dCount(shadowCount, "0")} sombras visibles.`
@@ -23287,6 +23621,14 @@ function renderPlanning3dSelection(force = false) {
       <article class="planning-3d-chip">
         <span>Fachada</span>
         <strong>${props.facadeLabel || "Base urbana"}</strong>
+      </article>
+      <article class="planning-3d-chip">
+        <span>Tipologia</span>
+        <strong>${props.facadeTypology || "Base urbana"}</strong>
+      </article>
+      <article class="planning-3d-chip">
+        <span>Material</span>
+        <strong>${props.facadeMaterial || "Catalogo base"}</strong>
       </article>
       <article class="planning-3d-chip">
         <span>Textura</span>
@@ -23441,6 +23783,7 @@ function setPlanning3dHoverFeature(feature, lngLat) {
   );
   const insight = getPlanning3dBuildingInsight(feature);
   const hoverFacts = [
+    feature.properties?.facadeTypology || "Base urbana",
     insight?.zoningLabel || "Sin patron",
     insight?.nearestRoadLabel || "Sin corredor",
     insight?.mobilityLabel || "Sin movilidad",
@@ -23535,6 +23878,7 @@ async function selectPlanning3dBuilding(feature, lngLat = null) {
   const popupHtml = `
       <p class="popup-title">Construccion ${feature.properties?.buildingId || feature.properties?.recordIndex + 1}</p>
       <p class="popup-copy">${feature.properties?.floors || 1} pisos | ${feature.properties?.heightM || 4.2} m | huella aprox. ${feature.properties?.footprintM2 || 0} m2</p>
+      <p class="popup-copy">${escapeHtmlContent(feature.properties?.facadeTypology || "Base urbana")} | ${escapeHtmlContent(feature.properties?.facadeMaterial || "Catalogo base")}</p>
       <p class="popup-copy">${escapeHtmlContent(popupFacts)}</p>
       <p class="popup-copy">${escapeHtmlContent(popupSupport)}</p>
     `;
