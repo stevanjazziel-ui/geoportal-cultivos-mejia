@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-9";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-10";
 
 const layerCatalog = [
   {
@@ -3956,6 +3956,7 @@ const planning3dState = {
   svgOverlay: null,
   svgSyncQueued: false,
   shadowSyncQueued: false,
+  shadowSyncTimer: null,
   datasetRequestId: {
     buildings: 0,
     parcels: 0,
@@ -20756,15 +20757,25 @@ function updatePlanning3dSunModel() {
 }
 
 function queuePlanning3dShadowSync() {
-  if (planning3dState.shadowSyncQueued) {
+  if (!planning3dState.shadowsVisible || !planning3dState.buildingsVisible) {
+    if (planning3dState.shadowSyncTimer) {
+      window.clearTimeout(planning3dState.shadowSyncTimer);
+      planning3dState.shadowSyncTimer = null;
+    }
+    planning3dState.shadowSyncQueued = false;
+    syncPlanning3dShadowLayerVisibility();
     return;
   }
 
+  if (planning3dState.shadowSyncTimer) {
+    window.clearTimeout(planning3dState.shadowSyncTimer);
+  }
   planning3dState.shadowSyncQueued = true;
-  window.requestAnimationFrame(() => {
+  planning3dState.shadowSyncTimer = window.setTimeout(() => {
     planning3dState.shadowSyncQueued = false;
+    planning3dState.shadowSyncTimer = null;
     syncPlanning3dShadowSource();
-  });
+  }, 96);
 }
 
 function syncPlanning3dShadowLayerVisibility() {
@@ -20785,7 +20796,9 @@ function syncPlanning3dShadowLayerVisibility() {
   });
 }
 
-function getVisiblePlanning3dBuildingFeatures(limit = 900) {
+function getVisiblePlanning3dBuildingFeatures(limit = null) {
+  const profile = getPlanning3dPerformanceProfile();
+  const normalizedLimit = limit || (profile.id === "lite" ? 260 : profile.id === "standard" ? 520 : 900);
   if (planning3dState.map?.getLayer("planning3d-buildings-footprint")) {
     try {
       const rendered = planning3dState.map.queryRenderedFeatures(undefined, {
@@ -20802,14 +20815,14 @@ function getVisiblePlanning3dBuildingFeatures(limit = 900) {
         unique.push(feature);
       });
       if (unique.length) {
-        return unique.slice(0, limit);
+        return unique.slice(0, normalizedLimit);
       }
     } catch (error) {
       console.warn("No fue posible consultar las construcciones visibles para sombras.", error);
     }
   }
 
-  return (planning3dState.sourceData.buildings?.features || []).slice(0, limit);
+  return (planning3dState.sourceData.buildings?.features || []).slice(0, normalizedLimit);
 }
 
 function getPlanning3dPrimaryRing(geometry) {
