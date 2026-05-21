@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-11";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-12";
 
 const layerCatalog = [
   {
@@ -3955,6 +3955,8 @@ const planning3dState = {
   domSyncQueued: false,
   svgOverlay: null,
   svgSyncQueued: false,
+  interactionActive: false,
+  interactionReleaseTimer: null,
   shadowSyncQueued: false,
   shadowSyncTimer: null,
   datasetRequestId: {
@@ -21819,6 +21821,16 @@ async function initializePlanning3dMap() {
   planning3dState.map.keyboard?.enable?.();
   planning3dState.map.touchZoomRotate?.enable?.();
   planning3dState.map.touchPitch?.enable?.();
+  planning3dState.map.on("movestart", () => setPlanning3dInteractionState(true));
+  planning3dState.map.on("zoomstart", () => setPlanning3dInteractionState(true));
+  planning3dState.map.on("rotatestart", () => setPlanning3dInteractionState(true));
+  planning3dState.map.on("pitchstart", () => setPlanning3dInteractionState(true));
+  planning3dState.map.on("dragstart", () => setPlanning3dInteractionState(true));
+  planning3dState.map.on("moveend", () => setPlanning3dInteractionState(false));
+  planning3dState.map.on("zoomend", () => setPlanning3dInteractionState(false));
+  planning3dState.map.on("rotateend", () => setPlanning3dInteractionState(false));
+  planning3dState.map.on("pitchend", () => setPlanning3dInteractionState(false));
+  planning3dState.map.on("dragend", () => setPlanning3dInteractionState(false));
   planning3dState.map.on("moveend", queuePlanning3dSvgSceneSync);
   planning3dState.map.on("zoomend", queuePlanning3dSvgSceneSync);
   planning3dState.map.on("rotateend", queuePlanning3dSvgSceneSync);
@@ -22624,6 +22636,7 @@ function ensurePlanning3dSvgOverlay() {
   overlay.setAttribute("aria-hidden", "true");
   dom.planning3dMap.appendChild(overlay);
   planning3dState.svgOverlay = overlay;
+  syncPlanning3dOverlayInteractionState();
   return overlay;
 }
 
@@ -22631,6 +22644,51 @@ function clearPlanning3dSvgScene() {
   if (planning3dState.svgOverlay) {
     planning3dState.svgOverlay.innerHTML = "";
   }
+}
+
+function clearPlanning3dInteractionReleaseTimer() {
+  if (planning3dState.interactionReleaseTimer) {
+    window.clearTimeout(planning3dState.interactionReleaseTimer);
+    planning3dState.interactionReleaseTimer = null;
+  }
+}
+
+function syncPlanning3dOverlayInteractionState() {
+  const visible = !planning3dState.interactionActive;
+  if (planning3dState.svgOverlay) {
+    planning3dState.svgOverlay.style.visibility = visible ? "visible" : "hidden";
+  }
+  if (planning3dState.domOverlay) {
+    planning3dState.domOverlay.style.visibility = visible ? "visible" : "hidden";
+  }
+}
+
+function setPlanning3dInteractionState(active = false) {
+  if (active) {
+    clearPlanning3dInteractionReleaseTimer();
+    if (planning3dState.interactionActive) {
+      return;
+    }
+    planning3dState.interactionActive = true;
+    clearPlanning3dHoverFeature();
+    syncPlanning3dOverlayInteractionState();
+    return;
+  }
+
+  clearPlanning3dInteractionReleaseTimer();
+  if (!planning3dState.interactionActive) {
+    syncPlanning3dOverlayInteractionState();
+    return;
+  }
+
+  planning3dState.interactionActive = false;
+  planning3dState.interactionReleaseTimer = window.setTimeout(() => {
+    planning3dState.interactionReleaseTimer = null;
+    syncPlanning3dOverlayInteractionState();
+    queuePlanning3dSvgSceneSync();
+    renderPlanning3dDomMarkers();
+    queuePlanning3dShadowSync();
+  }, 36);
 }
 
 function getPlanning3dFeatureAnchor(feature) {
@@ -22677,6 +22735,7 @@ function ensurePlanning3dDomOverlay() {
   overlay.setAttribute("aria-hidden", "true");
   dom.planning3dMap.appendChild(overlay);
   planning3dState.domOverlay = overlay;
+  syncPlanning3dOverlayInteractionState();
   return overlay;
 }
 
@@ -22688,6 +22747,7 @@ function shouldRenderPlanning3dDomMarkers() {
   if (
     !dom.planning3dMap
     || !planning3dState.modalOpen
+    || planning3dState.interactionActive
     || !planning3dState.buildingsVisible
     || !buildingCount
     || zoom < minZoom
@@ -22696,6 +22756,10 @@ function shouldRenderPlanning3dDomMarkers() {
   }
 
   if (profile?.id === "lite" && !planning3dState.selectedFeatureId) {
+    return false;
+  }
+
+  if (hasPlanning3dNativeBuildingScene() && !planning3dState.forceVisualFallback) {
     return false;
   }
 
@@ -22914,17 +22978,19 @@ function shouldRenderPlanning3dSvgScene() {
   if (profile.id === "standard" && !orthographic && planning3dState.selectedFeatureId == null && zoom < 16.2) {
     return false;
   }
+  if (!orthographic && !planning3dState.forceVisualFallback && planning3dState.selectedFeatureId == null) {
+    return false;
+  }
   return Boolean(
     dom.planning3dMap
     && planning3dState.modalOpen
+    && !planning3dState.interactionActive
     && planning3dState.buildingsVisible
     && buildingCount
     && zoom >= minimumZoom
     && (
       orthographic
       || planning3dState.forceVisualFallback
-      || planning3dState.backendMode === "public"
-      || buildingCount <= 12000
       || planning3dState.selectedFeatureId != null
       || !hasPlanning3dNativeBuildingScene()
     )
@@ -23291,6 +23357,11 @@ function positionPlanning3dDomMarkers() {
 }
 
 function queuePlanning3dDomMarkerPositionSync() {
+  if (planning3dState.interactionActive) {
+    planning3dState.domSyncQueued = false;
+    return;
+  }
+
   if (!planning3dState.domMarkers?.length) {
     planning3dState.domSyncQueued = false;
     return;
@@ -25301,10 +25372,12 @@ async function openPlanning3dViewer() {
     });
   }
   planning3dState.modalOpen = true;
+  planning3dState.interactionActive = false;
   planning3dState.forceVisualFallback = false;
   planning3dState.visualReady = false;
   planning3dState.visualSnapshot = null;
   planning3dState.baseSourceLoaded = false;
+  clearPlanning3dInteractionReleaseTimer();
   clearPlanning3dVisualRecoveryTimers();
   clearPlanning3dBaseReadinessTimer();
   const preferCompactOpening = typeof window !== "undefined" && window.innerWidth >= 1080;
@@ -25383,11 +25456,14 @@ async function openPlanning3dViewer() {
 
 function closePlanning3dViewer(silent = false) {
   planning3dState.modalOpen = false;
+  planning3dState.interactionActive = false;
   planning3dState.forceVisualFallback = false;
   planning3dState.visualReady = false;
   planning3dState.visualSnapshot = null;
   planning3dState.baseSourceLoaded = false;
   clearPlanning3dHoverFeature();
+  clearPlanning3dInteractionReleaseTimer();
+  syncPlanning3dOverlayInteractionState();
   clearPlanning3dVisualRecoveryTimers();
   clearPlanning3dBaseReadinessTimer();
   clearPlanning3dAnalyticalPrimeTimer();
@@ -28430,6 +28506,44 @@ function clearRiskAnalysis() {
   setStatus(`Estudio de riesgo territorial limpiado para ${getTerritorialAreaProfile().scopeLabel}.`);
 }
 
+function getAnalyticalHotspotMarkerStyle({
+  score = 60,
+  fillColor = "#ff9a1f",
+  strokeColor = "#fff7ea",
+  active = false,
+  minRadius = 7,
+  maxRadius = 12,
+}) {
+  const normalizedScore = clamp(Number(score) || 0, 0, 100);
+  const radius = clamp(minRadius + (normalizedScore / 28), minRadius, maxRadius) + (active ? 1.2 : 0);
+  return {
+    radius,
+    color: strokeColor,
+    weight: active ? 2.8 : 2.2,
+    fillColor,
+    fillOpacity: active ? 0.98 : 0.92,
+    className: "analysis-hotspot-marker",
+  };
+}
+
+function getAnalyticalBufferStyle({
+  stroke = "#c18c31",
+  fill = "#e2bb72",
+  active = false,
+  level = 0,
+  dashed = false,
+  fillOpacity = 0.12,
+}) {
+  return {
+    color: stroke,
+    weight: active ? 2 : (level === 0 ? 1.25 : 1.6),
+    fillColor: fill,
+    fillOpacity: active ? Math.min(0.24, fillOpacity + 0.08) : fillOpacity,
+    dashArray: dashed ? "8 7" : null,
+    className: "analysis-buffer-zone",
+  };
+}
+
 function renderRiskOverlay(analysis) {
   clearRiskOverlay();
   if (!mapState.map || !analysis?.sectors?.length || state.entryRoute !== "planificacion") {
@@ -28458,6 +28572,7 @@ function renderRiskOverlay(analysis) {
         weight: active ? 2.6 : 1.5,
         fillColor: score >= 74 ? "#d38a74" : score >= 58 ? "#e2bb72" : "#8fc9aa",
         fillOpacity: active ? 0.3 : 0.19,
+        className: "analysis-surface-zone",
       };
     },
     onEachFeature: (feature, layer) => {
@@ -28469,13 +28584,12 @@ function renderRiskOverlay(analysis) {
     type: "FeatureCollection",
     features: analysis.prioritySectors.map((sector) => turf.buffer(sector.feature, 0.12, { units: "kilometers" })),
   }, {
-    style: {
-      color: "#9f5441",
-      weight: 1.4,
-      fillColor: "#d38a74",
-      fillOpacity: 0.08,
-      dashArray: "7 8",
-    },
+    style: () => getAnalyticalBufferStyle({
+      stroke: "#9f5441",
+      fill: "#d38a74",
+      dashed: true,
+      fillOpacity: 0.1,
+    }),
   }).addTo(mapState.map);
 
   mapState.riskHotspotLayer = L.geoJSON({
@@ -28488,13 +28602,12 @@ function renderRiskOverlay(analysis) {
       summary: sector.summary,
     })),
   }, {
-    pointToLayer: (feature, latlng) => L.circleMarker(latlng, {
-      radius: 7,
-      color: "#fff5eb",
-      weight: 2,
+    pointToLayer: (feature, latlng) => L.circleMarker(latlng, getAnalyticalHotspotMarkerStyle({
+      score: feature.properties?.score,
       fillColor: "#9f5441",
-      fillOpacity: 0.96,
-    }),
+      strokeColor: "#fff5eb",
+      active: feature.properties?.riskSectorId === state.riskHighlightId,
+    })),
     onEachFeature: (feature, layer) => {
       layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Hotspot"}</h3><p class="popup-copy">${feature.properties?.riskLabel || "Riesgo"} · ${feature.properties?.score || 0}/100. ${feature.properties?.summary || ""}</p>`);
     },
@@ -29696,6 +29809,7 @@ function renderZoningPatternsOverlay(analysis) {
         weight: active ? 2.8 : 1.6,
         fillColor: palette.fill,
         fillOpacity: active ? 0.32 : 0.19,
+        className: "analysis-surface-zone",
       };
     },
     onEachFeature: (feature, layer) => {
@@ -29715,13 +29829,12 @@ function renderZoningPatternsOverlay(analysis) {
   }, {
     pointToLayer: (feature, latlng) => {
       const palette = getZoningPatternColor(feature.properties?.patternLabel);
-      return L.circleMarker(latlng, {
-        radius: 7,
-        color: "#fff9ef",
-        weight: 2,
+      return L.circleMarker(latlng, getAnalyticalHotspotMarkerStyle({
+        score: feature.properties?.vitalityIndex,
         fillColor: palette.color,
-        fillOpacity: 0.94,
-      });
+        strokeColor: "#fff9ef",
+        active: feature.properties?.zoningSectorId === state.zoningPatternsHighlightId,
+      }));
     },
     onEachFeature: (feature, layer) => {
       layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.patternLabel || "Patron"} · ${feature.properties?.vitalityIndex || 0}/100. ${feature.properties?.summary || ""}</p>`);
@@ -30168,6 +30281,7 @@ function renderHousingPatternsOverlay(analysis) {
         weight: active ? 2.8 : 1.5,
         fillColor: palette.fill,
         fillOpacity: active ? 0.3 : 0.18,
+        className: "analysis-surface-zone",
       };
     },
     onEachFeature: (feature, layer) => {
@@ -30187,13 +30301,12 @@ function renderHousingPatternsOverlay(analysis) {
   }, {
     pointToLayer: (feature, latlng) => {
       const palette = getHousingTypologyColor(feature.properties?.typologyLabel);
-      return L.circleMarker(latlng, {
-        radius: 7,
-        color: "#fff7ef",
-        weight: 2,
+      return L.circleMarker(latlng, getAnalyticalHotspotMarkerStyle({
+        score: feature.properties?.housingStress,
         fillColor: palette.color,
-        fillOpacity: 0.95,
-      });
+        strokeColor: "#fff7ef",
+        active: feature.properties?.housingSectorId === state.housingPatternsHighlightId,
+      }));
     },
     onEachFeature: (feature, layer) => {
       layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.typologyLabel || "Tipologia"} · ${feature.properties?.housingStress || 0}/100. ${feature.properties?.summary || ""}</p>`);
@@ -41082,6 +41195,7 @@ function renderLandChangeOverlay(analysis) {
           fillColor: "#d8bb91",
           fillOpacity: 0.08,
           dashArray: "6 8",
+          className: "analysis-buffer-zone",
         };
       },
       onEachFeature: (feature, layer) => {
@@ -41106,6 +41220,7 @@ function renderLandChangeOverlay(analysis) {
             ? (active ? 0.18 : 0.12)
             : (active ? 0.12 : 0.07),
           dashArray: zone === "inner" ? null : "8 8",
+          className: "analysis-buffer-zone",
         };
       },
       onEachFeature: (feature, layer) => {
@@ -41130,13 +41245,12 @@ function renderLandChangeOverlay(analysis) {
   }, {
     pointToLayer: (feature, latlng) => {
       const active = feature.properties?.landChangeSectorId === state.landChangeHighlightId;
-      return L.circleMarker(latlng, {
-        radius: active ? 9 : 7,
-        weight: 2.4,
-        color: active ? "#fff8eb" : "#fff1d5",
+      return L.circleMarker(latlng, getAnalyticalHotspotMarkerStyle({
+        score: feature.properties?.score,
         fillColor: active ? "#cc6b18" : "#ff9a1f",
-        fillOpacity: 0.96,
-      });
+        strokeColor: active ? "#fff8eb" : "#fff1d5",
+        active,
+      }));
     },
     onEachFeature: (feature, layer) => {
       layer.bindPopup(
@@ -41195,6 +41309,7 @@ function renderHydrologyOverlay(hydrology) {
             ? (active ? 0.12 : 0.08)
             : (active ? 0.17 : 0.11),
           dashArray: level === 0 ? "8 8" : null,
+          className: "analysis-buffer-zone",
         };
       },
       onEachFeature: (feature, layer) => {
@@ -41215,6 +41330,7 @@ function renderHydrologyOverlay(hydrology) {
         fillColor: tone === "surplus" ? "#72b89a" : tone === "watch" ? "#e2b66a" : "#d38a74",
         fillOpacity: feature.properties?.sectorId === state.hydrologyHighlightId ? 0.34 : 0.24,
         dashArray: feature.properties?.sectorId === state.hydrologyHighlightId ? null : "5 6",
+        className: "analysis-surface-zone",
       };
     },
     onEachFeature: (feature, layer) => {
@@ -41242,13 +41358,12 @@ function renderHydrologyOverlay(hydrology) {
   }, {
     pointToLayer: (feature, latlng) => {
       const active = feature.properties?.hydrologySectorId === state.hydrologyHighlightId;
-      return L.circleMarker(latlng, {
-        radius: active ? 9 : 7,
-        weight: 2.4,
-        color: active ? "#fff6ea" : "#eef8f5",
+      return L.circleMarker(latlng, getAnalyticalHotspotMarkerStyle({
+        score: feature.properties?.resilience,
         fillColor: active ? "#2f7f5f" : "#4c8e79",
-        fillOpacity: 0.96,
-      });
+        strokeColor: active ? "#fff6ea" : "#eef8f5",
+        active,
+      }));
     },
     onEachFeature: (feature, layer) => {
       layer.bindPopup(

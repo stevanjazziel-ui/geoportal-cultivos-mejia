@@ -1180,6 +1180,22 @@ button {
   border-radius: 999px;
 }
 
+.leaflet-overlay-pane path.analysis-buffer-zone,
+.leaflet-overlay-pane path.analysis-surface-zone,
+.leaflet-overlay-pane path.analysis-hotspot-marker {
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.leaflet-overlay-pane path.analysis-buffer-zone {
+  mix-blend-mode: multiply;
+}
+
+.leaflet-overlay-pane path.analysis-hotspot-marker {
+  filter: drop-shadow(0 2px 8px rgba(20, 33, 28, 0.22));
+}
+
 .legend-values {
   display: flex;
   justify-content: space-between;
