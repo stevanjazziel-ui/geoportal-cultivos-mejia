@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260526-1";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260526-2";
 
 const layerCatalog = [
   {
@@ -952,6 +952,7 @@ const agronomyMapNativeZoomLimits = {
 const exactSceneCache = new Map();
 const exactSceneMatchCache = new Map();
 let mqttClientFactoryPromise = null;
+let geoAiSchedulerTimerId = null;
 
 const indexConfig = {
   NDVI: {
@@ -3794,8 +3795,19 @@ const state = {
       feedback: [],
       versions: [],
       evidence: [],
+      researchLog: [],
+      experiments: [],
+      qualityGate: null,
+      scheduler: {
+        enabled: false,
+        cadenceHours: 24,
+        lastRunAt: null,
+        nextRunAt: null,
+      },
       lastQuestion: "",
       lastAnswer: null,
+      lastResearch: null,
+      lastExperimentRun: null,
       updatedAt: null,
     },
   },
@@ -37516,6 +37528,72 @@ function normalizeGeoAiVersionEntry(entry = {}) {
   };
 }
 
+function normalizeGeoAiEvidenceEntry(entry = {}) {
+  return {
+    id: String(entry.id || `geoai-evidence-${Date.now()}`),
+    domain: String(entry.domain || "GeoAI"),
+    sourceType: String(entry.sourceType || "estudio"),
+    title: String(entry.title || "Evidencia sin titulo"),
+    focus: String(entry.focus || entry.objective || ""),
+    objective: String(entry.objective || entry.focus || ""),
+    dataUsed: String(entry.dataUsed || "Datos locales y soporte geoespacial relacionado."),
+    method: String(entry.method || "Reglas y lectura geoespacial asistida."),
+    variables: Array.isArray(entry.variables) ? entry.variables.map((item) => String(item)) : [],
+    metrics: Array.isArray(entry.metrics) ? entry.metrics.map((item) => String(item)) : [],
+    limitations: Array.isArray(entry.limitations) ? entry.limitations.map((item) => String(item)) : [],
+    applicability: String(entry.applicability || ""),
+    moduleActionId: String(entry.moduleActionId || "suite-dashboard"),
+    moduleLabel: String(entry.moduleLabel || "GeoAI Core"),
+    topics: Array.isArray(entry.topics) ? entry.topics.map((item) => String(item)) : [],
+    tags: Array.isArray(entry.tags) ? entry.tags.map((item) => String(item)) : [],
+    qualityHint: Number.isFinite(Number(entry.qualityHint)) ? Math.round(Number(entry.qualityHint)) : 72,
+    updatedAt: entry.updatedAt || new Date().toISOString(),
+  };
+}
+
+function normalizeGeoAiExperimentEntry(entry = {}) {
+  return {
+    id: String(entry.id || `geoai-exp-${Date.now()}`),
+    title: String(entry.title || "Experimento GeoAI"),
+    domain: String(entry.domain || "GeoAI"),
+    route: isGpsRoute(entry.route) ? "gps" : isCadastreRoute(entry.route) ? "catastro" : isPlanningRoute(entry.route) ? "planificacion" : "agronomia",
+    evidenceId: String(entry.evidenceId || ""),
+    moduleActionId: String(entry.moduleActionId || "suite-dashboard"),
+    baselineScore: Number.isFinite(Number(entry.baselineScore)) ? Math.round(Number(entry.baselineScore)) : 0,
+    candidateScore: Number.isFinite(Number(entry.candidateScore)) ? Math.round(Number(entry.candidateScore)) : 0,
+    stabilityScore: Number.isFinite(Number(entry.stabilityScore)) ? Math.round(Number(entry.stabilityScore)) : 0,
+    utilityScore: Number.isFinite(Number(entry.utilityScore)) ? Math.round(Number(entry.utilityScore)) : 0,
+    delta: Number.isFinite(Number(entry.delta)) ? Math.round(Number(entry.delta)) : 0,
+    approved: Boolean(entry.approved),
+    summary: String(entry.summary || ""),
+    createdAt: entry.createdAt || new Date().toISOString(),
+  };
+}
+
+function normalizeGeoAiSchedulerState(entry = {}) {
+  const cadenceHours = Number.isFinite(Number(entry.cadenceHours)) ? Math.max(6, Math.min(168, Math.round(Number(entry.cadenceHours)))) : 24;
+  return {
+    enabled: Boolean(entry.enabled),
+    cadenceHours,
+    lastRunAt: entry.lastRunAt || null,
+    nextRunAt: entry.nextRunAt || null,
+  };
+}
+
+function normalizeGeoAiQualityGate(entry = {}) {
+  return {
+    approved: Boolean(entry.approved),
+    averageCandidateScore: Number.isFinite(Number(entry.averageCandidateScore)) ? Math.round(Number(entry.averageCandidateScore)) : 0,
+    averageDelta: Number.isFinite(Number(entry.averageDelta)) ? Math.round(Number(entry.averageDelta)) : 0,
+    averageStabilityScore: Number.isFinite(Number(entry.averageStabilityScore)) ? Math.round(Number(entry.averageStabilityScore)) : 0,
+    experimentCount: Number.isFinite(Number(entry.experimentCount)) ? Math.round(Number(entry.experimentCount)) : 0,
+    usefulFeedback: Number.isFinite(Number(entry.usefulFeedback)) ? Math.round(Number(entry.usefulFeedback)) : 0,
+    adjustFeedback: Number.isFinite(Number(entry.adjustFeedback)) ? Math.round(Number(entry.adjustFeedback)) : 0,
+    summary: String(entry.summary || "Sin evaluacion registrada."),
+    createdAt: entry.createdAt || new Date().toISOString(),
+  };
+}
+
 function buildGeoAiEvidenceLibrary() {
   return [
     {
@@ -37524,7 +37602,14 @@ function buildGeoAiEvidenceLibrary() {
       sourceType: "estudio",
       title: "Visible cadastral boundaries with deep learning",
       focus: "Delimitacion visible de predios a partir de imagen",
+      objective: "Detectar linderos visibles y priorizar tramos donde la evidencia de imagen si soporta una digitalizacion asistida.",
+      dataUsed: "Imagen aerea/satelital, bordes visibles, contorno parcelario y revision humana.",
       method: "Segmentacion de bordes visibles, confianza por tramo y revision asistida.",
+      variables: ["bordes visibles", "contraste", "contorno parcelario", "confianza del lindero"],
+      metrics: ["precision del borde", "confianza por tramo", "revision requerida"],
+      limitations: ["No sustituye validacion legal", "Depende de evidencia visible en la imagen"],
+      topics: ["catastro", "lindero", "predios", "deep learning"],
+      qualityHint: 86,
       applicability: "Base para ajustar hover, click y revision de linderos visibles.",
       moduleActionId: "planning-cadastre",
       moduleLabel: "Catastro asistido",
@@ -37535,7 +37620,14 @@ function buildGeoAiEvidenceLibrary() {
       sourceType: "estudio",
       title: "UAV boundary detection for cadastral workflows",
       focus: "Predios, evidencia de campo y ajuste fino con soporte fotogrametrico",
+      objective: "Apoyar la delimitacion predial con ortomosaicos y evidencia de campo de mayor resolucion.",
+      dataUsed: "UAV, ortomosaico, control de campo, bordes visibles y topologia predial.",
       method: "Cruce entre bordes visibles, ortomosaico y control tecnico.",
+      variables: ["ortomosaico", "ancho de borde", "topologia", "control de campo"],
+      metrics: ["estabilidad del contorno", "necesidad de campo", "calidad del ajuste"],
+      limitations: ["Requiere mejor soporte local", "No siempre hay dron o RTK disponible"],
+      topics: ["uav", "catastro", "campo", "fotogrametria"],
+      qualityHint: 82,
       applicability: "Refuerza la sincronizacion con dron, RTK y revision de campo.",
       moduleActionId: "cadastre-focus",
       moduleLabel: "Revision predial",
@@ -37546,7 +37638,14 @@ function buildGeoAiEvidenceLibrary() {
       sourceType: "norma",
       title: "Norma Tecnica Nacional de Catastros",
       focus: "Control geometrico, ficha y flujo tecnico",
+      objective: "Asegurar consistencia minima para ficha, control topologico y trazabilidad predial.",
+      dataUsed: "Norma ecuatoriana, ficha predial, control tecnico y revision administrativa.",
       method: "Estandares minimos para identificacion, consistencia y trazabilidad predial.",
+      variables: ["area", "perimetro", "topologia", "clave", "responsable tecnico"],
+      metrics: ["cumplimiento geometrico", "completitud de ficha", "estado de revision"],
+      limitations: ["No reemplaza tramite formal", "La norma requiere verificacion institucional"],
+      topics: ["norma", "catastro", "topologia", "ficha"],
+      qualityHint: 90,
       applicability: "Soporte para topologia, ficha predial y revision formal.",
       moduleActionId: "planning-cadastre",
       moduleLabel: "Control catastral",
@@ -37557,7 +37656,14 @@ function buildGeoAiEvidenceLibrary() {
       sourceType: "estudio",
       title: "Analisis multidimensional del DMQ: patrones de zonificacion",
       focus: "Patrones territoriales, vitalidad y tension urbana",
+      objective: "Identificar patrones urbanos, borde, mezcla y vitalidad para apoyar decisiones de implantacion.",
+      dataUsed: "Zonificacion, estructura urbana, centralidades, tejido y lectura espacial comparada.",
       method: "Cruce de estructura urbana, centralidades, borde y compatibilidad.",
+      variables: ["vitalidad", "mezcla de usos", "borde", "centralidad", "compatibilidad"],
+      metrics: ["intensidad urbana", "fragilidad", "oportunidad de consolidacion"],
+      limitations: ["Se adapta al contexto, no se copia literal", "Requiere interpretacion territorial local"],
+      topics: ["zonificacion", "territorio", "vitalidad", "centralidad"],
+      qualityHint: 84,
       applicability: "Se traduce en la capa de zonificacion, lectura 3D y comparador territorial.",
       moduleActionId: "planning-zoning",
       moduleLabel: "Patrones territoriales",
@@ -37568,7 +37674,14 @@ function buildGeoAiEvidenceLibrary() {
       sourceType: "estudio",
       title: "Patrones de vivienda en el DMQ",
       focus: "Oferta relativa, tension de vivienda y tipologias",
+      objective: "Leer tension de vivienda y patron residencial para orientar equipamientos y estrategia urbana.",
+      dataUsed: "Plataformas digitales, tejido residencial, oferta relativa y tipologias.",
       method: "Lectura de plataformas digitales y patron urbano comparado.",
+      variables: ["tipologia", "oferta", "presion", "demanda", "cobertura de servicios"],
+      metrics: ["tension territorial", "vocacion residencial", "deficit de soporte"],
+      limitations: ["Contexto original del DMQ", "Debe reinterpretarse con datos de Mejia y Quevedo"],
+      topics: ["vivienda", "residencial", "tipologias", "servicios"],
+      qualityHint: 79,
       applicability: "Base para vivienda, demanda territorial y prioridad de equipamientos.",
       moduleActionId: "planning-housing",
       moduleLabel: "Patrones de vivienda",
@@ -37579,7 +37692,14 @@ function buildGeoAiEvidenceLibrary() {
       sourceType: "regla",
       title: "Clima urbano y corredores de aire frio",
       focus: "Ventilacion, retencion termica y mitigacion del calor",
+      objective: "Proteger corredores de ventilacion y mitigar acumulacion de calor en tejido urbano.",
+      dataUsed: "Relieve, corredores, sombra, cobertura urbana, zonas termicas y estructura de valle.",
       method: "Reservas de ventilacion, nodos de enfriamiento y zonas de retencion.",
+      variables: ["corredor frio", "retencion termica", "ventilacion", "reserva climatica"],
+      metrics: ["exposicion termica", "continuidad de ventilacion", "prioridad de proteccion"],
+      limitations: ["Es una lectura geoespacial, no un CFD completo", "Requiere calibracion adicional para simulacion fina"],
+      topics: ["clima urbano", "ventilacion", "calor", "corredores frios"],
+      qualityHint: 81,
       applicability: "Se traduce en modo Clima, alertas y propuesta 3D.",
       moduleActionId: "planning-climate",
       moduleLabel: "Clima urbano",
@@ -37590,7 +37710,14 @@ function buildGeoAiEvidenceLibrary() {
       sourceType: "regla",
       title: "Caudal de riego y prioridad hidrica por lote",
       focus: "Capacidad del sistema, necesidad del cultivo y aforo real",
+      objective: "Pasar del calculo aislado a una recomendacion de riego por lote con soporte hidrico real.",
+      dataUsed: "Emisores, ETc, lluvia, area, aforo y red hidrica oficial disponible.",
       method: "Cruza emisores, ETc, lluvia, superficie y soporte hidrico oficial.",
+      variables: ["ETc", "lluvia", "caudal", "superficie", "distancia al agua"],
+      metrics: ["balance de riego", "prioridad hidrica", "abastecimiento probable"],
+      limitations: ["No reemplaza diseno hidraulico formal", "La calidad depende del soporte hidrico local"],
+      topics: ["riego", "caudal", "agua", "cultivo"],
+      qualityHint: 83,
       applicability: "Base para recomendacion de riego y soporte de agua por lote.",
       moduleActionId: "agronomy-water",
       moduleLabel: "Red hidrica y riego",
@@ -37601,7 +37728,14 @@ function buildGeoAiEvidenceLibrary() {
       sourceType: "regla",
       title: "Recomendacion por cultivo y estres",
       focus: "Aptitud agroclimatica, estres y mejor lote",
+      objective: "Convertir clima, relieve y agua en una recomendacion accionable por cultivo.",
+      dataUsed: "Escenas, clima, relieve, agua, riesgo y scoring de aptitud.",
       method: "Scoring por agua, clima, relieve y soporte del cultivo.",
+      variables: ["vigor", "humedad", "temperatura", "relieve", "soporte hidrico"],
+      metrics: ["score del lote", "riesgo de estres", "ajuste de cultivo"],
+      limitations: ["No es modelo de rendimiento entrenado", "Debe complementarse con manejo y campo"],
+      topics: ["agronomia", "cultivo", "estres", "rendimiento"],
+      qualityHint: 80,
       applicability: "Se refleja en aptitud agroclimatica, recomendacion y dashboard.",
       moduleActionId: "agronomy-suitability",
       moduleLabel: "Aptitud agroclimatica",
@@ -37612,7 +37746,14 @@ function buildGeoAiEvidenceLibrary() {
       sourceType: "regla",
       title: "Geocercas, replay y desvio operativo",
       focus: "Control de corredor, alertas y trazabilidad",
+      objective: "Transformar el seguimiento GPS en control operativo auditable.",
+      dataUsed: "Track, geocercas, eventos, replay e historial del corredor.",
       method: "Replay, historial exportable, multiples geocercas y bitacora de eventos.",
+      variables: ["corredor", "distancia de desvio", "tiempo fuera de ruta", "device id"],
+      metrics: ["precision operativa", "eventos", "tiempo fuera de corredor"],
+      limitations: ["Depende de calidad del feed GPS", "No reemplaza supervision de campo"],
+      topics: ["gps", "geocerca", "replay", "operacion"],
+      qualityHint: 85,
       applicability: "Base del centro GPS standalone y del control operativo real.",
       moduleActionId: "gps-corridor",
       moduleLabel: "GPS operativo",
@@ -37623,7 +37764,14 @@ function buildGeoAiEvidenceLibrary() {
       sourceType: "regla",
       title: "Lectura urbana 3D de corredor, zonificacion y propuesta",
       focus: "Calles, espacio publico, clima, riesgo, equipamientos y propuesta",
+      objective: "Usar el visor 3D como herramienta de decision y no solo como render.",
+      dataUsed: "Construcciones, calles, corredores, equipamientos, clima, riesgo y propuesta.",
       method: "Escenarios tematicos con hover, click, fichas y comparacion urbana.",
+      variables: ["volumen", "altura", "corredor", "equipamiento", "restriccion"],
+      metrics: ["claridad de decision", "lectura urbana", "compatibilidad de propuesta"],
+      limitations: ["No es gemelo digital de alta fidelidad", "Depende de datos 3D disponibles"],
+      topics: ["3d", "urbanismo", "propuesta", "corredor"],
+      qualityHint: 78,
       applicability: "Se traduce en el Centro 3D urbano y sus modos de decision.",
       moduleActionId: "planning-3d",
       moduleLabel: "Visor 3D",
@@ -37634,7 +37782,14 @@ function buildGeoAiEvidenceLibrary() {
       sourceType: "arquitectura",
       title: "RAG para conocimiento geoespacial",
       focus: "Buscar, leer, resumir y citar evidencia en vez de improvisar",
+      objective: "Hacer que el copiloto consulte evidencia antes de recomendar.",
+      dataUsed: "Biblioteca de estudios, normas, fichas, capas y memoria del sistema.",
       method: "Biblioteca de evidencia, copiloto, memoria y recuperacion contextual.",
+      variables: ["consulta", "dominio", "relevancia", "evidencia recuperada"],
+      metrics: ["relevancia", "cobertura de evidencia", "consistencia de respuesta"],
+      limitations: ["La calidad depende de la biblioteca cargada", "No reemplaza evaluacion tecnica"],
+      topics: ["rag", "conocimiento", "copiloto", "evidencia"],
+      qualityHint: 88,
       applicability: "Base para el copiloto IA del geoportal y sus respuestas guiadas.",
       moduleActionId: "suite-dashboard",
       moduleLabel: "GeoAI Core",
@@ -37645,7 +37800,14 @@ function buildGeoAiEvidenceLibrary() {
       sourceType: "arquitectura",
       title: "MLOps y evolucion controlada",
       focus: "Aprender sin romper produccion",
+      objective: "Versionar cambios de inteligencia y aceptar mejoras solo cuando ganan.",
+      dataUsed: "Feedback, experimentos, baseline, comparacion y bitacora.",
       method: "Observar, aprender, evaluar, publicar y dejar bitacora versionada.",
+      variables: ["feedback", "baseline", "candidato", "estabilidad", "version"],
+      metrics: ["delta", "candidate score", "stability", "approval"],
+      limitations: ["No sustituye criterio humano", "Necesita datos y uso real para madurar"],
+      topics: ["mlops", "versionado", "quality gate", "evolucion"],
+      qualityHint: 91,
       applicability: "Base para feedback, versionado de inteligencia y mejora continua controlada.",
       moduleActionId: "suite-dashboard",
       moduleLabel: "GeoAI Core",
@@ -37709,6 +37871,315 @@ function buildGeoAiCopilotContextSnapshot() {
       planning3dReady,
     },
   };
+}
+
+function getGeoAiEvidenceStore() {
+  const rawEvidence = Array.isArray(state.platformData.geoAi.evidence) && state.platformData.geoAi.evidence.length
+    ? state.platformData.geoAi.evidence
+    : buildGeoAiEvidenceLibrary();
+  return rawEvidence.map(normalizeGeoAiEvidenceEntry);
+}
+
+function buildGeoAiResearchDefaultQuery(route = state.entryRoute || "agronomia") {
+  if (isGpsRoute(route)) {
+    return "gps geocercas replay desvio corredor operativo";
+  }
+  if (isCadastreRoute(route)) {
+    return "catastro predio linderos control geometrico revision de campo";
+  }
+  if (isPlanningRoute(route)) {
+    return "territorio clima urbano movilidad riesgo equipamientos zonificacion propuesta 3d";
+  }
+  return "agronomia riego cultivo estres rendimiento humedad soporte hidrico";
+}
+
+function scoreGeoAiEvidence(query = "", item = normalizeGeoAiEvidenceEntry()) {
+  const normalizedQuery = normalizeTerritorialText(query);
+  const queryTokens = Array.from(new Set(normalizedQuery.split(/\s+/).filter((token) => token.length >= 3)));
+  const haystack = normalizeTerritorialText([
+    item.domain,
+    item.sourceType,
+    item.title,
+    item.focus,
+    item.objective,
+    item.dataUsed,
+    item.method,
+    item.applicability,
+    item.moduleLabel,
+    ...(item.variables || []),
+    ...(item.metrics || []),
+    ...(item.limitations || []),
+    ...(item.topics || []),
+    ...(item.tags || []),
+  ].join(" "));
+  let score = item.qualityHint * 0.35;
+  queryTokens.forEach((token) => {
+    if (haystack.includes(token)) {
+      score += 12;
+    }
+  });
+  if (normalizedQuery && haystack.includes(normalizedQuery)) {
+    score += 18;
+  }
+  return Math.round(score);
+}
+
+async function runGeoAiResearchAgent(query = "") {
+  const snapshot = buildGeoAiCopilotContextSnapshot();
+  const effectiveQuery = String(query || "").trim() || buildGeoAiResearchDefaultQuery(snapshot.route);
+  const shortlist = getGeoAiEvidenceStore()
+    .map((item) => ({
+      ...item,
+      relevanceScore: scoreGeoAiEvidence(effectiveQuery, item),
+    }))
+    .sort((left, right) => right.relevanceScore - left.relevanceScore)
+    .slice(0, 6);
+  const researchRecord = {
+    id: `geoai-research-${Date.now()}`,
+    query: effectiveQuery,
+    route: snapshot.route,
+    routeLabel: snapshot.routeLabel,
+    scopeLabel: snapshot.scopeLabel,
+    createdAt: new Date().toISOString(),
+    shortlist,
+    summary: shortlist.length
+      ? `${shortlist[0].title} aparece como evidencia mas pertinente para ${snapshot.scopeLabel}.`
+      : "No se encontraron estudios relevantes en la biblioteca cargada.",
+  };
+  state.platformData.geoAi.lastResearch = researchRecord;
+  state.platformData.geoAi.researchLog = [researchRecord, ...(state.platformData.geoAi.researchLog || [])].slice(0, 24);
+  state.platformData.geoAi.updatedAt = researchRecord.createdAt;
+  renderGeoAiCoreCard();
+  await persistGeoAiCoreState();
+  setStatus(`Agente investigador: ${researchRecord.summary}`);
+  return researchRecord;
+}
+
+function computeGeoAiDomainBaseline(domain = "GeoAI", snapshot = buildGeoAiCopilotContextSnapshot()) {
+  switch (domain) {
+    case "Agronomia": {
+      const decisionScore = state.agronomyOutputs.agroDecision?.bestLot?.score || 0;
+      const irrigationScore = state.agronomyOutputs.irrigationFlow?.balanceScore || 0;
+      const hydroScore = state.agronomyOutputs.hydroNetwork?.summary?.resilienceScore || 0;
+      return Math.round((decisionScore * 0.45) + (irrigationScore * 0.3) + (hydroScore * 0.25));
+    }
+    case "Territorio": {
+      const opsScore = state.territorialOpsData?.overallScore || 0;
+      const planningScore = state.planningData?.summary?.meanScore || 0;
+      const hydrologyScore = state.hydrologyData?.summary?.resilienceScore || 0;
+      return Math.round((opsScore * 0.45) + (planningScore * 0.35) + (hydrologyScore * 0.2));
+    }
+    case "GPS": {
+      const deviceScore = Math.min(100, (snapshot.metrics.gpsDeviceCount || 0) * 24);
+      const geofenceScore = state.gpsTracking.geofence ? 72 : 38;
+      const replayScore = (state.gpsTracking.trackSamples || []).length ? 76 : 42;
+      return Math.round((deviceScore * 0.25) + (geofenceScore * 0.4) + (replayScore * 0.35));
+    }
+    case "Catastro": {
+      const confidence = snapshot.completed.cadastreConfidence || 0;
+      const queueFactor = Math.min(100, (snapshot.metrics.cadastreCandidateCount || 0) * 12);
+      const plotFactor = snapshot.hasPlot ? 76 : 34;
+      return Math.round((confidence * 0.5) + (queueFactor * 0.2) + (plotFactor * 0.3));
+    }
+    case "3D": {
+      const ready = snapshot.metrics.planning3dReady ? 84 : 35;
+      const routeBoost = isPlanningRoute(snapshot.route) ? 12 : 0;
+      return Math.min(100, ready + routeBoost);
+    }
+    default:
+      return buildGeoAiEvaluationSnapshot().overallScore;
+  }
+}
+
+function buildGeoAiExperimentRecord(evidenceItem, snapshot = buildGeoAiCopilotContextSnapshot()) {
+  const usefulCount = (state.platformData.geoAi.feedback || []).filter((item) => item.kind === "useful").length;
+  const adjustCount = (state.platformData.geoAi.feedback || []).filter((item) => item.kind === "adjust").length;
+  const baselineScore = computeGeoAiDomainBaseline(evidenceItem.domain, snapshot);
+  const feedbackFactor = Math.max(-12, Math.min(18, usefulCount * 3 - adjustCount * 4));
+  const candidateScore = clamp(
+    baselineScore * 0.58
+    + evidenceItem.qualityHint * 0.26
+    + feedbackFactor
+    + (evidenceItem.relevanceScore || 0) * 0.08,
+    0,
+    100
+  );
+  const stabilityScore = clamp(
+    58
+    + (state.backendAvailable ? 12 : 0)
+    + (snapshot.projectCount > 0 ? 6 : 0)
+    + (snapshot.alertCount > 0 ? 4 : 0)
+    - adjustCount * 3,
+    0,
+    100
+  );
+  const utilityScore = clamp(
+    candidateScore * 0.55
+    + Math.max(candidateScore - baselineScore, 0) * 2.4
+    + (snapshot.hasPlot ? 6 : 0)
+    + (evidenceItem.domain === "Territorio" && isPlanningRoute(snapshot.route) ? 8 : 0)
+    + (evidenceItem.domain === "Agronomia" && !isPlanningRoute(snapshot.route) && !isCadastreRoute(snapshot.route) ? 8 : 0),
+    0,
+    100
+  );
+  const delta = Math.round(candidateScore - baselineScore);
+  const approved = candidateScore >= 72 && stabilityScore >= 65 && delta >= 3;
+  return normalizeGeoAiExperimentEntry({
+    id: `geoai-exp-${evidenceItem.id}-${Date.now()}`,
+    title: `${evidenceItem.moduleLabel}: ${evidenceItem.title}`,
+    domain: evidenceItem.domain,
+    route: snapshot.route,
+    evidenceId: evidenceItem.id,
+    moduleActionId: evidenceItem.moduleActionId,
+    baselineScore,
+    candidateScore,
+    stabilityScore,
+    utilityScore,
+    delta,
+    approved,
+    summary: approved
+      ? `La evidencia mejora la lectura de ${evidenceItem.moduleLabel} y supera la puerta de calidad.`
+      : `La propuesta todavia necesita mas validacion o mejor ajuste antes de publicarse.`,
+    createdAt: new Date().toISOString(),
+  });
+}
+
+async function runGeoAiExperimentation(query = "") {
+  const snapshot = buildGeoAiCopilotContextSnapshot();
+  const research = state.platformData.geoAi.lastResearch?.query === (String(query || "").trim() || buildGeoAiResearchDefaultQuery(snapshot.route))
+    ? state.platformData.geoAi.lastResearch
+    : await runGeoAiResearchAgent(query);
+  const experiments = (research.shortlist || []).slice(0, 5).map((item) => buildGeoAiExperimentRecord(item, snapshot));
+  const experimentRun = {
+    id: `geoai-exp-run-${Date.now()}`,
+    query: research.query,
+    route: snapshot.route,
+    createdAt: new Date().toISOString(),
+    experiments,
+    summary: experiments.length
+      ? `${experiments.filter((item) => item.approved).length}/${experiments.length} experimentos pasan la puerta inicial.`
+      : "No hubo evidencia suficiente para experimentar.",
+  };
+  state.platformData.geoAi.experiments = experiments;
+  state.platformData.geoAi.lastExperimentRun = experimentRun;
+  state.platformData.geoAi.updatedAt = experimentRun.createdAt;
+  renderGeoAiCoreCard();
+  await persistGeoAiCoreState();
+  setStatus(`Motor de experimentacion: ${experimentRun.summary}`);
+  return experimentRun;
+}
+
+function applyGeoAiQualityGate(experiments = state.platformData.geoAi.experiments || []) {
+  const list = Array.isArray(experiments) ? experiments.map(normalizeGeoAiExperimentEntry) : [];
+  const usefulCount = (state.platformData.geoAi.feedback || []).filter((item) => item.kind === "useful").length;
+  const adjustCount = (state.platformData.geoAi.feedback || []).filter((item) => item.kind === "adjust").length;
+  const averageCandidateScore = list.length ? Math.round(list.reduce((sum, item) => sum + item.candidateScore, 0) / list.length) : 0;
+  const averageDelta = list.length ? Math.round(list.reduce((sum, item) => sum + item.delta, 0) / list.length) : 0;
+  const averageStabilityScore = list.length ? Math.round(list.reduce((sum, item) => sum + item.stabilityScore, 0) / list.length) : 0;
+  const approved = Boolean(
+    list.length
+    && averageCandidateScore >= 74
+    && averageDelta >= 4
+    && averageStabilityScore >= 68
+    && adjustCount <= usefulCount + 2
+  );
+  const gate = normalizeGeoAiQualityGate({
+    approved,
+    averageCandidateScore,
+    averageDelta,
+    averageStabilityScore,
+    experimentCount: list.length,
+    usefulFeedback: usefulCount,
+    adjustFeedback: adjustCount,
+    summary: approved
+      ? "La propuesta mejora precision y estabilidad; puede registrarse como nueva inteligencia."
+      : "La propuesta todavia requiere mas evidencia, feedback o estabilidad antes de publicar.",
+    createdAt: new Date().toISOString(),
+  });
+  state.platformData.geoAi.qualityGate = gate;
+  state.platformData.geoAi.updatedAt = gate.createdAt;
+  return gate;
+}
+
+function computeGeoAiNextRunAt(cadenceHours = 24, referenceDate = new Date()) {
+  return new Date(referenceDate.getTime() + cadenceHours * 60 * 60 * 1000).toISOString();
+}
+
+function ensureGeoAiScheduler() {
+  if (geoAiSchedulerTimerId) {
+    return;
+  }
+  geoAiSchedulerTimerId = window.setInterval(() => {
+    const scheduler = state.platformData.geoAi.scheduler;
+    if (!scheduler?.enabled || !scheduler.nextRunAt) {
+      return;
+    }
+    if (Date.now() < new Date(scheduler.nextRunAt).getTime()) {
+      return;
+    }
+    runGeoAiEvolutionCycle({ scheduled: true }).catch((error) => {
+      console.warn("No se pudo completar el ciclo programado del GeoAI Core.", error);
+    });
+  }, 60000);
+}
+
+async function toggleGeoAiScheduler() {
+  const current = normalizeGeoAiSchedulerState(state.platformData.geoAi.scheduler || {});
+  const nextEnabled = !current.enabled;
+  const now = new Date();
+  state.platformData.geoAi.scheduler = normalizeGeoAiSchedulerState({
+    enabled: nextEnabled,
+    cadenceHours: current.cadenceHours || 24,
+    lastRunAt: current.lastRunAt || null,
+    nextRunAt: nextEnabled ? computeGeoAiNextRunAt(current.cadenceHours || 24, now) : null,
+  });
+  state.platformData.geoAi.updatedAt = now.toISOString();
+  ensureGeoAiScheduler();
+  renderGeoAiCoreCard();
+  await persistGeoAiCoreState();
+  setStatus(nextEnabled ? "GeoAI programado para evolucion controlada." : "Programacion automatica del GeoAI desactivada.");
+}
+
+async function runGeoAiEvolutionCycle(options = {}) {
+  const query = String(options.query || state.platformData.geoAi.lastQuestion || buildGeoAiResearchDefaultQuery(state.entryRoute)).trim();
+  const research = await runGeoAiResearchAgent(query);
+  const experimentRun = await runGeoAiExperimentation(query);
+  const gate = applyGeoAiQualityGate(experimentRun.experiments);
+  state.platformData.geoAi.updatedAt = new Date().toISOString();
+  if (options.scheduled) {
+    state.platformData.geoAi.scheduler = normalizeGeoAiSchedulerState({
+      ...(state.platformData.geoAi.scheduler || {}),
+      enabled: true,
+      cadenceHours: state.platformData.geoAi.scheduler?.cadenceHours || 24,
+      lastRunAt: new Date().toISOString(),
+      nextRunAt: computeGeoAiNextRunAt(state.platformData.geoAi.scheduler?.cadenceHours || 24),
+    });
+  }
+  if (gate.approved) {
+    const versionEntry = normalizeGeoAiVersionEntry({
+      id: `geoai-version-${Date.now()}`,
+      label: `${GEOAI_CORE_VERSION}-auto${(state.platformData.geoAi.versions || []).length + 1}`,
+      status: options.scheduled ? "candidato aprobado" : "lista para publicar",
+      summary: `${research.summary} ${gate.summary}`,
+      route: state.entryRoute,
+      score: gate.averageCandidateScore,
+      userName: state.userProfile.name,
+      createdAt: new Date().toISOString(),
+      evaluation: gate,
+    });
+    state.platformData.geoAi.versions = [versionEntry, ...(state.platformData.geoAi.versions || [])].slice(0, 24);
+    recordDecisionLogEntry({
+      title: `GeoAI ${options.scheduled ? "recalibrado" : "evaluado"}: ${versionEntry.label}`,
+      copy: `${versionEntry.summary} (${versionEntry.score}/100).`,
+      module: "GeoAI",
+      route: state.entryRoute,
+      focusAction: research.shortlist?.[0]?.moduleActionId || "suite-dashboard",
+    }, { persist: true, silentStatus: true });
+  }
+  renderGeoAiCoreCard();
+  await persistGeoAiCoreState();
+  setStatus(gate.approved ? "GeoAI Core mejoro y quedo listo para publicar con control." : "GeoAI Core corrio la evaluacion pero la mejora aun no pasa la puerta de calidad.");
+  return { research, experimentRun, gate };
 }
 
 function buildGeoAiRecommendationCatalog() {
@@ -37939,9 +38410,15 @@ async function persistGeoAiCoreState() {
     memory: (state.platformData.geoAi.memory || []).map(normalizeGeoAiMemoryEntry).slice(0, 32),
     feedback: (state.platformData.geoAi.feedback || []).map(normalizeGeoAiFeedbackEntry).slice(0, 64),
     versions: (state.platformData.geoAi.versions || []).map(normalizeGeoAiVersionEntry).slice(0, 24),
-    evidence: (state.platformData.geoAi.evidence || []).slice(0, 24),
+    evidence: getGeoAiEvidenceStore().slice(0, 32),
+    researchLog: Array.isArray(state.platformData.geoAi.researchLog) ? state.platformData.geoAi.researchLog.slice(0, 24) : [],
+    experiments: Array.isArray(state.platformData.geoAi.experiments) ? state.platformData.geoAi.experiments.map(normalizeGeoAiExperimentEntry).slice(0, 24) : [],
+    qualityGate: state.platformData.geoAi.qualityGate ? normalizeGeoAiQualityGate(state.platformData.geoAi.qualityGate) : null,
+    scheduler: normalizeGeoAiSchedulerState(state.platformData.geoAi.scheduler || {}),
     lastQuestion: String(state.platformData.geoAi.lastQuestion || ""),
     lastAnswer: state.platformData.geoAi.lastAnswer ? normalizeGeoAiAnswerRecord(state.platformData.geoAi.lastAnswer) : null,
+    lastResearch: state.platformData.geoAi.lastResearch || null,
+    lastExperimentRun: state.platformData.geoAi.lastExperimentRun || null,
     updatedAt: state.platformData.geoAi.updatedAt || new Date().toISOString(),
   };
   writeLocalStorageJson(geoAiCoreStorageKey, nextPayload);
@@ -37966,14 +38443,21 @@ async function loadGeoAiCoreState(force = false) {
     memory: Array.isArray(localPayload.memory) ? localPayload.memory.map(normalizeGeoAiMemoryEntry) : [],
     feedback: Array.isArray(localPayload.feedback) ? localPayload.feedback.map(normalizeGeoAiFeedbackEntry) : [],
     versions: Array.isArray(localPayload.versions) ? localPayload.versions.map(normalizeGeoAiVersionEntry) : [],
-    evidence: Array.isArray(localPayload.evidence) && localPayload.evidence.length ? localPayload.evidence : fallbackEvidence,
+    evidence: Array.isArray(localPayload.evidence) && localPayload.evidence.length ? localPayload.evidence.map(normalizeGeoAiEvidenceEntry) : fallbackEvidence.map(normalizeGeoAiEvidenceEntry),
+    researchLog: Array.isArray(localPayload.researchLog) ? localPayload.researchLog.slice(0, 24) : [],
+    experiments: Array.isArray(localPayload.experiments) ? localPayload.experiments.map(normalizeGeoAiExperimentEntry) : [],
+    qualityGate: localPayload.qualityGate ? normalizeGeoAiQualityGate(localPayload.qualityGate) : null,
+    scheduler: normalizeGeoAiSchedulerState(localPayload.scheduler || {}),
     lastQuestion: String(localPayload.lastQuestion || ""),
     lastAnswer: localPayload.lastAnswer ? normalizeGeoAiAnswerRecord(localPayload.lastAnswer) : null,
+    lastResearch: localPayload.lastResearch || null,
+    lastExperimentRun: localPayload.lastExperimentRun || null,
     updatedAt: localPayload.updatedAt || null,
   };
   if (dom.geoAiQuestionInput && !dom.geoAiQuestionInput.value && state.platformData.geoAi.lastQuestion) {
     setValueIfChanged(dom.geoAiQuestionInput, state.platformData.geoAi.lastQuestion);
   }
+  ensureGeoAiScheduler();
   renderGeoAiCoreCard();
   const backend = await detectBackend(force || !state.backendAvailable);
   if (!backend.available) {
@@ -37989,15 +38473,22 @@ async function loadGeoAiCoreState(force = false) {
       memory: Array.isArray(payload.memory) ? payload.memory.map(normalizeGeoAiMemoryEntry) : state.platformData.geoAi.memory,
       feedback: Array.isArray(payload.feedback) ? payload.feedback.map(normalizeGeoAiFeedbackEntry) : state.platformData.geoAi.feedback,
       versions: Array.isArray(payload.versions) ? payload.versions.map(normalizeGeoAiVersionEntry) : state.platformData.geoAi.versions,
-      evidence: Array.isArray(payload.evidence) && payload.evidence.length ? payload.evidence : fallbackEvidence,
+      evidence: Array.isArray(payload.evidence) && payload.evidence.length ? payload.evidence.map(normalizeGeoAiEvidenceEntry) : fallbackEvidence.map(normalizeGeoAiEvidenceEntry),
+      researchLog: Array.isArray(payload.researchLog) ? payload.researchLog.slice(0, 24) : state.platformData.geoAi.researchLog,
+      experiments: Array.isArray(payload.experiments) ? payload.experiments.map(normalizeGeoAiExperimentEntry) : state.platformData.geoAi.experiments,
+      qualityGate: payload.qualityGate ? normalizeGeoAiQualityGate(payload.qualityGate) : state.platformData.geoAi.qualityGate,
+      scheduler: normalizeGeoAiSchedulerState(payload.scheduler || state.platformData.geoAi.scheduler || {}),
       lastQuestion: String(payload.lastQuestion || state.platformData.geoAi.lastQuestion || ""),
       lastAnswer: payload.lastAnswer ? normalizeGeoAiAnswerRecord(payload.lastAnswer) : state.platformData.geoAi.lastAnswer,
+      lastResearch: payload.lastResearch || state.platformData.geoAi.lastResearch,
+      lastExperimentRun: payload.lastExperimentRun || state.platformData.geoAi.lastExperimentRun,
       updatedAt: payload.updatedAt || payload.fetchedAt || state.platformData.geoAi.updatedAt,
     };
     writeLocalStorageJson(geoAiCoreStorageKey, state.platformData.geoAi);
     if (dom.geoAiQuestionInput && !dom.geoAiQuestionInput.value && state.platformData.geoAi.lastQuestion) {
       setValueIfChanged(dom.geoAiQuestionInput, state.platformData.geoAi.lastQuestion);
     }
+    ensureGeoAiScheduler();
     renderGeoAiCoreCard();
   } catch (error) {
     // El respaldo local sigue operativo.
@@ -38008,6 +38499,8 @@ async function loadGeoAiCoreState(force = false) {
 async function runGeoAiCopilot(question = "") {
   const trimmedQuestion = String(question || "").trim() || `Que debo priorizar ahora en ${getGeoAiScopeLabel(state.entryRoute)}?`;
   const snapshot = buildGeoAiCopilotContextSnapshot();
+  const shouldSearchEvidence = /estudio|paper|norma|evidencia|investig|document/i.test(trimmedQuestion);
+  const research = shouldSearchEvidence ? await runGeoAiResearchAgent(trimmedQuestion) : state.platformData.geoAi.lastResearch;
   const recommendationBundle = buildGeoAiRecommendations(trimmedQuestion, snapshot);
   const evaluation = buildGeoAiEvaluationSnapshot();
   const answer = normalizeGeoAiAnswerRecord({
@@ -38020,12 +38513,17 @@ async function runGeoAiCopilot(question = "") {
     moduleLabel: recommendationBundle.primary.moduleLabel,
     headline: `${recommendationBundle.primary.moduleLabel} recomendado para ${snapshot.scopeLabel}.`,
     copy: recommendationBundle.primary.recommendation.copy,
-    conclusion: `${recommendationBundle.primary.rationale} ${evaluation.headline}`,
+    conclusion: `${recommendationBundle.primary.rationale}${research?.summary ? ` ${research.summary}` : ""} ${evaluation.headline}`,
     rationale: recommendationBundle.primary.rationale,
     tone: evaluation.overallScore >= 75 ? "low" : evaluation.overallScore >= 55 ? "mid" : "high",
     recommendation: recommendationBundle.primary.recommendation,
     alternatives: recommendationBundle.alternatives,
-    evidenceIds: recommendationBundle.evidence.map((item) => item.id),
+    evidenceIds: [
+      ...new Set([
+        ...recommendationBundle.evidence.map((item) => item.id),
+        ...(research?.shortlist || []).slice(0, 2).map((item) => item.id),
+      ]),
+    ],
     createdAt: new Date().toISOString(),
     evaluation,
   });
@@ -38082,14 +38580,17 @@ async function registerGeoAiVersion() {
     setStatus("Se necesita rol tecnico o administrador para registrar una version del GeoAI Core.");
     return;
   }
-  const evaluation = buildGeoAiEvaluationSnapshot();
+  const evaluation = state.platformData.geoAi.qualityGate || buildGeoAiEvaluationSnapshot();
+  const score = Number.isFinite(Number(evaluation.averageCandidateScore))
+    ? Math.round(Number(evaluation.averageCandidateScore))
+    : evaluation.overallScore || 0;
   const versionEntry = normalizeGeoAiVersionEntry({
     id: `geoai-version-${Date.now()}`,
     label: `${GEOAI_CORE_VERSION}-r${(state.platformData.geoAi.versions || []).length + 1}`,
-    status: evaluation.overallScore >= 70 ? "lista para publicar" : "requiere validacion",
-    summary: state.platformData.geoAi.lastAnswer?.headline || evaluation.headline,
+    status: (evaluation.approved ?? (evaluation.overallScore >= 70)) ? "lista para publicar" : "requiere validacion",
+    summary: state.platformData.geoAi.lastAnswer?.headline || evaluation.summary || evaluation.headline,
     route: state.entryRoute,
-    score: evaluation.overallScore,
+    score,
     userName: state.userProfile.name,
     createdAt: new Date().toISOString(),
     evaluation,
@@ -38115,6 +38616,34 @@ function handleGeoAiCoreInteraction(event) {
   }
   const action = button.dataset.geoaiAction;
   const answer = state.platformData.geoAi.lastAnswer;
+  if (action === "research") {
+    runGeoAiResearchAgent(dom.geoAiQuestionInput?.value || state.platformData.geoAi.lastQuestion || "");
+    return;
+  }
+  if (action === "experiments") {
+    runGeoAiExperimentation(dom.geoAiQuestionInput?.value || state.platformData.geoAi.lastQuestion || "");
+    return;
+  }
+  if (action === "cycle") {
+    runGeoAiEvolutionCycle({ query: dom.geoAiQuestionInput?.value || state.platformData.geoAi.lastQuestion || "" });
+    return;
+  }
+  if (action === "toggle-scheduler") {
+    toggleGeoAiScheduler();
+    return;
+  }
+  if (action === "open-evidence" && button.dataset.actionId) {
+    runWorkflowGuideAction(button.dataset.actionId);
+    return;
+  }
+  if (action === "export-research" && state.platformData.geoAi.lastResearch) {
+    downloadTerritorialFile(`geoai_investigacion_${formatDateInput(new Date())}.json`, JSON.stringify(state.platformData.geoAi.lastResearch, null, 2), "application/json;charset=utf-8");
+    return;
+  }
+  if (action === "export-experiments" && state.platformData.geoAi.lastExperimentRun) {
+    downloadTerritorialFile(`geoai_experimentos_${formatDateInput(new Date())}.json`, JSON.stringify(state.platformData.geoAi.lastExperimentRun, null, 2), "application/json;charset=utf-8");
+    return;
+  }
   if (action === "open-primary" && answer?.recommendation?.actionId) {
     runWorkflowGuideAction(answer.recommendation.actionId);
     return;
@@ -38146,6 +38675,11 @@ function renderGeoAiCoreCard() {
   const evidence = Array.isArray(geoAi.evidence) && geoAi.evidence.length ? geoAi.evidence : buildGeoAiEvidenceLibrary();
   const answer = geoAi.lastAnswer ? normalizeGeoAiAnswerRecord(geoAi.lastAnswer) : null;
   const evaluation = buildGeoAiEvaluationSnapshot();
+  const scheduler = normalizeGeoAiSchedulerState(geoAi.scheduler || {});
+  const qualityGate = geoAi.qualityGate ? normalizeGeoAiQualityGate(geoAi.qualityGate) : null;
+  const lastResearch = geoAi.lastResearch || null;
+  const lastExperimentRun = geoAi.lastExperimentRun || null;
+  const experiments = Array.isArray(geoAi.experiments) ? geoAi.experiments.map(normalizeGeoAiExperimentEntry).slice(0, 4) : [];
   const usefulCount = (geoAi.feedback || []).filter((item) => item.kind === "useful").length;
   const adjustCount = (geoAi.feedback || []).filter((item) => item.kind === "adjust").length;
   const latestVersion = (geoAi.versions || [])[0] || null;
@@ -38169,6 +38703,12 @@ function renderGeoAiCoreCard() {
       <span class="planning-pill emphasis">${(geoAi.feedback || []).length} feedback</span>
       <span class="planning-pill emphasis">${(geoAi.versions || []).length} versiones</span>
       <span class="planning-pill emphasis">${evidence.length} evidencias</span>
+    </div>
+    <div class="dashboard-action-row">
+      <button class="secondary-button" type="button" data-geoai-action="research">Investigar</button>
+      <button class="ghost-button" type="button" data-geoai-action="experiments">Probar experimentos</button>
+      <button class="ghost-button" type="button" data-geoai-action="cycle">Ciclo completo</button>
+      <button class="ghost-button" type="button" data-geoai-action="toggle-scheduler">${scheduler.enabled ? "Pausar scheduler" : "Programar mejora"}</button>
     </div>
     ${answer ? `
       <article class="territorial-export-card">
@@ -38201,6 +38741,84 @@ function renderGeoAiCoreCard() {
         <p class="territorial-readout-copy">El GeoAI Core conecta evidencia, memoria, feedback y el estado real del portal para recomendar el siguiente modulo.</p>
       </article>
     `}
+    <article class="territorial-export-card">
+      <div class="territorial-export-head">
+        <div>
+          <p class="section-kicker">IA investigadora</p>
+          <h4>${escapeHtmlContent(lastResearch?.summary || "Lista para buscar estudios relevantes por tema y por ruta.")}</h4>
+        </div>
+        <span class="planning-pill emphasis">${escapeHtmlContent(lastResearch?.routeLabel || getRouteWorkLabel(state.entryRoute))}</span>
+      </div>
+      <p class="territorial-readout-copy">${escapeHtmlContent(lastResearch?.query || "Pregunta por riego, clima urbano, catastro, movilidad, riesgo, GPS o 3D y el agente priorizara la evidencia mas util.")}</p>
+      <div class="action-row analysis-actions">
+        <button class="ghost-button" type="button" data-geoai-action="export-research">Exportar investigacion</button>
+        ${lastResearch?.shortlist?.[0]?.moduleActionId ? `<button class="ghost-button" type="button" data-geoai-action="open-evidence" data-action-id="${escapeHtmlContent(lastResearch.shortlist[0].moduleActionId)}">Abrir evidencia lider</button>` : ""}
+      </div>
+      <div class="decision-list compact">
+        ${(lastResearch?.shortlist?.length ? lastResearch.shortlist.slice(0, 4) : evidence.slice(0, 4)).map((item) => `
+          <article>
+            <strong>${escapeHtmlContent(item.title)}</strong>
+            <p>${escapeHtmlContent(item.objective || item.focus)}. Variables: ${escapeHtmlContent((item.variables || ["criterios del modulo"]).slice(0, 3).join(", "))}.</p>
+          </article>
+        `).join("")}
+      </div>
+    </article>
+    <article class="territorial-export-card">
+      <div class="territorial-export-head">
+        <div>
+          <p class="section-kicker">IA evaluadora</p>
+          <h4>${escapeHtmlContent(lastExperimentRun?.summary || "Lista para traducir evidencia en pruebas comparables.")}</h4>
+        </div>
+        <span class="planning-pill emphasis">${experiments.filter((item) => item.approved).length}/${experiments.length || 0} aprobados</span>
+      </div>
+      <p class="territorial-readout-copy">${escapeHtmlContent(qualityGate?.summary || "La puerta de calidad todavia no tiene una corrida registrada.")}</p>
+      <div class="action-row analysis-actions">
+        <button class="ghost-button" type="button" data-geoai-action="export-experiments">Exportar pruebas</button>
+        ${latestVersion ? `<button class="ghost-button" type="button" data-geoai-action="log-answer">Bitacora</button>` : ""}
+      </div>
+      <div class="decision-grid">
+        ${(experiments.length ? experiments : [{
+          title: "Sin experimentos",
+          baselineScore: 0,
+          candidateScore: 0,
+          delta: 0,
+          stabilityScore: 0,
+          approved: false,
+          summary: "Corre investigar o ciclo completo para proponer pruebas por dominio.",
+        }]).map((item) => `
+          <article class="decision-card tone-${item.approved ? "low" : item.delta >= 3 ? "mid" : "high"}">
+            <p class="candidate-rank">${escapeHtmlContent(item.domain || "GeoAI")}</p>
+            <h5>${item.candidateScore || 0}/100</h5>
+            <p>${escapeHtmlContent(item.summary || "")}</p>
+            <p>Base ${item.baselineScore || 0} | Delta ${item.delta || 0} | Estabilidad ${item.stabilityScore || 0}</p>
+          </article>
+        `).join("")}
+      </div>
+    </article>
+    <article class="territorial-export-card">
+      <div class="territorial-export-head">
+        <div>
+          <p class="section-kicker">IA evolutiva controlada</p>
+          <h4>${escapeHtmlContent(qualityGate?.approved ? "Lista para publicar mejoras controladas." : "Aun requiere mas evidencia o estabilidad.")}</h4>
+        </div>
+        <span class="planning-pill emphasis">${scheduler.enabled ? `Scheduler ${scheduler.cadenceHours}h` : "Scheduler manual"}</span>
+      </div>
+      <p class="territorial-readout-copy">${escapeHtmlContent(scheduler.enabled ? `Siguiente corrida ${scheduler.nextRunAt ? new Date(scheduler.nextRunAt).toLocaleString("es-EC") : "pendiente"}.` : "El scheduler puede ejecutar un ciclo nocturno o periodico mientras el portal este abierto.")}</p>
+      <div class="decision-list compact">
+        <article>
+          <strong>Puerta de calidad</strong>
+          <p>${escapeHtmlContent(qualityGate?.summary || "Sin decision automatica registrada.")}</p>
+        </article>
+        <article>
+          <strong>Comparacion</strong>
+          <p>${qualityGate ? `${qualityGate.averageCandidateScore}/100 candidato, delta ${qualityGate.averageDelta}, estabilidad ${qualityGate.averageStabilityScore}/100.` : "Aun no se ha comparado baseline vs propuesta."}</p>
+        </article>
+        <article>
+          <strong>Publicacion</strong>
+          <p>${escapeHtmlContent(latestVersion ? `${latestVersion.label} - ${latestVersion.status}` : "Todavia no hay version aprobada por el ciclo evolutivo.")}</p>
+        </article>
+      </div>
+    </article>
     <div class="decision-grid">
       ${evaluation.stages.map((stage) => `
         <article class="decision-card tone-${stage.score >= 75 ? "low" : stage.score >= 55 ? "mid" : "high"}">

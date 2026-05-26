@@ -1986,11 +1986,15 @@ function Get-PlatformGeoAiPayload($Body) {
   $memoryLimit = [Math]::Min([Math]::Max([int](Convert-ToInvariantDouble $(if ($Body -and $Body.PSObject.Properties.Name -contains "memoryLimit") { $Body.memoryLimit } else { 32 }) 32), 1), 64)
   $feedbackLimit = [Math]::Min([Math]::Max([int](Convert-ToInvariantDouble $(if ($Body -and $Body.PSObject.Properties.Name -contains "feedbackLimit") { $Body.feedbackLimit } else { 64 }) 64), 1), 120)
   $versionLimit = [Math]::Min([Math]::Max([int](Convert-ToInvariantDouble $(if ($Body -and $Body.PSObject.Properties.Name -contains "versionLimit") { $Body.versionLimit } else { 24 }) 24), 1), 60)
+  $researchLimit = [Math]::Min([Math]::Max([int](Convert-ToInvariantDouble $(if ($Body -and $Body.PSObject.Properties.Name -contains "researchLimit") { $Body.researchLimit } else { 24 }) 24), 1), 60)
+  $experimentLimit = [Math]::Min([Math]::Max([int](Convert-ToInvariantDouble $(if ($Body -and $Body.PSObject.Properties.Name -contains "experimentLimit") { $Body.experimentLimit } else { 24 }) 24), 1), 60)
   $feed = Read-LiveJsonFile $PlatformGeoAiPath
   $memory = @()
   $feedback = @()
   $versions = @()
   $evidence = @()
+  $researchLog = @()
+  $experiments = @()
   if ($feed -and $feed.memory) {
     $memory = @(
       $feed.memory |
@@ -2015,6 +2019,20 @@ function Get-PlatformGeoAiPayload($Body) {
   if ($feed -and $feed.evidence) {
     $evidence = @($feed.evidence)
   }
+  if ($feed -and $feed.researchLog) {
+    $researchLog = @(
+      $feed.researchLog |
+        Sort-Object { [datetime]$_.createdAt } -Descending |
+        Select-Object -First $researchLimit
+    )
+  }
+  if ($feed -and $feed.experiments) {
+    $experiments = @(
+      $feed.experiments |
+        Sort-Object { [datetime]$_.createdAt } -Descending |
+        Select-Object -First $experimentLimit
+    )
+  }
   return @{
     ok = $true
     fetchedAt = if ($feed -and $feed.fetchedAt) { [string]$feed.fetchedAt } else { (Get-Date).ToString("o") }
@@ -2023,8 +2041,14 @@ function Get-PlatformGeoAiPayload($Body) {
     feedback = $feedback
     versions = $versions
     evidence = $evidence
+    researchLog = $researchLog
+    experiments = $experiments
+    qualityGate = if ($feed -and $feed.PSObject.Properties.Name -contains "qualityGate") { $feed.qualityGate } else { $null }
+    scheduler = if ($feed -and $feed.PSObject.Properties.Name -contains "scheduler") { $feed.scheduler } else { $null }
     lastQuestion = if ($feed -and $feed.lastQuestion) { [string]$feed.lastQuestion } else { "" }
     lastAnswer = if ($feed -and $feed.PSObject.Properties.Name -contains "lastAnswer") { $feed.lastAnswer } else { $null }
+    lastResearch = if ($feed -and $feed.PSObject.Properties.Name -contains "lastResearch") { $feed.lastResearch } else { $null }
+    lastExperimentRun = if ($feed -and $feed.PSObject.Properties.Name -contains "lastExperimentRun") { $feed.lastExperimentRun } else { $null }
   }
 }
 
@@ -2033,6 +2057,8 @@ function Save-PlatformGeoAiState($Body) {
   $feedback = @()
   $versions = @()
   $evidence = @()
+  $researchLog = @()
+  $experiments = @()
   if ($Body -and $Body.PSObject.Properties.Name -contains "memory" -and $Body.memory) {
     $memory = @(
       @($Body.memory) |
@@ -2057,6 +2083,20 @@ function Save-PlatformGeoAiState($Body) {
   if ($Body -and $Body.PSObject.Properties.Name -contains "evidence" -and $Body.evidence) {
     $evidence = @($Body.evidence)
   }
+  if ($Body -and $Body.PSObject.Properties.Name -contains "researchLog" -and $Body.researchLog) {
+    $researchLog = @(
+      @($Body.researchLog) |
+        Sort-Object { [datetime]$_.createdAt } -Descending |
+        Select-Object -First 60
+    )
+  }
+  if ($Body -and $Body.PSObject.Properties.Name -contains "experiments" -and $Body.experiments) {
+    $experiments = @(
+      @($Body.experiments) |
+        Sort-Object { [datetime]$_.createdAt } -Descending |
+        Select-Object -First 60
+    )
+  }
   $payload = [ordered]@{
     fetchedAt = (Get-Date).ToString("o")
     updatedAt = if ($Body -and $Body.PSObject.Properties.Name -contains "updatedAt" -and -not [string]::IsNullOrWhiteSpace([string]$Body.updatedAt)) { [string]$Body.updatedAt } else { (Get-Date).ToString("o") }
@@ -2064,8 +2104,14 @@ function Save-PlatformGeoAiState($Body) {
     feedback = $feedback
     versions = $versions
     evidence = $evidence
+    researchLog = $researchLog
+    experiments = $experiments
+    qualityGate = if ($Body -and $Body.PSObject.Properties.Name -contains "qualityGate") { $Body.qualityGate } else { $null }
+    scheduler = if ($Body -and $Body.PSObject.Properties.Name -contains "scheduler") { $Body.scheduler } else { $null }
     lastQuestion = if ($Body -and $Body.PSObject.Properties.Name -contains "lastQuestion") { [string]$Body.lastQuestion } else { "" }
     lastAnswer = if ($Body -and $Body.PSObject.Properties.Name -contains "lastAnswer") { $Body.lastAnswer } else { $null }
+    lastResearch = if ($Body -and $Body.PSObject.Properties.Name -contains "lastResearch") { $Body.lastResearch } else { $null }
+    lastExperimentRun = if ($Body -and $Body.PSObject.Properties.Name -contains "lastExperimentRun") { $Body.lastExperimentRun } else { $null }
   }
   Ensure-ParentDirectory $PlatformGeoAiPath
   $payload | ConvertTo-Json -Depth 16 | Set-Content -LiteralPath $PlatformGeoAiPath -Encoding UTF8
@@ -2077,6 +2123,8 @@ function Save-PlatformGeoAiState($Body) {
     feedbackCount = $feedback.Count
     versionCount = $versions.Count
     evidenceCount = $evidence.Count
+    researchCount = $researchLog.Count
+    experimentCount = $experiments.Count
     lastQuestion = $payload.lastQuestion
     lastAnswer = $payload.lastAnswer
     message = "Estado del GeoAI Core almacenado."
