@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="geoportal-version" content="20260520-12">
+  <meta name="geoportal-version" content="20260526-1">
   <title>Centro de Decisiones | Mejia y Quevedo</title>
   <meta
     name="description"
@@ -33,7 +33,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260520-12">
+  <link rel="stylesheet" href="./styles.css?v=20260526-1">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -158,7 +158,7 @@
           <span class="status-dot"></span>
           <div class="user-pill-copy">
             <strong id="userNameLabel">Usuario publico</strong>
-              <span id="userVersionLabel">v20260520-12</span>
+              <span id="userVersionLabel">v20260526-1</span>
           </div>
           <label class="user-role-field" for="userRoleSelect">
             <span>Rol</span>
@@ -1666,6 +1666,34 @@
                 Aqui aparecera el estado del backend y el catalogo de endpoints disponibles.
               </div>
             </article>
+
+            <article id="geoAiCoreCard" class="module-card product-card" data-module-track="global">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">GeoAI Core</p>
+                  <h3>Nucleo inteligente del geoportal</h3>
+                </div>
+                <button id="refreshGeoAiCoreBtn" class="secondary-button" type="button">Actualizar IA</button>
+              </div>
+              <p class="module-copy">
+                Une copiloto, memoria operativa, biblioteca de evidencia, feedback y versionado de inteligencia para que el geoportal recomiende, aprenda y evolucione con control.
+              </p>
+              <div class="planning-toolbar project-toolbar">
+                <label class="field compact project-note-field">
+                  <span>Pregunta al copiloto</span>
+                  <input id="geoAiQuestionInput" type="text" placeholder="Ej. Que modulo debo correr para validar riesgo hidrico y soporte territorial?">
+                </label>
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="askGeoAiBtn" class="secondary-button" type="button">Consultar copiloto</button>
+                <button id="saveGeoAiFeedbackBtn" class="ghost-button" type="button" data-feedback-kind="useful">Feedback util</button>
+                <button id="saveGeoAiAdjustBtn" class="ghost-button" type="button" data-feedback-kind="adjust">Pide ajuste</button>
+                <button id="publishGeoAiVersionBtn" class="ghost-button" type="button" data-requires-role="tecnico">Registrar version</button>
+              </div>
+              <div id="geoAiCoreBoard" class="decision-board empty-state">
+                Aqui aparecera el copiloto del geoportal con memoria, evidencia, recomendaciones, evaluacion y versionado.
+              </div>
+            </article>
           </section>
         </div>
 
@@ -1997,6 +2025,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260520-12" defer></script>
+  <script src="./app.js?v=20260526-1" defer></script>
 </body>
 </html>

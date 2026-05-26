@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260520-12";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260526-1";
 
 const layerCatalog = [
   {
@@ -156,6 +156,7 @@ const gpsRouteVisibleModuleCardIds = new Set([
   "decisionLogCard",
   "accessRolesCard",
   "apiCenterCard",
+  "geoAiCoreCard",
 ]);
 
 const cadastreRouteVisibleModuleCardIds = new Set([
@@ -169,6 +170,7 @@ const cadastreRouteVisibleModuleCardIds = new Set([
   "decisionLogCard",
   "accessRolesCard",
   "apiCenterCard",
+  "geoAiCoreCard",
 ]);
 
 const officialSourceCatalog = {
@@ -870,6 +872,7 @@ const backendService = {
   platformProjectsPath: "/api/platform/projects",
   platformDecisionLogPath: "/api/platform/decision-log",
   platformUsersPath: "/api/platform/users",
+  platformGeoAiPath: "/api/platform/geoai",
   platformManifestPath: "/api/platform/manifest",
   localIpPath: "/api/network/local-ip",
   defaultOrigins: ["http://127.0.0.1:8765", "http://localhost:8765"],
@@ -898,6 +901,8 @@ const gpsRelaySessionStorageKey = "geoportal.gpsRelay.sessionId";
 const projectStorageKey = "geoportal.projects.v1";
 const decisionLogStorageKey = "geoportal.decisionLog.v1";
 const userProfileStorageKey = "geoportal.userProfile.v1";
+const geoAiCoreStorageKey = "geoportal.geoAiCore.v1";
+const GEOAI_CORE_VERSION = "2026.05.26-core1";
 
 const roleCatalog = {
   administrador: {
@@ -3784,6 +3789,15 @@ const state = {
     decisionLog: [],
     manifest: null,
     users: [],
+    geoAi: {
+      memory: [],
+      feedback: [],
+      versions: [],
+      evidence: [],
+      lastQuestion: "",
+      lastAnswer: null,
+      updatedAt: null,
+    },
   },
   gpsTracking: {
     mode: "idle",
@@ -5991,6 +6005,14 @@ function cacheDom() {
   dom.refreshApiCenterBtn = document.querySelector("#refreshApiCenterBtn");
   dom.downloadApiManifestBtn = document.querySelector("#downloadApiManifestBtn");
   dom.apiCenterBoard = document.querySelector("#apiCenterBoard");
+  dom.geoAiCoreCard = document.querySelector("#geoAiCoreCard");
+  dom.refreshGeoAiCoreBtn = document.querySelector("#refreshGeoAiCoreBtn");
+  dom.geoAiQuestionInput = document.querySelector("#geoAiQuestionInput");
+  dom.askGeoAiBtn = document.querySelector("#askGeoAiBtn");
+  dom.saveGeoAiFeedbackBtn = document.querySelector("#saveGeoAiFeedbackBtn");
+  dom.saveGeoAiAdjustBtn = document.querySelector("#saveGeoAiAdjustBtn");
+  dom.publishGeoAiVersionBtn = document.querySelector("#publishGeoAiVersionBtn");
+  dom.geoAiCoreBoard = document.querySelector("#geoAiCoreBoard");
   dom.runPlanningBtn = document.querySelector("#runPlanningBtn");
   dom.focusPlanningBtn = document.querySelector("#focusPlanningBtn");
   dom.clearPlanningBtn = document.querySelector("#clearPlanningBtn");
@@ -6277,6 +6299,9 @@ function bootstrapApp() {
   });
   loadPlatformManifest().catch((error) => {
     console.warn("No se pudo cargar el manifest de API.", error);
+  });
+  loadGeoAiCoreState().catch((error) => {
+    console.warn("No se pudo cargar el estado del GeoAI Core.", error);
   });
   loadOfficialHydroCatalog().catch((error) => {
     console.warn("No se pudo precargar la hidrologia oficial local.", error);
@@ -6729,6 +6754,18 @@ function bindUI() {
   dom.userNameInput?.addEventListener("change", () => updateUserProfile({ name: dom.userNameInput.value || "Usuario publico" }, { skipPersist: true, syncInputs: true }));
   dom.refreshApiCenterBtn?.addEventListener("click", () => loadPlatformManifest(true));
   dom.downloadApiManifestBtn?.addEventListener("click", downloadApiManifest);
+  dom.refreshGeoAiCoreBtn?.addEventListener("click", () => loadGeoAiCoreState(true));
+  dom.askGeoAiBtn?.addEventListener("click", () => runGeoAiCopilot(dom.geoAiQuestionInput?.value || ""));
+  dom.geoAiQuestionInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      runGeoAiCopilot(dom.geoAiQuestionInput?.value || "");
+    }
+  });
+  dom.saveGeoAiFeedbackBtn?.addEventListener("click", () => recordGeoAiFeedback(dom.saveGeoAiFeedbackBtn?.dataset.feedbackKind || "useful"));
+  dom.saveGeoAiAdjustBtn?.addEventListener("click", () => recordGeoAiFeedback(dom.saveGeoAiAdjustBtn?.dataset.feedbackKind || "adjust"));
+  dom.publishGeoAiVersionBtn?.addEventListener("click", registerGeoAiVersion);
+  dom.geoAiCoreBoard?.addEventListener("click", handleGeoAiCoreInteraction);
 
   if (dom.sensorSelect) {
     dom.sensorSelect.addEventListener("change", () => {
@@ -8576,6 +8613,7 @@ function getModuleCardLabel(card) {
     decisionLogCard: "Bitacora",
     accessRolesCard: "Roles",
     apiCenterCard: "API",
+    geoAiCoreCard: "GeoAI",
   };
   if (card?.id && shortLabels[card.id]) {
     return shortLabels[card.id];
@@ -8729,14 +8767,14 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
     growth: new Set(["mobilityCard", "landChangeCard", "territorialScenarioCard", "zoningPatternsCard", "housingPatternsCard", "urbanClimateCard"]),
     strategy: new Set(["fodaCameCard", "territorialDecisionCard", "territorialAlertsCard", "aiGeoCard", "zoningPatternsCard", "housingPatternsCard", "urbanClimateCard"]),
     validation: new Set(["planning3dCard", "digitalCadastreCard"]),
-    product: new Set(["executiveDashboardCard", "reportCenterCard", "scenarioLabCard", "timeSeriesCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard"]),
+    product: new Set(["executiveDashboardCard", "reportCenterCard", "scenarioLabCard", "timeSeriesCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
   };
 
   const cadastreFilters = {
     core: new Set(["digitalCadastreCard"]),
     official: new Set(["officialDataCard", "digitalCadastreCard"]),
     validation: new Set(["digitalCadastreCard"]),
-    product: new Set(["executiveDashboardCard", "reportCenterCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard"]),
+    product: new Set(["executiveDashboardCard", "reportCenterCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
   };
 
   const agronomyFilters = {
@@ -8746,14 +8784,14 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
     climate: new Set(["climateCard", "inamhiCard", "agroSuitabilityCard"]),
     operations: new Set(["gpsCard"]),
     assistant: new Set(["wizardCard", "aiGeoCard"]),
-    product: new Set(["executiveDashboardCard", "reportCenterCard", "scenarioLabCard", "timeSeriesCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard"]),
+    product: new Set(["executiveDashboardCard", "reportCenterCard", "scenarioLabCard", "timeSeriesCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
   };
 
   const gpsFilters = {
     tracking: new Set(["gpsCard"]),
     alerts: new Set(["gpsCard", "alertCenterCard", "decisionLogCard"]),
     records: new Set(["reportCenterCard", "projectRegistryCard", "decisionLogCard"]),
-    management: new Set(["executiveDashboardCard", "reportCenterCard", "projectRegistryCard", "accessRolesCard", "apiCenterCard"]),
+    management: new Set(["executiveDashboardCard", "reportCenterCard", "projectRegistryCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
   };
 
   const filters = isCadastreRoute(route)
@@ -8790,6 +8828,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
       decisionLogCard: true,
       accessRolesCard: true,
       apiCenterCard: true,
+      geoAiCoreCard: false,
     };
   }
 
@@ -8825,6 +8864,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
       decisionLogCard: true,
       accessRolesCard: true,
       apiCenterCard: true,
+      geoAiCoreCard: false,
     };
   }
 
@@ -8839,6 +8879,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
       decisionLogCard: true,
       accessRolesCard: true,
       apiCenterCard: true,
+      geoAiCoreCard: false,
     };
   }
 
@@ -8863,6 +8904,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
     decisionLogCard: true,
     accessRolesCard: true,
     apiCenterCard: true,
+    geoAiCoreCard: false,
   };
 }
 
@@ -37335,6 +37377,7 @@ function buildLocalPlatformManifest() {
       { path: backendService.platformProjectsPath, method: "POST", use: "Proyectos guardados" },
       { path: backendService.platformDecisionLogPath, method: "POST", use: "Bitacora de decisiones" },
       { path: backendService.platformUsersPath, method: "POST", use: "Perfil de usuario local" },
+      { path: backendService.platformGeoAiPath, method: "POST", use: "Estado del GeoAI Core" },
       { path: backendService.platformManifestPath, method: "GET", use: "Manifest de integracion" },
       { path: "/api/planning/3d/manifest", method: "GET", use: "Disponibilidad 3D" },
     ],
@@ -37393,6 +37436,824 @@ function renderApiCenterCard() {
 
 function downloadApiManifest() {
   downloadTerritorialFile(`geoportal_api_manifest_${APP_VERSION}.json`, JSON.stringify(state.platformData.manifest || buildLocalPlatformManifest(), null, 2), "application/json;charset=utf-8");
+}
+
+function normalizeGeoAiAnswerRecord(answer = {}) {
+  return {
+    id: String(answer.id || `geoai-answer-${Date.now()}`),
+    question: String(answer.question || ""),
+    route: isGpsRoute(answer.route) ? "gps" : isCadastreRoute(answer.route) ? "catastro" : isPlanningRoute(answer.route) ? "planificacion" : "agronomia",
+    routeLabel: String(answer.routeLabel || getRouteWorkLabel(answer.route || state.entryRoute)),
+    scopeLabel: String(answer.scopeLabel || ""),
+    domain: String(answer.domain || "General"),
+    moduleLabel: String(answer.moduleLabel || "Copiloto del geoportal"),
+    headline: String(answer.headline || "Sin recomendacion disponible."),
+    copy: String(answer.copy || "La recomendacion del GeoAI aparecera aqui."),
+    conclusion: String(answer.conclusion || "Sin conclusion adicional."),
+    rationale: String(answer.rationale || ""),
+    tone: ["low", "mid", "high", "base"].includes(String(answer.tone || "")) ? String(answer.tone) : "base",
+    recommendation: answer.recommendation && typeof answer.recommendation === "object"
+      ? {
+          actionId: String(answer.recommendation.actionId || ""),
+          label: String(answer.recommendation.label || "Abrir modulo"),
+          copy: String(answer.recommendation.copy || ""),
+        }
+      : null,
+    alternatives: Array.isArray(answer.alternatives)
+      ? answer.alternatives.slice(0, 3).map((item, index) => ({
+          actionId: String(item?.actionId || `geoai-alt-${index + 1}`),
+          label: String(item?.label || `Alternativa ${index + 1}`),
+          copy: String(item?.copy || ""),
+        }))
+      : [],
+    evidenceIds: Array.isArray(answer.evidenceIds) ? answer.evidenceIds.map((item) => String(item)) : [],
+    createdAt: answer.createdAt || new Date().toISOString(),
+    evaluation: answer.evaluation && typeof answer.evaluation === "object"
+      ? answer.evaluation
+      : null,
+  };
+}
+
+function normalizeGeoAiMemoryEntry(entry = {}) {
+  return {
+    id: String(entry.id || `geoai-memory-${Date.now()}`),
+    question: String(entry.question || entry.lastQuestion || ""),
+    route: isGpsRoute(entry.route) ? "gps" : isCadastreRoute(entry.route) ? "catastro" : isPlanningRoute(entry.route) ? "planificacion" : "agronomia",
+    scopeLabel: String(entry.scopeLabel || ""),
+    domain: String(entry.domain || "General"),
+    createdAt: entry.createdAt || new Date().toISOString(),
+    answer: normalizeGeoAiAnswerRecord(entry.answer || entry.lastAnswer || {}),
+  };
+}
+
+function normalizeGeoAiFeedbackEntry(entry = {}) {
+  const kind = String(entry.kind || "useful").toLowerCase();
+  return {
+    id: String(entry.id || `geoai-feedback-${Date.now()}`),
+    kind: kind === "adjust" ? "adjust" : "useful",
+    route: isGpsRoute(entry.route) ? "gps" : isCadastreRoute(entry.route) ? "catastro" : isPlanningRoute(entry.route) ? "planificacion" : "agronomia",
+    question: String(entry.question || ""),
+    note: String(entry.note || ""),
+    answerId: String(entry.answerId || ""),
+    answerHeadline: String(entry.answerHeadline || ""),
+    userName: String(entry.userName || state.userProfile.name || "Usuario publico"),
+    roleId: roleCatalog[entry.roleId] ? entry.roleId : state.userProfile.roleId || "tecnico",
+    createdAt: entry.createdAt || new Date().toISOString(),
+  };
+}
+
+function normalizeGeoAiVersionEntry(entry = {}) {
+  return {
+    id: String(entry.id || `geoai-version-${Date.now()}`),
+    label: String(entry.label || `${GEOAI_CORE_VERSION}-${Date.now()}`),
+    status: String(entry.status || "candidato"),
+    summary: String(entry.summary || "Version del GeoAI Core registrada."),
+    route: isGpsRoute(entry.route) ? "gps" : isCadastreRoute(entry.route) ? "catastro" : isPlanningRoute(entry.route) ? "planificacion" : "agronomia",
+    score: Number.isFinite(Number(entry.score)) ? Math.round(Number(entry.score)) : 0,
+    userName: String(entry.userName || state.userProfile.name || "Usuario publico"),
+    createdAt: entry.createdAt || new Date().toISOString(),
+    evaluation: entry.evaluation && typeof entry.evaluation === "object" ? entry.evaluation : null,
+  };
+}
+
+function buildGeoAiEvidenceLibrary() {
+  return [
+    {
+      id: "catastro-visible-boundaries",
+      domain: "Catastro",
+      sourceType: "estudio",
+      title: "Visible cadastral boundaries with deep learning",
+      focus: "Delimitacion visible de predios a partir de imagen",
+      method: "Segmentacion de bordes visibles, confianza por tramo y revision asistida.",
+      applicability: "Base para ajustar hover, click y revision de linderos visibles.",
+      moduleActionId: "planning-cadastre",
+      moduleLabel: "Catastro asistido",
+    },
+    {
+      id: "catastro-uav-boundary-detection",
+      domain: "Catastro",
+      sourceType: "estudio",
+      title: "UAV boundary detection for cadastral workflows",
+      focus: "Predios, evidencia de campo y ajuste fino con soporte fotogrametrico",
+      method: "Cruce entre bordes visibles, ortomosaico y control tecnico.",
+      applicability: "Refuerza la sincronizacion con dron, RTK y revision de campo.",
+      moduleActionId: "cadastre-focus",
+      moduleLabel: "Revision predial",
+    },
+    {
+      id: "catastro-norma-ecuador",
+      domain: "Catastro",
+      sourceType: "norma",
+      title: "Norma Tecnica Nacional de Catastros",
+      focus: "Control geometrico, ficha y flujo tecnico",
+      method: "Estandares minimos para identificacion, consistencia y trazabilidad predial.",
+      applicability: "Soporte para topologia, ficha predial y revision formal.",
+      moduleActionId: "planning-cadastre",
+      moduleLabel: "Control catastral",
+    },
+    {
+      id: "territorio-dmq-zonificacion",
+      domain: "Territorio",
+      sourceType: "estudio",
+      title: "Analisis multidimensional del DMQ: patrones de zonificacion",
+      focus: "Patrones territoriales, vitalidad y tension urbana",
+      method: "Cruce de estructura urbana, centralidades, borde y compatibilidad.",
+      applicability: "Se traduce en la capa de zonificacion, lectura 3D y comparador territorial.",
+      moduleActionId: "planning-zoning",
+      moduleLabel: "Patrones territoriales",
+    },
+    {
+      id: "territorio-dmq-vivienda",
+      domain: "Territorio",
+      sourceType: "estudio",
+      title: "Patrones de vivienda en el DMQ",
+      focus: "Oferta relativa, tension de vivienda y tipologias",
+      method: "Lectura de plataformas digitales y patron urbano comparado.",
+      applicability: "Base para vivienda, demanda territorial y prioridad de equipamientos.",
+      moduleActionId: "planning-housing",
+      moduleLabel: "Patrones de vivienda",
+    },
+    {
+      id: "territorio-clima-urbano",
+      domain: "Territorio",
+      sourceType: "regla",
+      title: "Clima urbano y corredores de aire frio",
+      focus: "Ventilacion, retencion termica y mitigacion del calor",
+      method: "Reservas de ventilacion, nodos de enfriamiento y zonas de retencion.",
+      applicability: "Se traduce en modo Clima, alertas y propuesta 3D.",
+      moduleActionId: "planning-climate",
+      moduleLabel: "Clima urbano",
+    },
+    {
+      id: "agronomia-riego-caudal",
+      domain: "Agronomia",
+      sourceType: "regla",
+      title: "Caudal de riego y prioridad hidrica por lote",
+      focus: "Capacidad del sistema, necesidad del cultivo y aforo real",
+      method: "Cruza emisores, ETc, lluvia, superficie y soporte hidrico oficial.",
+      applicability: "Base para recomendacion de riego y soporte de agua por lote.",
+      moduleActionId: "agronomy-water",
+      moduleLabel: "Red hidrica y riego",
+    },
+    {
+      id: "agronomia-cultivo-recomendacion",
+      domain: "Agronomia",
+      sourceType: "regla",
+      title: "Recomendacion por cultivo y estres",
+      focus: "Aptitud agroclimatica, estres y mejor lote",
+      method: "Scoring por agua, clima, relieve y soporte del cultivo.",
+      applicability: "Se refleja en aptitud agroclimatica, recomendacion y dashboard.",
+      moduleActionId: "agronomy-suitability",
+      moduleLabel: "Aptitud agroclimatica",
+    },
+    {
+      id: "gps-geofence-intelligence",
+      domain: "GPS",
+      sourceType: "regla",
+      title: "Geocercas, replay y desvio operativo",
+      focus: "Control de corredor, alertas y trazabilidad",
+      method: "Replay, historial exportable, multiples geocercas y bitacora de eventos.",
+      applicability: "Base del centro GPS standalone y del control operativo real.",
+      moduleActionId: "gps-corridor",
+      moduleLabel: "GPS operativo",
+    },
+    {
+      id: "planning3d-urban-reading",
+      domain: "3D",
+      sourceType: "regla",
+      title: "Lectura urbana 3D de corredor, zonificacion y propuesta",
+      focus: "Calles, espacio publico, clima, riesgo, equipamientos y propuesta",
+      method: "Escenarios tematicos con hover, click, fichas y comparacion urbana.",
+      applicability: "Se traduce en el Centro 3D urbano y sus modos de decision.",
+      moduleActionId: "planning-3d",
+      moduleLabel: "Visor 3D",
+    },
+    {
+      id: "geoai-rag-core",
+      domain: "GeoAI",
+      sourceType: "arquitectura",
+      title: "RAG para conocimiento geoespacial",
+      focus: "Buscar, leer, resumir y citar evidencia en vez de improvisar",
+      method: "Biblioteca de evidencia, copiloto, memoria y recuperacion contextual.",
+      applicability: "Base para el copiloto IA del geoportal y sus respuestas guiadas.",
+      moduleActionId: "suite-dashboard",
+      moduleLabel: "GeoAI Core",
+    },
+    {
+      id: "geoai-mlops-core",
+      domain: "GeoAI",
+      sourceType: "arquitectura",
+      title: "MLOps y evolucion controlada",
+      focus: "Aprender sin romper produccion",
+      method: "Observar, aprender, evaluar, publicar y dejar bitacora versionada.",
+      applicability: "Base para feedback, versionado de inteligencia y mejora continua controlada.",
+      moduleActionId: "suite-dashboard",
+      moduleLabel: "GeoAI Core",
+    },
+  ];
+}
+
+function getGeoAiScopeLabel(route = state.entryRoute || "agronomia") {
+  if (isGpsRoute(route)) {
+    return getAgronomyAreaProfile(state.agronomyAreaId).scopeLabel;
+  }
+  if (isCadastreRoute(route) || isPlanningRoute(route)) {
+    return getTerritorialAreaProfile(state.territorialAreaId).scopeLabel;
+  }
+  return getCurrentAgronomyScopeLabel();
+}
+
+function buildGeoAiCopilotContextSnapshot() {
+  const route = state.entryRoute || "agronomia";
+  const alerts = buildExecutiveAlertList();
+  const activeProject = (state.platformData.projects || []).find((item) => item.id === state.platformData.activeProjectId) || null;
+  const cadastreCandidate = getDigitalCadastreActiveCandidate();
+  const irrigation = state.agronomyOutputs.irrigationFlow;
+  const hydro = state.agronomyOutputs.hydroNetwork;
+  const gpsDevices = Array.isArray(state.gpsTracking.devices) ? state.gpsTracking.devices : [];
+  const planning3dReady = Boolean(planning3dState.manifest?.ready || planning3dState.publicDataAvailability?.buildings);
+  return {
+    route,
+    routeLabel: getRouteWorkLabel(route),
+    scopeLabel: getGeoAiScopeLabel(route),
+    questionCount: (state.platformData.geoAi.memory || []).length,
+    alertCount: alerts.length,
+    projectCount: (state.platformData.projects || []).length,
+    activeProjectName: activeProject?.name || "",
+    hasPlot: Boolean(state.currentPlot?.geometry),
+    plotLabel: state.currentPlotLabel || "Sin seleccionar",
+    completed: {
+      agronomyWater: Boolean(hydro || irrigation),
+      agronomyClimate: Boolean(state.agronomyOutputs.climate || state.agronomyOutputs.inamhi || state.agronomyOutputs.inamhiLive),
+      agronomySuitability: Boolean(state.agronomyOutputs.agroSuitability || state.agronomyOutputs.agroDecision),
+      planningOps: Boolean(state.territorialOpsData),
+      planningRisk: Boolean(state.riskData),
+      planningHydrology: Boolean(state.hydrologyData),
+      planningZoning: Boolean(state.zoningPatternsData),
+      planningHousing: Boolean(state.housingPatternsData),
+      planning3d: planning3dReady,
+      gpsTracking: gpsDevices.length > 0,
+      gpsGeofence: Boolean(state.gpsTracking.geofence),
+      cadastre: Boolean(state.digitalCadastreData),
+      cadastreConfidence: cadastreCandidate?.confidenceScore || state.digitalCadastreData?.summary?.meanConfidence || 0,
+    },
+    metrics: {
+      irrigationBalance: irrigation?.balanceScore || 0,
+      waterSupportLabel: hydro?.summary?.waterLabel || irrigation?.balanceLabel || "Sin lectura",
+      gpsDeviceCount: gpsDevices.length,
+      gpsEvents: (state.gpsTracking.geofenceEvents || []).length,
+      planningCandidateCount: state.planningData?.candidates?.length || 0,
+      riskCriticalHa: state.riskData?.summary?.criticalAreaHa || 0,
+      hydrologyBalanceHm3: state.hydrologyData?.summary?.balanceHm3 || 0,
+      cadastreCandidateCount: state.digitalCadastreData?.summary?.candidateCount || 0,
+      planning3dReady,
+    },
+  };
+}
+
+function buildGeoAiRecommendationCatalog() {
+  return [
+    {
+      id: "agro-water",
+      domain: "Agronomia",
+      moduleLabel: "Red hidrica y riego",
+      route: "agronomia",
+      keywords: ["riego", "caudal", "agua", "acequia", "quebrada", "rio", "hidrica", "hidr"],
+      recommendation: { actionId: "agronomy-water", label: "Abrir agua y riego", copy: "Lee red hidrica, soporte oficial y programacion del riego por lote." },
+      alternatives: [
+        { actionId: "agronomy-official", label: "Cruzar oficiales", copy: "Activa IGM, MAATE y riego estatal para soporte real." },
+        { actionId: "agronomy-suitability", label: "Cruzar cultivo", copy: "Completa la recomendacion con aptitud agroclimatica." },
+      ],
+      evidenceDomains: ["Agronomia", "GeoAI"],
+      rationale: "Prioriza agua, caudal y soporte hidrico antes de recomendar manejo del lote.",
+    },
+    {
+      id: "agro-crop",
+      domain: "Agronomia",
+      moduleLabel: "Aptitud agroclimatica",
+      route: "agronomia",
+      keywords: ["cultivo", "siembra", "plaga", "enfermedad", "rendimiento", "estres", "fenologia", "alternativo"],
+      recommendation: { actionId: "agronomy-suitability", label: "Abrir aptitud cultivo", copy: "Cruza agua, clima y relieve para recomendar cultivo y lote." },
+      alternatives: [
+        { actionId: "agronomy-assistant", label: "Usar asistente", copy: "Ejecuta el plan guiado por etapa del cultivo." },
+        { actionId: "agronomy-scenes", label: "Revisar escena", copy: "Confirma vigor y humedad desde la imagen satelital." },
+      ],
+      evidenceDomains: ["Agronomia", "GeoAI"],
+      rationale: "Cuando la pregunta trata de rendimiento o estres conviene pasar de la lectura a la recomendacion por cultivo.",
+    },
+    {
+      id: "territory-risk",
+      domain: "Territorio",
+      moduleLabel: "Riesgo territorial",
+      route: "planificacion",
+      keywords: ["riesgo", "inund", "desliz", "amenaza", "mitigacion", "contencion"],
+      recommendation: { actionId: "planning-risk", label: "Abrir riesgo", copy: "Lee exposicion, criticidad y sectores que requieren mitigacion." },
+      alternatives: [
+        { actionId: "planning-water", label: "Cruzar agua", copy: "Completa balance hidrico y resiliencia territorial." },
+        { actionId: "planning-3d", label: "Validar en 3D", copy: "Mira restriccion, propuesta y tejido urbano en volumen." },
+      ],
+      evidenceDomains: ["Territorio", "3D", "GeoAI"],
+      rationale: "La mejor respuesta combina riesgo, agua y validacion volumetrica si el sector ya tiene tejido urbano.",
+    },
+    {
+      id: "territory-mobility",
+      domain: "Territorio",
+      moduleLabel: "Movilidad y equipamientos",
+      route: "planificacion",
+      keywords: ["movilidad", "acceso", "vialidad", "transporte", "escuela", "salud", "equipamiento", "cobertura", "servicio"],
+      recommendation: { actionId: "planning-mobility", label: "Abrir movilidad", copy: "Mide conectividad, tiempos y cobertura funcional del sector." },
+      alternatives: [
+        { actionId: "planning-ops", label: "Cruzar tablero territorial", copy: "Resume servicios, riesgo, agua y prioridades en una sola vista." },
+        { actionId: "planning-3d", label: "Leer equipamientos 3D", copy: "Ve nodos, corredores y propuesta urbana sobre el visor." },
+      ],
+      evidenceDomains: ["Territorio", "3D", "GeoAI"],
+      rationale: "Cuando la consulta trata de servicios o accesibilidad conviene leer cobertura, deficit y soporte urbano juntos.",
+    },
+    {
+      id: "territory-climate",
+      domain: "Territorio",
+      moduleLabel: "Clima urbano",
+      route: "planificacion",
+      keywords: ["clima", "calor", "ventilacion", "aire frio", "isla de calor", "corredor urbano"],
+      recommendation: { actionId: "planning-climate", label: "Abrir clima urbano", copy: "Identifica corredores frios, retencion termica y reservas de ventilacion." },
+      alternatives: [
+        { actionId: "planning-3d", label: "Abrir 3D urbano", copy: "Valida corredores, propuesta y clima dentro del visor 3D." },
+        { actionId: "planning-zoning", label: "Cruzar zonificacion", copy: "Comprueba compatibilidad entre tejido, borde y ventilacion." },
+      ],
+      evidenceDomains: ["Territorio", "3D", "GeoAI"],
+      rationale: "El clima urbano funciona mejor cuando se lee con 3D, corredores y compatibilidad de tejido.",
+    },
+    {
+      id: "territory-zoning",
+      domain: "Territorio",
+      moduleLabel: "Patrones territoriales",
+      route: "planificacion",
+      keywords: ["zonificacion", "vivienda", "patrones", "vitalidad", "densificar", "consolidar", "borde"],
+      recommendation: { actionId: "planning-zoning", label: "Abrir patrones", copy: "Lee vitalidad urbana, borde, mezcla y compatibilidad territorial." },
+      alternatives: [
+        { actionId: "planning-housing", label: "Abrir vivienda", copy: "Cruza oferta relativa, tension y tipologias residenciales." },
+        { actionId: "planning-strategy", label: "Bajar a estrategia", copy: "Convierte patron territorial en decision FODA + CAME." },
+      ],
+      evidenceDomains: ["Territorio", "3D", "GeoAI"],
+      rationale: "Los patrones territoriales sirven para decidir si conviene densificar, proteger o reordenar un sector.",
+    },
+    {
+      id: "gps-operations",
+      domain: "GPS",
+      moduleLabel: "Seguimiento operativo",
+      route: "gps",
+      keywords: ["gps", "corredor", "geocerca", "replay", "desvio", "operacion", "flota", "ruta"],
+      recommendation: { actionId: "gps-track", label: "Abrir seguimiento", copy: "Activa telemetria, replay y lectura operativa en vivo." },
+      alternatives: [
+        { actionId: "gps-corridor", label: "Revisar corredor", copy: "Valida salida de ruta, multiples geocercas y alertas." },
+        { actionId: "gps-alerts", label: "Abrir alertas", copy: "Lee desvios, incidencias y estado del control operativo." },
+      ],
+      evidenceDomains: ["GPS", "GeoAI"],
+      rationale: "La operacion GPS se resuelve mejor con seguimiento, geocercas y replay del mismo evento.",
+    },
+    {
+      id: "cadastre-digitalization",
+      domain: "Catastro",
+      moduleLabel: "Catastro asistido",
+      route: "catastro",
+      keywords: ["predio", "catastro", "lindero", "digitaliza", "digitalizacion", "parcela", "shapefile", "topologia"],
+      recommendation: { actionId: "planning-cadastre", label: "Abrir catastro", copy: "Inspecciona predios, control geometrico y revision tecnica." },
+      alternatives: [
+        { actionId: "cadastre-area", label: "Dibujar AOI", copy: "Delimita el sector y activa la cola de predios visibles." },
+        { actionId: "cadastre-focus", label: "Enfocar candidatos", copy: "Centra hover, soporte y ficha predial activa." },
+      ],
+      evidenceDomains: ["Catastro", "GeoAI"],
+      rationale: "Antes de exportar conviene validar borde, topologia, confianza y soporte de campo.",
+    },
+    {
+      id: "planning-3d",
+      domain: "3D",
+      moduleLabel: "Visor 3D de planeamiento",
+      route: "planificacion",
+      keywords: ["3d", "volumen", "sombra", "propuesta", "altura", "espacio publico", "arboles"],
+      recommendation: { actionId: "planning-3d", label: "Abrir visor 3D", copy: "Compara corredor, zonificacion, equipamientos, clima y propuesta en volumen." },
+      alternatives: [
+        { actionId: "planning-ops", label: "Cruzar tablero", copy: "Llega al 3D con lectura territorial ya consolidada." },
+        { actionId: "planning-strategy", label: "Cerrar estrategia", copy: "Baja de 3D a una recomendacion ejecutiva." },
+      ],
+      evidenceDomains: ["3D", "Territorio", "GeoAI"],
+      rationale: "El 3D sirve para validar visualmente una decision, no solo para ver edificios extruidos.",
+    },
+    {
+      id: "suite-report",
+      domain: "GeoAI",
+      moduleLabel: "Reporte ejecutivo",
+      route: "agronomia",
+      keywords: ["reporte", "informe", "resumen", "pdf", "html", "conclusion", "explica"],
+      recommendation: { actionId: "suite-dashboard", label: "Abrir dashboard", copy: "Consolida lectura ejecutiva antes de emitir el informe." },
+      alternatives: [
+        { actionId: "planning-ops", label: "Leer territorio", copy: "Actualiza los datos antes de generar el informe territorial." },
+        { actionId: "agronomy-assistant", label: "Leer agronomia", copy: "Completa la corrida agronomica antes de redactar conclusiones." },
+      ],
+      evidenceDomains: ["GeoAI"],
+      rationale: "Cuando te piden un informe conviene consolidar contexto, alertas y conclusion antes de exportar.",
+    },
+  ];
+}
+
+function buildGeoAiRecommendations(question = "", snapshot = buildGeoAiCopilotContextSnapshot()) {
+  const normalizedQuestion = normalizeTerritorialText(question || "");
+  const catalog = buildGeoAiRecommendationCatalog();
+  const routeAware = catalog.map((template) => {
+    const routeBonus = template.route === snapshot.route ? 2 : 0;
+    const keywordHits = template.keywords.filter((keyword) => normalizedQuestion.includes(normalizeTerritorialText(keyword))).length;
+    const score = keywordHits * 3 + routeBonus + (template.domain === "GeoAI" && /reporte|informe|resumen/.test(normalizedQuestion) ? 2 : 0);
+    return { ...template, score };
+  }).sort((left, right) => right.score - left.score);
+
+  let primary = routeAware.find((item) => item.score > 0) || null;
+  if (!primary) {
+    if (snapshot.route === "gps") {
+      primary = routeAware.find((item) => item.id === "gps-operations");
+    } else if (snapshot.route === "catastro") {
+      primary = routeAware.find((item) => item.id === "cadastre-digitalization");
+    } else if (snapshot.route === "planificacion") {
+      primary = routeAware.find((item) => item.id === "territory-mobility");
+    } else {
+      primary = routeAware.find((item) => item.id === "agro-crop");
+    }
+  }
+
+  const alternatives = routeAware
+    .filter((item) => item.id !== primary.id && (item.score > 0 || item.route === snapshot.route))
+    .slice(0, 3)
+    .map((item) => ({
+      actionId: item.recommendation.actionId,
+      label: item.recommendation.label,
+      copy: item.recommendation.copy,
+    }));
+
+  const evidence = (state.platformData.geoAi.evidence?.length ? state.platformData.geoAi.evidence : buildGeoAiEvidenceLibrary())
+    .filter((item) => primary.evidenceDomains.includes(item.domain))
+    .slice(0, 4);
+
+  return {
+    primary,
+    alternatives,
+    evidence,
+  };
+}
+
+function buildGeoAiEvaluationSnapshot() {
+  const feedback = Array.isArray(state.platformData.geoAi.feedback) ? state.platformData.geoAi.feedback : [];
+  const versions = Array.isArray(state.platformData.geoAi.versions) ? state.platformData.geoAi.versions : [];
+  const memory = Array.isArray(state.platformData.geoAi.memory) ? state.platformData.geoAi.memory : [];
+  const usefulCount = feedback.filter((item) => item.kind === "useful").length;
+  const adjustCount = feedback.filter((item) => item.kind === "adjust").length;
+  const observeScore = Math.min(100, 24 + Math.min(state.platformData.projects.length, 12) * 4 + Math.min(state.platformData.decisionLog.length, 16) * 2 + Math.min(memory.length, 20) * 2);
+  const learnScore = Math.min(100, Math.max(0, 32 + usefulCount * 8 - adjustCount * 5 + Math.min(feedback.length, 20) * 2));
+  const activeDomainCount = [
+    state.agronomyOutputs.agroDecision,
+    state.planningData,
+    state.gpsTracking.geofence,
+    state.digitalCadastreData,
+    planning3dState.manifest?.ready || planning3dState.publicDataAvailability?.buildings,
+  ].filter(Boolean).length;
+  const evaluateScore = Math.min(100, 28 + activeDomainCount * 12 + Math.min((state.platformData.manifest?.endpoints || []).length, 16) * 2);
+  const publishScore = Math.min(100, (state.backendAvailable ? 42 : 16) + versions.length * 10 + Math.max(usefulCount - adjustCount, 0) * 4);
+  const overallScore = Math.round((observeScore + learnScore + evaluateScore + publishScore) / 4);
+  const headline = overallScore >= 75
+    ? "GeoAI Core listo para evolucion controlada."
+    : overallScore >= 55
+      ? "GeoAI Core ya aprende, pero todavia requiere mas validacion."
+      : "GeoAI Core esta en fase inicial y necesita mas evidencia operativa.";
+  return {
+    overallScore,
+    headline,
+    stages: [
+      { id: "observe", label: "Observa", score: observeScore, copy: "Memoria, proyectos y bitacora disponibles para capturar contexto y resultados." },
+      { id: "learn", label: "Aprende", score: learnScore, copy: `${usefulCount} feedback utiles y ${adjustCount} ajustes capturados para recalibrar reglas.` },
+      { id: "evaluate", label: "Evalua", score: evaluateScore, copy: `${activeDomainCount}/5 dominios ya tienen lectura lista para comparar y medir.` },
+      { id: "publish", label: "Publica", score: publishScore, copy: `${versions.length} versiones registradas con backend ${state.backendAvailable ? "activo" : "local"}.` },
+    ],
+  };
+}
+
+async function persistGeoAiCoreState() {
+  const nextPayload = {
+    memory: (state.platformData.geoAi.memory || []).map(normalizeGeoAiMemoryEntry).slice(0, 32),
+    feedback: (state.platformData.geoAi.feedback || []).map(normalizeGeoAiFeedbackEntry).slice(0, 64),
+    versions: (state.platformData.geoAi.versions || []).map(normalizeGeoAiVersionEntry).slice(0, 24),
+    evidence: (state.platformData.geoAi.evidence || []).slice(0, 24),
+    lastQuestion: String(state.platformData.geoAi.lastQuestion || ""),
+    lastAnswer: state.platformData.geoAi.lastAnswer ? normalizeGeoAiAnswerRecord(state.platformData.geoAi.lastAnswer) : null,
+    updatedAt: state.platformData.geoAi.updatedAt || new Date().toISOString(),
+  };
+  writeLocalStorageJson(geoAiCoreStorageKey, nextPayload);
+  const backend = await detectBackend(!state.backendAvailable);
+  if (!backend.available) {
+    return;
+  }
+  await fetchJson(`${backend.url}${backendService.platformGeoAiPath}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: "replace",
+      ...nextPayload,
+    }),
+  });
+}
+
+async function loadGeoAiCoreState(force = false) {
+  const fallbackEvidence = buildGeoAiEvidenceLibrary();
+  const localPayload = readLocalStorageJson(geoAiCoreStorageKey, {}) || {};
+  state.platformData.geoAi = {
+    memory: Array.isArray(localPayload.memory) ? localPayload.memory.map(normalizeGeoAiMemoryEntry) : [],
+    feedback: Array.isArray(localPayload.feedback) ? localPayload.feedback.map(normalizeGeoAiFeedbackEntry) : [],
+    versions: Array.isArray(localPayload.versions) ? localPayload.versions.map(normalizeGeoAiVersionEntry) : [],
+    evidence: Array.isArray(localPayload.evidence) && localPayload.evidence.length ? localPayload.evidence : fallbackEvidence,
+    lastQuestion: String(localPayload.lastQuestion || ""),
+    lastAnswer: localPayload.lastAnswer ? normalizeGeoAiAnswerRecord(localPayload.lastAnswer) : null,
+    updatedAt: localPayload.updatedAt || null,
+  };
+  if (dom.geoAiQuestionInput && !dom.geoAiQuestionInput.value && state.platformData.geoAi.lastQuestion) {
+    setValueIfChanged(dom.geoAiQuestionInput, state.platformData.geoAi.lastQuestion);
+  }
+  renderGeoAiCoreCard();
+  const backend = await detectBackend(force || !state.backendAvailable);
+  if (!backend.available) {
+    return state.platformData.geoAi;
+  }
+  try {
+    const payload = await fetchJson(`${backend.url}${backendService.platformGeoAiPath}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "get", limit: 32 }),
+    });
+    state.platformData.geoAi = {
+      memory: Array.isArray(payload.memory) ? payload.memory.map(normalizeGeoAiMemoryEntry) : state.platformData.geoAi.memory,
+      feedback: Array.isArray(payload.feedback) ? payload.feedback.map(normalizeGeoAiFeedbackEntry) : state.platformData.geoAi.feedback,
+      versions: Array.isArray(payload.versions) ? payload.versions.map(normalizeGeoAiVersionEntry) : state.platformData.geoAi.versions,
+      evidence: Array.isArray(payload.evidence) && payload.evidence.length ? payload.evidence : fallbackEvidence,
+      lastQuestion: String(payload.lastQuestion || state.platformData.geoAi.lastQuestion || ""),
+      lastAnswer: payload.lastAnswer ? normalizeGeoAiAnswerRecord(payload.lastAnswer) : state.platformData.geoAi.lastAnswer,
+      updatedAt: payload.updatedAt || payload.fetchedAt || state.platformData.geoAi.updatedAt,
+    };
+    writeLocalStorageJson(geoAiCoreStorageKey, state.platformData.geoAi);
+    if (dom.geoAiQuestionInput && !dom.geoAiQuestionInput.value && state.platformData.geoAi.lastQuestion) {
+      setValueIfChanged(dom.geoAiQuestionInput, state.platformData.geoAi.lastQuestion);
+    }
+    renderGeoAiCoreCard();
+  } catch (error) {
+    // El respaldo local sigue operativo.
+  }
+  return state.platformData.geoAi;
+}
+
+async function runGeoAiCopilot(question = "") {
+  const trimmedQuestion = String(question || "").trim() || `Que debo priorizar ahora en ${getGeoAiScopeLabel(state.entryRoute)}?`;
+  const snapshot = buildGeoAiCopilotContextSnapshot();
+  const recommendationBundle = buildGeoAiRecommendations(trimmedQuestion, snapshot);
+  const evaluation = buildGeoAiEvaluationSnapshot();
+  const answer = normalizeGeoAiAnswerRecord({
+    id: `geoai-answer-${Date.now()}`,
+    question: trimmedQuestion,
+    route: snapshot.route,
+    routeLabel: snapshot.routeLabel,
+    scopeLabel: snapshot.scopeLabel,
+    domain: recommendationBundle.primary.domain,
+    moduleLabel: recommendationBundle.primary.moduleLabel,
+    headline: `${recommendationBundle.primary.moduleLabel} recomendado para ${snapshot.scopeLabel}.`,
+    copy: recommendationBundle.primary.recommendation.copy,
+    conclusion: `${recommendationBundle.primary.rationale} ${evaluation.headline}`,
+    rationale: recommendationBundle.primary.rationale,
+    tone: evaluation.overallScore >= 75 ? "low" : evaluation.overallScore >= 55 ? "mid" : "high",
+    recommendation: recommendationBundle.primary.recommendation,
+    alternatives: recommendationBundle.alternatives,
+    evidenceIds: recommendationBundle.evidence.map((item) => item.id),
+    createdAt: new Date().toISOString(),
+    evaluation,
+  });
+  state.platformData.geoAi.lastQuestion = trimmedQuestion;
+  state.platformData.geoAi.lastAnswer = answer;
+  state.platformData.geoAi.updatedAt = answer.createdAt;
+  state.platformData.geoAi.memory = [
+    normalizeGeoAiMemoryEntry({
+      id: `geoai-memory-${Date.now()}`,
+      question: trimmedQuestion,
+      route: snapshot.route,
+      scopeLabel: snapshot.scopeLabel,
+      domain: answer.domain,
+      createdAt: answer.createdAt,
+      answer,
+    }),
+    ...(state.platformData.geoAi.memory || []),
+  ].slice(0, 32);
+  renderGeoAiCoreCard();
+  await persistGeoAiCoreState();
+  setStatus(`${answer.moduleLabel}: ${answer.copy}`);
+  return answer;
+}
+
+async function recordGeoAiFeedback(kind = "useful") {
+  const answer = state.platformData.geoAi.lastAnswer;
+  if (!answer) {
+    setStatus("Primero consulta al copiloto para poder registrar feedback.");
+    return;
+  }
+  const nextFeedback = normalizeGeoAiFeedbackEntry({
+    id: `geoai-feedback-${Date.now()}`,
+    kind,
+    route: answer.route,
+    question: answer.question,
+    note: kind === "adjust"
+      ? `Ajustar recomendacion ${answer.moduleLabel}.`
+      : `La recomendacion ${answer.moduleLabel} fue util para el usuario.`,
+    answerId: answer.id,
+    answerHeadline: answer.headline,
+    userName: state.userProfile.name,
+    roleId: state.userProfile.roleId,
+    createdAt: new Date().toISOString(),
+  });
+  state.platformData.geoAi.feedback = [nextFeedback, ...(state.platformData.geoAi.feedback || [])].slice(0, 64);
+  state.platformData.geoAi.updatedAt = nextFeedback.createdAt;
+  renderGeoAiCoreCard();
+  await persistGeoAiCoreState();
+  setStatus(kind === "adjust" ? "GeoAI marcado para ajuste y recalibracion." : "Feedback util registrado para mejorar el GeoAI Core.");
+}
+
+async function registerGeoAiVersion() {
+  if (!canAccessRole("tecnico")) {
+    setStatus("Se necesita rol tecnico o administrador para registrar una version del GeoAI Core.");
+    return;
+  }
+  const evaluation = buildGeoAiEvaluationSnapshot();
+  const versionEntry = normalizeGeoAiVersionEntry({
+    id: `geoai-version-${Date.now()}`,
+    label: `${GEOAI_CORE_VERSION}-r${(state.platformData.geoAi.versions || []).length + 1}`,
+    status: evaluation.overallScore >= 70 ? "lista para publicar" : "requiere validacion",
+    summary: state.platformData.geoAi.lastAnswer?.headline || evaluation.headline,
+    route: state.entryRoute,
+    score: evaluation.overallScore,
+    userName: state.userProfile.name,
+    createdAt: new Date().toISOString(),
+    evaluation,
+  });
+  state.platformData.geoAi.versions = [versionEntry, ...(state.platformData.geoAi.versions || [])].slice(0, 24);
+  state.platformData.geoAi.updatedAt = versionEntry.createdAt;
+  renderGeoAiCoreCard();
+  await persistGeoAiCoreState();
+  recordDecisionLogEntry({
+    title: `Version GeoAI registrada: ${versionEntry.label}`,
+    copy: `${versionEntry.summary} (${versionEntry.score}/100).`,
+    module: "GeoAI",
+    route: state.entryRoute,
+    focusAction: state.platformData.geoAi.lastAnswer?.recommendation?.actionId || "suite-dashboard",
+  }, { persist: true, silentStatus: true });
+  setStatus(`Version ${versionEntry.label} registrada para evolucion controlada del GeoAI Core.`);
+}
+
+function handleGeoAiCoreInteraction(event) {
+  const button = event.target.closest("[data-geoai-action]");
+  if (!button || !dom.geoAiCoreBoard?.contains(button)) {
+    return;
+  }
+  const action = button.dataset.geoaiAction;
+  const answer = state.platformData.geoAi.lastAnswer;
+  if (action === "open-primary" && answer?.recommendation?.actionId) {
+    runWorkflowGuideAction(answer.recommendation.actionId);
+    return;
+  }
+  if (action === "open-alternative" && button.dataset.actionId) {
+    runWorkflowGuideAction(button.dataset.actionId);
+    return;
+  }
+  if (action === "export-answer" && answer) {
+    downloadTerritorialFile(`geoai_respuesta_${formatDateInput(new Date())}.json`, JSON.stringify(answer, null, 2), "application/json;charset=utf-8");
+    return;
+  }
+  if (action === "log-answer" && answer) {
+    recordDecisionLogEntry({
+      title: `GeoAI: ${answer.headline}`,
+      copy: `${answer.copy} ${answer.conclusion}`,
+      module: "GeoAI",
+      route: answer.route,
+      focusAction: answer.recommendation?.actionId || "suite-dashboard",
+    }, { persist: true, silentStatus: false });
+  }
+}
+
+function renderGeoAiCoreCard() {
+  if (!dom.geoAiCoreBoard) {
+    return;
+  }
+  const geoAi = state.platformData.geoAi || {};
+  const evidence = Array.isArray(geoAi.evidence) && geoAi.evidence.length ? geoAi.evidence : buildGeoAiEvidenceLibrary();
+  const answer = geoAi.lastAnswer ? normalizeGeoAiAnswerRecord(geoAi.lastAnswer) : null;
+  const evaluation = buildGeoAiEvaluationSnapshot();
+  const usefulCount = (geoAi.feedback || []).filter((item) => item.kind === "useful").length;
+  const adjustCount = (geoAi.feedback || []).filter((item) => item.kind === "adjust").length;
+  const latestVersion = (geoAi.versions || [])[0] || null;
+  const recentMemory = (geoAi.memory || []).slice(0, 4);
+  dom.geoAiCoreBoard.classList.remove("empty-state");
+  dom.geoAiCoreBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.geoAiCoreBoard, `
+    <article class="decision-hero tone-${evaluation.overallScore >= 75 ? "low" : evaluation.overallScore >= 55 ? "mid" : "high"}">
+      <div>
+        <p class="section-kicker">GeoAI Core ${escapeHtmlContent(GEOAI_CORE_VERSION)}</p>
+        <h4>${escapeHtmlContent(answer?.headline || "Copiloto, memoria y evolucion controlada listos.")}</h4>
+        <p>${escapeHtmlContent(answer?.conclusion || evaluation.headline)}</p>
+      </div>
+      <div class="decision-score-stack">
+        <strong>${evaluation.overallScore}/100</strong>
+        <span>Evolucion</span>
+      </div>
+    </article>
+    <div class="dashboard-chip-row">
+      <span class="planning-pill emphasis">${(geoAi.memory || []).length} memorias</span>
+      <span class="planning-pill emphasis">${(geoAi.feedback || []).length} feedback</span>
+      <span class="planning-pill emphasis">${(geoAi.versions || []).length} versiones</span>
+      <span class="planning-pill emphasis">${evidence.length} evidencias</span>
+    </div>
+    ${answer ? `
+      <article class="territorial-export-card">
+        <div class="territorial-export-head">
+          <div>
+            <p class="section-kicker">Ultima recomendacion</p>
+            <h4>${escapeHtmlContent(answer.moduleLabel)}</h4>
+          </div>
+          <span class="planning-pill emphasis">${escapeHtmlContent(answer.scopeLabel || answer.routeLabel)}</span>
+        </div>
+        <p class="territorial-readout-copy">${escapeHtmlContent(answer.copy)}</p>
+        <div class="action-row analysis-actions">
+          ${answer.recommendation?.actionId ? `<button class="secondary-button" type="button" data-geoai-action="open-primary">Abrir modulo</button>` : ""}
+          ${answer.alternatives.slice(0, 2).map((item) => `
+            <button class="ghost-button" type="button" data-geoai-action="open-alternative" data-action-id="${escapeHtmlContent(item.actionId)}">${escapeHtmlContent(item.label)}</button>
+          `).join("")}
+          <button class="ghost-button" type="button" data-geoai-action="export-answer">Exportar</button>
+          <button class="ghost-button" type="button" data-geoai-action="log-answer" data-requires-role="tecnico">Bitacora</button>
+        </div>
+      </article>
+    ` : `
+      <article class="territorial-export-card">
+        <div class="territorial-export-head">
+          <div>
+            <p class="section-kicker">Copiloto listo</p>
+            <h4>Preguntale que correr, que significa un mapa o que decision conviene.</h4>
+          </div>
+          <span class="planning-pill emphasis">${escapeHtmlContent(getGeoAiScopeLabel(state.entryRoute))}</span>
+        </div>
+        <p class="territorial-readout-copy">El GeoAI Core conecta evidencia, memoria, feedback y el estado real del portal para recomendar el siguiente modulo.</p>
+      </article>
+    `}
+    <div class="decision-grid">
+      ${evaluation.stages.map((stage) => `
+        <article class="decision-card tone-${stage.score >= 75 ? "low" : stage.score >= 55 ? "mid" : "high"}">
+          <p class="candidate-rank">${escapeHtmlContent(stage.label)}</p>
+          <h5>${stage.score}/100</h5>
+          <p>${escapeHtmlContent(stage.copy)}</p>
+        </article>
+      `).join("")}
+    </div>
+    <div class="decision-list compact">
+      <article>
+        <strong>Feedback util</strong>
+        <p>${usefulCount} respuestas confirmadas como utiles para seguir ajustando reglas y prompts.</p>
+      </article>
+      <article>
+        <strong>Ajustes pendientes</strong>
+        <p>${adjustCount} respuestas marcadas para recalibracion o cambio de criterio.</p>
+      </article>
+      <article>
+        <strong>Version activa</strong>
+        <p>${escapeHtmlContent(latestVersion ? `${latestVersion.label} - ${latestVersion.status}` : "Sin version registrada todavia.")}</p>
+      </article>
+    </div>
+    <div class="territorial-export-pills">
+      ${evidence.slice(0, 6).map((item) => `
+        <span class="planning-pill emphasis">${escapeHtmlContent(item.domain)} - ${escapeHtmlContent(item.moduleLabel)}</span>
+      `).join("")}
+    </div>
+    <div class="decision-list compact">
+      ${(answer
+        ? evidence.filter((item) => answer.evidenceIds.includes(item.id))
+        : evidence
+      ).slice(0, 4).map((item) => `
+        <article>
+          <strong>${escapeHtmlContent(item.title)}</strong>
+          <p>${escapeHtmlContent(item.focus)}. ${escapeHtmlContent(item.applicability)}</p>
+        </article>
+      `).join("")}
+    </div>
+    <div class="decision-list compact">
+      ${(recentMemory.length ? recentMemory : [{
+        question: "Sin consultas previas",
+        answer: { headline: "La memoria empezara a crecer cuando uses el copiloto.", copy: "Tambien guardara feedback, versiones y contexto operativo." },
+        createdAt: new Date().toISOString(),
+      }]).map((item) => `
+        <article>
+          <strong>${escapeHtmlContent(item.question)}</strong>
+          <p>${escapeHtmlContent(item.answer?.headline || item.answer?.copy || "Sin respuesta registrada.")}</p>
+        </article>
+      `).join("")}
+    </div>
+  `);
+  syncUserProfileUi(false);
 }
 
 function renderAccessRolesCard() {
@@ -37557,6 +38418,7 @@ function renderProductSuite() {
   renderDecisionLogCard();
   renderAccessRolesCard();
   renderApiCenterCard();
+  renderGeoAiCoreCard();
 }
 
 function computePlanningGrowthScore(program, horizon, scenario, nearestUrban, nearestRoad, insideUrban) {

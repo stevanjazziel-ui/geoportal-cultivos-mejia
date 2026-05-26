@@ -51,6 +51,7 @@ $AgronomyGpsGeofenceEventsPath = Join-Path $Root "data\gps_geofence_events.json"
 $PlatformProjectsPath = Join-Path $Root "data\platform_projects.json"
 $PlatformDecisionLogPath = Join-Path $Root "data\platform_decision_log.json"
 $PlatformUsersPath = Join-Path $Root "data\platform_users.json"
+$PlatformGeoAiPath = Join-Path $Root "data\platform_geoai.json"
 $AgronomyGpsLiveMemory = $null
 $AgronomyGpsGeofenceMemory = $null
 $AgronomyRealtimeStations = @(
@@ -1981,6 +1982,107 @@ function Save-PlatformUserProfile($Body) {
   }
 }
 
+function Get-PlatformGeoAiPayload($Body) {
+  $memoryLimit = [Math]::Min([Math]::Max([int](Convert-ToInvariantDouble $(if ($Body -and $Body.PSObject.Properties.Name -contains "memoryLimit") { $Body.memoryLimit } else { 32 }) 32), 1), 64)
+  $feedbackLimit = [Math]::Min([Math]::Max([int](Convert-ToInvariantDouble $(if ($Body -and $Body.PSObject.Properties.Name -contains "feedbackLimit") { $Body.feedbackLimit } else { 64 }) 64), 1), 120)
+  $versionLimit = [Math]::Min([Math]::Max([int](Convert-ToInvariantDouble $(if ($Body -and $Body.PSObject.Properties.Name -contains "versionLimit") { $Body.versionLimit } else { 24 }) 24), 1), 60)
+  $feed = Read-LiveJsonFile $PlatformGeoAiPath
+  $memory = @()
+  $feedback = @()
+  $versions = @()
+  $evidence = @()
+  if ($feed -and $feed.memory) {
+    $memory = @(
+      $feed.memory |
+        Sort-Object { [datetime]$_.createdAt } -Descending |
+        Select-Object -First $memoryLimit
+    )
+  }
+  if ($feed -and $feed.feedback) {
+    $feedback = @(
+      $feed.feedback |
+        Sort-Object { [datetime]$_.createdAt } -Descending |
+        Select-Object -First $feedbackLimit
+    )
+  }
+  if ($feed -and $feed.versions) {
+    $versions = @(
+      $feed.versions |
+        Sort-Object { [datetime]$_.createdAt } -Descending |
+        Select-Object -First $versionLimit
+    )
+  }
+  if ($feed -and $feed.evidence) {
+    $evidence = @($feed.evidence)
+  }
+  return @{
+    ok = $true
+    fetchedAt = if ($feed -and $feed.fetchedAt) { [string]$feed.fetchedAt } else { (Get-Date).ToString("o") }
+    updatedAt = if ($feed -and $feed.updatedAt) { [string]$feed.updatedAt } else { (Get-Date).ToString("o") }
+    memory = $memory
+    feedback = $feedback
+    versions = $versions
+    evidence = $evidence
+    lastQuestion = if ($feed -and $feed.lastQuestion) { [string]$feed.lastQuestion } else { "" }
+    lastAnswer = if ($feed -and $feed.PSObject.Properties.Name -contains "lastAnswer") { $feed.lastAnswer } else { $null }
+  }
+}
+
+function Save-PlatformGeoAiState($Body) {
+  $memory = @()
+  $feedback = @()
+  $versions = @()
+  $evidence = @()
+  if ($Body -and $Body.PSObject.Properties.Name -contains "memory" -and $Body.memory) {
+    $memory = @(
+      @($Body.memory) |
+        Sort-Object { [datetime]$_.createdAt } -Descending |
+        Select-Object -First 64
+    )
+  }
+  if ($Body -and $Body.PSObject.Properties.Name -contains "feedback" -and $Body.feedback) {
+    $feedback = @(
+      @($Body.feedback) |
+        Sort-Object { [datetime]$_.createdAt } -Descending |
+        Select-Object -First 120
+    )
+  }
+  if ($Body -and $Body.PSObject.Properties.Name -contains "versions" -and $Body.versions) {
+    $versions = @(
+      @($Body.versions) |
+        Sort-Object { [datetime]$_.createdAt } -Descending |
+        Select-Object -First 60
+    )
+  }
+  if ($Body -and $Body.PSObject.Properties.Name -contains "evidence" -and $Body.evidence) {
+    $evidence = @($Body.evidence)
+  }
+  $payload = [ordered]@{
+    fetchedAt = (Get-Date).ToString("o")
+    updatedAt = if ($Body -and $Body.PSObject.Properties.Name -contains "updatedAt" -and -not [string]::IsNullOrWhiteSpace([string]$Body.updatedAt)) { [string]$Body.updatedAt } else { (Get-Date).ToString("o") }
+    memory = $memory
+    feedback = $feedback
+    versions = $versions
+    evidence = $evidence
+    lastQuestion = if ($Body -and $Body.PSObject.Properties.Name -contains "lastQuestion") { [string]$Body.lastQuestion } else { "" }
+    lastAnswer = if ($Body -and $Body.PSObject.Properties.Name -contains "lastAnswer") { $Body.lastAnswer } else { $null }
+  }
+  Ensure-ParentDirectory $PlatformGeoAiPath
+  $payload | ConvertTo-Json -Depth 16 | Set-Content -LiteralPath $PlatformGeoAiPath -Encoding UTF8
+  return @{
+    ok = $true
+    fetchedAt = $payload.fetchedAt
+    updatedAt = $payload.updatedAt
+    memoryCount = $memory.Count
+    feedbackCount = $feedback.Count
+    versionCount = $versions.Count
+    evidenceCount = $evidence.Count
+    lastQuestion = $payload.lastQuestion
+    lastAnswer = $payload.lastAnswer
+    message = "Estado del GeoAI Core almacenado."
+  }
+}
+
 function Get-PlatformManifestPayload() {
   return @{
     ok = $true
@@ -2001,6 +2103,7 @@ function Get-PlatformManifestPayload() {
       @{ path = "/api/platform/projects"; method = "POST"; use = "Proyectos guardados" },
       @{ path = "/api/platform/decision-log"; method = "POST"; use = "Bitacora de decisiones" },
       @{ path = "/api/platform/users"; method = "POST"; use = "Usuarios y roles" },
+      @{ path = "/api/platform/geoai"; method = "POST"; use = "Estado del GeoAI Core" },
       @{ path = "/api/platform/manifest"; method = "GET"; use = "Manifest de integracion" },
       @{ path = "/api/planning/3d/manifest"; method = "GET"; use = "Disponibilidad 3D" }
     )
@@ -2627,6 +2730,21 @@ try {
           }
         } else {
           $result = Get-PlatformUsersPayload $body
+          Write-Json $stream 200 $result
+        }
+        continue
+      }
+      if ($request.Path -eq "/api/platform/geoai" -and $request.Method -eq "POST") {
+        $body = if ([string]::IsNullOrWhiteSpace($request.Body)) { @{} } else { $request.Body | ConvertFrom-Json }
+        if ($body.action -eq "replace" -or $body.action -eq "save") {
+          $result = Save-PlatformGeoAiState $body
+          if ($result.ok) {
+            Write-Json $stream 200 $result
+          } else {
+            Write-Json $stream 400 $result
+          }
+        } else {
+          $result = Get-PlatformGeoAiPayload $body
           Write-Json $stream 200 $result
         }
         continue
