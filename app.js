@@ -4,7 +4,7 @@ const localeDate = new Intl.DateTimeFormat("es-EC", {
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260526-2";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260529-2";
 
 const layerCatalog = [
   {
@@ -39,6 +39,36 @@ const layerCatalog = [
         id: "hidrozonas",
         title: "Subzonas hidricas",
         description: "Unidades hidricas sinteticas para balance oferta-demanda y resiliencia urbana.",
+      },
+    ],
+  },
+  {
+    group: "PIVA Mejia | Insumos municipales",
+    items: [
+      {
+        id: "bancoSueloMunicipal",
+        title: "Banco de suelo municipal",
+        description: "Reservas y predios municipales utiles para nodos verdes, drenaje y espacio publico.",
+      },
+      {
+        id: "equipamientoMunicipal",
+        title: "Equipamiento municipal",
+        description: "Equipamientos reales del canton para cobertura, proximidad y cartera PIVA.",
+      },
+      {
+        id: "serviciosBasicosParroquia",
+        title: "Servicios basicos por parroquia",
+        description: "Lectura resumida de agua, alcantarillado, luz y telefono por parroquia.",
+      },
+      {
+        id: "patrimonioMunicipal",
+        title: "Patrimonio cultural",
+        description: "Predios patrimoniales a considerar como restriccion y oportunidad de espacio publico.",
+      },
+      {
+        id: "altaTensionMejia",
+        title: "Alta tension y resguardos",
+        description: "Corredores electricos que condicionan arbolado, ocupacion y espacio publico seguro.",
       },
     ],
   },
@@ -137,6 +167,36 @@ const layerCatalog = [
       },
     ],
   },
+  {
+    group: "IDE Peru | Lima",
+    items: [
+      {
+        id: "limaHeatSummary",
+        title: "Vulnerabilidad termica distrital",
+        description: "Indice derivado con temperatura maxima oficial, densidad, ocupacion y riesgo de ladera.",
+      },
+      {
+        id: "limaTemperature",
+        title: "Temperatura maxima multianual",
+        description: "Bandas oficiales de temperatura maxima para comparar presion termica en Lima.",
+      },
+      {
+        id: "limaLomas",
+        title: "Lomas y montaña costera",
+        description: "Frecuencia oficial de aparicion de lomas como soporte ecologico y de borde de montaña.",
+      },
+      {
+        id: "limaDistrictRisk",
+        title: "Riesgo distrital de ladera",
+        description: "Nivel oficial de riesgo cualitativo por distrito debido a caidas, deslizamientos y flujos.",
+      },
+      {
+        id: "limaUrbanFootprint",
+        title: "Huella urbana 2021",
+        description: "Huella urbana oficial para contrastar expansion, construccion y temperatura.",
+      },
+    ],
+  },
 ];
 
 const routeDefaultLayerIds = {
@@ -144,7 +204,32 @@ const routeDefaultLayerIds = {
   gps: ["vias", "lotes", "estaciones"],
   catastro: ["manchaUrbana", "equipamientos", "hidrozonas"],
   planificacion: ["manchaUrbana", "equipamientos", "hidrozonas"],
+  piva: [
+    "manchaUrbana",
+    "equipamientos",
+    "hidrozonas",
+    "bancoSueloMunicipal",
+    "equipamientoMunicipal",
+    "serviciosBasicosParroquia",
+    "patrimonioMunicipal",
+    "altaTensionMejia",
+  ],
 };
+
+const limaTerritorialLayerIds = [
+  "limaHeatSummary",
+  "limaTemperature",
+  "limaLomas",
+  "limaDistrictRisk",
+  "limaUrbanFootprint",
+];
+
+const limaPlanningDefaultLayerIds = [
+  "limaHeatSummary",
+  "limaTemperature",
+  "limaLomas",
+  "limaUrbanFootprint",
+];
 
 const gpsRouteVisibleModuleCardIds = new Set([
   "workflowGuideCard",
@@ -166,6 +251,50 @@ const cadastreRouteVisibleModuleCardIds = new Set([
   "executiveDashboardCard",
   "reportCenterCard",
   "alertCenterCard",
+  "projectRegistryCard",
+  "decisionLogCard",
+  "accessRolesCard",
+  "apiCenterCard",
+  "geoAiCoreCard",
+]);
+
+const pivaRouteVisiblePlanningModuleCardIds = new Set([
+  "pivaCard",
+  "hydrologyCard",
+  "urbanClimateCard",
+  "mobilityCard",
+  "riskCard",
+  "landChangeCard",
+  "zoningPatternsCard",
+  "territorialScenarioCard",
+  "territorialReadoutCard",
+  "territorialDecisionCard",
+  "territorialAlertsCard",
+  "planning3dCard",
+]);
+
+const pivaRouteVisibleModuleCardIds = new Set([
+  "workflowGuideCard",
+  "officialDataCard",
+  "executiveDashboardCard",
+  "reportCenterCard",
+  "alertCenterCard",
+  "projectRegistryCard",
+  "decisionLogCard",
+  "accessRolesCard",
+  "apiCenterCard",
+  "geoAiCoreCard",
+]);
+
+const limaPlanningVisibleModuleCardIds = new Set([
+  "urbanClimateCard",
+]);
+
+const limaPlanningVisibleGlobalModuleCardIds = new Set([
+  "workflowGuideCard",
+  "officialDataCard",
+  "executiveDashboardCard",
+  "reportCenterCard",
   "projectRegistryCard",
   "decisionLogCard",
   "accessRolesCard",
@@ -222,9 +351,9 @@ const officialSourceCatalog = {
     ],
   },
   planificacion: {
-    title: "Fuentes oficiales para movilidad, servicios y aptitud",
-    copy: "Integra MTOP, MSP, Educacion, MIES, SENPLADES e IGM para reforzar cobertura, movilidad y soporte de decision.",
-    layerIds: ["redVialEstatal", "saludPublica", "educacionPublica", "serviciosSociales", "presenciaInstitucional", "aptitudIGM"],
+    title: "Fuentes oficiales y municipales para movilidad, servicios y soporte PIVA",
+    copy: "Integra MTOP, MSP, Educacion, MIES, SENPLADES, IGM y GAD Mejia para reforzar cobertura, movilidad, restricciones y cartera verde-azul.",
+    layerIds: ["redVialEstatal", "saludPublica", "educacionPublica", "serviciosSociales", "presenciaInstitucional", "aptitudIGM", "bancoSueloMunicipal", "equipamientoMunicipal", "serviciosBasicosParroquia", "patrimonioMunicipal", "altaTensionMejia"],
     sources: [
       {
         id: "mtop",
@@ -274,6 +403,38 @@ const officialSourceCatalog = {
         link: "http://www.geoportaligm.gob.ec/geoinformacion/index-alt3.html",
         use: "Soporte tecnico para aptitud, restriccion y decisiones de implantacion.",
       },
+      {
+        id: "gadBancoSuelo",
+        label: "GAD Mejia banco de suelo",
+        theme: "Reservas municipales",
+        year: "insumo local",
+        link: "./public-data/mejia-piva/banco_suelo_municipal.geojson",
+        use: "Predios municipales que pueden alojar nodos verdes, drenaje, parques y equipamiento de proximidad.",
+      },
+      {
+        id: "gadEquipamiento",
+        label: "GAD Mejia equipamiento",
+        theme: "Cobertura municipal",
+        year: "insumo local",
+        link: "./public-data/mejia-piva/equipamiento_municipal.geojson",
+        use: "Red real de equipamientos, areas verdes, recreacion, salud, educacion y seguridad para lectura PIVA.",
+      },
+      {
+        id: "gadServiciosBasicos",
+        label: "GAD Mejia servicios basicos",
+        theme: "Brecha por parroquia",
+        year: "insumo local",
+        link: "./public-data/mejia-piva/servicios_basicos_resumen.json",
+        use: "Cobertura de agua, alcantarillado, luz y telefono para priorizar sectores donde la infraestructura azul debe entrar primero.",
+      },
+      {
+        id: "gadPatrimonio",
+        label: "GAD Mejia patrimonio y resguardos",
+        theme: "Restriccion y oportunidad",
+        year: "insumo local",
+        link: "./public-data/mejia-piva/patrimonio_municipal.geojson",
+        use: "Predios patrimoniales y alta tension para ajustar arbolado, ocupacion y espacio publico seguro.",
+      },
     ],
   },
 };
@@ -282,6 +443,7 @@ const officialHydroLayerIds = ["microcuencasIGM", "subcuencasIGM", "cuencasIGM",
 const officialHydroVisibleLayerIds = ["microcuencasIGM", "subcuencasIGM", "cuerposAguaIGM", "estacionesPluvioIGM", "zonasHidrologicasIGM"];
 const hydroSupportLayerIds = ["riegoEstatal", "suelosIGM", "coberturaMAATE"];
 const hydroOperationalLayerIds = [...officialHydroVisibleLayerIds, ...hydroSupportLayerIds];
+const mejiaPivaLayerIds = ["bancoSueloMunicipal", "equipamientoMunicipal", "serviciosBasicosParroquia", "patrimonioMunicipal", "altaTensionMejia"];
 const officialHydroFileCatalog = {
   mejia: {
     territoryId: "mejia",
@@ -902,7 +1064,7 @@ const projectStorageKey = "geoportal.projects.v1";
 const decisionLogStorageKey = "geoportal.decisionLog.v1";
 const userProfileStorageKey = "geoportal.userProfile.v1";
 const geoAiCoreStorageKey = "geoportal.geoAiCore.v1";
-const GEOAI_CORE_VERSION = "2026.05.26-core1";
+const GEOAI_CORE_VERSION = "2026.05.26-core2";
 
 const roleCatalog = {
   administrador: {
@@ -2593,6 +2755,21 @@ const layerStyles = {
     fillOpacity: 0.12,
     dashArray: "6 6",
   },
+  bancoSueloMunicipal: {},
+  equipamientoMunicipal: {},
+  serviciosBasicosParroquia: {},
+  patrimonioMunicipal: {
+    color: "#8d6c38",
+    weight: 1.4,
+    fillColor: "#e2ca8c",
+    fillOpacity: 0.18,
+  },
+  altaTensionMejia: {
+    color: "#8d5362",
+    weight: 2.6,
+    opacity: 0.94,
+    dashArray: "10 7",
+  },
   aptitudIGM: {
     color: "#946d2e",
     weight: 1.2,
@@ -3395,6 +3572,17 @@ const digitalCadastreModeCatalog = {
   },
 };
 
+const mejiaPivaFileCatalog = {
+  manifest: "./public-data/mejia-piva/manifest.json",
+  datasets: {
+    bancoSueloMunicipal: "bancoSueloMunicipal",
+    equipamientoMunicipal: "equipamientoMunicipal",
+    patrimonioMunicipal: "patrimonioMunicipal",
+    altaTensionMejia: "altaTensionMejia",
+    serviciosBasicosParroquia: "serviciosBasicosParroquia",
+  },
+};
+
 const digitalCadastreAreaCatalog = {
   mejia: {
     id: "mejia",
@@ -3742,6 +3930,8 @@ const state = {
   riskHighlightId: null,
   urbanClimateData: null,
   urbanClimateHighlightId: null,
+  pivaData: null,
+  pivaHighlightId: null,
   zoningPatternsData: null,
   zoningPatternsHighlightId: null,
   housingPatternsData: null,
@@ -3749,6 +3939,8 @@ const state = {
   fieldEvidenceCatalog: null,
   officialHydroCatalog: null,
   officialHydroPromise: null,
+  localPivaCatalog: null,
+  localPivaPromise: null,
   fieldEvidenceData: null,
   fieldEvidenceHighlightId: null,
   fieldEvidenceHighlightType: "sector",
@@ -3759,6 +3951,7 @@ const state = {
     agronomia: null,
     gps: null,
     planificacion: null,
+    piva: null,
   },
   agronomyFocus: "imagery",
   hydroLayersVisible: true,
@@ -3798,6 +3991,9 @@ const state = {
       researchLog: [],
       experiments: [],
       qualityGate: null,
+      uxAudit: null,
+      layoutOptimization: null,
+      renderOptimization: null,
       scheduler: {
         enabled: false,
         cadenceHours: 24,
@@ -3897,6 +4093,9 @@ const mapState = {
   urbanClimateZoneLayer: null,
   urbanClimateCorridorLayer: null,
   urbanClimateNodeLayer: null,
+  pivaZoneLayer: null,
+  pivaCorridorLayer: null,
+  pivaProjectLayer: null,
   zoningPatternsLayer: null,
   zoningPatternsHotspotLayer: null,
   housingPatternsLayer: null,
@@ -3975,6 +4174,7 @@ const planning3dState = {
   selectedInsight: null,
   selectedPhotos: [],
   performanceProfile: null,
+  performanceProfileOverride: null,
   imageBackdrop: null,
   domMarkers: [],
   domOverlay: null,
@@ -5843,6 +6043,7 @@ function cacheDom() {
   dom.loginOverlay = document.querySelector("#loginOverlay");
   dom.openAgronomyBtn = document.querySelector("#openAgronomyBtn");
   dom.openPlanningBtn = document.querySelector("#openPlanningBtn");
+  dom.openPivaBtn = document.querySelector("#openPivaBtn");
   dom.openCadastreBtn = document.querySelector("#openCadastreBtn");
   dom.openOperationsBtn = document.querySelector("#openOperationsBtn");
   dom.openFieldEvidenceBtn = document.querySelector("#openFieldEvidenceBtn");
@@ -6171,6 +6372,21 @@ function cacheDom() {
   dom.urbanClimateReadout = document.querySelector("#urbanClimateReadout");
   dom.urbanClimateDrivers = document.querySelector("#urbanClimateDrivers");
   dom.urbanClimateSectors = document.querySelector("#urbanClimateSectors");
+  dom.runPivaBtn = document.querySelector("#runPivaBtn");
+  dom.focusPivaBtn = document.querySelector("#focusPivaBtn");
+  dom.exportPivaHtmlBtn = document.querySelector("#exportPivaHtmlBtn");
+  dom.exportPivaJsonBtn = document.querySelector("#exportPivaJsonBtn");
+  dom.clearPivaBtn = document.querySelector("#clearPivaBtn");
+  dom.pivaResults = document.querySelector("#pivaResults");
+  dom.pivaReadout = document.querySelector("#pivaReadout");
+  dom.pivaBoard = document.querySelector("#pivaBoard");
+  dom.pivaLegendBoard = document.querySelector("#pivaLegendBoard");
+  dom.pivaComparator = document.querySelector("#pivaComparator");
+  dom.pivaFramework = document.querySelector("#pivaFramework");
+  dom.pivaProfiles = document.querySelector("#pivaProfiles");
+  dom.pivaParishes = document.querySelector("#pivaParishes");
+  dom.pivaProjects = document.querySelector("#pivaProjects");
+  dom.pivaSourceNote = document.querySelector("#pivaSourceNote");
   dom.zoningPatternsResults = document.querySelector("#zoningPatternsResults");
   dom.zoningPatternsReadout = document.querySelector("#zoningPatternsReadout");
   dom.zoningPatternsClusters = document.querySelector("#zoningPatternsClusters");
@@ -6194,6 +6410,7 @@ function cacheDom() {
   dom.mobilityCard = document.querySelector("#mobilityCard");
   dom.riskCard = document.querySelector("#riskCard");
   dom.urbanClimateCard = document.querySelector("#urbanClimateCard");
+  dom.pivaCard = document.querySelector("#pivaCard");
   dom.zoningPatternsCard = document.querySelector("#zoningPatternsCard");
   dom.housingPatternsCard = document.querySelector("#housingPatternsCard");
   dom.fieldEvidenceCard = document.querySelector("#fieldEvidenceCard");
@@ -6533,7 +6750,7 @@ function saveUserProfileFromForm() {
 }
 
 function shouldShowPlotTools(route = state.entryRoute || "agronomia") {
-  return route === "agronomia" || route === "planificacion" || route === "catastro";
+  return route === "agronomia" || route === "planificacion" || route === "piva" || route === "catastro";
 }
 
 function syncPlotToolsState(route = state.entryRoute || "agronomia") {
@@ -6668,6 +6885,10 @@ function bindUI() {
   dom.openPlanningBtn.addEventListener("click", () => {
     state.pendingEntryAction = null;
     enterPublicView("planificacion");
+  });
+  dom.openPivaBtn?.addEventListener("click", () => {
+    state.pendingEntryAction = null;
+    enterPublicView("piva");
   });
   dom.openCadastreBtn?.addEventListener("click", () => {
     state.pendingEntryAction = null;
@@ -7179,6 +7400,25 @@ function bindUI() {
   });
   dom.focusUrbanClimateBtn?.addEventListener("click", focusUrbanClimateStudy);
   dom.clearUrbanClimateBtn?.addEventListener("click", clearUrbanClimateAnalysis);
+  dom.runPivaBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.pivaResults, "Integrando clima urbano, seguridad hidrica, corredores verdes y soporte oficial para estructurar el PIVA...", [
+      { target: dom.pivaReadout, message: "Armando la lectura verde-azul integrada del canton Mejia..." },
+      { target: dom.pivaBoard, message: "Calculando semaforo PIVA, pilares y prioridad de intervencion..." },
+      { target: dom.pivaLegendBoard, message: "Preparando leyenda verde-azul y claves de lectura para el mapa y la cartera..." },
+      { target: dom.pivaComparator, message: "Comparando estado actual contra la propuesta PIVA para medir mejora esperada..." },
+      { target: dom.pivaFramework, message: "Ordenando modelo territorial, red priorizada, paquetes y fases de implementacion inspiradas en los resultados del PIVA de Manta..." },
+      { target: dom.pivaProfiles, message: "Preparando perfiles prioritarios para volver visible el PIVA en corredores urbanos, frentes hidricos y bordes productivos..." },
+      { target: dom.pivaParishes, message: "Priorizando parroquias, brechas de servicios y proyectos detonantes del PIVA..." },
+      { target: dom.pivaProjects, message: "Priorizando cartera inicial de proyectos PIVA por corredor, drenaje, arbolado y espacio publico..." },
+    ]);
+    return runModuleAction(dom.runPivaBtn, "Construyendo PIVA...", () => runPivaAnalysis());
+  });
+  dom.focusPivaBtn?.addEventListener("click", focusPivaStudy);
+  dom.exportPivaHtmlBtn?.addEventListener("click", exportPivaHtmlReport);
+  dom.exportPivaJsonBtn?.addEventListener("click", exportPivaJson);
+  dom.clearPivaBtn?.addEventListener("click", clearPivaAnalysis);
+  dom.pivaBoard?.addEventListener("click", handlePivaInteraction);
+  dom.pivaProjects?.addEventListener("click", handlePivaInteraction);
   dom.runZoningPatternsBtn?.addEventListener("click", () => {
     setModulePendingState(dom.zoningPatternsResults, "Leyendo patrones territoriales, vitalidad y contrastes espaciales...", [
       { target: dom.zoningPatternsReadout, message: "Interpretando patron dominante, vitalidad urbana y sentido territorial de la corrida..." },
@@ -7704,7 +7944,7 @@ function handleFieldEvidenceInteraction(event) {
 }
 
 function handleTerritorialSectorSheetsInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-digital-cadastre-id], [data-cadastre-draw], [data-cadastre-open], [data-land-change-sector-id], [data-hydrology-sector-id], [data-zoning-sector-id], [data-housing-sector-id], [data-urban-climate-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
+  const button = event.target.closest("[data-candidate-id], [data-digital-cadastre-id], [data-cadastre-draw], [data-cadastre-open], [data-land-change-sector-id], [data-hydrology-sector-id], [data-zoning-sector-id], [data-housing-sector-id], [data-urban-climate-sector-id], [data-piva-project-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
   if (!button || !dom.territorialSectorSheets?.contains(button)) {
     return;
   }
@@ -7745,6 +7985,10 @@ function handleTerritorialSectorSheetsInteraction(event) {
     focusUrbanClimateSector(button.dataset.urbanClimateSectorId);
     return;
   }
+  if (button.dataset.pivaProjectId) {
+    focusPivaProject(button.dataset.pivaProjectId);
+    return;
+  }
   if (button.dataset.fieldSectorId) {
     focusFieldEvidenceItem("sector", button.dataset.fieldSectorId);
     return;
@@ -7771,7 +8015,7 @@ function handleTerritorialSectorSheetsInteraction(event) {
 }
 
 function handleTerritorialAlertInteraction(event) {
-  const button = event.target.closest("[data-candidate-id], [data-digital-cadastre-id], [data-cadastre-draw], [data-cadastre-open], [data-land-change-sector-id], [data-hydrology-sector-id], [data-zoning-sector-id], [data-housing-sector-id], [data-urban-climate-sector-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
+  const button = event.target.closest("[data-candidate-id], [data-digital-cadastre-id], [data-cadastre-draw], [data-cadastre-open], [data-land-change-sector-id], [data-hydrology-sector-id], [data-zoning-sector-id], [data-housing-sector-id], [data-urban-climate-sector-id], [data-piva-project-id], [data-field-sector-id], [data-field-station-id], [data-field-sensitive-id], [data-field-history-id], [data-foda-zone-id], [data-ai-geo-focus-id]");
   if (!button || !dom.territorialAlertsPanel?.contains(button)) {
     return;
   }
@@ -7810,6 +8054,10 @@ function handleTerritorialAlertInteraction(event) {
   }
   if (button.dataset.urbanClimateSectorId) {
     focusUrbanClimateSector(button.dataset.urbanClimateSectorId);
+    return;
+  }
+  if (button.dataset.pivaProjectId) {
+    focusPivaProject(button.dataset.pivaProjectId);
     return;
   }
   if (button.dataset.fieldSectorId) {
@@ -8202,6 +8450,10 @@ function isPlanningRoute(route = state.entryRoute || "agronomia") {
   return route === "planificacion";
 }
 
+function isPivaRoute(route = state.entryRoute || "agronomia") {
+  return route === "piva";
+}
+
 function isCadastreRoute(route = state.entryRoute || "agronomia") {
   return route === "catastro";
 }
@@ -8214,8 +8466,12 @@ function isEvidenceRoute(route = state.entryRoute || "agronomia") {
   return false;
 }
 
+function isPlanningLikeRoute(route = state.entryRoute || "agronomia") {
+  return isPlanningRoute(route) || isPivaRoute(route);
+}
+
 function isTerritorialRoute(route = state.entryRoute || "agronomia") {
-  return isPlanningRoute(route) || isCadastreRoute(route);
+  return isPlanningLikeRoute(route) || isCadastreRoute(route);
 }
 
 function isAgronomyLikeRoute(route = state.entryRoute || "agronomia") {
@@ -8243,6 +8499,8 @@ function applyRouteFromUrl() {
   state.pendingEntryAction = null;
   const route = routeParam === "planificacion"
     ? "planificacion"
+    : routeParam === "piva"
+      ? "piva"
     : routeParam === "catastro"
       ? "catastro"
     : routeParam === "operacion" || routeParam === "gps"
@@ -8265,7 +8523,7 @@ function applyRouteFromUrl() {
     }, 260);
   }
 
-  if (route === "planificacion" && viewerParam === "3d") {
+  if ((route === "planificacion" || route === "piva") && viewerParam === "3d") {
     window.setTimeout(() => {
       openPlanning3dViewer();
     }, 520);
@@ -8276,28 +8534,61 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   state.entryRoute = route;
   syncEntryRouteUi(route);
 
-  if (isPlanningRoute(route)) {
+  if (isPlanningLikeRoute(route)) {
     state.pendingEntryAction = null;
-    state.territorialFocus = "planning";
+    state.territorialFocus = isPivaRoute(route) ? "piva" : "planning";
     clearAgronomyMapContext();
     if (mapState.studyAreaLayer) {
       mapState.map.removeLayer(mapState.studyAreaLayer);
       mapState.studyAreaLayer = null;
     }
-    if (state.planningData) {
+    if (state.planningData && !isPivaRoute(route)) {
       renderPlanningOverlay(state.planningData);
+    } else {
+      clearPlanningOverlay();
     }
-    if (state.mobilityData) {
+    if (state.mobilityData && !isPivaRoute(route)) {
       renderMobilityOverlay(state.mobilityData);
+    } else {
+      clearMobilityOverlay();
     }
-    if (state.riskData) {
+    if (state.riskData && !isPivaRoute(route)) {
       renderRiskOverlay(state.riskData);
+    } else {
+      clearRiskOverlay();
     }
-    if (state.landChangeData) {
+    if (state.landChangeData && !isPivaRoute(route)) {
       renderLandChangeOverlay(state.landChangeData);
+    } else {
+      clearLandChangeOverlay();
     }
-    if (state.hydrologyData) {
+    if (state.hydrologyData && !isPivaRoute(route)) {
       renderHydrologyOverlay(state.hydrologyData);
+    } else {
+      clearHydrologyOverlay();
+    }
+    if (state.urbanClimateData && !isPivaRoute(route)) {
+      renderUrbanClimateOverlay(state.urbanClimateData);
+    } else {
+      clearUrbanClimateOverlay();
+    }
+    if (state.zoningPatternsData && !isPivaRoute(route)) {
+      renderZoningPatternsOverlay(state.zoningPatternsData);
+    } else {
+      clearZoningPatternsOverlay();
+    }
+    if (state.housingPatternsData && !isPivaRoute(route)) {
+      renderHousingPatternsOverlay(state.housingPatternsData);
+    } else {
+      clearHousingPatternsOverlay();
+    }
+    if (state.pivaData) {
+      renderPivaOverlay(state.pivaData);
+    } else {
+      clearPivaOverlay();
+    }
+    if (state.hydrologyData && isPivaRoute(route)) {
+      clearHydrologyOverlay();
     }
     clearFodaCameOverlay();
     clearFieldEvidenceOverlay();
@@ -8309,17 +8600,25 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     setActiveTab("modulos");
     hydratePlanning3dManifest();
     if (dom.sidebarTitle) {
-      dom.sidebarTitle.textContent = "Modulo territorial inteligente";
+      dom.sidebarTitle.textContent = isPivaRoute(route)
+        ? "Centro PIVA del canton Mejia"
+        : "Modulo territorial inteligente";
     }
     if (dom.sidebarSubtitle) {
-      dom.sidebarSubtitle.textContent = "Una ruta guiada para resolver aptitud, riesgo, agua, movilidad, estrategia y validacion 3D.";
+      dom.sidebarSubtitle.textContent = isPivaRoute(route)
+        ? "Una ruta dedicada a infraestructura verde y azul, con modelo territorial, red priorizada, paquetes, perfiles y cartera de proyectos."
+        : "Una ruta guiada para resolver aptitud, riesgo, agua, movilidad, estrategia y validacion 3D.";
     }
     if (dom.overlayMode) {
-      dom.overlayMode.textContent = "Territorial";
+      dom.overlayMode.textContent = isPivaRoute(route) ? "PIVA" : "Territorial";
     }
     updateMapSummary();
     window.setTimeout(() => {
-      focusPlanningCommandCard();
+      if (isPivaRoute(route)) {
+        focusModuleCard(dom.pivaCard);
+      } else {
+        focusPlanningCommandCard();
+      }
     }, 120);
     return;
   }
@@ -8606,6 +8905,7 @@ function getModuleCardLabel(card) {
     mobilityCard: "Movilidad",
     riskCard: "Riesgo",
     urbanClimateCard: "Clima urbano",
+    pivaCard: "PIVA",
     zoningPatternsCard: "Zonificacion",
     housingPatternsCard: "Vivienda",
     landChangeCard: "Huella",
@@ -8654,12 +8954,40 @@ function getModuleRouteLabel(route = state.entryRoute || "agronomia") {
   if (isCadastreRoute(route)) {
     return "catastro asistido";
   }
+  if (isPivaRoute(route)) {
+    return "PIVA Mejia";
+  }
   return isPlanningRoute(route)
     ? "planificacion territorial"
     : "agronomia";
 }
 
 function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
+  if (isPivaRoute(route)) {
+    return {
+      kicker: "PIVA Mejia",
+      title: "Abre el plan verde-azul como una ruta propia y no como una tarjeta perdida",
+      copy: "Modelo territorial, red priorizada, paquetes, perfiles, cartera, capas municipales y validacion 3D dentro de un frente dedicado.",
+      actions: [
+        { id: "planning-piva", label: "Construir PIVA", copy: "Modelo y cartera", tone: "primary" },
+        { id: "planning-water", label: "Agua", copy: "Frentes azules", tone: "neutral" },
+        { id: "planning-climate", label: "Clima", copy: "Corredores frios", tone: "neutral" },
+        { id: "planning-risk", label: "Riesgo", copy: "Contencion y borde", tone: "neutral" },
+        { id: "planning-official", label: "Oficiales", copy: "Capas y soporte", tone: "neutral" },
+        { id: "planning-3d", label: "3D", copy: "Corredor y propuesta", tone: "accent" },
+        { id: "suite-dashboard", label: "Dashboard", copy: "Semaforos y avance", tone: "neutral" },
+      ],
+      filters: [
+        { id: "all", label: "Todo" },
+        { id: "core", label: "PIVA" },
+        { id: "structure", label: "Red" },
+        { id: "official", label: "Oficiales" },
+        { id: "projects", label: "Proyectos" },
+        { id: "product", label: "Gestion" },
+      ],
+    };
+  }
+
   if (isCadastreRoute(route)) {
     return {
       kicker: "Catastro inteligente",
@@ -8718,6 +9046,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
         { id: "planning-risk", label: "Riesgo", copy: "Restriccion y contencion", tone: "neutral" },
         { id: "planning-mobility", label: "Movilidad", copy: "Cobertura y tiempos", tone: "neutral" },
         { id: "planning-climate", label: "Clima urbano", copy: "Ventilacion y enfriamiento", tone: "neutral" },
+        { id: "planning-piva", label: "PIVA", copy: "Infraestructura verde y azul", tone: "neutral" },
         { id: "planning-official", label: "Oficiales", copy: "Vialidad y servicios", tone: "neutral" },
         { id: "planning-water", label: "Agua", copy: "Oferta y resiliencia", tone: "neutral" },
         { id: "planning-cadastre", label: "Catastro", copy: "Predios y contornos", tone: "neutral" },
@@ -8772,12 +9101,20 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
     return true;
   }
 
+  const pivaFilters = {
+    core: new Set(["pivaCard", "territorialReadoutCard", "territorialDecisionCard", "territorialAlertsCard"]),
+    structure: new Set(["hydrologyCard", "urbanClimateCard", "mobilityCard", "riskCard", "landChangeCard", "zoningPatternsCard", "planning3dCard", "territorialScenarioCard"]),
+    official: new Set(["officialDataCard"]),
+    projects: new Set(["pivaCard", "territorialScenarioCard", "planning3dCard", "projectRegistryCard", "reportCenterCard"]),
+    product: new Set(["executiveDashboardCard", "reportCenterCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
+  };
+
   const planningFilters = {
     core: new Set(["planningCommandCard", "territorialOpsCard", "planningCard", "planningResultsCard"]),
     official: new Set(["officialDataCard", "digitalCadastreCard"]),
-    risk: new Set(["riskCard", "urbanClimateCard", "hydrologyCard", "territorialReadoutCard"]),
-    growth: new Set(["mobilityCard", "landChangeCard", "territorialScenarioCard", "zoningPatternsCard", "housingPatternsCard", "urbanClimateCard"]),
-    strategy: new Set(["fodaCameCard", "territorialDecisionCard", "territorialAlertsCard", "aiGeoCard", "zoningPatternsCard", "housingPatternsCard", "urbanClimateCard"]),
+    risk: new Set(["riskCard", "urbanClimateCard", "hydrologyCard", "pivaCard", "territorialReadoutCard"]),
+    growth: new Set(["mobilityCard", "landChangeCard", "territorialScenarioCard", "zoningPatternsCard", "housingPatternsCard", "urbanClimateCard", "pivaCard"]),
+    strategy: new Set(["fodaCameCard", "territorialDecisionCard", "territorialAlertsCard", "aiGeoCard", "zoningPatternsCard", "housingPatternsCard", "urbanClimateCard", "pivaCard"]),
     validation: new Set(["planning3dCard", "digitalCadastreCard"]),
     product: new Set(["executiveDashboardCard", "reportCenterCard", "scenarioLabCard", "timeSeriesCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
   };
@@ -8808,6 +9145,8 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
 
   const filters = isCadastreRoute(route)
     ? cadastreFilters
+    : isPivaRoute(route)
+    ? pivaFilters
     : isPlanningRoute(route)
     ? planningFilters
     : isGpsRoute(route)
@@ -8828,6 +9167,33 @@ function setModuleQuickNavActive(cardId = "") {
 }
 
 function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
+  if (isPivaRoute(route)) {
+    return {
+      workflowGuideCard: false,
+      officialDataCard: true,
+      pivaCard: false,
+      hydrologyCard: true,
+      urbanClimateCard: true,
+      mobilityCard: true,
+      riskCard: true,
+      landChangeCard: true,
+      zoningPatternsCard: true,
+      territorialScenarioCard: true,
+      territorialReadoutCard: true,
+      territorialDecisionCard: true,
+      territorialAlertsCard: true,
+      planning3dCard: true,
+      executiveDashboardCard: false,
+      reportCenterCard: true,
+      alertCenterCard: false,
+      projectRegistryCard: true,
+      decisionLogCard: true,
+      accessRolesCard: true,
+      apiCenterCard: true,
+      geoAiCoreCard: false,
+    };
+  }
+
   if (isCadastreRoute(route)) {
     return {
       workflowGuideCard: false,
@@ -8857,6 +9223,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
       mobilityCard: true,
       riskCard: true,
       urbanClimateCard: true,
+      pivaCard: true,
       zoningPatternsCard: true,
       housingPatternsCard: true,
       hydrologyCard: true,
@@ -9168,6 +9535,8 @@ function clearPlanningModuleFocus() {
 function getWorkflowGuideModel(route = state.entryRoute || "agronomia") {
   const profile = isCadastreRoute(route)
     ? workflowGuideCatalog.catastro
+    : isPivaRoute(route)
+    ? workflowGuideCatalog.planificacion
     : isPlanningRoute(route)
     ? workflowGuideCatalog.planificacion
     : isGpsRoute(route)
@@ -9423,6 +9792,21 @@ function openSidebarWorkingPanel(tabId = "modulos") {
 }
 
 function getSidebarDockConfig(route = state.entryRoute || "agronomia") {
+  if (isPivaRoute(route)) {
+    return {
+      title: "Atajos PIVA",
+      subtitle: "Modelo, red, paquetes y 3D sin recorrer toda la ruta territorial.",
+      actions: [
+        { id: "planning-piva", label: "PIVA" },
+        { id: "planning-water", label: "Agua" },
+        { id: "planning-climate", label: "Clima" },
+        { id: "planning-official", label: "Oficiales" },
+        { id: "planning-3d", label: "3D" },
+        { id: "suite-dashboard", label: "Dashboard" },
+      ],
+    };
+  }
+
   if (isCadastreRoute(route)) {
     return {
       title: "Atajos catastrales",
@@ -9450,6 +9834,79 @@ function getSidebarDockConfig(route = state.entryRoute || "agronomia") {
     };
   }
 
+  if (isPivaRoute(route)) {
+    const areaProfile = getTerritorialAreaProfile();
+    const analysis = isCurrentTerritorialAnalysis(state.pivaData) ? state.pivaData : null;
+    const officialReady = !!state.officialData.planificacion?.activeLayerCount;
+    const threeDReady = !!planning3dState.manifest || planning3dState.modalOpen;
+    return {
+      ...profile,
+      badge: "Ruta PIVA",
+      title: "Secuencia corta para armar el PIVA de Mejia",
+      copy: analysis
+        ? `${analysis.summary.headline} ${analysis.summary.projectCount} proyectos, ${analysis.summary.packageCount} paquetes y ${analysis.summary.profileCount} perfiles ya estan listos en ${analysis.context.scopeLabel}.`
+        : `Modelo territorial, red verde-azul, soporte municipal y cartera accionable para ${areaProfile.scopeLabel}.`,
+      steps: [
+        {
+          id: "official",
+          title: "Activar soporte oficial y municipal",
+          tone: officialReady ? "ready" : "pending",
+          stateLabel: officialReady
+            ? `${state.officialData.planificacion.activeLayerCount} capas oficiales y soporte municipal disponibles`
+            : "Cruza capas oficiales, banco de suelo, equipamientos, servicios y patrimonio.",
+        },
+        {
+          id: "model",
+          title: "Construir modelo territorial",
+          tone: analysis ? "ready" : "pending",
+          stateLabel: analysis
+            ? `${analysis.summary.pivaScore}/100 con lectura integrada`
+            : "Ejecuta el PIVA para obtener score, semaforo y lectura verde-azul.",
+        },
+        {
+          id: "corridors",
+          title: "Priorizar red y corredores",
+          tone: analysis?.summary?.corridorCount ? "ready" : "pending",
+          stateLabel: analysis
+            ? `${analysis.summary.corridorCount} corredores y ${analysis.summary.hydricPriorityCount} frentes azules`
+            : "Define corredores, frentes hidricos y conectividad ecológica.",
+        },
+        {
+          id: "packages",
+          title: "Definir paquetes y perfiles",
+          tone: analysis?.packages?.length ? "ready" : "pending",
+          stateLabel: analysis
+            ? `${analysis.summary.packageCount} paquetes y ${analysis.summary.profileCount} perfiles`
+            : "Agrupa drenaje, arbolado, espacio publico y bordes productivos.",
+        },
+        {
+          id: "portfolio",
+          title: "Cerrar cartera accionable",
+          tone: analysis?.projects?.length ? "ready" : "pending",
+          stateLabel: analysis
+            ? `${analysis.summary.projectCount} proyectos priorizados`
+            : "Genera la cartera inicial por corredor, drenaje y soporte municipal.",
+        },
+        {
+          id: "viewer3d",
+          title: "Contrastar en visor 3D",
+          tone: threeDReady ? "available" : "pending",
+          stateLabel: threeDReady
+            ? "Visor listo para contrastar tejido, clima y propuesta"
+            : "Abre el 3D para validar calle, espacio publico y restricciones.",
+        },
+      ],
+      actions: [
+        { id: "planning-piva", label: "Construir PIVA", tone: "secondary" },
+        { id: "planning-water", label: "Cruzar agua", tone: "ghost" },
+        { id: "planning-climate", label: "Leer clima", tone: "ghost" },
+        { id: "planning-official", label: "Fuentes oficiales", tone: "ghost" },
+        { id: "planning-3d", label: "Abrir visor 3D", tone: "ghost" },
+        { id: "suite-dashboard", label: "Dashboard", tone: "ghost" },
+      ],
+    };
+  }
+
   if (isPlanningRoute(route)) {
     return {
       title: "Atajos inteligentes",
@@ -9458,6 +9915,7 @@ function getSidebarDockConfig(route = state.entryRoute || "agronomia") {
         { id: "planning-area", label: "Area" },
         { id: "planning-copilot", label: "Copiloto" },
         { id: "planning-aptitude", label: "Aptitud" },
+        { id: "planning-piva", label: "PIVA" },
         { id: "planning-official", label: "Oficiales" },
         { id: "planning-risk", label: "Riesgo" },
         { id: "planning-3d", label: "3D" },
@@ -9656,6 +10114,12 @@ function runWorkflowGuideAction(actionId) {
       focusModuleCard(dom.urbanClimateCard);
       setStatus("Clima urbano listo para proteger corredores de aire frio, reservas de ventilacion y sectores de retencion termica.");
       return;
+    case "planning-piva":
+      openSidebarWorkingPanel("modulos");
+      dom.runPivaBtn?.click();
+      focusModuleCard(dom.pivaCard);
+      setStatus("PIVA de Mejia listo para integrar agua, clima, arbolado, espacio publico y cartera priorizada de proyectos.");
+      return;
     case "planning-official":
       openSidebarWorkingPanel("modulos");
       dom.runOfficialDataBtn?.click();
@@ -9712,10 +10176,11 @@ function runWorkflowGuideAction(actionId) {
 
 function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   const isPlanning = isPlanningRoute(route);
+  const isPiva = isPivaRoute(route);
   const isCadastre = isCadastreRoute(route);
   const isGps = isGpsRoute(route);
   const isEvidence = isEvidenceRoute(route);
-  const isTerritorial = isPlanning || isCadastre || isEvidence;
+  const isTerritorial = isPlanning || isPiva || isCadastre || isEvidence;
   if (state.moduleSearchRoute !== route) {
     state.moduleSearchRoute = route;
     state.moduleSearchQuery = "";
@@ -9730,13 +10195,15 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
     dom.tabImageryBtn.textContent = "Imagenes";
   }
   if (dom.tabModulesBtn) {
-    dom.tabModulesBtn.textContent = isGps ? "GPS" : isCadastre ? "Catastro" : "Copiloto";
+    dom.tabModulesBtn.textContent = isGps ? "GPS" : isCadastre ? "Catastro" : isPiva ? "PIVA" : "Copiloto";
   }
   if (dom.moduleSearchInput) {
     dom.moduleSearchInput.placeholder = isGps
       ? "Buscar seguimiento, corredor, replay o alertas"
       : isCadastre
         ? "Buscar predios, contornos, oficiales o catastro"
+      : isPiva
+        ? "Buscar PIVA, agua, clima, paquetes o cartera"
       : isPlanning
         ? "Buscar aptitud, agua, riesgo, FODA o 3D"
         : "Buscar GPS, agua, riesgo, FODA, 3D o clima";
@@ -9752,6 +10219,8 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
       ? "Centro operativo"
       : isCadastre
       ? "Catastro inteligente"
+      : isPiva
+      ? "PIVA Mejia"
       : isPlanning
       ? "Modulo inteligente"
       : isEvidence
@@ -9763,6 +10232,8 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
       ? "Centro GPS operativo"
       : isCadastre
       ? "Modulo catastral inteligente"
+      : isPiva
+      ? "Plan verde-azul inteligente"
       : isPlanning
       ? "Modulo territorial inteligente"
       : isEvidence
@@ -9774,6 +10245,8 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
       ? `Seguimiento en vivo, corredor, replay, alertas y reporte sobre ${getAgronomyAreaProfile().scopeLabel}.`
       : isCadastre
       ? "Predios visibles, contornos, soporte oficial y validacion tecnica en una ruta aparte."
+      : isPiva
+      ? "Ruta dedicada al PIVA de Mejia: modelo territorial, red verde-azul, paquetes, perfiles, cartera e implementacion."
       : isPlanning
       ? "Copiloto, oficiales, aptitud, agua, riesgo, estrategia y 3D en una sola ruta."
       : isEvidence
@@ -9785,6 +10258,8 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
       ? "Operacion GPS"
       : isCadastre
       ? "Catastro inteligente"
+      : isPiva
+      ? "PIVA Mejia"
       : isPlanning
       ? "Territorio inteligente"
       : isEvidence
@@ -9793,7 +10268,11 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   }
   if (Array.isArray(dom.planningModuleCards)) {
     dom.planningModuleCards.forEach((card) => {
-      card.classList.toggle("hidden", isCadastre ? card.id !== "digitalCadastreCard" : !isPlanning);
+      card.classList.toggle("hidden", isCadastre
+        ? card.id !== "digitalCadastreCard"
+        : isPiva
+          ? !pivaRouteVisiblePlanningModuleCardIds.has(card.id)
+          : !isPlanning);
     });
   }
   if (Array.isArray(dom.evidenceModuleCards)) {
@@ -9807,6 +10286,8 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
         ? !gpsRouteVisibleModuleCardIds.has(card.id)
         : isCadastre
           ? !cadastreRouteVisibleModuleCardIds.has(card.id)
+          : isPiva
+            ? !pivaRouteVisibleModuleCardIds.has(card.id)
           : false);
     });
   }
@@ -9841,7 +10322,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
 }
 
 function getOfficialRouteKey(route = state.entryRoute || "agronomia") {
-  return isPlanningRoute(route) || isCadastreRoute(route) || isEvidenceRoute(route) ? "planificacion" : "agronomia";
+  return isPlanningLikeRoute(route) || isCadastreRoute(route) || isEvidenceRoute(route) ? "planificacion" : "agronomia";
 }
 
 function getOfficialSourceProfile(route = state.entryRoute || "agronomia") {
@@ -9982,9 +10463,9 @@ function renderOfficialDataModule(route = state.entryRoute || "agronomia") {
       ]
     : [
         {
-          label: "Fuentes oficiales",
+          label: "Fuentes base",
           value: `${summary.sourceCount}`,
-          copy: "MTOP, MSP, Educacion, MIES, PIT e IGM activadas.",
+          copy: "MTOP, MSP, Educacion, MIES, PIT, IGM y GAD Mejia activadas.",
         },
         {
           label: "Capas activas",
@@ -9994,13 +10475,13 @@ function renderOfficialDataModule(route = state.entryRoute || "agronomia") {
         {
           label: "Servicios visibles",
           value: `${summary.pointCount}`,
-          copy: "Salud, educacion, servicios sociales y presencia institucional.",
+          copy: "Salud, educacion, servicios sociales, equipamiento municipal y brechas de servicios.",
           highlight: true,
         },
         {
           label: "Corredores y aptitud",
           value: `${summary.lineCount + summary.areaCount}`,
-          copy: "Red vial estatal y superficies de aptitud fisica del territorio.",
+          copy: "Red vial estatal, aptitud fisica, patrimonio y resguardos municipales.",
         },
         {
           label: "Elementos visibles",
@@ -10062,6 +10543,13 @@ function renderOfficialDataModule(route = state.entryRoute || "agronomia") {
 async function runOfficialDataAnalysis(silent = false) {
   const route = state.entryRoute || "agronomia";
   const routeKey = getOfficialRouteKey(route);
+  if (routeKey === "planificacion") {
+    try {
+      await loadMejiaPivaCatalog();
+    } catch (error) {
+      console.warn("No se pudieron cargar los insumos municipales de Mejia para oficiales.", error);
+    }
+  }
   const preset = getOfficialLayerPreset(route);
   setLayerSelectionForIds(preset, true, route);
   renderLayerTree();
@@ -10510,6 +10998,9 @@ function getLayerSelectionRouteKey(route = state.entryRoute || "agronomia") {
   if (isCadastreRoute(route)) {
     return "catastro";
   }
+  if (isPivaRoute(route)) {
+    return "piva";
+  }
   if (isPlanningRoute(route) || isEvidenceRoute(route)) {
     return "planificacion";
   }
@@ -10614,13 +11105,18 @@ function getGeoLayerSource(layerId) {
       console.warn(`No se pudo cargar la capa oficial ${layerId}.`, error);
     });
   }
+  if (mejiaPivaLayerIds.includes(layerId) && !state.localPivaCatalog && !state.localPivaPromise) {
+    loadMejiaPivaCatalog().catch((error) => {
+      console.warn(`No se pudo cargar la capa local ${layerId}.`, error);
+    });
+  }
   const geojson = geoSources[layerId];
   if (!geojson) {
     return null;
   }
 
   const agronomyScopedLayers = ["parroquias", "vias", "lotes", "estaciones", "riegoEstatal", "suelosIGM", "coberturaMAATE", ...officialHydroLayerIds];
-  const planningScopedLayers = ["manchaUrbana", "equipamientos", "hidrozonas", "redVialEstatal", "saludPublica", "educacionPublica", "serviciosSociales", "presenciaInstitucional", "aptitudIGM"];
+  const planningScopedLayers = ["manchaUrbana", "equipamientos", "hidrozonas", "redVialEstatal", "saludPublica", "educacionPublica", "serviciosSociales", "presenciaInstitucional", "aptitudIGM", ...mejiaPivaLayerIds];
 
   if (agronomyScopedLayers.includes(layerId)) {
     return {
@@ -10697,6 +11193,21 @@ function buildLayerDescription(layerId, properties = {}) {
   if (layerId === "equipamientos") {
     return `${formatFacilityTypeLabel(properties.serviceType)} de escala ${properties.level || "local"} usado para medir cobertura territorial.`;
   }
+  if (layerId === "bancoSueloMunicipal") {
+    return `${properties.descr || "Banco de suelo"} en ${properties.parroquia || "Mejia"} con ${Number.isFinite(Number(properties.areaTerrenoM2)) ? `${formatIrrigationNumber(Number(properties.areaTerrenoM2), 0)} m²` : "area sin dato"}. ${properties.summary || "Reserva municipal util para espacio publico, drenaje o nodo verde."}`;
+  }
+  if (layerId === "equipamientoMunicipal") {
+    return `${properties.tipologia || "Equipamiento"}${properties.serviceTypeLabel ? ` de tipo ${properties.serviceTypeLabel}` : ""}. ${properties.summary || "Punto municipal para cobertura y proximidad."}`;
+  }
+  if (layerId === "serviciosBasicosParroquia") {
+    return properties.summary || `${properties.parroquia || "Parroquia"} con indice de servicios ${properties.serviceIndex || "s/d"}.`;
+  }
+  if (layerId === "patrimonioMunicipal") {
+    return `${properties.tde || "Patrimonio"}${properties.obs ? `. ${properties.obs}` : ""}`;
+  }
+  if (layerId === "altaTensionMejia") {
+    return `${properties.tde || "Alta tension"} con resguardo referencial de ${properties.resguardoM || 30} m. ${properties.summary || ""}`.trim();
+  }
   if (layerId === "aptitudIGM") {
     return `${properties.aptitudeClass || "Aptitud"} segun ${properties.source || "IGM"}. ${properties.summary || "Soporte fisico para implantacion territorial."}`;
   }
@@ -10769,6 +11280,73 @@ function getPointMarkerStyle(layerId, feature = null) {
       color: "#1f6a50",
       fillColor: "#69bb8f",
       fillOpacity: 0.94,
+    };
+  }
+  if (layerId === "bancoSueloMunicipal") {
+    return {
+      radius: 7,
+      weight: 2,
+      color: "#3f7b55",
+      fillColor: "#8ec79c",
+      fillOpacity: 0.95,
+    };
+  }
+  if (layerId === "equipamientoMunicipal") {
+    const localType = String(feature?.properties?.tipologia || "").toUpperCase();
+    if (/EDUCACI/.test(localType)) {
+      return {
+        radius: 8,
+        weight: 2,
+        color: "#966b22",
+        fillColor: "#efc36b",
+        fillOpacity: 0.94,
+      };
+    }
+    if (/SALUD/.test(localType)) {
+      return {
+        radius: 8,
+        weight: 2,
+        color: "#7f3f57",
+        fillColor: "#d97f9d",
+        fillOpacity: 0.92,
+      };
+    }
+    if (/SEGURIDAD/.test(localType)) {
+      return {
+        radius: 7,
+        weight: 2,
+        color: "#466889",
+        fillColor: "#8eb3d8",
+        fillOpacity: 0.93,
+      };
+    }
+    if (/ÁREAS VERDES|AREAS VERDES|RECREACI/.test(localType)) {
+      return {
+        radius: 7,
+        weight: 2,
+        color: "#2f6d58",
+        fillColor: "#79c28e",
+        fillOpacity: 0.94,
+      };
+    }
+    return {
+      radius: 7,
+      weight: 2,
+      color: "#7a6b48",
+      fillColor: "#d7c28d",
+      fillOpacity: 0.93,
+    };
+  }
+  if (layerId === "serviciosBasicosParroquia") {
+    const serviceIndex = Number(feature?.properties?.serviceIndex);
+    const fillColor = serviceIndex >= 72 ? "#69bb8f" : serviceIndex >= 55 ? "#e5c06a" : "#d07a72";
+    const color = serviceIndex >= 72 ? "#2f6d58" : serviceIndex >= 55 ? "#8d6b2d" : "#8c4e4f";
+    return {
+      radius: 9,
+      weight: 2,
+      color,
+      fillColor,
+      fillOpacity: 0.95,
     };
   }
   if (layerId === "estacionesPluvioIGM") {
@@ -11207,6 +11785,235 @@ async function loadOfficialHydroCatalog(force = false) {
   return state.officialHydroPromise;
 }
 
+function normalizeMunicipalPivaText(value) {
+  if (typeof value !== "string") {
+    return value;
+  }
+  let normalized = value;
+  if (/[ÃÂ]/.test(normalized)) {
+    try {
+      normalized = decodeURIComponent(escape(normalized));
+    } catch (error) {
+      normalized = value;
+    }
+  }
+  return normalized
+    .replace(/Ã/g, "A")
+    .replace(/Ã‰/g, "E")
+    .replace(/Ã/g, "I")
+    .replace(/Ã“/g, "O")
+    .replace(/Ãš/g, "U")
+    .replace(/Ã¡/g, "a")
+    .replace(/Ã©/g, "e")
+    .replace(/Ã­/g, "i")
+    .replace(/Ã³/g, "o")
+    .replace(/Ãº/g, "u")
+    .replace(/Ã±/g, "n")
+    .replace(/Ã‘/g, "N")
+    .replace(/Ã¼/g, "u")
+    .replace(/Ãœ/g, "U")
+    .replace(/Â/g, "")
+    .replace(/\uFFFD/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function normalizeMunicipalPivaParish(value) {
+  const normalized = String(value || "").trim().toUpperCase();
+  if (!normalized) {
+    return "Mejia";
+  }
+  if (normalized === "ALOAG") {
+    return "Aloag";
+  }
+  if (normalized === "ALOASI" || normalized === "ALOASÍ") {
+    return "Aloasí";
+  }
+  if (normalized === "CUTUGLAHUA" || normalized === "CUTUGLAGUA") {
+    return "Cutuglagua";
+  }
+  if (normalized === "EL CHAUPI") {
+    return "El Chaupi";
+  }
+  if (normalized === "MACHACHI") {
+    return "Machachi";
+  }
+  if (normalized === "MANUEL CORNEJO ASTORGA" || normalized === "MANUEL CORNEJO ASTORGA (TANDAPI)") {
+    return "Manuel Cornejo Astorga";
+  }
+  if (normalized === "TAMBILLO") {
+    return "Tambillo";
+  }
+  if (normalized === "UYUMBICHO") {
+    return "Uyumbicho";
+  }
+  return normalized
+    .toLowerCase()
+    .split(/\s+/)
+    .map((token) => token ? `${token[0].toUpperCase()}${token.slice(1)}` : "")
+    .join(" ");
+}
+
+function mapMunicipalEquipmentServiceType(tipologia) {
+  const label = String(tipologia || "").toUpperCase();
+  if (/EDUCACI/.test(label)) {
+    return { serviceType: "escuela", serviceTypeLabel: "Escuela" };
+  }
+  if (/SALUD/.test(label)) {
+    return { serviceType: "hospital", serviceTypeLabel: "Salud" };
+  }
+  if (/SEGURIDAD/.test(label)) {
+    return { serviceType: "institucional", serviceTypeLabel: "Seguridad" };
+  }
+  if (/ÁREAS VERDES|AREAS VERDES|RECREACI/.test(label)) {
+    return { serviceType: "equipamiento", serviceTypeLabel: "Espacio publico" };
+  }
+  if (/CULTO/.test(label)) {
+    return { serviceType: "social", serviceTypeLabel: "Culto" };
+  }
+  return { serviceType: "equipamiento", serviceTypeLabel: normalizeMunicipalPivaText(tipologia) || "Equipamiento" };
+}
+
+function buildMunicipalPivaFeatureName(layerId, properties, index) {
+  if (layerId === "bancoSueloMunicipal") {
+    return properties.nombre || `${properties.descr || "Banco de suelo"} · ${properties.parroquia || "Mejia"}`;
+  }
+  if (layerId === "equipamientoMunicipal") {
+    return properties.nombre || properties.descr || `${properties.tipologia || "Equipamiento"} ${index + 1}`;
+  }
+  if (layerId === "serviciosBasicosParroquia") {
+    return `Servicios basicos ${properties.parroquia || "Mejia"}`;
+  }
+  if (layerId === "patrimonioMunicipal") {
+    return properties.tde || `Patrimonio ${index + 1}`;
+  }
+  if (layerId === "altaTensionMejia") {
+    return properties.tde || `Alta tension ${index + 1}`;
+  }
+  return properties.name || `Insumo municipal ${index + 1}`;
+}
+
+function buildMunicipalPivaFeatureSummary(layerId, properties) {
+  if (layerId === "bancoSueloMunicipal") {
+    const terrainCopy = Number.isFinite(Number(properties.areaTerrenoM2))
+      ? `${formatIrrigationNumber(Number(properties.areaTerrenoM2), 0)} m²`
+      : "area sin dato";
+    return `${properties.parroquia || "Mejia"}: ${properties.descr || "banco de suelo"} con ${terrainCopy} y ambito ${properties.ambito || "sin dato"}.`;
+  }
+  if (layerId === "equipamientoMunicipal") {
+    return `${properties.tipologia || "Equipamiento"} municipal para cobertura, proximidad y lectura PIVA.`;
+  }
+  if (layerId === "serviciosBasicosParroquia") {
+    return properties.summary || `${properties.parroquia || "Mejia"} con indice de servicios ${properties.serviceIndex || "s/d"}.`;
+  }
+  if (layerId === "patrimonioMunicipal") {
+    return normalizeMunicipalPivaText(properties.obs) || "Predio patrimonial a considerar en cualquier actuacion urbana.";
+  }
+  if (layerId === "altaTensionMejia") {
+    return `${normalizeMunicipalPivaText(properties.obs) || "Corredor de alta tension."} Resguardo sugerido: ${properties.resguardoM || 30} m.`;
+  }
+  return "Insumo municipal listo para integrarse al PIVA.";
+}
+
+function normalizeMunicipalPivaCollection(layerId, payload) {
+  const features = Array.isArray(payload?.features) ? payload.features : [];
+  return {
+    type: "FeatureCollection",
+    features: features
+      .filter((feature) => !!feature?.geometry)
+      .map((feature, index) => {
+        const cloned = cloneFeature(feature);
+        const original = cloned.properties || {};
+        const parish = original.parroquia ? normalizeMunicipalPivaParish(original.parroquia) : null;
+        const equipmentProfile = layerId === "equipamientoMunicipal"
+          ? mapMunicipalEquipmentServiceType(original.tipologia)
+          : null;
+        const properties = {
+          ...original,
+          territoryId: "mejia",
+          parroquia: parish || original.parroquia,
+          areaTerrenoM2: Number(original.area_terre ?? original.areaTerrenoM2),
+          areaConstruccionM2: Number(original.area_contr ?? original.areaConstruccionM2),
+          descr: normalizeMunicipalPivaText(original.descr),
+          nombre: normalizeMunicipalPivaText(original.nombre),
+          tipologia: normalizeMunicipalPivaText(original.tipologia),
+          ambito: normalizeMunicipalPivaText(original.ambito),
+          tde: normalizeMunicipalPivaText(original.tde),
+          obs: normalizeMunicipalPivaText(original.obs),
+          resguardoM: Number(original.resguardoM || original.ret || 30),
+          serviceIndex: Number.isFinite(Number(original.serviceIndex)) ? Number(original.serviceIndex) : null,
+          aguaPct: Number.isFinite(Number(original.aguaPct)) ? Number(original.aguaPct) : null,
+          alcantarilladoPct: Number.isFinite(Number(original.alcantarilladoPct)) ? Number(original.alcantarilladoPct) : null,
+          luzPct: Number.isFinite(Number(original.luzPct)) ? Number(original.luzPct) : null,
+          telefonoPct: Number.isFinite(Number(original.telefonoPct)) ? Number(original.telefonoPct) : null,
+          ...equipmentProfile,
+          name: buildMunicipalPivaFeatureName(layerId, {
+            ...original,
+            parroquia: parish || original.parroquia,
+            descr: normalizeMunicipalPivaText(original.descr),
+            nombre: normalizeMunicipalPivaText(original.nombre),
+            tipologia: normalizeMunicipalPivaText(original.tipologia),
+            ambito: normalizeMunicipalPivaText(original.ambito),
+            tde: normalizeMunicipalPivaText(original.tde),
+          }, index),
+        };
+        properties.summary = buildMunicipalPivaFeatureSummary(layerId, properties);
+        cloned.properties = properties;
+        return cloned;
+      }),
+  };
+}
+
+function materializeMejiaPivaSources(catalog) {
+  const mergedSources = {};
+  mejiaPivaLayerIds.forEach((layerId) => {
+    mergedSources[layerId] = Array.isArray(catalog?.[layerId]?.features)
+      ? {
+          type: "FeatureCollection",
+          features: catalog[layerId].features.map(cloneFeature),
+        }
+      : { type: "FeatureCollection", features: [] };
+  });
+  Object.assign(geoSources, mergedSources);
+}
+
+async function loadMejiaPivaCatalog(force = false) {
+  if (state.localPivaCatalog && !force) {
+    return state.localPivaCatalog;
+  }
+  if (state.localPivaPromise && !force) {
+    return state.localPivaPromise;
+  }
+
+  state.localPivaPromise = (async () => {
+    const manifest = await fetchJson(mejiaPivaFileCatalog.manifest);
+    const datasets = {};
+    for (const [layerId, datasetKey] of Object.entries(mejiaPivaFileCatalog.datasets)) {
+      const datasetInfo = manifest?.datasets?.[datasetKey];
+      if (!datasetInfo?.path) {
+        continue;
+      }
+      const payload = await fetchJson(datasetInfo.path);
+      datasets[layerId] = normalizeMunicipalPivaCollection(layerId, payload);
+    }
+
+    materializeMejiaPivaSources(datasets);
+    state.localPivaCatalog = { manifest, datasets };
+    state.officialData.planificacion = buildOfficialDataSummary("planificacion");
+    if (isPlanningLikeRoute(state.entryRoute)) {
+      renderOfficialDataModule("planificacion");
+      if (mapState.map) {
+        refreshVisibleGeoLayers(mejiaPivaLayerIds);
+      }
+    }
+    return state.localPivaCatalog;
+  })().finally(() => {
+    state.localPivaPromise = null;
+  });
+
+  return state.localPivaPromise;
+}
+
 function mapStacScene(feature) {
   const properties = feature.properties || {};
   const platform = formatPlatform(properties.platform, "Sentinel-2");
@@ -11625,6 +12432,38 @@ function renderIndexButtons() {
 }
 
 function renderLegend() {
+  const piva = isCurrentTerritorialAnalysis(state.pivaData) ? state.pivaData : null;
+  if (isPivaRoute() && piva) {
+    const legendMarkup = piva.legend.map((item) => `
+      <span class="map-legend-item">
+        <i style="background:${escapeHtmlContent(item.color)}"></i>
+        ${escapeHtmlContent(item.label)}
+      </span>
+    `).join("");
+    setHtmlIfChanged(dom.legendCard, `
+      <strong>Leyenda PIVA Mejia</strong>
+      <span>${escapeHtmlContent(piva.summary.headline)}</span>
+      <div class="map-legend-list">
+        ${legendMarkup}
+      </div>
+      <div class="legend-values compact">
+        <span>Actual ${piva.comparator.currentScore}/100</span>
+        <span>Propuesta ${piva.comparator.targetScore}/100</span>
+        <span>Cartera ${piva.summary.projectCount} proyectos</span>
+      </div>
+    `);
+    if (dom.mapLegend) {
+      dom.mapLegend.classList.remove("hidden");
+      setHtmlIfChanged(dom.mapLegend, `
+        <span class="map-legend-kicker">PIVA Mejia</span>
+        <div class="map-legend-list">
+          ${legendMarkup}
+        </div>
+      `);
+    }
+    return;
+  }
+
   const config = getSurfaceConfig();
   const stats = state.surfaceMode === "change"
     ? getRenderableChangeAnalysis()?.summary?.[state.selectedIndex] || null
@@ -19557,40 +20396,33 @@ function getPlanning3dEmptyCollection() {
   return planning3dEmptyCollection;
 }
 
-function getPlanning3dPerformanceProfile(force = false) {
-  if (!force && planning3dState.performanceProfile) {
-    return planning3dState.performanceProfile;
+function getPlanning3dPerformancePreset(profileId = "high", options = {}) {
+  const veryCompactViewport = Boolean(options.veryCompactViewport);
+  if (profileId === "lite") {
+    return {
+      id: "lite",
+      antialias: false,
+      roadLimit: 18,
+      facilityLimit: 12,
+      roadPublicSpaceLimit: 7,
+      greenEdgeLimit: 5,
+      facilitySpaceLimit: 4,
+      urbanCommonsLimit: 3,
+      climateGreenLimit: 2,
+      coverGreenLimit: 2,
+      treeLimit: 84,
+      roadTreeRoadLimit: 7,
+      facilityTreeLimit: 4,
+      publicSpaceTreeLimit: 3,
+      domMarkerLimit: 48,
+      labelsEnabled: false,
+      facilityLabelsEnabled: false,
+      roadmapLabelsEnabled: false,
+    };
   }
 
-  const hardwareConcurrency = Number(globalThis?.navigator?.hardwareConcurrency || 4);
-  const deviceMemory = Number(globalThis?.navigator?.deviceMemory || 4);
-  const viewportWidth = typeof window !== "undefined" ? window.innerWidth || 1280 : 1280;
-  const viewportHeight = typeof window !== "undefined" ? window.innerHeight || 800 : 800;
-  const compactViewport = viewportWidth < 1320 || viewportHeight < 760;
-  const veryCompactViewport = viewportWidth < 1120 || viewportHeight < 700;
-  let profile = {
-    id: "high",
-    antialias: true,
-    roadLimit: 36,
-    facilityLimit: 28,
-    roadPublicSpaceLimit: 14,
-    greenEdgeLimit: 10,
-    facilitySpaceLimit: 8,
-    urbanCommonsLimit: 6,
-    climateGreenLimit: 5,
-    coverGreenLimit: 4,
-    treeLimit: 260,
-    roadTreeRoadLimit: 14,
-    facilityTreeLimit: 8,
-    publicSpaceTreeLimit: 6,
-    domMarkerLimit: 220,
-    labelsEnabled: true,
-    facilityLabelsEnabled: true,
-    roadmapLabelsEnabled: true,
-  };
-
-  if (hardwareConcurrency <= 4 || deviceMemory <= 4 || compactViewport) {
-    profile = {
+  if (profileId === "standard") {
+    return {
       id: "standard",
       antialias: true,
       roadLimit: 28,
@@ -19612,27 +20444,57 @@ function getPlanning3dPerformanceProfile(force = false) {
     };
   }
 
+  return {
+    id: "high",
+    antialias: true,
+    roadLimit: 36,
+    facilityLimit: 28,
+    roadPublicSpaceLimit: 14,
+    greenEdgeLimit: 10,
+    facilitySpaceLimit: 8,
+    urbanCommonsLimit: 6,
+    climateGreenLimit: 5,
+    coverGreenLimit: 4,
+    treeLimit: 260,
+    roadTreeRoadLimit: 14,
+    facilityTreeLimit: 8,
+    publicSpaceTreeLimit: 6,
+    domMarkerLimit: 220,
+    labelsEnabled: true,
+    facilityLabelsEnabled: true,
+    roadmapLabelsEnabled: true,
+  };
+}
+
+function setPlanning3dPerformanceOverride(profileId = null) {
+  planning3dState.performanceProfileOverride = ["lite", "standard", "high"].includes(profileId) ? profileId : null;
+  planning3dState.performanceProfile = null;
+  renderPlanning3dPanel();
+}
+
+function getPlanning3dPerformanceProfile(force = false) {
+  if (!force && planning3dState.performanceProfile) {
+    return planning3dState.performanceProfile;
+  }
+
+  const hardwareConcurrency = Number(globalThis?.navigator?.hardwareConcurrency || 4);
+  const deviceMemory = Number(globalThis?.navigator?.deviceMemory || 4);
+  const viewportWidth = typeof window !== "undefined" ? window.innerWidth || 1280 : 1280;
+  const viewportHeight = typeof window !== "undefined" ? window.innerHeight || 800 : 800;
+  const compactViewport = viewportWidth < 1320 || viewportHeight < 760;
+  const veryCompactViewport = viewportWidth < 1120 || viewportHeight < 700;
+  let profile = getPlanning3dPerformancePreset("high", { veryCompactViewport });
+
+  if (hardwareConcurrency <= 4 || deviceMemory <= 4 || compactViewport) {
+    profile = getPlanning3dPerformancePreset("standard", { veryCompactViewport });
+  }
+
   if (hardwareConcurrency <= 2 || deviceMemory <= 2 || veryCompactViewport) {
-    profile = {
-      id: "lite",
-      antialias: false,
-      roadLimit: 18,
-      facilityLimit: 12,
-      roadPublicSpaceLimit: 7,
-      greenEdgeLimit: 5,
-      facilitySpaceLimit: 4,
-      urbanCommonsLimit: 3,
-      climateGreenLimit: 2,
-      coverGreenLimit: 2,
-      treeLimit: 84,
-      roadTreeRoadLimit: 7,
-      facilityTreeLimit: 4,
-      publicSpaceTreeLimit: 3,
-      domMarkerLimit: 48,
-      labelsEnabled: false,
-      facilityLabelsEnabled: false,
-      roadmapLabelsEnabled: false,
-    };
+    profile = getPlanning3dPerformancePreset("lite", { veryCompactViewport });
+  }
+
+  if (planning3dState.performanceProfileOverride) {
+    profile = getPlanning3dPerformancePreset(planning3dState.performanceProfileOverride, { veryCompactViewport });
   }
 
   planning3dState.performanceProfile = profile;
@@ -25744,6 +26606,7 @@ function renderPlanningModule(force = false) {
   renderMobilityModule();
   renderRiskModule();
   renderUrbanClimateModule();
+  renderPivaModule();
   renderZoningPatternsModule();
   renderHousingPatternsModule();
   renderLandChangeModule();
@@ -25881,6 +26744,18 @@ function renderPlanningModule(force = false) {
   if (dom.clearUrbanClimateBtn) {
     dom.clearUrbanClimateBtn.disabled = !state.urbanClimateData;
   }
+  if (dom.focusPivaBtn) {
+    dom.focusPivaBtn.disabled = !(isCurrentTerritorialAnalysis(state.pivaData) && state.pivaData?.projects?.length);
+  }
+  if (dom.exportPivaHtmlBtn) {
+    dom.exportPivaHtmlBtn.disabled = !isCurrentTerritorialAnalysis(state.pivaData);
+  }
+  if (dom.exportPivaJsonBtn) {
+    dom.exportPivaJsonBtn.disabled = !isCurrentTerritorialAnalysis(state.pivaData);
+  }
+  if (dom.clearPivaBtn) {
+    dom.clearPivaBtn.disabled = !isCurrentTerritorialAnalysis(state.pivaData);
+  }
   if (dom.focusZoningPatternsBtn) {
     dom.focusZoningPatternsBtn.disabled = !(state.zoningPatternsData?.prioritySectors?.length);
   }
@@ -25953,6 +26828,16 @@ function renderPlanningModule(force = false) {
     setTextIfChanged(
       dom.hydrologySourceNote,
       `Replica metodologica inspirada en el estudio hidrico del DMQ: cubo hidroclimatico, modelo semidistribuido tipo GR4, demanda 2020-2100 y sesgo climatico corregido. En esta fase el geoportal usa una simulacion territorial sintetica para ${areaProfile.scopeLabel} con ${climate.label}, ${horizon.label} y ${demand.label}. La calibracion local ya se incorpora dentro del modelo sin añadir ruido a la lectura grafica.`
+    );
+  }
+  if (dom.pivaSourceNote) {
+    const officialLayers = state.officialData.planificacion?.activeLayerCount || 0;
+    const pivaScope = isCurrentTerritorialAnalysis(state.pivaData)
+      ? state.pivaData.context.scopeLabel
+      : "Canton Mejia";
+    setTextIfChanged(
+      dom.pivaSourceNote,
+      `PIVA anclado a ${pivaScope}. Integra clima urbano, seguridad hidrica, huella, patrones, evidencia territorial, ${officialLayers} capa(s) oficiales activas y los insumos municipales de banco de suelo, servicios, patrimonio y alta tension para priorizar infraestructura verde y azul con una sola lectura.`
     );
   }
   if (isTerritorialRoute() && !state.planningData) {
@@ -28196,7 +29081,7 @@ function clearMobilityAnalysis() {
 
 function renderMobilityOverlay(analysis) {
   clearMobilityOverlay();
-  if (!mapState.map || !analysis?.sectors?.length || state.entryRoute !== "planificacion") {
+  if (!mapState.map || !analysis?.sectors?.length || !isPlanningLikeRoute(state.entryRoute)) {
     return;
   }
 
@@ -28600,7 +29485,7 @@ function getAnalyticalBufferStyle({
 
 function renderRiskOverlay(analysis) {
   clearRiskOverlay();
-  if (!mapState.map || !analysis?.sectors?.length || state.entryRoute !== "planificacion") {
+  if (!mapState.map || !analysis?.sectors?.length || !isPlanningLikeRoute(state.entryRoute)) {
     return;
   }
 
@@ -29253,7 +30138,7 @@ function clearUrbanClimateAnalysis() {
 
 function renderUrbanClimateOverlay(analysis) {
   clearUrbanClimateOverlay();
-  if (!mapState.map || !analysis?.sectors?.length || state.entryRoute !== "planificacion") {
+  if (!mapState.map || !analysis?.sectors?.length || !isPlanningLikeRoute(state.entryRoute)) {
     return;
   }
 
@@ -29354,6 +30239,1734 @@ function handleUrbanClimateSectorsInteraction(event) {
     return;
   }
   focusUrbanClimateSector(button.dataset.urbanClimateSectorId);
+}
+
+function getPivaProjectTone(score = 0) {
+  if (score >= 76) {
+    return "high";
+  }
+  if (score >= 58) {
+    return "mid";
+  }
+  return "low";
+}
+
+function getPivaSignalPalette(kind = "green") {
+  const palettes = {
+    blue: {
+      stroke: "#3f86a3",
+      fill: "#9fd4e3",
+      marker: "#3f86a3",
+      corridor: "#58a9c9",
+    },
+    green: {
+      stroke: "#4d8c62",
+      fill: "#b8d9bc",
+      marker: "#4d8c62",
+      corridor: "#6dae79",
+    },
+    climate: {
+      stroke: "#4f7997",
+      fill: "#c6d9e7",
+      marker: "#4f7997",
+      corridor: "#6a97bb",
+    },
+    transition: {
+      stroke: "#bd8b35",
+      fill: "#ecd39e",
+      marker: "#bd8b35",
+      corridor: "#d2a85a",
+    },
+    civic: {
+      stroke: "#826d4d",
+      fill: "#dcccae",
+      marker: "#826d4d",
+      corridor: "#a48d69",
+    },
+  };
+  return palettes[kind] || palettes.green;
+}
+
+function getPivaEcuadorSourceStudy() {
+  return {
+    label: "PIVA Ecuador | Sistema Verde-Azul y formulacion municipal",
+    methodLabel: "Sintesis territorial inspirada en la Ordenanza Metropolitana 060-2023 de Quito y la formulacion PIVA de Manta con apoyo GIZ",
+    variablesLabel: "Corredores frios, seguridad hidrica, drenaje, arbolado, espacio publico, conectividad y soporte oficial",
+    references: [
+      "Quito | Ordenanza Metropolitana 060-2023 del Sistema Verde-Azul",
+      "Manta | formulacion municipal del Plan de Infraestructura Verde y Azul con apoyo GIZ",
+    ],
+  };
+}
+
+function getPivaLegendItems() {
+  return [
+    { id: "blue", label: "Sistema azul prioritario", color: "#2c7da0", copy: "Frentes hidricos, drenaje y restauracion azul." },
+    { id: "green", label: "Sistema verde estructurante", color: "#3b9c72", copy: "Suelo productivo, parques, arbolado y soporte ecologico." },
+    { id: "climate", label: "Corredor climatico", color: "#57a6b8", copy: "Reservas de ventilacion, enfriamiento y sombra urbana." },
+    { id: "transition", label: "Borde y transicion", color: "#d1a457", copy: "Contencion del borde, franjas seguras y compatibilidad del tejido." },
+    { id: "project", label: "Proyecto PIVA detonante", color: "#d96b43", copy: "Accion priorizada para pasar de diagnostico a proyecto." },
+  ];
+}
+
+function getPivaParishActionLabel(priorityScore = 0) {
+  if (priorityScore >= 72) {
+    return "Intervenir primero";
+  }
+  if (priorityScore >= 56) {
+    return "Preparar paquete";
+  }
+  return "Consolidar y monitorear";
+}
+
+function buildPivaParishPortfolio(localSupport, projects = []) {
+  const serviceFeatures = Array.isArray(localSupport?.serviceFeatures) ? localSupport.serviceFeatures : [];
+  const greenBankFeatures = Array.isArray(localSupport?.greenBankFeatures) ? localSupport.greenBankFeatures : [];
+  const municipalEquipmentFeatures = Array.isArray(localSupport?.municipalEquipmentFeatures) ? localSupport.municipalEquipmentFeatures : [];
+  const heritageFeatures = Array.isArray(localSupport?.heritageFeatures) ? localSupport.heritageFeatures : [];
+  const highTensionFeatures = Array.isArray(localSupport?.highTensionFeatures) ? localSupport.highTensionFeatures : [];
+
+  return serviceFeatures.map((feature, index) => {
+    const parish = String(feature.properties?.parroquia || `Parroquia ${index + 1}`).trim();
+    const serviceIndex = Math.round(Number(feature.properties?.serviceIndex) || 0);
+    const bankCount = greenBankFeatures.filter((item) => item.properties?.parroquia === parish).length;
+    const equipmentCount = municipalEquipmentFeatures.filter((item) => item.properties?.parroquia === parish).length;
+    const heritageCount = heritageFeatures.filter((item) => item.properties?.parroquia === parish).length;
+    const highTensionKm = Number(highTensionFeatures
+      .filter((item) => item.properties?.parroquia === parish)
+      .reduce((sum, item) => sum + measureFeatureLengthKm(item), 0)
+      .toFixed(1));
+    const supportScore = Math.round(clamp(
+      serviceIndex * 0.62
+      + Math.min(bankCount, 12) * 2.2
+      + Math.min(equipmentCount, 18) * 0.9
+      - Math.min(heritageCount, 18) * 0.6
+      - Math.min(highTensionKm, 6) * 5.4,
+      0,
+      100
+    ));
+    const priorityScore = Math.round(clamp(
+      100
+      - serviceIndex * 0.54
+      - supportScore * 0.22
+      + (parish === localSupport.weakestParish ? 18 : 0)
+      + Math.min(heritageCount, 14) * 0.8
+      + Math.min(highTensionKm, 4) * 6,
+      0,
+      100
+    ));
+    const linkedProject = projects.find((project) => {
+      const title = `${project.title || ""} ${project.summary || ""}`.toLowerCase();
+      return title.includes(parish.toLowerCase());
+    }) || (parish === localSupport.weakestParish ? projects[0] || null : null);
+    return {
+      id: `piva-parish-${parish.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`,
+      parish,
+      serviceIndex,
+      supportScore,
+      priorityScore,
+      bankCount,
+      equipmentCount,
+      heritageCount,
+      highTensionKm,
+      tone: getPivaProjectTone(priorityScore),
+      actionLabel: getPivaParishActionLabel(priorityScore),
+      focusLabel: priorityScore >= 72
+        ? "Nodo de activacion inmediata"
+        : priorityScore >= 56
+          ? "Paquete demostrativo"
+          : "Consolidacion y mantenimiento",
+      summary: priorityScore >= 72
+        ? `${parish} requiere intervenir primero por brecha de servicios y baja resiliencia verde-azul.`
+        : priorityScore >= 56
+          ? `${parish} ya tiene soporte parcial y puede entrar en la segunda ola de proyectos PIVA.`
+          : `${parish} tiene mejor soporte relativo y sirve para consolidar o monitorear la red.`,
+      linkedProjectTitle: linkedProject?.title || "Cartera general PIVA",
+    };
+  }).sort((left, right) => right.priorityScore - left.priorityScore);
+}
+
+function buildPivaComparator(summary, localSupport, packages, projects) {
+  const upliftBase = Math.min(18, 6 + projects.length * 2);
+  const dimensions = [
+    {
+      id: "blue",
+      label: "Azul",
+      current: summary.blueScore,
+      target: Math.round(clamp(summary.blueScore + upliftBase, 0, 100)),
+      note: "Drenaje, frentes hidricos y continuidad de la red azul.",
+    },
+    {
+      id: "green",
+      label: "Verde",
+      current: summary.greenScore,
+      target: Math.round(clamp(summary.greenScore + Math.min(16, 5 + localSupport.greenBankCount * 0.25), 0, 100)),
+      note: "Suelo productivo, arbolado, parques y estructura ecologica.",
+    },
+    {
+      id: "climate",
+      label: "Clima",
+      current: summary.climateScore,
+      target: Math.round(clamp(summary.climateScore + Math.min(14, 4 + summary.corridorCount * 1.2), 0, 100)),
+      note: "Corredores frios, sombra y mitigacion de retencion termica.",
+    },
+    {
+      id: "connectivity",
+      label: "Conectividad",
+      current: summary.connectivityScore,
+      target: Math.round(clamp(summary.connectivityScore + Math.min(14, 4 + packages.length * 2.6), 0, 100)),
+      note: "Espacio publico, nodos, accesibilidad y continuidad territorial.",
+    },
+    {
+      id: "municipal",
+      label: "Municipal",
+      current: summary.localSupportScore,
+      target: Math.round(clamp(summary.localSupportScore + Math.min(18, 6 + projects.length * 2.4), 0, 100)),
+      note: "Soporte de servicios, banco de suelo, equipamiento y restricciones.",
+    },
+  ].map((dimension) => ({
+    ...dimension,
+    delta: Math.max(0, dimension.target - dimension.current),
+    tone: dimension.current >= 70 ? "good" : dimension.current >= 55 ? "watch" : "critical",
+  }));
+
+  const currentScore = Math.round(dimensions.reduce((sum, item) => sum + item.current, 0) / Math.max(dimensions.length, 1));
+  const targetScore = Math.round(dimensions.reduce((sum, item) => sum + item.target, 0) / Math.max(dimensions.length, 1));
+  return {
+    currentScore,
+    targetScore,
+    delta: Math.max(0, targetScore - currentScore),
+    headline: targetScore >= 75
+      ? "La propuesta PIVA deja una red verde-azul consolidable"
+      : targetScore >= 60
+        ? "La propuesta PIVA mejora el sistema, pero aun requiere fases de soporte"
+        : "La propuesta PIVA abre una base inicial y necesita madurar por fases",
+    recommendation: targetScore >= 75
+      ? "Puedes pasar de diagnostico a cartera y priorizar ejecucion por paquetes."
+      : targetScore >= 60
+        ? "Conviene arrancar por parroquias criticas y paquetes demostrativos antes de escalar."
+        : "Empieza por habilitadores, nodos criticos y proteccion de corredores antes de expandir la red.",
+    dimensions,
+  };
+}
+
+function getPivaLocalSupportLabel(score = 0) {
+  if (score >= 72) {
+    return "Soporte municipal fuerte";
+  }
+  if (score >= 56) {
+    return "Soporte municipal intermedio";
+  }
+  return "Soporte municipal fragil";
+}
+
+function measureFeatureLengthKm(feature) {
+  if (!feature?.geometry) {
+    return 0;
+  }
+  try {
+    if (feature.geometry.type === "LineString" || feature.geometry.type === "MultiLineString") {
+      return turf.length(feature, { units: "kilometers" });
+    }
+  } catch (error) {
+  }
+  return 0;
+}
+
+function buildMejiaPivaLocalSupport(targetFeature) {
+  const bankFeatures = filterFeaturesByTerritorialArea(geoSources.bancoSueloMunicipal?.features || [], "mejia").map(cloneFeature);
+  const municipalEquipmentFeatures = filterFeaturesByTerritorialArea(geoSources.equipamientoMunicipal?.features || [], "mejia").map(cloneFeature);
+  const heritageFeatures = filterFeaturesByTerritorialArea(geoSources.patrimonioMunicipal?.features || [], "mejia").map(cloneFeature);
+  const highTensionFeatures = filterFeaturesByTerritorialArea(geoSources.altaTensionMejia?.features || [], "mejia").map(cloneFeature);
+  const serviceFeatures = filterFeaturesByTerritorialArea(geoSources.serviciosBasicosParroquia?.features || [], "mejia").map(cloneFeature);
+
+  const greenBankFeatures = bankFeatures.filter((feature) => /AREA VERDE|ÁREA VERDE|ÁREAS VERDES|AREAS VERDES/i.test(String(feature.properties?.descr || "")));
+  const parkEquipmentFeatures = municipalEquipmentFeatures.filter((feature) => /ÁREAS VERDES|AREAS VERDES|RECREACI/i.test(String(feature.properties?.tipologia || "")));
+  const healthFeatures = municipalEquipmentFeatures.filter((feature) => feature.properties?.serviceType === "hospital");
+  const educationFeatures = municipalEquipmentFeatures.filter((feature) => feature.properties?.serviceType === "escuela");
+  const securityFeatures = municipalEquipmentFeatures.filter((feature) => /SEGURIDAD/i.test(String(feature.properties?.tipologia || "")));
+
+  const averageServiceIndex = Number((
+    serviceFeatures.reduce((sum, feature) => sum + (Number(feature.properties?.serviceIndex) || 0), 0)
+    / Math.max(serviceFeatures.length, 1)
+  ).toFixed(1));
+  const weakestServiceNode = serviceFeatures
+    .slice()
+    .sort((left, right) => (Number(left.properties?.serviceIndex) || 0) - (Number(right.properties?.serviceIndex) || 0))[0] || null;
+  const strongestServiceNode = serviceFeatures
+    .slice()
+    .sort((left, right) => (Number(right.properties?.serviceIndex) || 0) - (Number(left.properties?.serviceIndex) || 0))[0] || null;
+
+  const targetAnchor = turf.point(getPlanning3dFeatureAnchor(targetFeature) || turf.centroid(targetFeature).geometry.coordinates);
+  const serviceAnchor = weakestServiceNode || pointFeature("target", targetAnchor.geometry.coordinates);
+  const weakestParish = weakestServiceNode?.properties?.parroquia || null;
+  const candidateBankPool = weakestParish
+    ? greenBankFeatures.filter((feature) => feature.properties?.parroquia === weakestParish)
+    : greenBankFeatures;
+  const bankMatch = getNearestFeatureMatch(serviceAnchor, candidateBankPool.length ? candidateBankPool : greenBankFeatures);
+  const bankCandidate = bankMatch.feature || null;
+  const heritageMatch = getNearestFeatureMatch(targetAnchor, heritageFeatures);
+  const heritageCandidate = heritageMatch.feature || null;
+  const highTensionMatch = getNearestFeatureMatch(targetAnchor, highTensionFeatures);
+  const highTensionCandidate = highTensionMatch.feature || null;
+
+  const highTensionKm = Number(highTensionFeatures.reduce((sum, feature) => sum + measureFeatureLengthKm(feature), 0).toFixed(1));
+  const heritagePressureScore = clamp(Math.min(heritageFeatures.length, 140) * 0.42, 0, 100);
+  const highTensionPressureScore = clamp(highTensionKm * 3.8, 0, 100);
+  const localConstraintScore = Math.round(clamp(heritagePressureScore * 0.58 + highTensionPressureScore * 0.42, 0, 100));
+  const localSupportScore = Math.round(clamp(
+    averageServiceIndex * 0.42
+    + Math.min(greenBankFeatures.length, 140) * 0.12
+    + Math.min(parkEquipmentFeatures.length, 220) * 0.06
+    + Math.min(healthFeatures.length + educationFeatures.length + securityFeatures.length, 180) * 0.08
+    + (bankCandidate ? 8 : 0)
+    + Math.max(0, 100 - localConstraintScore) * 0.12,
+    0,
+    100
+  ));
+
+  return {
+    bankFeatures,
+    greenBankFeatures,
+    municipalEquipmentFeatures,
+    parkEquipmentFeatures,
+    healthFeatures,
+    educationFeatures,
+    securityFeatures,
+    heritageFeatures,
+    highTensionFeatures,
+    serviceFeatures,
+    weakestServiceNode,
+    strongestServiceNode,
+    bankCandidate,
+    bankCandidateDistanceKm: Number.isFinite(bankMatch.distanceKm) ? Number(bankMatch.distanceKm.toFixed(2)) : null,
+    heritageCandidate,
+    heritageCandidateDistanceKm: Number.isFinite(heritageMatch.distanceKm) ? Number(heritageMatch.distanceKm.toFixed(2)) : null,
+    highTensionCandidate,
+    highTensionCandidateDistanceKm: Number.isFinite(highTensionMatch.distanceKm) ? Number(highTensionMatch.distanceKm.toFixed(2)) : null,
+    averageServiceIndex,
+    localSupportScore,
+    localConstraintScore,
+    supportLabel: getPivaLocalSupportLabel(localSupportScore),
+    bankCount: bankFeatures.length,
+    greenBankCount: greenBankFeatures.length,
+    municipalEquipmentCount: municipalEquipmentFeatures.length,
+    parkEquipmentCount: parkEquipmentFeatures.length,
+    heritageCount: heritageFeatures.length,
+    highTensionKm,
+    weakestParish: weakestParish || "Sin parroquia priorizada",
+    strongestParish: strongestServiceNode?.properties?.parroquia || "Sin parroquia priorizada",
+    weakestServiceIndex: Number(weakestServiceNode?.properties?.serviceIndex) || averageServiceIndex || 0,
+  };
+}
+
+function buildPivaAnalysis() {
+  const target = getCurrentTerritorialTarget();
+  const planning = isCurrentTerritorialAnalysis(state.planningData, target) ? state.planningData : buildPlanningAnalysis();
+  const mobility = isCurrentTerritorialAnalysis(state.mobilityData, target) ? state.mobilityData : buildMobilityAnalysis();
+  const risk = isCurrentTerritorialAnalysis(state.riskData, target) ? state.riskData : buildRiskAnalysis();
+  const hydrology = isCurrentTerritorialAnalysis(state.hydrologyData, target) ? state.hydrologyData : buildHydrologyAnalysis();
+  const urbanClimate = isCurrentTerritorialAnalysis(state.urbanClimateData, target) ? state.urbanClimateData : buildUrbanClimateAnalysis();
+  const zoning = isCurrentTerritorialAnalysis(state.zoningPatternsData, target) ? state.zoningPatternsData : buildZoningPatternsAnalysis();
+  const landChange = isCurrentTerritorialAnalysis(state.landChangeData, target) ? state.landChangeData : buildLandChangeAnalysis();
+  const official = state.officialData.planificacion?.activeLayerCount ? state.officialData.planificacion : buildOfficialDataSummary("planificacion");
+  const localSupport = buildMejiaPivaLocalSupport(target.feature);
+  const evidenceProfiles = getTerritorialEvidenceProfiles(target.feature);
+  const evidenceSummary = summarizeStudyEvidence(evidenceProfiles, [
+    ...(hydrology?.prioritySectors || []).slice(0, 2),
+    ...(urbanClimate?.prioritySectors || []).slice(0, 2),
+    ...(zoning?.prioritySectors || []).slice(0, 2),
+    ...(landChange?.prioritySectors || []).slice(0, 2),
+  ]);
+  const areaHa = Number((turf.area(target.feature) / 10000).toFixed(1));
+  const blueScore = Math.round(clamp(
+    (hydrology.summary.meanResilience || 0) * 0.52
+    + (hydrology.summary.balanceHm3 >= 0 ? 24 : 9)
+    + Math.max(0, 100 - (hydrology.summary.meanFloodRisk || 0)) * 0.14
+    + Math.max(0, 100 - (hydrology.summary.meanDroughtRisk || 0)) * 0.14
+    + evidenceSummary.supportScore * 0.08,
+    0,
+    100
+  ));
+  const greenScore = Math.round(clamp(
+    (100 - (landChange.summary.meanScore || 0)) * 0.28
+    + (zoning.summary.meanVitality || 0) * 0.3
+    + (mobility.summary.meanScore || 0) * 0.16
+    + (official.activeLayerCount ? clamp(42 + official.activeLayerCount * 5, 42, 90) : 42) * 0.14
+    + localSupport.localSupportScore * 0.12
+    - localSupport.localConstraintScore * 0.06
+    + evidenceSummary.supportScore * 0.12,
+    0,
+    100
+  ));
+  const climateScore = Math.round(clamp(
+    (urbanClimate.summary.climateReadinessScore || 0) * 0.74
+    + Math.min(urbanClimate.summary.priorityCorridorCount || 0, 6) * 4
+    + Math.min(urbanClimate.summary.coolingAreaHa || 0, 260) * 0.04,
+    0,
+    100
+  ));
+  const connectivityScore = Math.round(clamp(
+    (mobility.summary.meanScore || 0) * 0.46
+    + (planning.serviceCoverage?.overallCoverage || 0) * 0.18
+    + (zoning.summary.meanVitality || 0) * 0.16
+    + Math.max(0, 100 - (risk.summary.meanScore || 0)) * 0.1
+    + (official.activeLayerCount ? clamp(38 + official.lineCount * 1.8, 38, 84) : 38) * 0.1
+    + localSupport.averageServiceIndex * 0.12
+    - localSupport.localConstraintScore * 0.04,
+    0,
+    100
+  ));
+  const pivaScore = Math.round(clamp(
+    blueScore * 0.3
+    + greenScore * 0.24
+    + climateScore * 0.24
+    + connectivityScore * 0.16
+    + localSupport.localSupportScore * 0.04
+    - localSupport.localConstraintScore * 0.02
+    + evidenceSummary.supportScore * 0.06,
+    0,
+    100
+  ));
+  const signal = getTerritorialSignalState(pivaScore);
+  const topHydrology = hydrology.prioritySectors[0] || hydrology.sectors[0] || null;
+  const topClimate = urbanClimate.prioritySectors[0] || urbanClimate.sectors?.[0] || null;
+  const topLand = landChange.prioritySectors[0] || landChange.sectors?.[0] || null;
+  const topZoning = zoning.prioritySectors[0] || zoning.sectors?.[0] || null;
+  const weakestService = planning.serviceCoverage?.items?.slice?.().sort((left, right) => left.coveragePct - right.coveragePct)[0] || null;
+  const topMobility = mobility.prioritySectors[0] || mobility.sectors?.[0] || null;
+
+  const projects = [];
+  if (topClimate) {
+    const priorityScore = Math.round(clamp(
+      topClimate.ventilationScore * 0.44
+      + topClimate.coolingScore * 0.28
+      + Math.max(0, 100 - topClimate.retentionScore) * 0.18
+      + Math.max(0, 100 - topClimate.obstructionScore) * 0.1,
+      0,
+      100
+    ));
+    projects.push({
+      id: `piva-corridor-${topClimate.id}`,
+      kind: "climate",
+      module: "Clima urbano",
+      title: `Corredor verde de ventilacion ${topClimate.name}`,
+      priorityScore,
+      priorityLabel: priorityScore >= 76 ? "Alta" : priorityScore >= 58 ? "Media" : "Condicionada",
+      tone: getPivaProjectTone(priorityScore),
+      summary: `${topClimate.classLabel} con ventilacion ${topClimate.ventilationScore}/100 y enfriamiento ${topClimate.coolingScore}/100.`,
+      note: topClimate.recommendation,
+      feature: cloneFeature(topClimate.feature),
+      centroid: topClimate.centroid,
+      metrics: [
+        { label: "Ventilacion", value: `${topClimate.ventilationScore}/100` },
+        { label: "Enfriamiento", value: `${topClimate.coolingScore}/100` },
+        { label: "Retencion", value: `${topClimate.retentionScore}/100` },
+        { label: "Area", value: `${formatLandChangeHa(topClimate.areaHa)} ha` },
+      ],
+    });
+  }
+  if (topHydrology) {
+    const priorityScore = Math.round(clamp(
+      topHydrology.resilience * 0.24
+      + Math.max(0, 100 - topHydrology.droughtRisk) * 0.24
+      + Math.max(0, 100 - topHydrology.floodRisk) * 0.24
+      + (topHydrology.balanceHm3 >= 0 ? 22 : 8)
+      + evidenceSummary.supportScore * 0.06,
+      0,
+      100
+    ));
+    projects.push({
+      id: `piva-blue-${topHydrology.id}`,
+      kind: "blue",
+      module: "Seguridad hidrica",
+      title: `Franja azul de drenaje y recarga ${topHydrology.name}`,
+      priorityScore,
+      priorityLabel: priorityScore >= 76 ? "Alta" : priorityScore >= 58 ? "Media" : "Condicionada",
+      tone: getPivaProjectTone(priorityScore),
+      summary: `${topHydrology.balanceLabel} con resiliencia ${topHydrology.resilience}/100 y cobertura ${topHydrology.coveragePct}%.`,
+      note: topHydrology.intervention?.copy || hydrology.summary.criticalCopy,
+      feature: cloneFeature(topHydrology.feature),
+      centroid: topHydrology.centroid,
+      metrics: [
+        { label: "Balance", value: `${topHydrology.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(topHydrology.balanceHm3)} hm3` },
+        { label: "Resiliencia", value: `${topHydrology.resilience}/100` },
+        { label: "Estiaje", value: `${topHydrology.droughtRisk}%` },
+        { label: "Crecida", value: `${topHydrology.floodRisk}%` },
+      ],
+    });
+  }
+  if (topLand) {
+    const productiveShare = clamp(topLand.productiveLossHa / Math.max(topLand.transformedHa || 1, 1), 0, 1);
+    const priorityScore = Math.round(clamp(
+      Math.max(0, 100 - topLand.score) * 0.34
+      + (topLand.riskPressure || 0) * 0.18
+      + productiveShare * 100 * 0.2
+      + evidenceSummary.supportScore * 0.14
+      + 24,
+      0,
+      100
+    ));
+    projects.push({
+      id: `piva-transition-${topLand.id}`,
+      kind: "transition",
+      module: "Huella urbana",
+      title: `Borde agroecologico y quebradas ${topLand.name}`,
+      priorityScore,
+      priorityLabel: priorityScore >= 76 ? "Alta" : priorityScore >= 58 ? "Media" : "Condicionada",
+      tone: getPivaProjectTone(priorityScore),
+      summary: `${topLand.pressureLabel} con ${formatLandChangeHa(topLand.productiveLossHa)} ha de suelo productivo en tension.`,
+      note: topLand.recommendation,
+      feature: cloneFeature(topLand.feature),
+      centroid: topLand.centroid,
+      metrics: [
+        { label: "Huella nueva", value: `${formatLandChangeHa(topLand.transformedHa)} ha` },
+        { label: "Suelo rural", value: `${formatLandChangeHa(topLand.productiveLossHa)} ha` },
+        { label: "Riesgo", value: `${formatLandChangeHa(topLand.riskHa)} ha` },
+        { label: "Puntaje", value: `${topLand.score}/100` },
+      ],
+    });
+  }
+  if (topMobility && weakestService) {
+    const priorityScore = Math.round(clamp(
+      topMobility.score * 0.42
+      + Math.max(0, 100 - weakestService.coveragePct) * 0.32
+      + (planning.serviceCoverage?.overallCoverage || 0) * 0.12
+      + (zoning.summary.meanVitality || 0) * 0.14,
+      0,
+      100
+    ));
+    projects.push({
+      id: `piva-civic-${topMobility.id}`,
+      kind: "civic",
+      module: "Movilidad y espacio publico",
+      title: `Nodo verde de proximidad ${topMobility.name}`,
+      priorityScore,
+      priorityLabel: priorityScore >= 76 ? "Alta" : priorityScore >= 58 ? "Media" : "Condicionada",
+      tone: getPivaProjectTone(priorityScore),
+      summary: `${weakestService.shortLabel} es la brecha dominante y ${topMobility.name} concentra oportunidad de espacio publico y arbolado.`,
+      note: topMobility.recommendation || "Refuerza espacio publico, arbolado estructurante y continuidad peatonal donde la cobertura cae primero.",
+      feature: cloneFeature(topMobility.feature),
+      centroid: topMobility.centroid,
+      metrics: [
+        { label: "Acceso", value: `${topMobility.accessScore}/100` },
+        { label: "Cobertura", value: `${weakestService.coveragePct}%` },
+        { label: "Tiempo", value: `${topMobility.travelMinutes} min` },
+        { label: "Prioridad", value: weakestService.shortLabel },
+      ],
+    });
+  }
+  if (topZoning) {
+    const priorityScore = Math.round(clamp(
+      topZoning.vitalityIndex * 0.24
+      + Math.max(0, 100 - topZoning.vulnerabilityScore) * 0.26
+      + topZoning.serviceScore * 0.22
+      + topZoning.resilienceScore * 0.18
+      + 10,
+      0,
+      100
+    ));
+    projects.push({
+      id: `piva-green-${topZoning.id}`,
+      kind: "green",
+      module: "Patrones territoriales",
+      title: `Corredor verde barrial ${topZoning.name}`,
+      priorityScore,
+      priorityLabel: priorityScore >= 76 ? "Alta" : priorityScore >= 58 ? "Media" : "Condicionada",
+      tone: getPivaProjectTone(priorityScore),
+      summary: `${topZoning.patternLabel} con vitalidad ${topZoning.vitalityIndex}/100 y resiliencia ${topZoning.resilienceScore}/100.`,
+      note: topZoning.recommendation,
+      feature: cloneFeature(topZoning.feature),
+      centroid: topZoning.centroid,
+      metrics: [
+        { label: "Vitalidad", value: `${topZoning.vitalityIndex}/100` },
+        { label: "Servicios", value: `${topZoning.serviceScore}/100` },
+        { label: "Resiliencia", value: `${topZoning.resilienceScore}/100` },
+        { label: "Vulnerabilidad", value: `${topZoning.vulnerabilityScore}/100` },
+      ],
+    });
+  }
+  if (localSupport.bankCandidate && localSupport.weakestServiceNode) {
+    const bankFeature = cloneFeature(localSupport.bankCandidate);
+    const serviceFeature = cloneFeature(localSupport.weakestServiceNode);
+    const centroid = getPlanning3dFeatureAnchor(bankFeature) || getPlanning3dFeatureAnchor(serviceFeature);
+    const priorityScore = Math.round(clamp(
+      localSupport.localSupportScore * 0.42
+      + Math.max(0, 100 - localSupport.weakestServiceIndex) * 0.38
+      + (planning.serviceCoverage?.overallCoverage || 0) * 0.08
+      + 18,
+      0,
+      100
+    ));
+    projects.push({
+      id: `piva-bank-${localSupport.weakestParish.toLowerCase().replace(/\s+/g, "-")}`,
+      kind: "green",
+      module: "Banco de suelo y servicios",
+      title: `Nodo verde-azul ${localSupport.weakestParish}`,
+      priorityScore,
+      priorityLabel: priorityScore >= 76 ? "Alta" : priorityScore >= 58 ? "Media" : "Condicionada",
+      tone: getPivaProjectTone(priorityScore),
+      summary: `${localSupport.weakestParish} concentra la mayor brecha de servicios basicos y ya cuenta con banco de suelo municipal util para un nodo verde-azul.`,
+      note: `Combina drenaje, arbolado, sombra y espacio publico en suelo municipal a ${localSupport.bankCandidateDistanceKm != null ? `${localSupport.bankCandidateDistanceKm} km` : "distancia corta"} de la parroquia priorizada.`,
+      feature: bankFeature,
+      centroid,
+      metrics: [
+        { label: "Indice servicios", value: `${localSupport.weakestServiceIndex}/100` },
+        { label: "Banco verde", value: `${localSupport.greenBankCount} predios` },
+        { label: "Equipamientos", value: `${localSupport.municipalEquipmentCount}` },
+        { label: "Soporte", value: `${localSupport.localSupportScore}/100` },
+      ],
+    });
+  }
+  if (localSupport.highTensionCandidate || localSupport.heritageCandidate) {
+    const constraintFeature = cloneFeature(localSupport.highTensionCandidate || localSupport.heritageCandidate);
+    const centroid = getPlanning3dFeatureAnchor(constraintFeature);
+    const priorityScore = Math.round(clamp(
+      localSupport.localConstraintScore * 0.48
+      + Math.max(0, 100 - localSupport.averageServiceIndex) * 0.18
+      + (risk.summary.meanScore || 0) * 0.14
+      + 16,
+      0,
+      100
+    ));
+    projects.push({
+      id: `piva-constraint-${target.targetKey}`,
+      kind: "transition",
+      module: "Restricciones urbanas",
+      title: "Resguardo patrimonial y franja segura",
+      priorityScore,
+      priorityLabel: priorityScore >= 76 ? "Alta" : priorityScore >= 58 ? "Media" : "Condicionada",
+      tone: getPivaProjectTone(priorityScore),
+      summary: `${localSupport.heritageCount} predios patrimoniales y ${localSupport.highTensionKm} km de alta tension obligan a disenar espacio publico, arbolado y ocupacion compatibles.`,
+      note: "Usa franjas seguras, mobiliario liviano, arbolado compatible y tratamiento del borde patrimonial antes de intensificar ocupacion.",
+      feature: constraintFeature,
+      centroid,
+      metrics: [
+        { label: "Patrimonio", value: `${localSupport.heritageCount}` },
+        { label: "Alta tension", value: `${localSupport.highTensionKm} km` },
+        { label: "Restriccion", value: `${localSupport.localConstraintScore}/100` },
+        { label: "Parroquia fuerte", value: localSupport.strongestParish },
+      ],
+    });
+  }
+
+  const sortedProjects = projects
+    .filter((project) => Array.isArray(project.centroid) && project.feature?.geometry)
+    .sort((left, right) => right.priorityScore - left.priorityScore)
+    .slice(0, 5);
+  const projectCollection = {
+    type: "FeatureCollection",
+    features: sortedProjects.map((project, index) => pointFeature(project.title, project.centroid, {
+      pivaProjectId: project.id,
+      rank: index + 1,
+      title: project.title,
+      priorityScore: project.priorityScore,
+      priorityLabel: project.priorityLabel,
+      kind: project.kind,
+      module: project.module,
+      summary: project.summary,
+      note: project.note,
+    })),
+  };
+  const climateIds = new Set((urbanClimate.prioritySectors || []).slice(0, 3).map((sector) => sector.id));
+  const corridorFeatures = (urbanClimate.corridorCollection?.features || [])
+    .filter((feature) => climateIds.has(feature.properties?.urbanClimateSectorId))
+    .slice(0, 6)
+    .map((feature) => {
+      const clone = cloneFeature(feature);
+      clone.properties = {
+        ...(clone.properties || {}),
+        pivaCorridorKind: "climate",
+        pivaLabel: clone.properties?.classLabel || "Corredor PIVA",
+      };
+      return clone;
+    });
+  if (localSupport.highTensionFeatures.length) {
+    corridorFeatures.push(
+      ...localSupport.highTensionFeatures.slice(0, 3).map((feature, index) => {
+        const clone = cloneFeature(feature);
+        clone.properties = {
+          ...(clone.properties || {}),
+          pivaCorridorKind: "transition",
+          pivaLabel: clone.properties?.name || `Resguardo ${index + 1}`,
+          summary: clone.properties?.summary || "Franja de resguardo electrico integrada al PIVA.",
+        };
+        return clone;
+      })
+    );
+  }
+  const zoneFeatures = [
+    ...(hydrology.prioritySectors || []).slice(0, 2).map((sector) => {
+      const clone = cloneFeature(sector.feature);
+      clone.properties = {
+        ...(clone.properties || {}),
+        pivaZoneKind: "blue",
+        pivaLabel: sector.name,
+        pivaSummary: sector.summary,
+      };
+      return clone;
+    }),
+    ...(urbanClimate.prioritySectors || []).slice(0, 2).map((sector) => {
+      const clone = cloneFeature(sector.feature);
+      clone.properties = {
+        ...(clone.properties || {}),
+        pivaZoneKind: "climate",
+        pivaLabel: sector.name,
+        pivaSummary: sector.summary,
+      };
+      return clone;
+    }),
+    ...(zoning.prioritySectors || []).slice(0, 2).map((sector) => {
+      const clone = cloneFeature(sector.feature);
+      clone.properties = {
+        ...(clone.properties || {}),
+        pivaZoneKind: "green",
+        pivaLabel: sector.name,
+        pivaSummary: sector.summary,
+      };
+      return clone;
+    }),
+    ...(landChange.prioritySectors || []).slice(0, 1).map((sector) => {
+      const clone = cloneFeature(sector.feature);
+      clone.properties = {
+        ...(clone.properties || {}),
+        pivaZoneKind: "transition",
+        pivaLabel: sector.name,
+        pivaSummary: sector.summary,
+      };
+      return clone;
+    }),
+  ];
+  const deliverables = [
+    {
+      label: "Modelo territorial",
+      copy: `Ordena agua, paisaje productivo, ciudad y conectividad sobre ${target.scopeLabel}.`,
+      note: "Pasa de lectura dispersa a una estructura territorial comun para decidir.",
+    },
+    {
+      label: "Red priorizada",
+      copy: `${urbanClimate.summary.priorityCorridorCount || corridorFeatures.length} corredores y ${hydrology.prioritySectors.length} frentes azules estructuran la red PIVA.`,
+      note: "Jerarquiza donde empezar y que piezas deben conectarse primero.",
+    },
+    {
+      label: "Paquetes territoriales",
+      copy: "Agrupa problemas, oportunidades y proyectos en bloques coherentes.",
+      note: "Evita proyectos aislados y facilita fases de gestion.",
+    },
+    {
+      label: "Perfiles y cartera",
+      copy: "Vuelve visible el PIVA en tramos demostrativos y proyectos detonantes.",
+      note: "Conecta el plan con el siguiente nivel de proyecto.",
+    },
+  ];
+  const packages = [
+    {
+      id: "piva-package-urban",
+      label: "Paquete 1",
+      title: "Centralidades y corredor urbano verde-azul",
+      summary: `${topMobility?.name || "Machachi"} concentra la mezcla entre espacio publico, equipamientos, sombra y continuidad peatonal.`,
+      priority: "Corto plazo",
+      focus: "Arbolado estructurante, plazas, equipamientos y continuidad de corredores urbanos.",
+      tone: "high",
+    },
+    {
+      id: "piva-package-transition",
+      label: "Paquete 2",
+      title: "Cinturon productivo y transicion urbano-rural",
+      summary: `${topLand?.name || "Borde productivo"} exige contencion del borde, manejo del suelo y activacion de reservas municipales.`,
+      priority: "Mediano plazo",
+      focus: "Suelo productivo, drenaje de borde, banco de suelo y regulacion de la expansion.",
+      tone: "mid",
+    },
+    {
+      id: "piva-package-blue",
+      label: "Paquete 3",
+      title: "Corredores hidricos, quebradas y parque lineal esponja",
+      summary: `${topHydrology?.name || "Frente hidrico prioritario"} combina recarga, drenaje, seguridad hidrica y restauracion ecologica.`,
+      priority: "Corto a mediano plazo",
+      focus: "Continuidad hidraulica, mitigacion de riesgo, restauracion azul y espacio publico compatible.",
+      tone: "high",
+    },
+  ];
+  const phases = [
+    {
+      label: "Fase 0-1",
+      title: "Habilitadores criticos",
+      copy: "Continuidad hidraulica, limpieza de estancamientos, resguardos patrimoniales y franjas seguras de alta tension.",
+    },
+    {
+      label: "Fase 1-2",
+      title: "Activacion de nodos detonantes",
+      copy: `Arranca con ${localSupport.weakestParish}, nodos de proximidad y corredores frios con mejor capacidad demostrativa.`,
+    },
+    {
+      label: "Fase 2-3",
+      title: "Expansion de conectores",
+      copy: "Extiende conectores verdes y azules hacia bordes productivos, centralidades y frentes hidricos secundarios.",
+    },
+    {
+      label: "Gestion adaptativa",
+      title: "Monitoreo e iteracion",
+      copy: "Ajusta por indicadores de servicios, clima, conectividad, riesgo y avance de cartera.",
+    },
+  ];
+  const profiles = sortedProjects.slice(0, 3).map((project, index) => ({
+    id: `piva-profile-${index + 1}`,
+    label: `Perfil ${index + 1}`,
+    title: project.kind === "climate"
+      ? `Corredor urbano verde-azul | ${project.title}`
+      : project.kind === "blue"
+        ? `Parque lineal esponja | ${project.title}`
+        : project.kind === "transition"
+          ? `Borde productivo y franja segura | ${project.title}`
+          : project.title,
+    summary: project.summary,
+    rationale: project.note,
+    tone: project.tone,
+    module: project.module,
+  }));
+  const parishPortfolio = buildPivaParishPortfolio(localSupport, sortedProjects);
+  const comparator = buildPivaComparator({
+    blueScore,
+    greenScore,
+    climateScore,
+    connectivityScore,
+    localSupportScore: localSupport.localSupportScore,
+    corridorCount: urbanClimate.summary.priorityCorridorCount || corridorFeatures.length,
+  }, localSupport, packages, sortedProjects);
+  const legend = getPivaLegendItems();
+  const summary = {
+    pivaScore,
+    signal,
+    blueScore,
+    greenScore,
+    climateScore,
+    connectivityScore,
+    projectCount: sortedProjects.length,
+    corridorCount: urbanClimate.summary.priorityCorridorCount || corridorFeatures.length,
+    coolingAreaHa: urbanClimate.summary.coolingAreaHa || 0,
+    heatRetentionAreaHa: urbanClimate.summary.heatRetentionAreaHa || 0,
+    hydricPriorityCount: hydrology.prioritySectors.length,
+    supportScore: evidenceSummary.supportScore,
+    supportLabel: evidenceSummary.supportLabel,
+    localSupportScore: localSupport.localSupportScore,
+    localSupportLabel: localSupport.supportLabel,
+    localConstraintScore: localSupport.localConstraintScore,
+    localServiceIndex: localSupport.averageServiceIndex,
+    bankReserveCount: localSupport.greenBankCount,
+    heritageCount: localSupport.heritageCount,
+    highTensionKm: localSupport.highTensionKm,
+    weakestServiceParish: localSupport.weakestParish,
+    packageCount: packages.length,
+    profileCount: profiles.length,
+    officialLayerCount: official.activeLayerCount || 0,
+    officialSourceCount: official.sourceCount || 0,
+    headline: signal.tone === "good"
+      ? "Red verde-azul lista para consolidar"
+      : signal.tone === "watch"
+        ? "Red verde-azul lista con condicionantes"
+        : "Red verde-azul en tension y con contencion prioritaria",
+    recommendation: signal.tone === "good"
+      ? "Prioriza corredores verdes, drenaje azul y nodos de proximidad antes de abrir nuevos frentes de ocupacion."
+      : signal.tone === "watch"
+        ? "Protege corredores frios, ajusta drenaje y corrige los nodos con menor cobertura antes de escalar proyectos."
+        : "Activa restauracion azul, contencion del borde y mitigacion termica antes de habilitar nuevas intensidades urbanas.",
+    dominantProjectLabel: sortedProjects[0]?.title || "Sin cartera activa",
+    areaHa,
+  };
+
+  return getCachedRuntimeAnalysis(
+    `piva|${state.territorialAreaId}|${target.targetKey}|${blueScore}|${greenScore}|${climateScore}|${connectivityScore}|${sortedProjects.length}|${official.activeLayerCount || 0}`,
+    () => ({
+      context: target,
+      sourceStudy: getPivaEcuadorSourceStudy(),
+      planning,
+      mobility,
+      risk,
+      hydrology,
+      urbanClimate,
+      zoning,
+      landChange,
+      official,
+      localSupport,
+      evidence: evidenceSummary,
+      deliverables,
+      packages,
+      phases,
+      profiles,
+      parishPortfolio,
+      comparator,
+      legend,
+      summary,
+      projects: sortedProjects,
+      zoneCollection: {
+        type: "FeatureCollection",
+        features: zoneFeatures,
+      },
+      corridorCollection: {
+        type: "FeatureCollection",
+        features: corridorFeatures,
+      },
+      projectCollection,
+    })
+  );
+}
+
+function renderPivaModule() {
+  const areaProfile = getTerritorialAreaProfile();
+  const analysis = isCurrentTerritorialAnalysis(state.pivaData) ? state.pivaData : null;
+  if (!analysis) {
+    resetMetricGrid(dom.pivaResults, `Ejecuta el PIVA para priorizar infraestructura verde y azul sobre Canton Mejia y dejar una cartera accionable por corredor, agua y espacio publico.`);
+    resetVisualPanel(dom.pivaReadout, "Aqui aparecera la lectura verde-azul integrada con clima urbano, seguridad hidrica, conectividad y soporte de evidencia.");
+    resetVisualPanel(dom.pivaBoard, "Aqui aparecera el semaforo PIVA con los pilares azul, verde, clima, conectividad y soporte oficial.");
+    resetVisualPanel(dom.pivaLegendBoard, "Aqui aparecera la leyenda PIVA para distinguir capas azules, verdes, climaticas, transiciones y proyectos detonantes.");
+    resetVisualPanel(dom.pivaComparator, "Aqui aparecera el comparador entre el estado actual y la propuesta PIVA para medir mejora esperada.");
+    resetVisualPanel(dom.pivaFramework, "Aqui apareceran el modelo territorial, la red PIVA, los paquetes y la hoja de ruta de implementacion inspirada en la estructura usada en Manta.");
+    resetVisualPanel(dom.pivaProfiles, "Aqui apareceran los perfiles prioritarios que vuelven visible el PIVA en corredores, bordes productivos y frentes hidricos.");
+    resetVisualPanel(dom.pivaParishes, "Aqui aparecera la cartera PIVA por parroquia, con brecha de servicios, soporte local y accion sugerida.");
+    resetVisualPanel(dom.pivaProjects, "Aqui aparecera la cartera inicial de proyectos PIVA del canton Mejia, con acciones por corredor, drenaje y espacio publico.");
+    if (dom.pivaSourceNote) {
+      setTextIfChanged(dom.pivaSourceNote, `Modulo PIVA orientado a ${areaProfile.scopeLabel === "Canton Mejia" ? areaProfile.scopeLabel : "Canton Mejia"}. Si el ambito activo no es Mejia, al ejecutar la corrida se ajusta para construir la cartera verde-azul del canton con banco de suelo, equipamiento, servicios basicos y patrimonio municipal.`);
+    }
+    return;
+  }
+
+  paintMetricGrid(dom.pivaResults, [
+    {
+      label: "Score PIVA",
+      value: `${analysis.summary.pivaScore}/100`,
+      copy: analysis.summary.headline,
+      highlight: true,
+    },
+    {
+      label: "Sistema azul",
+      value: `${analysis.summary.blueScore}/100`,
+      copy: `${analysis.summary.hydricPriorityCount} frentes hidricos y ${analysis.hydrology.summary.balanceLabel.toLowerCase()}.`,
+    },
+    {
+      label: "Sistema verde",
+      value: `${analysis.summary.greenScore}/100`,
+      copy: `${analysis.landChange.summary.productiveLabel} y ${analysis.zoning.summary.dominantPatternLabel.toLowerCase()}.`,
+    },
+    {
+      label: "Clima urbano",
+      value: `${analysis.summary.climateScore}/100`,
+      copy: `${analysis.summary.corridorCount} corredores y ${analysis.summary.coolingAreaHa} ha de enfriamiento.`,
+    },
+    {
+      label: "Conectividad",
+      value: `${analysis.summary.connectivityScore}/100`,
+      copy: `${analysis.mobility.summary.coverageLabel} y cobertura territorial ${analysis.planning.serviceCoverage.overallCoverage}%.`,
+    },
+    {
+      label: "Soporte municipal",
+      value: `${analysis.summary.localSupportScore}/100`,
+      copy: `${analysis.summary.weakestServiceParish} es la brecha mas urgente; ${analysis.summary.bankReserveCount} reservas municipales y ${analysis.summary.localServiceIndex}/100 de servicios base.`,
+    },
+    {
+      label: "Cartera",
+      value: `${analysis.summary.projectCount} proyectos`,
+      copy: analysis.summary.dominantProjectLabel,
+    },
+    {
+      label: "Paquetes y perfiles",
+      value: `${analysis.summary.packageCount} / ${analysis.summary.profileCount}`,
+      copy: "Modelo territorial, red priorizada y perfiles demostrativos listos para pasar de lectura a proyecto.",
+    },
+  ]);
+
+  if (dom.pivaReadout) {
+    dom.pivaReadout.classList.remove("empty-state");
+    dom.pivaReadout.classList.add("has-data");
+    setHtmlIfChanged(dom.pivaReadout, `
+      <article class="territorial-readout-card tone-${analysis.summary.signal.tone}">
+        <div class="territorial-readout-head">
+          <div>
+            <h4>${escapeHtmlContent(analysis.summary.headline)}</h4>
+            <p class="territorial-readout-copy">${escapeHtmlContent(analysis.summary.recommendation)}</p>
+          </div>
+          <span class="planning-pill emphasis">${analysis.summary.pivaScore}/100</span>
+        </div>
+        <div class="territorial-readout-grid">
+          <article class="scenario-card">
+            <div class="scenario-card-head">
+              <div>
+                <h5>Sistema azul</h5>
+                <p class="scenario-copy">${escapeHtmlContent(analysis.hydrology.summary.criticalCopy)}</p>
+              </div>
+              <span class="scenario-chip tone-${getHydrologyBalanceTone(analysis.hydrology.summary.balanceHm3) === "surplus" ? "high" : getHydrologyBalanceTone(analysis.hydrology.summary.balanceHm3) === "watch" ? "mid" : "low"}">${escapeHtmlContent(analysis.hydrology.summary.balanceLabel)}</span>
+            </div>
+            <div class="territorial-readout-bars">
+              <div class="territorial-readout-row"><span>Balance</span><strong>${analysis.hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(analysis.hydrology.summary.balanceHm3)} hm3</strong><div class="territorial-readout-track"><i style="width:${clamp(analysis.summary.blueScore, 8, 100)}%"></i></div></div>
+              <div class="territorial-readout-row"><span>Soporte</span><strong>${escapeHtmlContent(analysis.summary.supportLabel)}</strong><div class="territorial-readout-track"><i style="width:${clamp(analysis.summary.supportScore, 6, 100)}%"></i></div></div>
+            </div>
+          </article>
+          <article class="scenario-card">
+            <div class="scenario-card-head">
+              <div>
+                <h5>Sistema verde</h5>
+                <p class="scenario-copy">${escapeHtmlContent(analysis.landChange.summary.hotspotCopy)}</p>
+              </div>
+              <span class="scenario-chip tone-${analysis.summary.greenScore >= 70 ? "high" : analysis.summary.greenScore >= 55 ? "mid" : "low"}">${analysis.summary.greenScore}/100</span>
+            </div>
+            <div class="territorial-readout-bars">
+              <div class="territorial-readout-row"><span>Suelo rural</span><strong>${formatLandChangeHa(analysis.landChange.summary.productiveLossHa)} ha</strong><div class="territorial-readout-track"><i style="width:${clamp(analysis.summary.greenScore, 8, 100)}%"></i></div></div>
+              <div class="territorial-readout-row"><span>Vitalidad</span><strong>${analysis.zoning.summary.meanVitality}/100</strong><div class="territorial-readout-track"><i style="width:${clamp(analysis.zoning.summary.meanVitality, 8, 100)}%"></i></div></div>
+            </div>
+          </article>
+          <article class="scenario-card">
+            <div class="scenario-card-head">
+              <div>
+                <h5>Clima y red</h5>
+                <p class="scenario-copy">${escapeHtmlContent(analysis.urbanClimate.summary.dominantLabel)} con ${analysis.summary.coolingAreaHa} ha de enfriamiento y ${analysis.summary.heatRetentionAreaHa} ha de vigilancia termica.</p>
+              </div>
+              <span class="scenario-chip tone-${analysis.summary.climateScore >= 70 ? "high" : analysis.summary.climateScore >= 55 ? "mid" : "low"}">${analysis.summary.climateScore}/100</span>
+            </div>
+            <div class="territorial-readout-bars">
+              <div class="territorial-readout-row"><span>Corredores</span><strong>${analysis.summary.corridorCount}</strong><div class="territorial-readout-track"><i style="width:${clamp(analysis.summary.climateScore, 8, 100)}%"></i></div></div>
+              <div class="territorial-readout-row"><span>Conectividad</span><strong>${analysis.summary.connectivityScore}/100</strong><div class="territorial-readout-track"><i style="width:${clamp(analysis.summary.connectivityScore, 8, 100)}%"></i></div></div>
+            </div>
+          </article>
+          <article class="scenario-card">
+            <div class="scenario-card-head">
+              <div>
+                <h5>Soporte municipal</h5>
+                <p class="scenario-copy">${escapeHtmlContent(analysis.localSupport.supportLabel)} con foco en ${escapeHtmlContent(analysis.localSupport.weakestParish)} y restricciones visibles de patrimonio o alta tension.</p>
+              </div>
+              <span class="scenario-chip tone-${analysis.summary.localSupportScore >= 70 ? "high" : analysis.summary.localSupportScore >= 55 ? "mid" : "low"}">${analysis.summary.localSupportScore}/100</span>
+            </div>
+            <div class="territorial-readout-bars">
+              <div class="territorial-readout-row"><span>Servicios base</span><strong>${analysis.summary.localServiceIndex}/100</strong><div class="territorial-readout-track"><i style="width:${clamp(analysis.summary.localSupportScore, 8, 100)}%"></i></div></div>
+              <div class="territorial-readout-row"><span>Restriccion</span><strong>${analysis.summary.localConstraintScore}/100</strong><div class="territorial-readout-track"><i style="width:${clamp(Math.max(100 - analysis.summary.localConstraintScore, 8), 8, 100)}%"></i></div></div>
+            </div>
+          </article>
+        </div>
+        <p class="territorial-readout-copy">Base usada: ${escapeHtmlContent(analysis.sourceStudy.methodLabel)}.</p>
+      </article>
+    `);
+  }
+
+  if (dom.pivaBoard) {
+    dom.pivaBoard.classList.remove("empty-state");
+    dom.pivaBoard.classList.add("has-data");
+    setHtmlIfChanged(dom.pivaBoard, `
+      <article class="territorial-decision-hero tone-${analysis.summary.signal.tone}">
+        <div>
+          <p class="candidate-rank">Semaforo PIVA</p>
+          <h4>${escapeHtmlContent(analysis.summary.headline)}</h4>
+          <p>${escapeHtmlContent(analysis.summary.recommendation)}</p>
+        </div>
+        <div class="territorial-decision-score">
+          <strong>${analysis.summary.pivaScore}/100</strong>
+          <span>${escapeHtmlContent(analysis.context.scopeLabel)}</span>
+        </div>
+      </article>
+      <div class="planning-pills has-data">
+        <span class="planning-pill emphasis">${analysis.summary.projectCount} proyectos</span>
+        <span class="planning-pill emphasis">${analysis.summary.packageCount} paquetes</span>
+        <span class="planning-pill emphasis">${analysis.summary.profileCount} perfiles</span>
+        <span class="planning-pill emphasis">${analysis.summary.officialLayerCount} capas oficiales</span>
+        <span class="planning-pill emphasis">${analysis.summary.bankReserveCount} reservas municipales</span>
+        <span class="planning-pill emphasis">${analysis.summary.heritageCount} patrimonios</span>
+        <span class="planning-pill emphasis">${analysis.summary.highTensionKm} km alta tension</span>
+        <span class="planning-pill emphasis">${analysis.summary.supportLabel}</span>
+        <span class="planning-pill emphasis">${analysis.summary.areaHa} ha leidas</span>
+      </div>
+      <div class="territorial-decision-grid">
+        ${[
+          {
+            label: "Azul",
+            tone: analysis.summary.blueScore >= 70 ? "good" : analysis.summary.blueScore >= 55 ? "watch" : "critical",
+            value: `${analysis.summary.blueScore}/100`,
+            copy: `${analysis.hydrology.summary.balanceLabel}. ${analysis.hydrology.summary.criticalSectorLabel} concentra la tension azul.`,
+          },
+          {
+            label: "Verde",
+            tone: analysis.summary.greenScore >= 70 ? "good" : analysis.summary.greenScore >= 55 ? "watch" : "critical",
+            value: `${analysis.summary.greenScore}/100`,
+            copy: `${analysis.zoning.summary.dominantPatternLabel} y ${analysis.landChange.summary.productiveLabel.toLowerCase()} marcan el soporte verde.`,
+          },
+          {
+            label: "Clima",
+            tone: analysis.summary.climateScore >= 70 ? "good" : analysis.summary.climateScore >= 55 ? "watch" : "critical",
+            value: `${analysis.summary.climateScore}/100`,
+            copy: `${analysis.summary.corridorCount} corredores y ${analysis.summary.heatRetentionAreaHa} ha de retencion termica a corregir.`,
+          },
+          {
+            label: "Conectividad",
+            tone: analysis.summary.connectivityScore >= 70 ? "good" : analysis.summary.connectivityScore >= 55 ? "watch" : "critical",
+            value: `${analysis.summary.connectivityScore}/100`,
+            copy: `${analysis.mobility.summary.coverageLabel} y ${analysis.planning.serviceCoverage.overallCoverage}% de cobertura funcional del tablero base.`,
+          },
+          {
+            label: "Municipal",
+            tone: analysis.summary.localSupportScore >= 70 ? "good" : analysis.summary.localSupportScore >= 55 ? "watch" : "critical",
+            value: `${analysis.summary.localSupportScore}/100`,
+            copy: `${analysis.summary.weakestServiceParish} requiere servicios y ${analysis.summary.bankReserveCount} reservas ayudan a montar la cartera PIVA.`,
+          },
+        ].map((card) => `
+          <article class="territorial-decision-card tone-${card.tone}">
+            <div class="territorial-decision-card-head">
+              <div>
+                <p class="candidate-rank">${card.label}</p>
+                <h5>${card.value}</h5>
+              </div>
+            </div>
+            <p>${escapeHtmlContent(card.copy)}</p>
+          </article>
+        `).join("")}
+      </div>
+    `);
+  }
+
+  if (dom.pivaLegendBoard) {
+    dom.pivaLegendBoard.classList.remove("empty-state");
+    dom.pivaLegendBoard.classList.add("has-data");
+    setHtmlIfChanged(dom.pivaLegendBoard, `
+      <article class="territorial-decision-hero tone-${analysis.summary.signal.tone}">
+        <div>
+          <p class="candidate-rank">Leyenda PIVA</p>
+          <h4>Clave de lectura verde-azul</h4>
+          <p>Distingue rapidamente sistema azul, verde, clima, borde de transicion y proyectos detonantes dentro del mapa y la cartera.</p>
+        </div>
+        <div class="territorial-decision-score">
+          <strong>${analysis.legend.length}</strong>
+          <span>claves</span>
+        </div>
+      </article>
+      <div class="piva-legend-grid">
+        ${analysis.legend.map((item) => `
+          <article class="territorial-decision-card tone-base">
+            <div class="territorial-decision-card-head">
+              <div>
+                <p class="candidate-rank">${escapeHtmlContent(item.label)}</p>
+                <h5><span class="piva-swatch" style="background:${escapeHtmlContent(item.color)}"></span>${escapeHtmlContent(item.id.toUpperCase())}</h5>
+              </div>
+            </div>
+            <p>${escapeHtmlContent(item.copy)}</p>
+          </article>
+        `).join("")}
+      </div>
+    `);
+  }
+
+  if (dom.pivaComparator) {
+    dom.pivaComparator.classList.remove("empty-state");
+    dom.pivaComparator.classList.add("has-data");
+    setHtmlIfChanged(dom.pivaComparator, `
+      <article class="territorial-decision-hero tone-${analysis.comparator.targetScore >= 75 ? "good" : analysis.comparator.targetScore >= 60 ? "watch" : "critical"}">
+        <div>
+          <p class="candidate-rank">Comparador PIVA</p>
+          <h4>${escapeHtmlContent(analysis.comparator.headline)}</h4>
+          <p>${escapeHtmlContent(analysis.comparator.recommendation)}</p>
+        </div>
+        <div class="territorial-decision-score">
+          <strong>${analysis.comparator.currentScore} → ${analysis.comparator.targetScore}</strong>
+          <span>${analysis.comparator.delta >= 0 ? `+${analysis.comparator.delta}` : analysis.comparator.delta} pts</span>
+        </div>
+      </article>
+      <div class="piva-comparator-stack">
+        ${analysis.comparator.dimensions.map((item) => `
+          <article class="scenario-card">
+            <div class="scenario-card-head">
+              <div>
+                <h5>${escapeHtmlContent(item.label)}</h5>
+                <p class="scenario-copy">${escapeHtmlContent(item.note)}</p>
+              </div>
+              <span class="scenario-chip tone-${item.tone}">${item.current}/100</span>
+            </div>
+            <div class="piva-comparator-row">
+              <span>Actual</span>
+              <strong>${item.current}/100</strong>
+              <div class="territorial-readout-track"><i style="width:${clamp(item.current, 8, 100)}%"></i></div>
+            </div>
+            <div class="piva-comparator-row target">
+              <span>Propuesta</span>
+              <strong>${item.target}/100</strong>
+              <div class="territorial-readout-track"><i style="width:${clamp(item.target, 8, 100)}%"></i></div>
+            </div>
+          </article>
+        `).join("")}
+      </div>
+    `);
+  }
+
+  if (dom.pivaFramework) {
+    dom.pivaFramework.classList.remove("empty-state");
+    dom.pivaFramework.classList.add("has-data");
+    setHtmlIfChanged(dom.pivaFramework, `
+      <article class="territorial-decision-hero tone-${analysis.summary.signal.tone}">
+        <div>
+          <p class="candidate-rank">PIVA como plan territorial</p>
+          <h4>Modelo, red, paquetes, fases y cartera</h4>
+          <p>Siguiendo la estructura de resultados usada en Manta, el PIVA de Mejia ya no entrega solo un score: deja una lectura territorial, una red priorizada y una ruta de implementacion.</p>
+        </div>
+        <div class="territorial-decision-score">
+          <strong>${analysis.summary.packageCount}</strong>
+          <span>paquetes</span>
+        </div>
+      </article>
+      <div class="territorial-decision-grid">
+        ${analysis.deliverables.map((item) => `
+          <article class="territorial-decision-card tone-good">
+            <div class="territorial-decision-card-head">
+              <div>
+                <p class="candidate-rank">${escapeHtmlContent(item.label)}</p>
+                <h5>${escapeHtmlContent(item.copy)}</h5>
+              </div>
+            </div>
+            <p>${escapeHtmlContent(item.note)}</p>
+          </article>
+        `).join("")}
+      </div>
+      <div class="territorial-sector-sheets has-data">
+        ${analysis.packages.map((item) => `
+          <article class="territorial-sector-sheet tone-${item.tone}">
+            <div class="territorial-sector-head">
+              <div>
+                <p class="candidate-rank">${escapeHtmlContent(item.label)}</p>
+                <h4>${escapeHtmlContent(item.title)}</h4>
+              </div>
+              <span class="planning-pill emphasis">${escapeHtmlContent(item.priority)}</span>
+            </div>
+            <p class="territorial-readout-copy">${escapeHtmlContent(item.summary)}</p>
+            <p class="land-change-sector-note">${escapeHtmlContent(item.focus)}</p>
+          </article>
+        `).join("")}
+      </div>
+      <div class="official-source-list">
+        ${analysis.phases.map((phase) => `
+          <article class="official-source-card">
+            <div class="official-source-card-head">
+              <div>
+                <h5>${escapeHtmlContent(phase.label)} · ${escapeHtmlContent(phase.title)}</h5>
+                <p>${escapeHtmlContent(phase.copy)}</p>
+              </div>
+            </div>
+          </article>
+        `).join("")}
+      </div>
+    `);
+  }
+
+  if (dom.pivaProfiles) {
+    dom.pivaProfiles.classList.remove("empty-state");
+    dom.pivaProfiles.classList.add("has-data");
+    setHtmlIfChanged(dom.pivaProfiles, analysis.profiles.map((profile) => `
+      <article class="territorial-sector-sheet tone-${profile.tone}">
+        <div class="territorial-sector-head">
+          <div>
+            <p class="candidate-rank">${escapeHtmlContent(profile.label)}</p>
+            <h4>${escapeHtmlContent(profile.title)}</h4>
+          </div>
+          <span class="planning-pill emphasis">${escapeHtmlContent(profile.module)}</span>
+        </div>
+        <p class="territorial-readout-copy">${escapeHtmlContent(profile.summary)}</p>
+        <p class="land-change-sector-note">${escapeHtmlContent(profile.rationale)}</p>
+      </article>
+    `).join(""));
+  }
+
+  if (dom.pivaParishes) {
+    dom.pivaParishes.classList.remove("empty-state");
+    dom.pivaParishes.classList.add("has-data");
+    setHtmlIfChanged(dom.pivaParishes, analysis.parishPortfolio.map((parish, index) => `
+      <article class="territorial-sector-sheet tone-${parish.tone}">
+        <div class="territorial-sector-head">
+          <div>
+            <p class="candidate-rank">Parroquia ${index + 1}</p>
+            <h4>${escapeHtmlContent(parish.parish)}</h4>
+          </div>
+          <span class="planning-pill emphasis">${escapeHtmlContent(parish.actionLabel)}</span>
+        </div>
+        <p class="territorial-readout-copy">${escapeHtmlContent(parish.summary)}</p>
+        <div class="field-evidence-metrics piva-parish-meta">
+          <span>Servicios: ${parish.serviceIndex}/100</span>
+          <span>Soporte: ${parish.supportScore}/100</span>
+          <span>Banco verde: ${parish.bankCount}</span>
+          <span>Equipamientos: ${parish.equipmentCount}</span>
+          <span>Patrimonio: ${parish.heritageCount}</span>
+          <span>Alta tension: ${parish.highTensionKm} km</span>
+        </div>
+        <p class="land-change-sector-note">${escapeHtmlContent(parish.focusLabel)} | Proyecto sugerido: ${escapeHtmlContent(parish.linkedProjectTitle)}</p>
+      </article>
+    `).join(""));
+  }
+
+  if (dom.pivaProjects) {
+    dom.pivaProjects.classList.remove("empty-state");
+    dom.pivaProjects.classList.add("has-data");
+    setHtmlIfChanged(dom.pivaProjects, analysis.projects.map((project, index) => `
+      <article class="territorial-sector-sheet tone-${project.tone} ${project.id === state.pivaHighlightId ? "active" : ""}">
+        <div class="territorial-sector-head">
+          <div>
+            <p class="candidate-rank">${escapeHtmlContent(project.module)}</p>
+            <h4>${escapeHtmlContent(project.title)}</h4>
+          </div>
+          <span class="planning-pill emphasis">Prioridad ${index + 1}</span>
+        </div>
+        <p class="territorial-readout-copy">${escapeHtmlContent(project.summary)}</p>
+        <div class="field-evidence-metrics">
+          ${project.metrics.map((metric) => `<span>${escapeHtmlContent(metric.label)}: ${escapeHtmlContent(metric.value)}</span>`).join("")}
+        </div>
+        <p class="territorial-readout-copy">${escapeHtmlContent(project.note)}</p>
+        <button class="ghost-button" type="button" data-piva-project-id="${escapeHtmlContent(project.id)}">Ver en mapa</button>
+      </article>
+    `).join(""));
+  }
+}
+
+async function runPivaAnalysis(silent = false) {
+  try {
+    if (state.territorialAreaId !== "mejia") {
+      setTerritorialArea("mejia", {
+        rerun: false,
+        reload3d: false,
+        silent: true,
+      });
+    }
+    await loadMejiaPivaCatalog().catch((error) => {
+      console.warn("No se pudieron cargar los insumos municipales del PIVA.", error);
+    });
+    await runOfficialDataAnalysis(true);
+    await ensureFieldEvidencePrecisionData();
+    if (!isCurrentTerritorialAnalysis(state.planningData)) {
+      state.planningData = buildPlanningAnalysis();
+      state.planningHighlightId = state.planningData.candidates[0]?.id || null;
+    }
+    if (!isCurrentTerritorialAnalysis(state.mobilityData)) {
+      state.mobilityData = buildMobilityAnalysis();
+      state.mobilityHighlightId = state.mobilityData.prioritySectors[0]?.id || null;
+    }
+    if (!isCurrentTerritorialAnalysis(state.riskData)) {
+      state.riskData = buildRiskAnalysis();
+      state.riskHighlightId = state.riskData.prioritySectors[0]?.id || null;
+    }
+    if (!isCurrentTerritorialAnalysis(state.hydrologyData)) {
+      state.hydrologyData = buildHydrologyAnalysis();
+      state.hydrologyHighlightId = state.hydrologyData.prioritySectors[0]?.id || null;
+    }
+    if (!isCurrentTerritorialAnalysis(state.urbanClimateData)) {
+      state.urbanClimateData = buildUrbanClimateAnalysis();
+      state.urbanClimateHighlightId = state.urbanClimateData.prioritySectors[0]?.id || null;
+    }
+    if (!isCurrentTerritorialAnalysis(state.landChangeData)) {
+      state.landChangeData = buildLandChangeAnalysis();
+      state.landChangeHighlightId = state.landChangeData.prioritySectors[0]?.id || null;
+    }
+    if (!isCurrentTerritorialAnalysis(state.zoningPatternsData)) {
+      state.zoningPatternsData = buildZoningPatternsAnalysis();
+      state.zoningPatternsHighlightId = state.zoningPatternsData.prioritySectors[0]?.id || null;
+    }
+
+    const analysis = buildPivaAnalysis();
+    state.pivaData = analysis;
+    state.pivaHighlightId = analysis.projects[0]?.id || null;
+    state.territorialFocus = "piva";
+    renderPlanningModule();
+    renderPivaOverlay(analysis);
+    renderTerritorialDecisionSupport();
+    refreshPlanning3dAnalyticalScene();
+    renderLegend();
+    updateMapSummary();
+    if (!silent) {
+      setStatus(`PIVA del canton Mejia listo: score ${analysis.summary.pivaScore}/100, ${analysis.summary.projectCount} proyectos y ${analysis.summary.corridorCount} corredores verde-azules priorizados.`);
+    }
+    return analysis;
+  } catch (error) {
+    console.warn("Fallo el modulo PIVA.", error);
+    state.pivaData = null;
+    state.pivaHighlightId = null;
+    clearPivaOverlay();
+    resetTerritorialModuleState(dom.pivaResults, "No se pudo estructurar el PIVA del canton Mejia en esta corrida.", [
+      { target: dom.pivaReadout, message: "No fue posible construir la lectura verde-azul integrada." },
+      { target: dom.pivaBoard, message: "No fue posible consolidar el semaforo PIVA y sus pilares." },
+      { target: dom.pivaLegendBoard, message: "No fue posible generar la leyenda y claves de lectura del PIVA." },
+      { target: dom.pivaComparator, message: "No fue posible comparar el estado actual con la propuesta PIVA." },
+      { target: dom.pivaParishes, message: "No fue posible priorizar la cartera por parroquia." },
+      { target: dom.pivaProjects, message: "No fue posible preparar la cartera de proyectos PIVA." },
+    ]);
+    renderPlanningModule();
+    refreshPlanning3dAnalyticalScene();
+    renderLegend();
+    updateMapSummary();
+    if (!silent) {
+      setStatus(`PIVA: ${error.message || "ocurrio un error inesperado"}.`);
+    }
+    return null;
+  }
+}
+
+function clearPivaOverlay() {
+  ["pivaZoneLayer", "pivaCorridorLayer", "pivaProjectLayer"].forEach((layerName) => {
+    if (mapState[layerName]) {
+      mapState.map?.removeLayer(mapState[layerName]);
+      mapState[layerName] = null;
+    }
+  });
+}
+
+function renderPivaOverlay(analysis) {
+  clearPivaOverlay();
+  if (!mapState.map || !analysis || !isPivaRoute(state.entryRoute)) {
+    return;
+  }
+
+  if (analysis.zoneCollection?.features?.length) {
+    mapState.pivaZoneLayer = L.geoJSON(analysis.zoneCollection, {
+      style: (feature) => {
+        const palette = getPivaSignalPalette(feature.properties?.pivaZoneKind);
+        return {
+          color: palette.stroke,
+          weight: 1.5,
+          fillColor: palette.fill,
+          fillOpacity: 0.16,
+          dashArray: feature.properties?.pivaZoneKind === "climate" ? "7 7" : null,
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(`<h3 class="popup-title">${feature.properties?.pivaLabel || "Zona PIVA"}</h3><p class="popup-copy">${feature.properties?.pivaSummary || "Lectura verde-azul priorizada para el canton Mejia."}</p>`);
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (analysis.corridorCollection?.features?.length) {
+    mapState.pivaCorridorLayer = L.geoJSON(analysis.corridorCollection, {
+      style: (feature) => {
+        const palette = getPivaSignalPalette(feature.properties?.pivaCorridorKind || "climate");
+        return {
+          color: palette.corridor,
+          weight: 4.2,
+          opacity: 0.86,
+          dashArray: feature.properties?.pivaCorridorKind === "climate" ? "10 7" : null,
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(`<h3 class="popup-title">${feature.properties?.pivaLabel || feature.properties?.classLabel || "Corredor PIVA"}</h3><p class="popup-copy">${feature.properties?.summary || "Corredor verde-azul priorizado para ventilacion y espacio publico."}</p>`);
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (analysis.projectCollection?.features?.length) {
+    mapState.pivaProjectLayer = L.geoJSON(analysis.projectCollection, {
+      pointToLayer: (feature, latlng) => {
+        const active = feature.properties?.pivaProjectId === state.pivaHighlightId;
+        const palette = getPivaSignalPalette(feature.properties?.kind || "green");
+        return L.circleMarker(latlng, {
+          radius: active ? 9 : 7,
+          color: "#fff9ef",
+          weight: active ? 2.5 : 2,
+          fillColor: palette.marker,
+          fillOpacity: 0.94,
+        });
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(`<h3 class="popup-title">${feature.properties?.title || "Proyecto PIVA"}</h3><p class="popup-copy">${feature.properties?.summary || ""} Prioridad ${feature.properties?.priorityScore || 0}/100.</p>`);
+      },
+    }).addTo(mapState.map);
+  }
+
+  mapState.pivaZoneLayer?.bringToFront?.();
+  mapState.pivaCorridorLayer?.bringToFront?.();
+  mapState.pivaProjectLayer?.bringToFront?.();
+  if (mapState.currentPlotLayer) {
+    mapState.currentPlotLayer.bringToFront();
+  }
+}
+
+function focusPivaStudy() {
+  const analysis = isCurrentTerritorialAnalysis(state.pivaData) ? state.pivaData : null;
+  if (!analysis || !mapState.map) {
+    return;
+  }
+  state.territorialFocus = "piva";
+  renderPivaModule();
+  renderPivaOverlay(analysis);
+  updateMapSummary();
+  const bounds = buildBoundsFromFeatures([
+    ...(analysis.zoneCollection?.features || []),
+    ...(analysis.corridorCollection?.features || []),
+    ...(analysis.projectCollection?.features || []),
+  ]);
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, {
+      padding: [52, 52],
+      maxZoom: 12,
+    });
+  }
+}
+
+function focusPivaProject(projectId) {
+  const analysis = isCurrentTerritorialAnalysis(state.pivaData) ? state.pivaData : null;
+  const project = analysis?.projects?.find((item) => item.id === projectId);
+  if (!project || !mapState.map) {
+    return;
+  }
+  state.pivaHighlightId = projectId;
+  state.territorialFocus = "piva";
+  renderPivaModule();
+  renderPivaOverlay(analysis);
+  updateMapSummary();
+  const bounds = buildBoundsFromFeatures([project.feature]);
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, {
+      padding: [56, 56],
+      maxZoom: 13,
+    });
+  } else if (Array.isArray(project.centroid)) {
+    mapState.map.setView([project.centroid[1], project.centroid[0]], Math.max(mapState.map.getZoom(), 13));
+  }
+}
+
+function handlePivaInteraction(event) {
+  const button = event.target.closest("[data-piva-project-id]");
+  if (!button || !(dom.pivaBoard?.contains(button) || dom.pivaProjects?.contains(button))) {
+    return;
+  }
+  focusPivaProject(button.dataset.pivaProjectId);
+}
+
+function buildPivaJsonExport() {
+  const analysis = isCurrentTerritorialAnalysis(state.pivaData) ? state.pivaData : null;
+  if (!analysis) {
+    return null;
+  }
+  return {
+    generatedAt: new Date().toISOString(),
+    version: APP_VERSION,
+    area: getTerritorialAreaProfile(),
+    context: analysis.context,
+    sourceStudy: analysis.sourceStudy,
+    summary: analysis.summary,
+    deliverables: analysis.deliverables,
+    legend: analysis.legend,
+    comparator: analysis.comparator,
+    packages: analysis.packages,
+    phases: analysis.phases,
+    profiles: analysis.profiles,
+    parishPortfolio: analysis.parishPortfolio,
+    localSupport: {
+      supportLabel: analysis.localSupport.supportLabel,
+      localSupportScore: analysis.localSupport.localSupportScore,
+      localConstraintScore: analysis.localSupport.localConstraintScore,
+      averageServiceIndex: analysis.localSupport.averageServiceIndex,
+      bankCount: analysis.localSupport.bankCount,
+      greenBankCount: analysis.localSupport.greenBankCount,
+      municipalEquipmentCount: analysis.localSupport.municipalEquipmentCount,
+      parkEquipmentCount: analysis.localSupport.parkEquipmentCount,
+      heritageCount: analysis.localSupport.heritageCount,
+      highTensionKm: analysis.localSupport.highTensionKm,
+      weakestParish: analysis.localSupport.weakestParish,
+      strongestParish: analysis.localSupport.strongestParish,
+      weakestServiceIndex: analysis.localSupport.weakestServiceIndex,
+      bankCandidate: analysis.localSupport.bankCandidate?.properties?.name || null,
+      weakestServiceNode: analysis.localSupport.weakestServiceNode?.properties?.name || null,
+    },
+    official: {
+      activeLayerCount: analysis.official.activeLayerCount || 0,
+      sourceCount: analysis.official.sourceCount || 0,
+      pointCount: analysis.official.pointCount || 0,
+      lineCount: analysis.official.lineCount || 0,
+      areaCount: analysis.official.areaCount || 0,
+    },
+    evidence: analysis.evidence,
+    projects: analysis.projects,
+  };
+}
+
+function buildPivaReportHtml() {
+  const analysis = isCurrentTerritorialAnalysis(state.pivaData) ? state.pivaData : null;
+  if (!analysis) {
+    return "";
+  }
+  return `<!doctype html>
+  <html lang="es">
+    <head>
+      <meta charset="utf-8">
+      <title>PIVA Canton Mejia</title>
+      <style>
+        body{font-family:Arial,sans-serif;margin:28px;color:#243129}
+        h1,h2,h3{margin:0 0 12px}
+        p{line-height:1.55}
+        .kicker{text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:#2f7f5f;margin-bottom:8px}
+        .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin:18px 0 26px}
+        .card{border:1px solid #d8ddd5;border-radius:14px;padding:16px;background:#fbfaf7}
+        .metric{font-size:28px;font-weight:700;margin:8px 0}
+        .sheet{margin-bottom:14px}
+      </style>
+    </head>
+    <body>
+      <p class="kicker">Infraestructura verde y azul</p>
+      <h1>PIVA del canton Mejia</h1>
+      <p>Corrida generada para ${escapeHtmlContent(analysis.context.scopeLabel)} con soporte de clima urbano, seguridad hidrica, huella, patrones territoriales, evidencia, capas oficiales e insumos municipales de banco de suelo, equipamiento, servicios basicos y patrimonio.</p>
+      <p><strong>Marco Ecuador:</strong> ${escapeHtmlContent(analysis.sourceStudy.methodLabel)}.</p>
+      <ul>
+        ${analysis.sourceStudy.references.map((reference) => `<li>${escapeHtmlContent(reference)}</li>`).join("")}
+      </ul>
+      <section>
+        <h2>${escapeHtmlContent(analysis.summary.headline)}</h2>
+        <p>${escapeHtmlContent(analysis.summary.recommendation)}</p>
+        <div class="grid">
+          ${[
+            ["Score PIVA", `${analysis.summary.pivaScore}/100`, "Semaforo verde-azul integrado."],
+            ["Sistema azul", `${analysis.summary.blueScore}/100`, `${analysis.summary.hydricPriorityCount} frentes hidricos priorizados.`],
+            ["Sistema verde", `${analysis.summary.greenScore}/100`, `${formatLandChangeHa(analysis.landChange.summary.productiveLossHa)} ha de suelo productivo en tension.`],
+            ["Clima urbano", `${analysis.summary.climateScore}/100`, `${analysis.summary.corridorCount} corredores y ${analysis.summary.coolingAreaHa} ha de enfriamiento.`],
+            ["Conectividad", `${analysis.summary.connectivityScore}/100`, `${analysis.mobility.summary.coverageLabel} y ${analysis.planning.serviceCoverage.overallCoverage}% de cobertura.`],
+            ["Soporte municipal", `${analysis.summary.localSupportScore}/100`, `${analysis.summary.bankReserveCount} reservas, ${analysis.summary.heritageCount} patrimonios y ${analysis.summary.highTensionKm} km de resguardo.`],
+            ["Soporte", analysis.summary.supportLabel, `${analysis.summary.officialLayerCount} capas oficiales y score ${analysis.summary.supportScore}/100.`],
+          ].map((item) => `
+            <article class="card">
+              <p class="kicker">${escapeHtmlContent(item[0])}</p>
+              <div class="metric">${escapeHtmlContent(item[1])}</div>
+              <p>${escapeHtmlContent(item[2])}</p>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+      <section>
+        <h2>Insumos municipales integrados</h2>
+        <div class="grid">
+          ${[
+            ["Servicios basicos", `${analysis.summary.localServiceIndex}/100`, `${analysis.summary.weakestServiceParish} concentra la brecha mas urgente.`],
+            ["Banco de suelo", `${analysis.summary.bankReserveCount}`, "Predios municipales utiles para nodos verdes, drenaje y espacio publico."],
+            ["Patrimonio", `${analysis.summary.heritageCount}`, "Predios con restriccion patrimonial para ajustar ocupacion y tratamiento del borde."],
+            ["Alta tension", `${analysis.summary.highTensionKm} km`, "Resguardos que condicionan arbolado, mobiliario y ocupacion segura."],
+          ].map((item) => `
+            <article class="card">
+              <p class="kicker">${escapeHtmlContent(item[0])}</p>
+              <div class="metric">${escapeHtmlContent(item[1])}</div>
+              <p>${escapeHtmlContent(item[2])}</p>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+      <section>
+        <h2>Comparador actual vs propuesta</h2>
+        <p><strong>Actual:</strong> ${analysis.comparator.currentScore}/100. <strong>Propuesta:</strong> ${analysis.comparator.targetScore}/100. <strong>Delta:</strong> +${analysis.comparator.delta} puntos.</p>
+        <div class="grid">
+          ${analysis.comparator.dimensions.map((item) => `
+            <article class="card">
+              <p class="kicker">${escapeHtmlContent(item.label)}</p>
+              <div class="metric">${item.current}/100 -> ${item.target}/100</div>
+              <p>${escapeHtmlContent(item.note)}</p>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+      <section>
+        <h2>Modelo, red y paquetes territoriales</h2>
+        <div class="grid">
+          ${analysis.deliverables.map((item) => `
+            <article class="card">
+              <p class="kicker">${escapeHtmlContent(item.label)}</p>
+              <p>${escapeHtmlContent(item.copy)}</p>
+              <p>${escapeHtmlContent(item.note)}</p>
+            </article>
+          `).join("")}
+        </div>
+        ${analysis.packages.map((item) => `
+          <article class="card sheet">
+            <p class="kicker">${escapeHtmlContent(item.label)} · ${escapeHtmlContent(item.priority)}</p>
+            <h3>${escapeHtmlContent(item.title)}</h3>
+            <p>${escapeHtmlContent(item.summary)}</p>
+            <p>${escapeHtmlContent(item.focus)}</p>
+          </article>
+        `).join("")}
+      </section>
+      <section>
+        <h2>Fases y perfiles prioritarios</h2>
+        <div class="grid">
+          ${analysis.phases.map((item) => `
+            <article class="card">
+              <p class="kicker">${escapeHtmlContent(item.label)}</p>
+              <h3>${escapeHtmlContent(item.title)}</h3>
+              <p>${escapeHtmlContent(item.copy)}</p>
+            </article>
+          `).join("")}
+        </div>
+        ${analysis.profiles.map((item) => `
+          <article class="card sheet">
+            <p class="kicker">${escapeHtmlContent(item.label)} · ${escapeHtmlContent(item.module)}</p>
+            <h3>${escapeHtmlContent(item.title)}</h3>
+            <p>${escapeHtmlContent(item.summary)}</p>
+            <p>${escapeHtmlContent(item.rationale)}</p>
+          </article>
+        `).join("")}
+      </section>
+      <section>
+        <h2>Cartera por parroquia</h2>
+        ${analysis.parishPortfolio.map((item, index) => `
+          <article class="card sheet">
+            <p class="kicker">Parroquia ${index + 1} | ${escapeHtmlContent(item.actionLabel)}</p>
+            <h3>${escapeHtmlContent(item.parish)}</h3>
+            <p>${escapeHtmlContent(item.summary)}</p>
+            <ul>
+              <li>Servicios: ${item.serviceIndex}/100</li>
+              <li>Soporte: ${item.supportScore}/100</li>
+              <li>Banco verde: ${item.bankCount}</li>
+              <li>Equipamientos: ${item.equipmentCount}</li>
+              <li>Proyecto sugerido: ${escapeHtmlContent(item.linkedProjectTitle)}</li>
+            </ul>
+          </article>
+        `).join("")}
+      </section>
+      <section>
+        <h2>Cartera inicial de proyectos</h2>
+        ${analysis.projects.map((project, index) => `
+          <article class="card sheet">
+            <p class="kicker">${escapeHtmlContent(project.module)} · Prioridad ${index + 1}</p>
+            <h3>${escapeHtmlContent(project.title)}</h3>
+            <p>${escapeHtmlContent(project.summary)}</p>
+            <p>${escapeHtmlContent(project.note)}</p>
+            <ul>
+              ${project.metrics.map((metric) => `<li>${escapeHtmlContent(metric.label)}: ${escapeHtmlContent(metric.value)}</li>`).join("")}
+            </ul>
+          </article>
+        `).join("")}
+      </section>
+    </body>
+  </html>`;
+}
+
+function exportPivaHtmlReport() {
+  const analysis = isCurrentTerritorialAnalysis(state.pivaData) ? state.pivaData : null;
+  if (!analysis) {
+    setStatus("Primero construye el PIVA para exportar el informe.");
+    return;
+  }
+  downloadTerritorialFile(
+    `piva_mejia_${getTerritorialExportSlug()}_${formatDateInput(new Date())}.html`,
+    buildPivaReportHtml(),
+    "text/html;charset=utf-8"
+  );
+  setStatus("Informe HTML del PIVA descargado.");
+}
+
+function exportPivaJson() {
+  const payload = buildPivaJsonExport();
+  if (!payload) {
+    setStatus("Primero construye el PIVA para exportar el JSON.");
+    return;
+  }
+  downloadTerritorialFile(
+    `piva_mejia_${getTerritorialExportSlug()}_${formatDateInput(new Date())}.json`,
+    JSON.stringify(payload, null, 2),
+    "application/json;charset=utf-8"
+  );
+  setStatus("JSON del PIVA descargado.");
+}
+
+function clearPivaAnalysis() {
+  state.pivaData = null;
+  state.pivaHighlightId = null;
+  clearPivaOverlay();
+  renderPlanningModule();
+  renderTerritorialDecisionSupport();
+  refreshPlanning3dAnalyticalScene();
+  renderLegend();
+  updateMapSummary();
+  setStatus(`PIVA limpiado para ${getTerritorialAreaProfile().scopeLabel}.`);
 }
 
 function isCurrentTerritorialAnalysis(data, target = getCurrentTerritorialTarget()) {
@@ -29837,7 +32450,7 @@ function clearZoningPatternsAnalysis() {
 
 function renderZoningPatternsOverlay(analysis) {
   clearZoningPatternsOverlay();
-  if (!mapState.map || !analysis?.sectors?.length || state.entryRoute !== "planificacion") {
+  if (!mapState.map || !analysis?.sectors?.length || !isPlanningLikeRoute(state.entryRoute)) {
     return;
   }
 
@@ -30309,7 +32922,7 @@ function clearHousingPatternsAnalysis() {
 
 function renderHousingPatternsOverlay(analysis) {
   clearHousingPatternsOverlay();
-  if (!mapState.map || !analysis?.sectors?.length || state.entryRoute !== "planificacion") {
+  if (!mapState.map || !analysis?.sectors?.length || !isPlanningLikeRoute(state.entryRoute)) {
     return;
   }
 
@@ -33871,6 +36484,19 @@ function buildTerritorialDecisionSnapshot() {
     });
   }
 
+  if (isCurrentTerritorialAnalysis(state.pivaData)) {
+    const piva = state.pivaData;
+    items.push({
+      id: "piva",
+      score: piva.summary.pivaScore,
+      signal: piva.summary.signal,
+      title: "PIVA Mejia",
+      metric: `${piva.summary.projectCount} proyectos`,
+      copy: `${piva.summary.headline}. ${piva.summary.corridorCount} corredores, ${piva.summary.coolingAreaHa} ha de enfriamiento y ${piva.summary.hydricPriorityCount} frentes azules.`,
+      note: `${piva.summary.supportLabel} | ${piva.summary.officialLayerCount} capas oficiales | score ${piva.summary.pivaScore}/100.`,
+    });
+  }
+
   if (state.zoningPatternsData) {
     const zoning = state.zoningPatternsData;
     const score = clamp(zoning.summary.meanVitality, 0, 100);
@@ -33988,6 +36614,36 @@ function buildTerritorialSectorSheets() {
           { label: "Solar", value: state.planningData.solarReadout.exposures.find((item) => item.candidateId === candidate.id)?.solarSignal || state.planningData.solarReadout.solarLabel },
         ],
         actionAttr: `data-candidate-id="${candidate.id}"`,
+      });
+    });
+  }
+
+  if (isCurrentTerritorialAnalysis(state.pivaData) && state.pivaData.projects?.length) {
+    state.pivaData.projects.slice(0, 3).forEach((project) => {
+      sheets.push({
+        id: project.id,
+        module: "PIVA Mejia",
+        title: project.title,
+        tone: project.tone,
+        kicker: `${project.module} / ${project.priorityLabel}`,
+        summary: project.summary,
+        note: project.note,
+        metrics: project.metrics,
+        actionAttr: `data-piva-project-id="${project.id}"`,
+      });
+    });
+  }
+
+  if (isCurrentTerritorialAnalysis(state.pivaData)) {
+    const piva = state.pivaData;
+    piva.projects.slice(0, 3).forEach((project) => {
+      alerts.push({
+        id: `alert-piva-${project.id}`,
+        tone: project.priorityScore >= 76 ? "watch" : "critical",
+        module: "PIVA Mejia",
+        title: project.title,
+        copy: `${project.summary} ${project.note}`,
+        actionAttr: `data-piva-project-id="${project.id}"`,
       });
     });
   }
@@ -34412,13 +37068,14 @@ function buildTerritorialOpsAnalysis() {
   const risk = state.riskData;
   const hydrology = state.hydrologyData;
   const urbanClimate = state.urbanClimateData;
+  const piva = isCurrentTerritorialAnalysis(state.pivaData) ? state.pivaData : null;
   const zoning = state.zoningPatternsData;
   const housing = state.housingPatternsData;
   const official = state.officialData.planificacion;
   const decision = buildTerritorialDecisionSnapshot();
   const alerts = buildTerritorialAlerts();
 
-  if (!planning && !mobility && !risk && !hydrology && !urbanClimate && !zoning && !housing && !official?.activeLayerCount && !decision) {
+  if (!planning && !mobility && !risk && !hydrology && !urbanClimate && !piva && !zoning && !housing && !official?.activeLayerCount && !decision) {
     return null;
   }
 
@@ -34479,6 +37136,12 @@ function buildTerritorialOpsAnalysis() {
       tone: urbanClimate.summary.climateReadinessScore >= 70 ? "low" : urbanClimate.summary.climateReadinessScore >= 55 ? "mid" : "high",
       value: `${urbanClimate.summary.climateReadinessScore}/100`,
       copy: `${urbanClimate.summary.priorityCorridorCount} corredores y ${urbanClimate.summary.heatRetentionAreaHa} ha en vigilancia termica.`,
+    } : null,
+    piva ? {
+      label: "PIVA",
+      tone: piva.summary.pivaScore >= 70 ? "low" : piva.summary.pivaScore >= 55 ? "mid" : "high",
+      value: `${piva.summary.pivaScore}/100`,
+      copy: `${piva.summary.projectCount} proyectos, ${piva.summary.corridorCount} corredores y ${piva.summary.supportLabel.toLowerCase()}.`,
     } : null,
     zoning ? {
       label: "Patrones",
@@ -34809,6 +37472,18 @@ function buildTerritorialCsvExport() {
     ]);
   });
 
+  (isCurrentTerritorialAnalysis(state.pivaData) ? state.pivaData.projects : []).forEach((project) => {
+    rows.push([
+      "piva_mejia",
+      project.id,
+      project.title,
+      `${project.priorityScore}/100`,
+      project.module,
+      project.metrics.map((metric) => `${metric.label} ${metric.value}`).slice(0, 2).join(" | "),
+      `${project.summary} ${project.note}`,
+    ]);
+  });
+
   (state.zoningPatternsData?.prioritySectors || []).forEach((sector) => {
     rows.push([
       "patrones_territoriales",
@@ -34958,6 +37633,12 @@ function buildTerritorialGeoJsonExport() {
     pushFeatures(state.urbanClimateData.nodeCollection, "clima_urbano", "nodos_prioritarios");
   }
 
+  if (isCurrentTerritorialAnalysis(state.pivaData)) {
+    pushFeatures(state.pivaData.zoneCollection, "piva_mejia", "zonas_piva");
+    pushFeatures(state.pivaData.corridorCollection, "piva_mejia", "corredores_piva");
+    pushFeatures(state.pivaData.projectCollection, "piva_mejia", "proyectos_piva");
+  }
+
   if (state.zoningPatternsData) {
     state.zoningPatternsData.sectors.forEach((sector) => {
       const clone = cloneFeature(sector.feature);
@@ -35059,6 +37740,15 @@ function buildTerritorialJsonExport() {
       sourceStudy: state.urbanClimateData.sourceStudy,
       summary: state.urbanClimateData.summary,
       prioritySectors: state.urbanClimateData.prioritySectors,
+    } : null,
+    pivaMejia: isCurrentTerritorialAnalysis(state.pivaData) ? {
+      summary: state.pivaData.summary,
+      projects: state.pivaData.projects,
+      evidence: state.pivaData.evidence,
+      official: {
+        activeLayerCount: state.pivaData.official.activeLayerCount || 0,
+        sourceCount: state.pivaData.official.sourceCount || 0,
+      },
     } : null,
     patronesTerritoriales: state.zoningPatternsData ? {
       sourceStudy: state.zoningPatternsData.sourceStudy,
@@ -36327,7 +39017,7 @@ function renderExecutiveDashboardCard() {
     return;
   }
   const snapshot = buildExecutiveDashboardSnapshot();
-  const routeLabel = snapshot.route === "planificacion" ? "Territorial" : "Agronomico";
+  const routeLabel = getRouteWorkLabel(snapshot.route);
   const alertTone = snapshot.alerts.length >= 5 ? "high" : snapshot.alerts.length >= 2 ? "mid" : "low";
   dom.executiveDashboardBoard.classList.remove("empty-state");
   dom.executiveDashboardBoard.classList.add("has-data");
@@ -36497,10 +39187,10 @@ function renderScenarioLabCard() {
         <p class="section-kicker">Laboratorio de comparacion</p>
         <h4>${escapeHtmlContent(snapshot.headline)}</h4>
       </div>
-      <p>${snapshot.route === "planificacion" ? "Pulsa una tarjeta para cambiar el escenario activo." : "Pulsa una tarjeta para cambiar el cultivo objetivo."}</p>
+      <p>${isPlanningLikeRoute(snapshot.route) ? "Pulsa una tarjeta para cambiar el escenario activo." : "Pulsa una tarjeta para cambiar el cultivo objetivo."}</p>
     </div>
     <div class="dashboard-chip-row">
-      <span class="planning-pill emphasis">${snapshot.route === "planificacion" ? "Territorial" : "Agronomico"}</span>
+      <span class="planning-pill emphasis">${isPlanningLikeRoute(snapshot.route) ? getRouteWorkLabel(snapshot.route) : "Agronomico"}</span>
       <span class="planning-pill emphasis">${snapshot.cards.length} escenarios listos</span>
       <span class="planning-pill emphasis">Comparador activo</span>
     </div>
@@ -36930,6 +39620,7 @@ function buildProjectSnapshot() {
     dashboard: summary,
     completedModules: {
       planning: !!state.planningData,
+      piva: !!state.pivaData,
       mobility: !!state.mobilityData,
       risk: !!state.riskData,
       hydrology: !!state.hydrologyData,
@@ -37050,10 +39741,10 @@ function renderProjectRegistryCard() {
   dom.projectRegistryList.classList.remove("empty-state");
   dom.projectRegistryList.classList.add("has-data");
   setHtmlIfChanged(dom.projectRegistryList, projects.map((project) => `
-    <article class="territorial-sector-sheet tone-${project.route === "planificacion" ? "mid" : "low"}">
+    <article class="territorial-sector-sheet tone-${getRouteTone(project.route)}">
       <div class="territorial-sector-head">
         <div>
-          <p class="candidate-rank">${escapeHtmlContent(project.owner)} · ${escapeHtmlContent(project.route)}</p>
+          <p class="candidate-rank">${escapeHtmlContent(project.owner)} | ${escapeHtmlContent(getRouteWorkLabel(project.route))}</p>
           <h4>${escapeHtmlContent(project.name)}</h4>
         </div>
         <span class="planning-pill emphasis">${escapeHtmlContent(project.scopeLabel || "Sin ambito")}</span>
@@ -37151,6 +39842,11 @@ async function applyProjectSnapshot(project) {
 async function replayProjectSnapshot(snapshot) {
   if (snapshot.route === "catastro") {
     if (snapshot.completedModules.cadastre) { await runDigitalCadastreAnalysis(true); }
+    if (snapshot.completedModules.aiGeo) { await runAiGeoAnalysis(true); }
+    return;
+  }
+  if (snapshot.route === "piva") {
+    if (snapshot.completedModules.piva) { await runPivaAnalysis(true); }
     if (snapshot.completedModules.aiGeo) { await runAiGeoAnalysis(true); }
     return;
   }
@@ -37454,7 +40150,7 @@ function normalizeGeoAiAnswerRecord(answer = {}) {
   return {
     id: String(answer.id || `geoai-answer-${Date.now()}`),
     question: String(answer.question || ""),
-    route: isGpsRoute(answer.route) ? "gps" : isCadastreRoute(answer.route) ? "catastro" : isPlanningRoute(answer.route) ? "planificacion" : "agronomia",
+    route: normalizePortalRoute(answer.route),
     routeLabel: String(answer.routeLabel || getRouteWorkLabel(answer.route || state.entryRoute)),
     scopeLabel: String(answer.scopeLabel || ""),
     domain: String(answer.domain || "General"),
@@ -37490,7 +40186,7 @@ function normalizeGeoAiMemoryEntry(entry = {}) {
   return {
     id: String(entry.id || `geoai-memory-${Date.now()}`),
     question: String(entry.question || entry.lastQuestion || ""),
-    route: isGpsRoute(entry.route) ? "gps" : isCadastreRoute(entry.route) ? "catastro" : isPlanningRoute(entry.route) ? "planificacion" : "agronomia",
+    route: normalizePortalRoute(entry.route),
     scopeLabel: String(entry.scopeLabel || ""),
     domain: String(entry.domain || "General"),
     createdAt: entry.createdAt || new Date().toISOString(),
@@ -37503,7 +40199,7 @@ function normalizeGeoAiFeedbackEntry(entry = {}) {
   return {
     id: String(entry.id || `geoai-feedback-${Date.now()}`),
     kind: kind === "adjust" ? "adjust" : "useful",
-    route: isGpsRoute(entry.route) ? "gps" : isCadastreRoute(entry.route) ? "catastro" : isPlanningRoute(entry.route) ? "planificacion" : "agronomia",
+    route: normalizePortalRoute(entry.route),
     question: String(entry.question || ""),
     note: String(entry.note || ""),
     answerId: String(entry.answerId || ""),
@@ -37520,7 +40216,7 @@ function normalizeGeoAiVersionEntry(entry = {}) {
     label: String(entry.label || `${GEOAI_CORE_VERSION}-${Date.now()}`),
     status: String(entry.status || "candidato"),
     summary: String(entry.summary || "Version del GeoAI Core registrada."),
-    route: isGpsRoute(entry.route) ? "gps" : isCadastreRoute(entry.route) ? "catastro" : isPlanningRoute(entry.route) ? "planificacion" : "agronomia",
+    route: normalizePortalRoute(entry.route),
     score: Number.isFinite(Number(entry.score)) ? Math.round(Number(entry.score)) : 0,
     userName: String(entry.userName || state.userProfile.name || "Usuario publico"),
     createdAt: entry.createdAt || new Date().toISOString(),
@@ -37556,7 +40252,7 @@ function normalizeGeoAiExperimentEntry(entry = {}) {
     id: String(entry.id || `geoai-exp-${Date.now()}`),
     title: String(entry.title || "Experimento GeoAI"),
     domain: String(entry.domain || "GeoAI"),
-    route: isGpsRoute(entry.route) ? "gps" : isCadastreRoute(entry.route) ? "catastro" : isPlanningRoute(entry.route) ? "planificacion" : "agronomia",
+    route: normalizePortalRoute(entry.route),
     evidenceId: String(entry.evidenceId || ""),
     moduleActionId: String(entry.moduleActionId || "suite-dashboard"),
     baselineScore: Number.isFinite(Number(entry.baselineScore)) ? Math.round(Number(entry.baselineScore)) : 0,
@@ -37590,6 +40286,67 @@ function normalizeGeoAiQualityGate(entry = {}) {
     usefulFeedback: Number.isFinite(Number(entry.usefulFeedback)) ? Math.round(Number(entry.usefulFeedback)) : 0,
     adjustFeedback: Number.isFinite(Number(entry.adjustFeedback)) ? Math.round(Number(entry.adjustFeedback)) : 0,
     summary: String(entry.summary || "Sin evaluacion registrada."),
+    createdAt: entry.createdAt || new Date().toISOString(),
+  };
+}
+
+function normalizeGeoAiUxIssue(entry = {}) {
+  const severity = String(entry.severity || "mid").toLowerCase();
+  return {
+    id: String(entry.id || `geoai-ux-issue-${Date.now()}`),
+    severity: ["low", "mid", "high"].includes(severity) ? severity : "mid",
+    title: String(entry.title || "Hallazgo de interfaz"),
+    copy: String(entry.copy || "La IA detecto una oportunidad de mejora visual u operativa."),
+  };
+}
+
+function normalizeGeoAiUxAudit(entry = {}) {
+  const metrics = entry.metrics && typeof entry.metrics === "object" ? entry.metrics : {};
+  return {
+    id: String(entry.id || `geoai-ux-audit-${Date.now()}`),
+    route: normalizePortalRoute(entry.route),
+    routeLabel: String(entry.routeLabel || getRouteWorkLabel(entry.route || state.entryRoute || "agronomia")),
+    scopeLabel: String(entry.scopeLabel || getGeoAiScopeLabel(entry.route || state.entryRoute || "agronomia")),
+    score: Number.isFinite(Number(entry.score)) ? Math.round(Number(entry.score)) : 0,
+    summary: String(entry.summary || "Sin auditoria visual registrada."),
+    createdAt: entry.createdAt || new Date().toISOString(),
+    metrics: {
+      visibleModules: Number.isFinite(Number(metrics.visibleModules)) ? Math.round(Number(metrics.visibleModules)) : 0,
+      collapsedModules: Number.isFinite(Number(metrics.collapsedModules)) ? Math.round(Number(metrics.collapsedModules)) : 0,
+      sidebarEmptySpacePx: Number.isFinite(Number(metrics.sidebarEmptySpacePx)) ? Math.round(Number(metrics.sidebarEmptySpacePx)) : 0,
+      mapCoveragePct: Number.isFinite(Number(metrics.mapCoveragePct)) ? Math.round(Number(metrics.mapCoveragePct)) : 0,
+      threeDProfile: String(metrics.threeDProfile || "standard"),
+      threeDActiveModes: Number.isFinite(Number(metrics.threeDActiveModes)) ? Math.round(Number(metrics.threeDActiveModes)) : 0,
+      threeDOverlayLoad: Number.isFinite(Number(metrics.threeDOverlayLoad)) ? Math.round(Number(metrics.threeDOverlayLoad)) : 0,
+    },
+    issues: Array.isArray(entry.issues) ? entry.issues.map(normalizeGeoAiUxIssue).slice(0, 8) : [],
+    recommendations: Array.isArray(entry.recommendations) ? entry.recommendations.map((item) => String(item)).slice(0, 8) : [],
+  };
+}
+
+function normalizeGeoAiLayoutOptimization(entry = {}) {
+  return {
+    id: String(entry.id || `geoai-layout-opt-${Date.now()}`),
+    route: normalizePortalRoute(entry.route),
+    summary: String(entry.summary || "Sin optimizacion de layout registrada."),
+    compactEnabled: entry.compactEnabled !== false,
+    expandedCards: Array.isArray(entry.expandedCards) ? entry.expandedCards.map((item) => String(item)).slice(0, 8) : [],
+    collapsedCards: Array.isArray(entry.collapsedCards) ? entry.collapsedCards.map((item) => String(item)).slice(0, 16) : [],
+    changes: Array.isArray(entry.changes) ? entry.changes.map((item) => String(item)).slice(0, 10) : [],
+    createdAt: entry.createdAt || new Date().toISOString(),
+  };
+}
+
+function normalizeGeoAiRenderOptimization(entry = {}) {
+  return {
+    id: String(entry.id || `geoai-render-opt-${Date.now()}`),
+    route: normalizePortalRoute(entry.route),
+    summary: String(entry.summary || "Sin optimizacion de render registrada."),
+    profileId: ["lite", "standard", "high"].includes(String(entry.profileId || "")) ? String(entry.profileId) : "standard",
+    lightBase: entry.lightBase !== false,
+    disabledModes: Array.isArray(entry.disabledModes) ? entry.disabledModes.map((item) => String(item)).slice(0, 8) : [],
+    superResolutionEnabled: Boolean(entry.superResolutionEnabled),
+    changes: Array.isArray(entry.changes) ? entry.changes.map((item) => String(item)).slice(0, 10) : [],
     createdAt: entry.createdAt || new Date().toISOString(),
   };
 }
@@ -37819,10 +40576,26 @@ function getGeoAiScopeLabel(route = state.entryRoute || "agronomia") {
   if (isGpsRoute(route)) {
     return getAgronomyAreaProfile(state.agronomyAreaId).scopeLabel;
   }
-  if (isCadastreRoute(route) || isPlanningRoute(route)) {
+  if (isCadastreRoute(route) || isPlanningLikeRoute(route)) {
     return getTerritorialAreaProfile(state.territorialAreaId).scopeLabel;
   }
   return getCurrentAgronomyScopeLabel();
+}
+
+function normalizePortalRoute(route = state.entryRoute || "agronomia") {
+  if (isGpsRoute(route)) {
+    return "gps";
+  }
+  if (isCadastreRoute(route)) {
+    return "catastro";
+  }
+  if (isPivaRoute(route)) {
+    return "piva";
+  }
+  if (isPlanningRoute(route)) {
+    return "planificacion";
+  }
+  return "agronomia";
 }
 
 function buildGeoAiCopilotContextSnapshot() {
@@ -38145,6 +40918,7 @@ async function runGeoAiEvolutionCycle(options = {}) {
   const research = await runGeoAiResearchAgent(query);
   const experimentRun = await runGeoAiExperimentation(query);
   const gate = applyGeoAiQualityGate(experimentRun.experiments);
+  const uxAudit = await runGeoAiUxAudit();
   state.platformData.geoAi.updatedAt = new Date().toISOString();
   if (options.scheduled) {
     state.platformData.geoAi.scheduler = normalizeGeoAiSchedulerState({
@@ -38179,7 +40953,7 @@ async function runGeoAiEvolutionCycle(options = {}) {
   renderGeoAiCoreCard();
   await persistGeoAiCoreState();
   setStatus(gate.approved ? "GeoAI Core mejoro y quedo listo para publicar con control." : "GeoAI Core corrio la evaluacion pero la mejora aun no pasa la puerta de calidad.");
-  return { research, experimentRun, gate };
+  return { research, experimentRun, gate, uxAudit };
 }
 
 function buildGeoAiRecommendationCatalog() {
@@ -38239,6 +41013,21 @@ function buildGeoAiRecommendationCatalog() {
       ],
       evidenceDomains: ["Territorio", "3D", "GeoAI"],
       rationale: "Cuando la consulta trata de servicios o accesibilidad conviene leer cobertura, deficit y soporte urbano juntos.",
+    },
+    {
+      id: "territory-piva",
+      domain: "Territorio",
+      moduleLabel: "PIVA Mejia",
+      route: "piva",
+      keywords: ["piva", "infraestructura verde", "infraestructura azul", "verde azul", "corredor ecologico", "drenaje sostenible", "arbolado", "espacio publico", "frente hidrico"],
+      recommendation: { actionId: "planning-piva", label: "Abrir PIVA", copy: "Unifica agua, clima, soporte municipal y cartera priorizada en una sola ruta." },
+      alternatives: [
+        { actionId: "planning-water", label: "Cruzar agua", copy: "Contrasta balance, soporte hidrico y frentes azules del canton." },
+        { actionId: "planning-climate", label: "Leer clima", copy: "Valida corredores frios, ventilacion y reservas termicas." },
+        { actionId: "planning-3d", label: "Abrir 3D", copy: "Contrasta tejido, espacio publico y propuesta sobre el visor." },
+      ],
+      evidenceDomains: ["Territorio", "3D", "GeoAI"],
+      rationale: "El PIVA funciona mejor como lectura integrada de agua, clima, conectividad, soporte municipal y cartera de proyectos.",
     },
     {
       id: "territory-climate",
@@ -38343,6 +41132,8 @@ function buildGeoAiRecommendations(question = "", snapshot = buildGeoAiCopilotCo
       primary = routeAware.find((item) => item.id === "gps-operations");
     } else if (snapshot.route === "catastro") {
       primary = routeAware.find((item) => item.id === "cadastre-digitalization");
+    } else if (snapshot.route === "piva") {
+      primary = routeAware.find((item) => item.id === "territory-piva");
     } else if (snapshot.route === "planificacion") {
       primary = routeAware.find((item) => item.id === "territory-mobility");
     } else {
@@ -38368,6 +41159,290 @@ function buildGeoAiRecommendations(question = "", snapshot = buildGeoAiCopilotCo
     alternatives,
     evidence,
   };
+}
+
+function getGeoAiVisibleSidebarPanel() {
+  if (!dom.sidebar) {
+    return null;
+  }
+  return Array.from(dom.sidebar.querySelectorAll(".tab-panel")).find((panel) => panel.offsetParent !== null && !panel.hidden) || null;
+}
+
+function getGeoAiSidebarEmptySpace(panel = getGeoAiVisibleSidebarPanel()) {
+  if (!panel) {
+    return 0;
+  }
+  const visibleChildren = Array.from(panel.children || []).filter((node) => node.offsetParent !== null);
+  if (!visibleChildren.length) {
+    return Math.max(0, Math.round(panel.clientHeight || 0));
+  }
+  const lastBottom = visibleChildren.reduce((max, node) => (
+    Math.max(max, (node.offsetTop || 0) + (node.offsetHeight || 0))
+  ), 0);
+  return Math.max(0, Math.round((panel.clientHeight || 0) - lastBottom));
+}
+
+function applyGeoAiCompactLayoutState(enabled = true) {
+  dom.appShell?.classList.toggle("geoai-layout-compact", !!enabled);
+}
+
+function buildGeoAiUxAuditSnapshot() {
+  const route = state.entryRoute || "agronomia";
+  const routeLabel = getRouteWorkLabel(route);
+  const scopeLabel = getGeoAiScopeLabel(route);
+  const compactViewport = typeof window !== "undefined" && (window.innerWidth < 1180 || window.innerHeight < 760);
+  const veryCompactViewport = typeof window !== "undefined" && (window.innerWidth < 720 || window.innerHeight < 680);
+  const visibleCards = getVisibleModuleCards().filter((card) => card.id && card.id !== "workflowGuideCard");
+  const collapsedCards = visibleCards.filter((card) => card.classList.contains("is-collapsed"));
+  const sidebarPanel = getGeoAiVisibleSidebarPanel();
+  const sidebarEmptySpacePx = getGeoAiSidebarEmptySpace(sidebarPanel);
+  const appRect = dom.appShell?.getBoundingClientRect?.() || null;
+  const mapRect = (planning3dState.modalOpen ? dom.planning3dMap : dom.mapStage)?.getBoundingClientRect?.() || null;
+  const mapCoveragePct = appRect?.width && appRect?.height && mapRect?.width && mapRect?.height
+    ? Math.round(((mapRect.width * mapRect.height) / (appRect.width * appRect.height)) * 100)
+    : 0;
+  const performanceProfile = getPlanning3dPerformanceProfile();
+  const active3dModes = getPlanning3dVisibleModeIds();
+  const overlayLoad = (
+    (planning3dState.sourceData.roads?.features?.length || 0)
+    + (planning3dState.sourceData.publicSpace?.features?.length || 0)
+    + (planning3dState.sourceData.trees?.features?.length || 0)
+    + (planning3dState.sourceData.facilities?.features?.length || 0)
+  );
+  const issues = [];
+  const recommendations = [];
+
+  if (sidebarEmptySpacePx >= 96) {
+    issues.push({
+      id: "sidebar-empty-space",
+      severity: sidebarEmptySpacePx >= 180 ? "high" : "mid",
+      title: "Espacio muerto en el lateral",
+      copy: `Quedan ${sidebarEmptySpacePx}px sin aprovechar en el panel visible; conviene compactar tarjetas y fijar menos modulos abiertos.`,
+    });
+    recommendations.push("Compactar la distribucion del lateral y dejar solo los modulos prioritarios abiertos.");
+  }
+
+  const recommendedOpenCards = veryCompactViewport ? 1 : compactViewport ? 2 : 3;
+  if (visibleCards.length > (compactViewport ? 4 : 7) && collapsedCards.length < Math.max(0, visibleCards.length - recommendedOpenCards)) {
+    issues.push({
+      id: "module-density",
+      severity: compactViewport ? "high" : "mid",
+      title: "Demasiados modulos visibles al mismo tiempo",
+      copy: `${visibleCards.length} modulos visibles con solo ${collapsedCards.length} contraidos; esto empuja scroll y reduce legibilidad.`,
+    });
+    recommendations.push(`Contraer modulos secundarios y dejar ${recommendedOpenCards} abiertos como maximo en esta vista.`);
+  }
+
+  if (!planning3dState.modalOpen && mapCoveragePct > 0 && mapCoveragePct < (compactViewport ? 38 : 48)) {
+    issues.push({
+      id: "map-coverage",
+      severity: "mid",
+      title: "El mapa esta cediendo demasiado espacio a paneles",
+      copy: `La lectura cartografica ocupa solo ${mapCoveragePct}% del casco visible; conviene compactar layout o cerrar paneles secundarios.`,
+    });
+    recommendations.push("Dar mas espacio util al mapa y dejar resuenes y acciones mas condensados.");
+  }
+
+  if (planning3dState.modalOpen && active3dModes.length > 3) {
+    issues.push({
+      id: "3d-mode-overload",
+      severity: active3dModes.length > 4 ? "high" : "mid",
+      title: "El 3D arranca con demasiados modos analiticos",
+      copy: `${active3dModes.length} modos activos al mismo tiempo elevan carga, overlays y tiempo de respuesta.`,
+    });
+    recommendations.push("Mantener solo el modo 3D que realmente se esta leyendo y cargar el resto bajo demanda.");
+  }
+
+  if (planning3dState.modalOpen && compactViewport && performanceProfile.id === "high") {
+    issues.push({
+      id: "3d-performance-profile",
+      severity: "high",
+      title: "El perfil 3D es demasiado pesado para esta pantalla",
+      copy: `El visor corre en perfil ${performanceProfile.id} aunque el viewport ya pide un modo mas liviano.`,
+    });
+    recommendations.push("Bajar el perfil 3D a Estandar o Ligero y colapsar el panel lateral del visor.");
+  }
+
+  if (!state.moduleSearchQuery && visibleCards.length >= 6 && !planning3dState.modalOpen) {
+    issues.push({
+      id: "search-not-guiding",
+      severity: "low",
+      title: "La ruta necesita mas guiado inicial",
+      copy: "Hay muchos modulos visibles y el buscador no esta afinando nada; conviene dejar un frente principal y acciones rapidas arriba.",
+    });
+    recommendations.push("Usar el filtro o la navegacion rapida como punto de entrada en vez de mostrar toda la ruta expandida.");
+  }
+
+  const penalty = issues.reduce((total, issue) => (
+    total + (issue.severity === "high" ? 18 : issue.severity === "mid" ? 11 : 6)
+  ), 0);
+  const score = clamp(100 - penalty, 28, 100);
+  const summary = !issues.length
+    ? `La distribucion actual de ${routeLabel.toLowerCase()} esta bastante sana para ${scopeLabel}.`
+    : `Detecte ${issues.length} oportunidades para compactar interfaz, reducir scroll y aligerar el visor.`;
+
+  return normalizeGeoAiUxAudit({
+    id: `geoai-ux-audit-${Date.now()}`,
+    route,
+    routeLabel,
+    scopeLabel,
+    score,
+    summary,
+    createdAt: new Date().toISOString(),
+    metrics: {
+      visibleModules: visibleCards.length,
+      collapsedModules: collapsedCards.length,
+      sidebarEmptySpacePx,
+      mapCoveragePct,
+      threeDProfile: performanceProfile.id,
+      threeDActiveModes: active3dModes.length,
+      threeDOverlayLoad: overlayLoad,
+    },
+    issues,
+    recommendations,
+  });
+}
+
+async function runGeoAiUxAudit() {
+  const audit = buildGeoAiUxAuditSnapshot();
+  state.platformData.geoAi.uxAudit = audit;
+  state.platformData.geoAi.updatedAt = audit.createdAt;
+  renderGeoAiCoreCard();
+  await persistGeoAiCoreState();
+  setStatus(`GeoAI UX Auditor: ${audit.summary}`);
+  return audit;
+}
+
+function applyGeoAiUiOptimizationsFromState() {
+  const layout = state.platformData.geoAi.layoutOptimization
+    ? normalizeGeoAiLayoutOptimization(state.platformData.geoAi.layoutOptimization)
+    : null;
+  const render = state.platformData.geoAi.renderOptimization
+    ? normalizeGeoAiRenderOptimization(state.platformData.geoAi.renderOptimization)
+    : null;
+  applyGeoAiCompactLayoutState(layout?.compactEnabled !== false);
+  setPlanning3dPerformanceOverride(render?.profileId || null);
+  if (render && state.satelliteSuperResolutionEnabled !== render.superResolutionEnabled) {
+    state.satelliteSuperResolutionEnabled = render.superResolutionEnabled;
+    syncSatelliteSuperResolution();
+  }
+}
+
+async function applyGeoAiLayoutOptimizer() {
+  const audit = state.platformData.geoAi.uxAudit ? normalizeGeoAiUxAudit(state.platformData.geoAi.uxAudit) : buildGeoAiUxAuditSnapshot();
+  const visibleCards = getVisibleModuleCards().filter((card) => card.id && card.id !== "workflowGuideCard");
+  const keepOpen = typeof window !== "undefined" && (window.innerWidth < 720 || window.innerHeight < 680)
+    ? 1
+    : typeof window !== "undefined" && (window.innerWidth < 1180 || window.innerHeight < 760)
+      ? 2
+      : 3;
+  applyGeoAiCompactLayoutState(true);
+  setVisibleModuleCardsCollapsed(true);
+  const expandedCards = visibleCards.slice(0, keepOpen).map((card) => card.id).filter(Boolean);
+  expandedCards.forEach((cardId) => setModuleCardCollapsed(cardId, false));
+  setModuleQuickNavActive(expandedCards[0] || visibleCards[0]?.id || "");
+  renderModuleQuickNav();
+  renderModuleSearchSummary();
+  if (isPlanningRoute() && planning3dState.modalOpen) {
+    setPlanning3dPanelCollapsed(true);
+  }
+  queueMapLayoutRefresh();
+  const optimization = normalizeGeoAiLayoutOptimization({
+    id: `geoai-layout-opt-${Date.now()}`,
+    route: state.entryRoute,
+    compactEnabled: true,
+    expandedCards,
+    collapsedCards: visibleCards.filter((card) => !expandedCards.includes(card.id)).map((card) => card.id),
+    changes: [
+      "Active el modo compacto del shell para reducir aire muerto.",
+      `Deje ${expandedCards.length} modulos abiertos y contraje el resto para bajar scroll.`,
+      isPlanningRoute() && planning3dState.modalOpen ? "Colapse el panel del visor 3D para devolver mas mapa util." : null,
+      audit.metrics.sidebarEmptySpacePx >= 96 ? `Reduje el hueco lateral detectado (${audit.metrics.sidebarEmptySpacePx}px).` : null,
+    ].filter(Boolean),
+    summary: `Layout optimizado para ${audit.routeLabel.toLowerCase()} con ${expandedCards.length} modulos visibles como frente principal.`,
+    createdAt: new Date().toISOString(),
+  });
+  state.platformData.geoAi.layoutOptimization = optimization;
+  state.platformData.geoAi.updatedAt = optimization.createdAt;
+  renderGeoAiCoreCard();
+  await persistGeoAiCoreState();
+  setStatus("GeoAI Layout Optimizer: distribucion compactada y mas clara.");
+  return optimization;
+}
+
+async function applyGeoAiRenderOptimizer() {
+  const audit = state.platformData.geoAi.uxAudit ? normalizeGeoAiUxAudit(state.platformData.geoAi.uxAudit) : buildGeoAiUxAuditSnapshot();
+  const compactViewport = typeof window !== "undefined" && (window.innerWidth < 1180 || window.innerHeight < 760);
+  const activeModes = getPlanning3dVisibleModeIds();
+  const focusMode = resolvePlanning3dFocusMode();
+  const profileId = planning3dState.modalOpen
+    ? (compactViewport || activeModes.length > 2 ? "lite" : "standard")
+    : (compactViewport ? "standard" : "high");
+  const disabledModes = [];
+
+  setPlanning3dPerformanceOverride(profileId);
+  if (state.satelliteSuperResolutionEnabled) {
+    state.satelliteSuperResolutionEnabled = false;
+    syncSatelliteSuperResolution();
+  }
+
+  if (planning3dState.modalOpen) {
+    const keepModes = new Set(focusMode ? [focusMode] : activeModes.slice(0, 1));
+    const modeBindings = [
+      ["climate", "urbanClimateVisible"],
+      ["corridor", "corridorVisible"],
+      ["zoning", "zoningVisible"],
+      ["mobility", "mobilityVisible"],
+      ["risk", "riskVisible"],
+      ["facilities", "facilitiesVisible"],
+      ["proposal", "proposalVisible"],
+    ];
+    modeBindings.forEach(([modeId, stateKey]) => {
+      const currentlyActive = Boolean(planning3dState[stateKey]);
+      const shouldKeep = keepModes.has(modeId);
+      if (currentlyActive && !shouldKeep) {
+        disabledModes.push(modeId);
+      }
+      planning3dState[stateKey] = shouldKeep && currentlyActive;
+    });
+    setPlanning3dPanelCollapsed(true);
+    syncPlanning3dScenarioButtons();
+    syncPlanning3dLayerVisibility({
+      refreshScene: true,
+      refreshMarkers: true,
+      refreshShadows: false,
+      refreshSummary: true,
+      refreshVisualState: true,
+      allowRecovery: false,
+    });
+    if (planning3dHasAnalyticalLayersEnabled()) {
+      requestPlanning3dAnalyticalScene(true);
+    }
+  }
+
+  const optimization = normalizeGeoAiRenderOptimization({
+    id: `geoai-render-opt-${Date.now()}`,
+    route: state.entryRoute,
+    profileId,
+    lightBase: planning3dState.currentBase !== "satellite",
+    disabledModes,
+    superResolutionEnabled: Boolean(state.satelliteSuperResolutionEnabled),
+    changes: [
+      `Forzamos perfil 3D ${profileId === "lite" ? "Ligero" : profileId === "standard" ? "Estandar" : "Alto"} para responder mejor.`,
+      "Apague la superresolucion satelital donde no aporta al flujo actual.",
+      planning3dState.modalOpen && disabledModes.length ? `Desactive modos 3D secundarios: ${disabledModes.join(", ")}.` : null,
+      planning3dState.modalOpen ? "El visor 3D quedo con panel colapsado para priorizar dibujo y navegacion." : null,
+      audit.metrics.threeDOverlayLoad > 0 ? `Recorte la carga analitica visible (${audit.metrics.threeDOverlayLoad} overlays base).` : null,
+    ].filter(Boolean),
+    summary: "Render afinado para priorizar respuesta, menor sobrecarga visual y carga analitica bajo demanda.",
+    createdAt: new Date().toISOString(),
+  });
+  state.platformData.geoAi.renderOptimization = optimization;
+  state.platformData.geoAi.updatedAt = optimization.createdAt;
+  renderGeoAiCoreCard();
+  await persistGeoAiCoreState();
+  setStatus("GeoAI Render Optimizer: motor afinado para responder mejor.");
+  return optimization;
 }
 
 function buildGeoAiEvaluationSnapshot() {
@@ -38414,6 +41489,9 @@ async function persistGeoAiCoreState() {
     researchLog: Array.isArray(state.platformData.geoAi.researchLog) ? state.platformData.geoAi.researchLog.slice(0, 24) : [],
     experiments: Array.isArray(state.platformData.geoAi.experiments) ? state.platformData.geoAi.experiments.map(normalizeGeoAiExperimentEntry).slice(0, 24) : [],
     qualityGate: state.platformData.geoAi.qualityGate ? normalizeGeoAiQualityGate(state.platformData.geoAi.qualityGate) : null,
+    uxAudit: state.platformData.geoAi.uxAudit ? normalizeGeoAiUxAudit(state.platformData.geoAi.uxAudit) : null,
+    layoutOptimization: state.platformData.geoAi.layoutOptimization ? normalizeGeoAiLayoutOptimization(state.platformData.geoAi.layoutOptimization) : null,
+    renderOptimization: state.platformData.geoAi.renderOptimization ? normalizeGeoAiRenderOptimization(state.platformData.geoAi.renderOptimization) : null,
     scheduler: normalizeGeoAiSchedulerState(state.platformData.geoAi.scheduler || {}),
     lastQuestion: String(state.platformData.geoAi.lastQuestion || ""),
     lastAnswer: state.platformData.geoAi.lastAnswer ? normalizeGeoAiAnswerRecord(state.platformData.geoAi.lastAnswer) : null,
@@ -38447,6 +41525,9 @@ async function loadGeoAiCoreState(force = false) {
     researchLog: Array.isArray(localPayload.researchLog) ? localPayload.researchLog.slice(0, 24) : [],
     experiments: Array.isArray(localPayload.experiments) ? localPayload.experiments.map(normalizeGeoAiExperimentEntry) : [],
     qualityGate: localPayload.qualityGate ? normalizeGeoAiQualityGate(localPayload.qualityGate) : null,
+    uxAudit: localPayload.uxAudit ? normalizeGeoAiUxAudit(localPayload.uxAudit) : null,
+    layoutOptimization: localPayload.layoutOptimization ? normalizeGeoAiLayoutOptimization(localPayload.layoutOptimization) : null,
+    renderOptimization: localPayload.renderOptimization ? normalizeGeoAiRenderOptimization(localPayload.renderOptimization) : null,
     scheduler: normalizeGeoAiSchedulerState(localPayload.scheduler || {}),
     lastQuestion: String(localPayload.lastQuestion || ""),
     lastAnswer: localPayload.lastAnswer ? normalizeGeoAiAnswerRecord(localPayload.lastAnswer) : null,
@@ -38457,6 +41538,7 @@ async function loadGeoAiCoreState(force = false) {
   if (dom.geoAiQuestionInput && !dom.geoAiQuestionInput.value && state.platformData.geoAi.lastQuestion) {
     setValueIfChanged(dom.geoAiQuestionInput, state.platformData.geoAi.lastQuestion);
   }
+  applyGeoAiUiOptimizationsFromState();
   ensureGeoAiScheduler();
   renderGeoAiCoreCard();
   const backend = await detectBackend(force || !state.backendAvailable);
@@ -38477,6 +41559,9 @@ async function loadGeoAiCoreState(force = false) {
       researchLog: Array.isArray(payload.researchLog) ? payload.researchLog.slice(0, 24) : state.platformData.geoAi.researchLog,
       experiments: Array.isArray(payload.experiments) ? payload.experiments.map(normalizeGeoAiExperimentEntry) : state.platformData.geoAi.experiments,
       qualityGate: payload.qualityGate ? normalizeGeoAiQualityGate(payload.qualityGate) : state.platformData.geoAi.qualityGate,
+      uxAudit: payload.uxAudit ? normalizeGeoAiUxAudit(payload.uxAudit) : state.platformData.geoAi.uxAudit,
+      layoutOptimization: payload.layoutOptimization ? normalizeGeoAiLayoutOptimization(payload.layoutOptimization) : state.platformData.geoAi.layoutOptimization,
+      renderOptimization: payload.renderOptimization ? normalizeGeoAiRenderOptimization(payload.renderOptimization) : state.platformData.geoAi.renderOptimization,
       scheduler: normalizeGeoAiSchedulerState(payload.scheduler || state.platformData.geoAi.scheduler || {}),
       lastQuestion: String(payload.lastQuestion || state.platformData.geoAi.lastQuestion || ""),
       lastAnswer: payload.lastAnswer ? normalizeGeoAiAnswerRecord(payload.lastAnswer) : state.platformData.geoAi.lastAnswer,
@@ -38488,6 +41573,7 @@ async function loadGeoAiCoreState(force = false) {
     if (dom.geoAiQuestionInput && !dom.geoAiQuestionInput.value && state.platformData.geoAi.lastQuestion) {
       setValueIfChanged(dom.geoAiQuestionInput, state.platformData.geoAi.lastQuestion);
     }
+    applyGeoAiUiOptimizationsFromState();
     ensureGeoAiScheduler();
     renderGeoAiCoreCard();
   } catch (error) {
@@ -38620,6 +41706,18 @@ function handleGeoAiCoreInteraction(event) {
     runGeoAiResearchAgent(dom.geoAiQuestionInput?.value || state.platformData.geoAi.lastQuestion || "");
     return;
   }
+  if (action === "ux-audit") {
+    runGeoAiUxAudit();
+    return;
+  }
+  if (action === "layout-optimize") {
+    applyGeoAiLayoutOptimizer();
+    return;
+  }
+  if (action === "render-optimize") {
+    applyGeoAiRenderOptimizer();
+    return;
+  }
   if (action === "experiments") {
     runGeoAiExperimentation(dom.geoAiQuestionInput?.value || state.platformData.geoAi.lastQuestion || "");
     return;
@@ -38684,6 +41782,9 @@ function renderGeoAiCoreCard() {
   const adjustCount = (geoAi.feedback || []).filter((item) => item.kind === "adjust").length;
   const latestVersion = (geoAi.versions || [])[0] || null;
   const recentMemory = (geoAi.memory || []).slice(0, 4);
+  const uxAudit = geoAi.uxAudit ? normalizeGeoAiUxAudit(geoAi.uxAudit) : null;
+  const layoutOptimization = geoAi.layoutOptimization ? normalizeGeoAiLayoutOptimization(geoAi.layoutOptimization) : null;
+  const renderOptimization = geoAi.renderOptimization ? normalizeGeoAiRenderOptimization(geoAi.renderOptimization) : null;
   dom.geoAiCoreBoard.classList.remove("empty-state");
   dom.geoAiCoreBoard.classList.add("has-data");
   setHtmlIfChanged(dom.geoAiCoreBoard, `
@@ -38705,6 +41806,9 @@ function renderGeoAiCoreCard() {
       <span class="planning-pill emphasis">${evidence.length} evidencias</span>
     </div>
     <div class="dashboard-action-row">
+      <button class="secondary-button" type="button" data-geoai-action="ux-audit">Auditar interfaz</button>
+      <button class="ghost-button" type="button" data-geoai-action="layout-optimize">Optimizar layout</button>
+      <button class="ghost-button" type="button" data-geoai-action="render-optimize">Optimizar render</button>
       <button class="secondary-button" type="button" data-geoai-action="research">Investigar</button>
       <button class="ghost-button" type="button" data-geoai-action="experiments">Probar experimentos</button>
       <button class="ghost-button" type="button" data-geoai-action="cycle">Ciclo completo</button>
@@ -38819,6 +41923,69 @@ function renderGeoAiCoreCard() {
         </article>
       </div>
     </article>
+    <article class="territorial-export-card">
+      <div class="territorial-export-head">
+        <div>
+          <p class="section-kicker">GeoAI UX Auditor</p>
+          <h4>${escapeHtmlContent(uxAudit?.summary || "Listo para revisar distribucion, scroll, espacio muerto y carga del 3D.")}</h4>
+        </div>
+        <span class="planning-pill emphasis">${uxAudit ? `${uxAudit.score}/100` : "Sin auditoria"}</span>
+      </div>
+      <p class="territorial-readout-copy">${escapeHtmlContent(
+        uxAudit
+          ? `${uxAudit.metrics.visibleModules} modulos visibles, ${uxAudit.metrics.sidebarEmptySpacePx}px de espacio lateral libre y ${uxAudit.metrics.mapCoveragePct}% de cobertura util del mapa.`
+          : "El auditor IA puede revisar la ruta actual y detectar huecos, solapes, exceso de modulos abiertos o un perfil 3D demasiado pesado."
+      )}</p>
+      <div class="decision-grid">
+        ${(uxAudit?.issues?.length ? uxAudit.issues : [{
+          severity: "base",
+          title: "Sin hallazgos todavia",
+          copy: "Corre la auditoria para detectar oportunidades reales de distribucion y render.",
+        }]).slice(0, 4).map((issue) => `
+          <article class="decision-card tone-${issue.severity === "high" ? "high" : issue.severity === "mid" ? "mid" : "base"}">
+            <p class="candidate-rank">${escapeHtmlContent(issue.severity === "high" ? "Critico" : issue.severity === "mid" ? "Ajuste" : "Observacion")}</p>
+            <h5>${escapeHtmlContent(issue.title)}</h5>
+            <p>${escapeHtmlContent(issue.copy)}</p>
+          </article>
+        `).join("")}
+      </div>
+      <div class="decision-list compact">
+        ${(uxAudit?.recommendations?.length ? uxAudit.recommendations : ["Compactar y priorizar solo lo que realmente ayuda a decidir."]).slice(0, 4).map((item) => `
+          <article>
+            <strong>Recomendacion</strong>
+            <p>${escapeHtmlContent(item)}</p>
+          </article>
+        `).join("")}
+      </div>
+    </article>
+    <div class="decision-grid">
+      <article class="decision-card tone-${layoutOptimization ? "low" : "base"}">
+        <p class="candidate-rank">Layout Optimizer</p>
+        <h5>${layoutOptimization ? `${layoutOptimization.expandedCards.length} mod.` : "Manual"}</h5>
+        <p>${escapeHtmlContent(layoutOptimization?.summary || "Compacta shell, deja abiertos solo los modulos prioritarios y reduce scroll innecesario.")}</p>
+      </article>
+      <article class="decision-card tone-${renderOptimization ? "low" : "base"}">
+        <p class="candidate-rank">Render Optimizer</p>
+        <h5>${escapeHtmlContent(renderOptimization ? (renderOptimization.profileId === "lite" ? "Ligero" : renderOptimization.profileId === "standard" ? "Estandar" : "Alto") : "Adaptivo")}</h5>
+        <p>${escapeHtmlContent(renderOptimization?.summary || "Recorta capas pesadas, fuerza perfil 3D coherente y protege la fluidez del motor.")}</p>
+      </article>
+    </div>
+    ${(layoutOptimization || renderOptimization) ? `
+      <div class="decision-list compact">
+        ${layoutOptimization ? `
+          <article>
+            <strong>Ultimo ajuste de layout</strong>
+            <p>${escapeHtmlContent(layoutOptimization.changes.join(" "))}</p>
+          </article>
+        ` : ""}
+        ${renderOptimization ? `
+          <article>
+            <strong>Ultimo ajuste de render</strong>
+            <p>${escapeHtmlContent(renderOptimization.changes.join(" "))}</p>
+          </article>
+        ` : ""}
+      </div>
+    ` : ""}
     <div class="decision-grid">
       ${evaluation.stages.map((stage) => `
         <article class="decision-card tone-${stage.score >= 75 ? "low" : stage.score >= 55 ? "mid" : "high"}">
@@ -39918,6 +43085,9 @@ function getRouteWorkLabel(route = state.entryRoute || "agronomia") {
   if (route === "catastro") {
     return "Catastro";
   }
+  if (route === "piva") {
+    return "PIVA Mejia";
+  }
   if (route === "planificacion") {
     return "Territorio";
   }
@@ -39930,6 +43100,9 @@ function getRouteWorkLabel(route = state.entryRoute || "agronomia") {
 function getRouteTone(route = state.entryRoute || "agronomia") {
   if (route === "catastro") {
     return "high";
+  }
+  if (route === "piva") {
+    return "mid";
   }
   if (route === "planificacion") {
     return "mid";
@@ -44625,6 +47798,7 @@ function updateMapSummary(force = false) {
     const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
     const urbanClimate = state.urbanClimateData;
+    const piva = isCurrentTerritorialAnalysis(state.pivaData) ? state.pivaData : null;
     const officialData = state.officialData.planificacion?.activeLayerCount ? state.officialData.planificacion : null;
     const digitalCadastre = state.digitalCadastreData;
     const territorialOps = state.territorialOpsData;
@@ -44642,6 +47816,7 @@ function updateMapSummary(force = false) {
     const showLandChange = state.territorialFocus === "landChange" && landChange;
     const showHydrology = state.territorialFocus === "hydrology" && hydrology;
     const showUrbanClimate = state.territorialFocus === "urbanClimate" && urbanClimate;
+    const showPiva = state.territorialFocus === "piva" && piva;
     const showOfficial = state.territorialFocus === "official" && officialData;
     const showDigitalCadastre = state.territorialFocus === "digitalCadastre" && digitalCadastre;
     const showOps = state.territorialFocus === "ops" && territorialOps;
@@ -44698,6 +47873,13 @@ function updateMapSummary(force = false) {
         dom.mapSubtitle,
         `${urbanClimate.summary.dominantLabel} - ${urbanClimate.summary.priorityCorridorCount} corredores prioritarios - ${urbanClimate.summary.heatRetentionAreaHa} ha en retencion termica.`
       );
+    } else if (showPiva) {
+      setTextIfChanged(dom.overlayIndex, "PIVA");
+      setTextIfChanged(dom.mapTitle, `PIVA del canton Mejia sobre ${piva.context.scopeLabel}`);
+      setTextIfChanged(
+        dom.mapSubtitle,
+        `${piva.summary.headline}. ${piva.summary.projectCount} proyectos, ${piva.summary.corridorCount} corredores y soporte ${piva.summary.supportLabel.toLowerCase()}.`
+      );
     } else if (showZoningPatterns) {
       setTextIfChanged(dom.overlayIndex, "Patrones");
       setTextIfChanged(dom.mapTitle, `Patrones territoriales sobre ${zoningPatterns.context.scopeLabel}`);
@@ -44745,6 +47927,10 @@ function updateMapSummary(force = false) {
       setTextIfChanged(dom.overlayIndex, "Clima");
       setTextIfChanged(dom.mapTitle, "Clima urbano listo");
       setTextIfChanged(dom.mapSubtitle, `${urbanClimate.summary.dominantLabel} - ${urbanClimate.summary.priorityCorridorCount} corredores sobre ${urbanClimate.context.scopeLabel}.`);
+    } else if (piva) {
+      setTextIfChanged(dom.overlayIndex, "PIVA");
+      setTextIfChanged(dom.mapTitle, "PIVA del canton Mejia listo");
+      setTextIfChanged(dom.mapSubtitle, `${piva.summary.headline}. ${piva.summary.projectCount} proyectos y ${piva.summary.supportLabel.toLowerCase()} sobre ${piva.context.scopeLabel}.`);
     } else if (landChange) {
       setTextIfChanged(dom.overlayIndex, "Huella");
       setTextIfChanged(dom.mapTitle, "Estudio de transformacion del suelo listo");
@@ -44769,6 +47955,10 @@ function updateMapSummary(force = false) {
         setTextIfChanged(dom.overlayIndex, "Catastro");
         setTextIfChanged(dom.mapTitle, "Catastro asistido listo");
         setTextIfChanged(dom.mapSubtitle, `Dibuja un AOI o activa el modulo para delimitar predios visibles sobre ${getDigitalCadastreAreaProfile().scopeLabel}.`);
+      } else if (isPivaRoute()) {
+        setTextIfChanged(dom.overlayIndex, "PIVA");
+        setTextIfChanged(dom.mapTitle, "PIVA del canton Mejia listo");
+        setTextIfChanged(dom.mapSubtitle, "Construye el PIVA para leer sistema azul, verde, clima, cartera por parroquia y comparador actual vs propuesta.");
       } else {
         setTextIfChanged(dom.mapTitle, "Planificacion territorial lista");
         setTextIfChanged(dom.mapSubtitle, `Empieza por aptitud, huella, agua, estrategia o 3D sobre ${getTerritorialAreaProfile().scopeLabel}.`);
@@ -44899,6 +48089,7 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
     const landChange = state.landChangeData;
     const hydrology = state.hydrologyData;
     const urbanClimate = state.urbanClimateData;
+    const piva = isCurrentTerritorialAnalysis(state.pivaData) ? state.pivaData : null;
     const digitalCadastre = state.digitalCadastreData;
     const officialData = state.officialData.planificacion?.activeLayerCount ? state.officialData.planificacion : null;
     const imageryProfile = planning?.imageryProfile || getPlanningImageryProfile();
@@ -45074,6 +48265,29 @@ function renderMapBadges(image = null, compareImage = null, previewLabel = "sin 
           {
             tone: "neutral",
             label: `${urbanClimate.summary.heatRetentionAreaHa} ha calor`,
+          },
+        ]
+      : state.territorialFocus === "piva" && piva
+      ? [
+          {
+            tone: "analysis",
+            label: "PIVA",
+          },
+          {
+            tone: "neutral",
+            label: `${piva.summary.pivaScore}/100`,
+          },
+          {
+            tone: "neutral",
+            label: `${piva.summary.projectCount} proyectos`,
+          },
+          {
+            tone: "preview",
+            label: `${piva.summary.corridorCount} corredores`,
+          },
+          {
+            tone: "neutral",
+            label: piva.summary.supportLabel,
           },
         ]
       : state.territorialFocus === "official" && officialData

@@ -315,6 +315,10 @@ button {
   background: rgba(255, 223, 188, 0.16);
 }
 
+.entry-option.piva {
+  background: rgba(157, 214, 194, 0.16);
+}
+
 .entry-option.operations {
   background: rgba(196, 224, 219, 0.14);
 }
@@ -1173,6 +1177,34 @@ button {
   color: var(--muted);
   font-size: 0.72rem;
   font-weight: 700;
+}
+
+.map-legend-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.map-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--text);
+  font-size: 0.72rem;
+  line-height: 1;
+}
+
+.map-legend-item i,
+.piva-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-flex;
+  flex: 0 0 10px;
 }
 
 .legend-scale {
@@ -3315,6 +3347,12 @@ button {
   background: rgba(255, 255, 255, 0.82);
 }
 
+.territorial-sector-sheet.active {
+  border-color: rgba(47, 127, 95, 0.24);
+  box-shadow: 0 14px 28px rgba(24, 84, 65, 0.08);
+  transform: translateY(-1px);
+}
+
 .territorial-decision-hero {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -3457,6 +3495,29 @@ button {
   border-color: rgba(95, 108, 118, 0.18);
 }
 
+.piva-legend-grid,
+.piva-comparator-stack {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.piva-comparator-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  margin-top: 10px;
+}
+
+.piva-comparator-row.target strong {
+  color: #2f7f5f;
+}
+
+.piva-parish-meta {
+  gap: 8px;
+}
+
 .territorial-alert-card.tone-critical {
   border-color: rgba(153, 79, 79, 0.24);
 }
@@ -3489,6 +3550,40 @@ button {
 .dashboard-action-row .secondary-button {
   justify-content: center;
   width: 100%;
+}
+
+.app-shell.geoai-layout-compact .module-browser-toolbar,
+.app-shell.geoai-layout-compact .module-action-hub,
+.app-shell.geoai-layout-compact .sidebar-dock,
+.app-shell.geoai-layout-compact .decision-board,
+.app-shell.geoai-layout-compact .territorial-export-card,
+.app-shell.geoai-layout-compact .planning-3d-mode-readout,
+.app-shell.geoai-layout-compact .planning-3d-legend,
+.app-shell.geoai-layout-compact .planning-3d-summary,
+.app-shell.geoai-layout-compact .planning-3d-selection {
+  padding: 12px;
+}
+
+.app-shell.geoai-layout-compact .tab-panel[data-panel="modulos"] .module-card,
+.app-shell.geoai-layout-compact .module-card {
+  gap: 10px;
+  padding: 14px;
+}
+
+.app-shell.geoai-layout-compact .module-head,
+.app-shell.geoai-layout-compact .territorial-export-head,
+.app-shell.geoai-layout-compact .planning-3d-header,
+.app-shell.geoai-layout-compact .planning-3d-toolbar,
+.app-shell.geoai-layout-compact .planning-3d-panel {
+  gap: 10px;
+}
+
+.app-shell.geoai-layout-compact .planning-3d-quick-summary,
+.app-shell.geoai-layout-compact .decision-grid,
+.app-shell.geoai-layout-compact .decision-list.compact,
+.app-shell.geoai-layout-compact .dashboard-chip-row,
+.app-shell.geoai-layout-compact .dashboard-action-row {
+  gap: 8px;
 }
 
 .report-center-summary {
