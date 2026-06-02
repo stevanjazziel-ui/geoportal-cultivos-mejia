@@ -3531,6 +3531,85 @@ button {
   min-width: 0;
 }
 
+.piva-visual-scene {
+  margin: 16px 0 14px;
+  border: 1px solid rgba(43, 65, 56, 0.12);
+  border-radius: 24px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(172, 212, 186, 0.22), transparent 42%),
+    radial-gradient(circle at top right, rgba(159, 212, 227, 0.2), transparent 38%),
+    linear-gradient(180deg, rgba(252, 250, 245, 0.98), rgba(244, 248, 242, 0.98));
+}
+
+.piva-visual-scene svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.piva-visual-svg-label,
+.piva-visual-svg-note {
+  font-family: "Segoe UI", sans-serif;
+  fill: #274036;
+}
+
+.piva-visual-svg-label {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.piva-visual-svg-note {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.piva-visual-bars {
+  display: grid;
+  gap: 12px;
+}
+
+.piva-visual-bar {
+  display: grid;
+  gap: 8px;
+}
+
+.piva-visual-bar-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  font-size: 13px;
+}
+
+.piva-visual-bar-head strong {
+  color: #204b3e;
+}
+
+.piva-visual-bar-track {
+  position: relative;
+  height: 12px;
+  border-radius: 999px;
+  background: rgba(37, 54, 46, 0.08);
+  overflow: hidden;
+}
+
+.piva-visual-bar-track i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 999px;
+}
+
+.piva-visual-bar-track .current {
+  background: rgba(69, 113, 90, 0.35);
+}
+
+.piva-visual-bar-track .target {
+  background: linear-gradient(90deg, rgba(87, 166, 184, 0.82), rgba(62, 147, 114, 0.88));
+  opacity: 0.94;
+}
+
 .territorial-alert-card.tone-critical {
   border-color: rgba(153, 79, 79, 0.24);
 }

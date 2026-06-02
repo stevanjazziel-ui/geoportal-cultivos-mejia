@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260602-1";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260602-2";
 
 const layerCatalog = [
   {
@@ -6381,6 +6381,7 @@ function cacheDom() {
   dom.clearPivaBtn = document.querySelector("#clearPivaBtn");
   dom.pivaResults = document.querySelector("#pivaResults");
   dom.pivaDashboard = document.querySelector("#pivaDashboard");
+  dom.pivaProjectVisual = document.querySelector("#pivaProjectVisual");
   dom.pivaReadout = document.querySelector("#pivaReadout");
   dom.pivaBoard = document.querySelector("#pivaBoard");
   dom.pivaLegendBoard = document.querySelector("#pivaLegendBoard");
@@ -7406,6 +7407,7 @@ function bindUI() {
   dom.runPivaBtn?.addEventListener("click", () => {
     setModulePendingState(dom.pivaResults, "Integrando clima urbano, seguridad hidrica, corredores verdes y soporte oficial para estructurar el PIVA...", [
       { target: dom.pivaDashboard, message: "Armando el tablero ejecutivo del PIVA con parroquia critica, proyecto lider y paquetes listos para decision..." },
+      { target: dom.pivaProjectVisual, message: "Generando la visual conceptual del proyecto lider y el grafico de impacto esperado..." },
       { target: dom.pivaReadout, message: "Armando la lectura verde-azul integrada del canton Mejia..." },
       { target: dom.pivaBoard, message: "Calculando semaforo PIVA, pilares y prioridad de intervencion..." },
       { target: dom.pivaLegendBoard, message: "Preparando leyenda verde-azul y claves de lectura para el mapa y la cartera..." },
@@ -30523,6 +30525,156 @@ function buildPivaExecutiveSnapshot(analysis) {
   };
 }
 
+function getPivaVisualTheme(kind = "green") {
+  const palette = getPivaSignalPalette(kind === "civic" ? "green" : kind);
+  return {
+    lane: palette.fill,
+    stroke: palette.stroke,
+    accent: palette.marker,
+    soft: `${palette.fill}cc`,
+    corridor: palette.corridor,
+  };
+}
+
+function buildPivaProjectVisualMarkup(analysis) {
+  const dashboard = analysis.dashboard || {};
+  const project = dashboard.leadProject || analysis.projects?.[0] || null;
+  const parish = dashboard.leadParish || analysis.parishPortfolio?.[0] || null;
+  if (!project) {
+    return `
+      <article class="territorial-decision-hero tone-pending">
+        <div>
+          <p class="candidate-rank">Visual del proyecto</p>
+          <h4>Sin proyecto lider</h4>
+          <p>Construye el PIVA para generar la visual conceptual del frente verde-azul prioritario.</p>
+        </div>
+      </article>
+    `;
+  }
+
+  const theme = getPivaVisualTheme(project.kind);
+  const componentMarkup = analysis.comparator.dimensions.map((item) => `
+    <div class="piva-visual-bar">
+      <div class="piva-visual-bar-head">
+        <span>${escapeHtmlContent(item.label)}</span>
+        <strong>${item.current}/100 -> ${item.target}/100</strong>
+      </div>
+      <div class="piva-visual-bar-track">
+        <i class="current" style="width:${clamp(item.current, 8, 100)}%"></i>
+        <i class="target" style="width:${clamp(item.target, 8, 100)}%"></i>
+      </div>
+    </div>
+  `).join("");
+  const metricPills = (project.metrics || []).slice(0, 4).map((metric) => `<span class="planning-pill emphasis">${escapeHtmlContent(metric.label)}: ${escapeHtmlContent(metric.value)}</span>`).join("");
+  const svgByKind = project.kind === "blue"
+    ? `
+      <rect x="30" y="58" width="860" height="130" rx="28" fill="#f5efe4"></rect>
+      <path d="M70 140 C180 90, 260 185, 380 132 S610 76, 840 138" stroke="${theme.corridor}" stroke-width="28" fill="none" stroke-linecap="round"></path>
+      <path d="M70 120 C185 70, 260 165, 380 112 S610 56, 840 118" stroke="#dff1f6" stroke-width="8" fill="none" stroke-linecap="round"></path>
+      <rect x="140" y="82" width="120" height="28" rx="14" fill="${theme.soft}"></rect>
+      <rect x="620" y="150" width="148" height="26" rx="13" fill="#96cfa7"></rect>
+      <circle cx="220" cy="172" r="16" fill="#5b9a63"></circle>
+      <circle cx="640" cy="83" r="18" fill="#5b9a63"></circle>
+      <circle cx="702" cy="92" r="14" fill="#5b9a63"></circle>
+      <path d="M416 66 L440 42 L464 66" fill="none" stroke="${theme.stroke}" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"></path>
+      <text x="72" y="42" class="piva-visual-svg-label">Franja azul prioritaria</text>
+      <text x="610" y="48" class="piva-visual-svg-label">Parque lineal esponja</text>
+      <text x="144" y="101" class="piva-visual-svg-note">recarga y drenaje</text>
+      <text x="624" y="168" class="piva-visual-svg-note">arbolado y estancia</text>
+    `
+    : project.kind === "climate"
+      ? `
+        <rect x="30" y="58" width="860" height="130" rx="28" fill="#eef4f7"></rect>
+        <rect x="54" y="102" width="812" height="42" rx="21" fill="#dce8ef"></rect>
+        <rect x="96" y="88" width="728" height="72" rx="30" fill="#c7deea"></rect>
+        <path d="M120 124 C220 76, 320 76, 420 124 S620 170, 780 108" stroke="${theme.corridor}" stroke-width="10" fill="none" stroke-dasharray="12 12" stroke-linecap="round"></path>
+        <path d="M250 56 L250 28" stroke="${theme.stroke}" stroke-width="7" stroke-linecap="round"></path>
+        <path d="M470 56 L470 28" stroke="${theme.stroke}" stroke-width="7" stroke-linecap="round"></path>
+        <path d="M690 56 L690 28" stroke="${theme.stroke}" stroke-width="7" stroke-linecap="round"></path>
+        <path d="M250 28 l-12 16 h24 z" fill="${theme.stroke}"></path>
+        <path d="M470 28 l-12 16 h24 z" fill="${theme.stroke}"></path>
+        <path d="M690 28 l-12 16 h24 z" fill="${theme.stroke}"></path>
+        <circle cx="170" cy="169" r="14" fill="#66a37c"></circle>
+        <circle cx="720" cy="166" r="17" fill="#66a37c"></circle>
+        <rect x="384" y="150" width="138" height="20" rx="10" fill="#8bc6a0"></rect>
+        <text x="68" y="42" class="piva-visual-svg-label">Corredor frio y ventilacion</text>
+        <text x="370" y="181" class="piva-visual-svg-note">sombra y permanencia</text>
+      `
+      : project.kind === "transition"
+        ? `
+          <rect x="30" y="58" width="860" height="130" rx="28" fill="#f6f1e6"></rect>
+          <rect x="58" y="82" width="240" height="82" rx="24" fill="#d7e5b6"></rect>
+          <rect x="312" y="82" width="170" height="82" rx="24" fill="#ecd39e"></rect>
+          <rect x="496" y="82" width="350" height="82" rx="24" fill="#f7f3ea"></rect>
+          <path d="M330 92 L462 154" stroke="${theme.stroke}" stroke-width="6" stroke-dasharray="10 10" fill="none"></path>
+          <path d="M330 154 L462 92" stroke="${theme.stroke}" stroke-width="6" stroke-dasharray="10 10" fill="none"></path>
+          <rect x="540" y="104" width="92" height="18" rx="9" fill="#92c9a0"></rect>
+          <rect x="648" y="104" width="114" height="18" rx="9" fill="#9fd4e3"></rect>
+          <rect x="778" y="104" width="38" height="38" rx="10" fill="#d7b57c"></rect>
+          <text x="74" y="42" class="piva-visual-svg-label">Borde productivo protegido</text>
+          <text x="338" y="123" class="piva-visual-svg-note">franja segura</text>
+          <text x="540" y="155" class="piva-visual-svg-note">parque + drenaje + estancia</text>
+        `
+        : project.kind === "civic"
+          ? `
+            <rect x="30" y="58" width="860" height="130" rx="28" fill="#f5f0e6"></rect>
+            <rect x="64" y="112" width="792" height="22" rx="11" fill="#cfc9bc"></rect>
+            <rect x="102" y="86" width="186" height="74" rx="22" fill="#97cfaa"></rect>
+            <rect x="328" y="80" width="264" height="86" rx="30" fill="#ecdec0"></rect>
+            <rect x="628" y="86" width="188" height="74" rx="22" fill="#b4d8c0"></rect>
+            <circle cx="155" cy="97" r="14" fill="#5f9964"></circle>
+            <circle cx="218" cy="154" r="16" fill="#5f9964"></circle>
+            <circle cx="704" cy="96" r="14" fill="#5f9964"></circle>
+            <circle cx="766" cy="150" r="16" fill="#5f9964"></circle>
+            <rect x="416" y="94" width="88" height="58" rx="16" fill="${theme.soft}"></rect>
+            <text x="74" y="42" class="piva-visual-svg-label">Nodo verde de proximidad</text>
+            <text x="356" y="177" class="piva-visual-svg-note">plaza + equipamiento + sombra</text>
+          `
+          : `
+            <rect x="30" y="58" width="860" height="130" rx="28" fill="#f1f6ef"></rect>
+            <rect x="56" y="112" width="816" height="22" rx="11" fill="#c6d3c7"></rect>
+            <rect x="120" y="82" width="214" height="78" rx="24" fill="#b7d9bc"></rect>
+            <rect x="358" y="82" width="214" height="78" rx="24" fill="#dcead7"></rect>
+            <rect x="596" y="82" width="214" height="78" rx="24" fill="#cce3d2"></rect>
+            <circle cx="154" cy="92" r="16" fill="#5d9a66"></circle>
+            <circle cx="244" cy="150" r="14" fill="#5d9a66"></circle>
+            <circle cx="398" cy="92" r="16" fill="#5d9a66"></circle>
+            <circle cx="514" cy="148" r="16" fill="#5d9a66"></circle>
+            <circle cx="638" cy="92" r="16" fill="#5d9a66"></circle>
+            <circle cx="760" cy="148" r="16" fill="#5d9a66"></circle>
+            <path d="M360 112 C404 88, 468 88, 520 112" stroke="${theme.corridor}" stroke-width="6" fill="none"></path>
+            <text x="74" y="42" class="piva-visual-svg-label">Corredor verde barrial</text>
+            <text x="340" y="176" class="piva-visual-svg-note">suelo verde, arbolado y estancia cotidiana</text>
+          `;
+
+  return `
+    <article class="territorial-decision-hero tone-${project.tone}">
+      <div>
+        <p class="candidate-rank">Visual del proyecto propuesto</p>
+        <h4>${escapeHtmlContent(project.title)}</h4>
+        <p>${escapeHtmlContent(project.summary)}</p>
+      </div>
+      <div class="territorial-decision-score">
+        <strong>${project.priorityScore}/100</strong>
+        <span>${escapeHtmlContent(parish?.parish || analysis.summary.weakestServiceParish || "Mejia")}</span>
+      </div>
+    </article>
+    <div class="piva-visual-scene">
+      <svg viewBox="0 0 920 220" role="img" aria-label="Visual conceptual del proyecto PIVA lider">
+        <rect x="18" y="18" width="884" height="184" rx="34" fill="#fcfaf5" stroke="${theme.stroke}" stroke-width="2"></rect>
+        ${svgByKind}
+      </svg>
+    </div>
+    <div class="dashboard-chip-row">
+      ${metricPills}
+    </div>
+    <div class="piva-visual-bars">
+      ${componentMarkup}
+    </div>
+    <p class="territorial-readout-copy">Esta visual sintetiza la intervencion propuesta para ${escapeHtmlContent(parish?.parish || "Mejia")}: ${escapeHtmlContent(project.note)}</p>
+  `;
+}
+
 function buildPivaParishCollection(parishPortfolio, serviceFeatures, projects = []) {
   const features = parishPortfolio.map((parish, index) => {
     const serviceFeature = serviceFeatures.find((feature) => {
@@ -31241,6 +31393,7 @@ function renderPivaModule() {
   if (!analysis) {
     resetMetricGrid(dom.pivaResults, `Ejecuta el PIVA para priorizar infraestructura verde y azul sobre Canton Mejia y dejar una cartera accionable por corredor, agua y espacio publico.`);
     resetVisualPanel(dom.pivaDashboard, "Aqui aparecera el tablero ejecutivo del PIVA con parroquia critica, proyecto lider, paquete de arranque y segunda ola territorial.");
+    resetVisualPanel(dom.pivaProjectVisual, "Aqui aparecera la visual conceptual del proyecto lider, con grafico de impacto por componente y la imagen sintesis de la intervencion propuesta.");
     resetVisualPanel(dom.pivaReadout, "Aqui aparecera la lectura verde-azul integrada con clima urbano, seguridad hidrica, conectividad y soporte de evidencia.");
     resetVisualPanel(dom.pivaBoard, "Aqui aparecera el semaforo PIVA con los pilares azul, verde, clima, conectividad y soporte oficial.");
     resetVisualPanel(dom.pivaLegendBoard, "Aqui aparecera la leyenda PIVA para distinguir capas azules, verdes, climaticas, transiciones y proyectos detonantes.");
@@ -31289,6 +31442,12 @@ function renderPivaModule() {
         `).join("")}
       </div>
     `);
+  }
+
+  if (dom.pivaProjectVisual) {
+    dom.pivaProjectVisual.classList.remove("empty-state");
+    dom.pivaProjectVisual.classList.add("has-data");
+    setHtmlIfChanged(dom.pivaProjectVisual, buildPivaProjectVisualMarkup(analysis));
   }
 
   paintMetricGrid(dom.pivaResults, [
