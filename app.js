@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260602-3";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260602-4";
 
 const layerCatalog = [
   {
@@ -4373,8 +4373,8 @@ function setTextIfChanged(element, text) {
   const normalized = text == null
     ? ""
     : String(text)
-      .replace(/Ã‚|/g, " | ")
-      .replace(/\s*|\s*/g, " | ")
+      .replace(/Ã‚\|/g, " | ")
+      .replace(/\s*\|\s*/g, " | ")
       .replace(/Ã‚/g, "")
       .replace(/\uFFFD/g, "");
   if (uiRenderCache.text.get(element) === normalized) {
@@ -15012,7 +15012,7 @@ async function runInamhiAnalysis(silent = false) {
 
     paintMetricGrid(dom.inamhiResults, cards);
     Array.from(dom.inamhiResults.querySelectorAll(".metric-card strong")).forEach((node) => {
-      node.textContent = node.textContent.replace(/|/g, " - ");
+      node.textContent = node.textContent.replace(/\|/g, " - ");
     });
     const result = {
       reference,
@@ -49317,7 +49317,7 @@ function renderInamhiVisual(result = null) {
     <p class="agronomy-visual-copy">${result.readout}</p>
   `);
   Array.from(dom.inamhiVisual.querySelectorAll("strong")).forEach((node) => {
-    node.textContent = node.textContent.replace(/|/g, " - ");
+    node.textContent = node.textContent.replace(/\|/g, " - ");
   });
 }
 
