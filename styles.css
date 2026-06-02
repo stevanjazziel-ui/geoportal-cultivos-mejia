@@ -3514,6 +3514,185 @@ button {
   color: #2f7f5f;
 }
 
+.piva-presentation-deck {
+  display: grid;
+  gap: 18px;
+}
+
+.piva-slide {
+  display: grid;
+  grid-template-columns: minmax(280px, 0.92fr) minmax(0, 1.28fr);
+  gap: 20px;
+  padding: 22px;
+  border: 1px solid rgba(43, 65, 56, 0.12);
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at top left, rgba(172, 212, 186, 0.18), transparent 34%),
+    radial-gradient(circle at top right, rgba(159, 212, 227, 0.18), transparent 30%),
+    linear-gradient(180deg, rgba(252, 250, 245, 0.98), rgba(244, 248, 242, 0.98));
+  box-shadow: 0 18px 44px rgba(28, 44, 38, 0.06);
+}
+
+.piva-slide-copy,
+.piva-slide-visual {
+  display: grid;
+  gap: 14px;
+  align-content: start;
+}
+
+.piva-slide-kicker {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #2c6855;
+}
+
+.piva-slide h4 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2vw, 2rem);
+  line-height: 1.08;
+}
+
+.piva-slide-question {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(33, 56, 49, 0.68);
+}
+
+.piva-slide-lede {
+  margin: 0;
+  font-size: 1.06rem;
+  font-weight: 700;
+  color: #224338;
+}
+
+.piva-slide-copy > p:last-child {
+  margin-bottom: 0;
+}
+
+.piva-slide-visual {
+  min-width: 0;
+}
+
+.piva-slide-visual svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.piva-slide-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 12px;
+}
+
+.piva-slide-stat,
+.piva-slide-package,
+.piva-phase-step {
+  border: 1px solid rgba(43, 65, 56, 0.1);
+  border-radius: 18px;
+  background: rgba(255, 253, 248, 0.88);
+}
+
+.piva-slide-stat {
+  display: grid;
+  gap: 8px;
+  padding: 14px 15px;
+}
+
+.piva-slide-stat span {
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(33, 56, 49, 0.68);
+}
+
+.piva-slide-stat strong {
+  font-size: 1.45rem;
+  color: #204b3e;
+}
+
+.piva-slide-stat p,
+.piva-slide-package p,
+.piva-phase-step p {
+  margin: 0;
+}
+
+.piva-slide-packages {
+  display: grid;
+  gap: 12px;
+}
+
+.piva-slide-package {
+  display: grid;
+  gap: 8px;
+  padding: 15px 16px;
+}
+
+.piva-slide-package h5,
+.piva-phase-step h5 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.piva-slide-package span {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: rgba(33, 56, 49, 0.76);
+}
+
+.piva-phase-lane {
+  display: grid;
+  gap: 12px;
+}
+
+.piva-phase-step {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  padding: 15px 16px;
+  align-items: start;
+}
+
+.piva-phase-badge {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2f7f5f, #57a6b8);
+  color: #fff;
+  font-weight: 800;
+}
+
+.piva-slide.tone-high,
+.piva-slide-stat.tone-good,
+.piva-slide-package.tone-high {
+  border-color: rgba(47, 127, 95, 0.18);
+}
+
+.piva-slide.tone-mid,
+.piva-slide-stat.tone-watch,
+.piva-slide-package.tone-mid {
+  border-color: rgba(203, 148, 64, 0.18);
+}
+
+.piva-slide.tone-low,
+.piva-slide-stat.tone-critical,
+.piva-slide-package.tone-low {
+  border-color: rgba(153, 79, 79, 0.18);
+}
+
+.piva-slide.tone-base {
+  border-color: rgba(95, 108, 118, 0.12);
+}
+
 .piva-parish-meta {
   gap: 8px;
 }
@@ -3662,6 +3841,12 @@ button {
 .piva-masterplan-note {
   font-size: 13px;
   font-weight: 600;
+}
+
+@media (max-width: 1080px) {
+  .piva-slide {
+    grid-template-columns: 1fr;
+  }
 }
 
 .territorial-alert-card.tone-critical {
