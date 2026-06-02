@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260602-5";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260602-6";
 
 const layerCatalog = [
   {
@@ -10805,6 +10805,61 @@ function initializeAgronomyMapPanes() {
   ensureLeafletPane("plotOverlayPane", 460, "auto");
 }
 
+function setMapInteractionCursor(isPointer = false) {
+  const container = mapState.map?.getContainer?.();
+  if (!container) {
+    return;
+  }
+  container.style.cursor = isPointer ? "pointer" : "";
+}
+
+function enhanceInteractiveFeatureLayer(layer, { bringToFront = true } = {}) {
+  if (!layer || layer.__geoportalInteractiveEnhanced || layer.options?.interactive === false) {
+    return;
+  }
+
+  if (typeof layer.eachLayer === "function" && !layer.feature) {
+    layer.__geoportalInteractiveEnhanced = true;
+    layer.eachLayer((childLayer) => enhanceInteractiveFeatureLayer(childLayer, { bringToFront }));
+    return;
+  }
+
+  const hasPopup = typeof layer.getPopup === "function" && !!layer.getPopup();
+  const hasFeature = !!layer.feature;
+  if (!hasPopup && !hasFeature) {
+    return;
+  }
+
+  layer.__geoportalInteractiveEnhanced = true;
+  layer.on("mouseover", () => {
+    setMapInteractionCursor(true);
+    if (bringToFront && typeof layer.bringToFront === "function") {
+      try {
+        layer.bringToFront();
+      } catch (error) {
+      }
+    }
+  });
+  layer.on("mouseout", () => {
+    setMapInteractionCursor(false);
+  });
+  layer.on("click", () => {
+    setMapInteractionCursor(true);
+    if (bringToFront && typeof layer.bringToFront === "function") {
+      try {
+        layer.bringToFront();
+      } catch (error) {
+      }
+    }
+    if (hasPopup && typeof layer.openPopup === "function") {
+      layer.openPopup();
+    }
+  });
+  layer.on("remove", () => {
+    setMapInteractionCursor(false);
+  });
+}
+
 function initializeMap() {
   const initialAgronomyView = getAgronomyAreaMapView();
   mapState.map = L.map("map", {
@@ -10904,6 +10959,10 @@ function initializeMap() {
 
   mapState.map.on(L.Draw.Event.DELETED, () => {
     clearCurrentPlot(true);
+  });
+
+  mapState.map.on("layeradd", (event) => {
+    enhanceInteractiveFeatureLayer(event.layer);
   });
 
   mapState.map.on("zoomend", maybeRefreshScenePreviewQuality);
@@ -29209,6 +29268,8 @@ function focusMobilitySector(sectorId) {
   updateMapSummary();
   const bounds = L.geoJSON(sector.feature).getBounds();
   mapState.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 13 });
+  openFeaturePopupByProperty(mapState.mobilityLayer, "mobilitySectorId", sectorId)
+    || openFeaturePopupByProperty(mapState.mobilityLinkLayer, "mobilitySectorId", sectorId);
 }
 
 function handleMobilitySectorsInteraction(event) {
@@ -29472,15 +29533,15 @@ function getAnalyticalHotspotMarkerStyle({
   fillColor = "#ff9a1f",
   strokeColor = "#fff7ea",
   active = false,
-  minRadius = 7,
-  maxRadius = 12,
+  minRadius = 8.4,
+  maxRadius = 13.4,
 }) {
   const normalizedScore = clamp(Number(score) || 0, 0, 100);
-  const radius = clamp(minRadius + (normalizedScore / 28), minRadius, maxRadius) + (active ? 1.2 : 0);
+  const radius = clamp(minRadius + (normalizedScore / 24), minRadius, maxRadius) + (active ? 1.6 : 0.2);
   return {
     radius,
     color: strokeColor,
-    weight: active ? 2.8 : 2.2,
+    weight: active ? 3 : 2.4,
     fillColor,
     fillOpacity: active ? 0.98 : 0.92,
     className: "analysis-hotspot-marker",
@@ -30253,6 +30314,9 @@ function focusUrbanClimateSector(sectorId) {
   updateMapSummary();
   const bounds = L.geoJSON(sector.feature).getBounds();
   mapState.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 13 });
+  openFeaturePopupByProperty(mapState.urbanClimateNodeLayer, "urbanClimateSectorId", sectorId)
+    || openFeaturePopupByProperty(mapState.urbanClimateCorridorLayer, "urbanClimateSectorId", sectorId)
+    || openFeaturePopupByProperty(mapState.urbanClimateZoneLayer, "urbanClimateSectorId", sectorId);
 }
 
 function handleUrbanClimateSectorsInteraction(event) {
@@ -33272,6 +33336,10 @@ function focusPivaProject(projectId) {
   } else if (Array.isArray(project.centroid)) {
     mapState.map.setView([project.centroid[1], project.centroid[0]], Math.max(mapState.map.getZoom(), 13));
   }
+  openFeaturePopupByProperty(mapState.pivaProjectLayer, "pivaProjectId", projectId)
+    || openFeaturePopupByProperty(mapState.pivaProposalNodeLayer, "pivaProjectId", projectId)
+    || openFeaturePopupByProperty(mapState.pivaProposalCorridorLayer, "pivaProjectId", projectId)
+    || openFeaturePopupByProperty(mapState.pivaProposalReserveLayer, "pivaProjectId", projectId);
 }
 
 function focusPivaParish(parishId) {
@@ -33302,6 +33370,10 @@ function focusPivaParish(parishId) {
   } else if (feature?.geometry?.type === "Point") {
     mapState.map.setView([feature.geometry.coordinates[1], feature.geometry.coordinates[0]], Math.max(mapState.map.getZoom(), 12));
   }
+  openFeaturePopupByProperty(mapState.pivaParishLayer, "pivaParishId", parishId)
+    || openFeaturePopupByProperty(mapState.pivaProposalNodeLayer, "pivaParishId", parishId)
+    || openFeaturePopupByProperty(mapState.pivaProposalPieceLayer, "pivaParishId", parishId)
+    || openFeaturePopupByProperty(mapState.pivaProposalCorridorLayer, "pivaParishId", parishId);
 }
 
 function handlePivaInteraction(event) {
@@ -34395,6 +34467,8 @@ function focusZoningPatternsSector(sectorId) {
   updateMapSummary();
   const bounds = L.geoJSON(sector.feature).getBounds();
   mapState.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 13 });
+  openFeaturePopupByProperty(mapState.zoningPatternsHotspotLayer, "zoningSectorId", sectorId)
+    || openFeaturePopupByProperty(mapState.zoningPatternsLayer, "zoningSectorId", sectorId);
 }
 
 function handleZoningPatternsSectorsInteraction(event) {
@@ -34867,6 +34941,8 @@ function focusHousingPatternsSector(sectorId) {
   updateMapSummary();
   const bounds = L.geoJSON(sector.feature).getBounds();
   mapState.map.fitBounds(bounds, { padding: [48, 48], maxZoom: 13 });
+  openFeaturePopupByProperty(mapState.housingPatternsHotspotLayer, "housingSectorId", sectorId)
+    || openFeaturePopupByProperty(mapState.housingPatternsLayer, "housingSectorId", sectorId);
 }
 
 function handleHousingPatternsSectorsInteraction(event) {
@@ -48433,16 +48509,34 @@ function getPlanningFocusBounds() {
     || null;
 }
 
-function openPlanningCandidatePopup(candidateId) {
-  if (!candidateId || !mapState.planningCandidatesLayer) {
-    return;
+function openFeaturePopupByProperty(layerGroup, propertyKeys, value) {
+  if (!layerGroup || value == null) {
+    return false;
   }
-
-  mapState.planningCandidatesLayer.eachLayer((layer) => {
-    if (layer.feature?.properties?.candidateId === candidateId) {
-      layer.openPopup();
+  const keys = Array.isArray(propertyKeys) ? propertyKeys : [propertyKeys];
+  let opened = false;
+  layerGroup.eachLayer?.((layer) => {
+    if (opened) {
+      return;
     }
+    const matches = keys.some((key) => layer.feature?.properties?.[key] === value);
+    if (!matches) {
+      return;
+    }
+    if (typeof layer.bringToFront === "function") {
+      try {
+        layer.bringToFront();
+      } catch (error) {
+      }
+    }
+    layer.openPopup?.();
+    opened = true;
   });
+  return opened;
+}
+
+function openPlanningCandidatePopup(candidateId) {
+  openFeaturePopupByProperty(mapState.planningCandidatesLayer, "candidateId", candidateId);
 }
 
 function focusPlanningCandidates() {
@@ -48635,13 +48729,9 @@ function focusHydrologySector(sectorId) {
     padding: [52, 52],
     maxZoom: 12,
   });
-  if (mapState.hydrologyLayer) {
-    mapState.hydrologyLayer.eachLayer((layer) => {
-      if (layer.feature?.properties?.sectorId === sectorId) {
-        layer.openPopup();
-      }
-    });
-  }
+  openFeaturePopupByProperty(mapState.hydrologyLayer, "sectorId", sectorId)
+    || openFeaturePopupByProperty(mapState.hydrologyPriorityLayer, "sectorId", sectorId)
+    || openFeaturePopupByProperty(mapState.hydrologyBufferLayer, "sectorId", sectorId);
 }
 
 function focusFodaCameZone(zoneId) {

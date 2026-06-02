@@ -4725,11 +4725,23 @@ button {
   color: rgba(31, 42, 34, 0.78);
 }
 
+.plot-tools-overlay {
+  left: 14px;
+  bottom: 72px;
+  width: min(378px, calc(100% - 28px));
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  pointer-events: auto;
+}
+
 .plot-tools {
   display: grid;
   gap: 8px;
   position: relative;
-  z-index: 2;
+  z-index: 12;
   padding: 10px 12px;
   border-radius: 18px;
   border: 1px solid rgba(57, 73, 66, 0.08);
@@ -4984,25 +4996,29 @@ button {
 }
 
 .app-shell[data-route="planificacion"] .overlay-left,
-.app-shell[data-route="catastro"] .overlay-left {
+.app-shell[data-route="catastro"] .overlay-left,
+.app-shell[data-route="piva"] .overlay-left {
   max-width: min(282px, calc(100% - 184px));
   background: rgba(250, 252, 247, 0.9);
   border-color: rgba(255, 255, 255, 0.52);
 }
 
 .app-shell[data-route="planificacion"] .overlay-right,
-.app-shell[data-route="catastro"] .overlay-right {
+.app-shell[data-route="catastro"] .overlay-right,
+.app-shell[data-route="piva"] .overlay-right {
   background: rgba(26, 33, 29, 0.78);
 }
 
 .app-shell[data-route="planificacion"] .status-bar,
-.app-shell[data-route="catastro"] .status-bar {
+.app-shell[data-route="catastro"] .status-bar,
+.app-shell[data-route="piva"] .status-bar {
   max-width: 460px;
   background: rgba(252, 253, 249, 0.9);
 }
 
 .app-shell[data-route="planificacion"] .footer-pill,
-.app-shell[data-route="catastro"] .footer-pill {
+.app-shell[data-route="catastro"] .footer-pill,
+.app-shell[data-route="piva"] .footer-pill {
   font-size: 0.72rem;
 }
 
@@ -5012,13 +5028,14 @@ button {
 }
 
 .leaflet-control-container {
-  z-index: 620 !important;
+  z-index: 760 !important;
 }
 
 .leaflet-draw,
 .leaflet-draw-toolbar,
 .leaflet-draw-actions {
-  z-index: 620 !important;
+  z-index: 760 !important;
+  pointer-events: auto !important;
 }
 
 .leaflet-bar a,
@@ -6920,6 +6937,13 @@ button {
   .overlay-left {
     right: 14px;
     max-width: min(260px, calc(100% - 28px));
+  }
+
+  .plot-tools-overlay {
+    left: 14px;
+    right: 14px;
+    bottom: 88px;
+    width: auto;
   }
 
   .map-legend {
