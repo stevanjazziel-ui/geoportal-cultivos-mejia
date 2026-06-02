@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260602-2";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260602-3";
 
 const layerCatalog = [
   {
@@ -6382,6 +6382,9 @@ function cacheDom() {
   dom.pivaResults = document.querySelector("#pivaResults");
   dom.pivaDashboard = document.querySelector("#pivaDashboard");
   dom.pivaProjectVisual = document.querySelector("#pivaProjectVisual");
+  dom.pivaSpatialModel = document.querySelector("#pivaSpatialModel");
+  dom.pivaMasterplan = document.querySelector("#pivaMasterplan");
+  dom.pivaProposalScene = document.querySelector("#pivaProposalScene");
   dom.pivaReadout = document.querySelector("#pivaReadout");
   dom.pivaBoard = document.querySelector("#pivaBoard");
   dom.pivaLegendBoard = document.querySelector("#pivaLegendBoard");
@@ -7408,6 +7411,9 @@ function bindUI() {
     setModulePendingState(dom.pivaResults, "Integrando clima urbano, seguridad hidrica, corredores verdes y soporte oficial para estructurar el PIVA...", [
       { target: dom.pivaDashboard, message: "Armando el tablero ejecutivo del PIVA con parroquia critica, proyecto lider y paquetes listos para decision..." },
       { target: dom.pivaProjectVisual, message: "Generando la visual conceptual del proyecto lider y el grafico de impacto esperado..." },
+      { target: dom.pivaSpatialModel, message: "Trazando el modelo espacial PIVA con corredores, reservas, nodos, bordes y piezas parroquiales..." },
+      { target: dom.pivaMasterplan, message: "Componiendo la lamina urbana y parroquial tipo plan maestro para mostrar como se veria la intervencion..." },
+      { target: dom.pivaProposalScene, message: "Levantando la escena de propuesta con arbolado, espacio publico, drenaje y estructura urbana sugerida..." },
       { target: dom.pivaReadout, message: "Armando la lectura verde-azul integrada del canton Mejia..." },
       { target: dom.pivaBoard, message: "Calculando semaforo PIVA, pilares y prioridad de intervencion..." },
       { target: dom.pivaLegendBoard, message: "Preparando leyenda verde-azul y claves de lectura para el mapa y la cartera..." },
@@ -7425,6 +7431,7 @@ function bindUI() {
   dom.exportPivaCsvBtn?.addEventListener("click", exportPivaCsv);
   dom.clearPivaBtn?.addEventListener("click", clearPivaAnalysis);
   dom.pivaDashboard?.addEventListener("click", handlePivaInteraction);
+  dom.pivaSpatialModel?.addEventListener("click", handlePivaInteraction);
   dom.pivaBoard?.addEventListener("click", handlePivaInteraction);
   dom.pivaParishes?.addEventListener("click", handlePivaInteraction);
   dom.pivaProjects?.addEventListener("click", handlePivaInteraction);
@@ -30675,6 +30682,739 @@ function buildPivaProjectVisualMarkup(analysis) {
   `;
 }
 
+function getPivaProposalKindFromProjectKind(kind = "green") {
+  if (kind === "blue" || kind === "green" || kind === "climate" || kind === "transition") {
+    return kind;
+  }
+  if (kind === "civic") {
+    return "green";
+  }
+  return "green";
+}
+
+function getPivaFeatureAnchor(feature) {
+  if (!feature?.geometry) {
+    return null;
+  }
+  const anchor = getPlanning3dFeatureAnchor(feature);
+  if (Array.isArray(anchor) && anchor.length === 2 && Number.isFinite(anchor[0]) && Number.isFinite(anchor[1])) {
+    return anchor;
+  }
+  try {
+    const centroid = turf.centroid(feature)?.geometry?.coordinates;
+    if (Array.isArray(centroid) && centroid.length === 2 && Number.isFinite(centroid[0]) && Number.isFinite(centroid[1])) {
+      return centroid;
+    }
+  } catch (error) {
+  }
+  return null;
+}
+
+function decoratePivaFeature(feature, properties = {}) {
+  const clone = cloneFeature(feature);
+  clone.properties = {
+    ...(clone.properties || {}),
+    ...properties,
+  };
+  return clone;
+}
+
+function buildPivaBufferedFeature(feature, radiusKm = 0.22, properties = {}) {
+  if (!feature?.geometry) {
+    return null;
+  }
+  const geometryType = feature.geometry.type;
+  if (geometryType === "Polygon" || geometryType === "MultiPolygon") {
+    return decoratePivaFeature(feature, properties);
+  }
+  try {
+    const buffered = turf.buffer(feature, radiusKm, { units: "kilometers" });
+    return decoratePivaFeature(buffered, properties);
+  } catch (error) {
+  }
+  const anchor = getPivaFeatureAnchor(feature);
+  if (!anchor) {
+    return null;
+  }
+  try {
+    const fallback = turf.circle(anchor, radiusKm, {
+      steps: 28,
+      units: "kilometers",
+      properties,
+    });
+    return decoratePivaFeature(fallback, properties);
+  } catch (error) {
+  }
+  return null;
+}
+
+function buildPivaLineConnector(name, start, end, properties = {}) {
+  if (!Array.isArray(start) || !Array.isArray(end)) {
+    return null;
+  }
+  try {
+    const distanceKm = turf.distance(turf.point(start), turf.point(end), { units: "kilometers" });
+    if (!Number.isFinite(distanceKm) || distanceKm < 0.02) {
+      return null;
+    }
+    return lineFeature(name, [start, end], {
+      ...properties,
+      pivaLengthKm: Number(distanceKm.toFixed(2)),
+    });
+  } catch (error) {
+    return null;
+  }
+}
+
+function normalizePivaLineFeatures(featureOrCollection, properties = {}) {
+  if (!featureOrCollection) {
+    return [];
+  }
+  if (featureOrCollection.type === "FeatureCollection") {
+    return (featureOrCollection.features || []).map((feature) => decoratePivaFeature(feature, properties));
+  }
+  if (featureOrCollection.type === "Feature") {
+    return [decoratePivaFeature(featureOrCollection, properties)];
+  }
+  return [];
+}
+
+function buildPivaProposalSpatialModel({
+  projects = [],
+  parishPortfolio = [],
+  parishCollection = { type: "FeatureCollection", features: [] },
+  corridorCollection = { type: "FeatureCollection", features: [] },
+  zoneCollection = { type: "FeatureCollection", features: [] },
+  localSupport = {},
+  context = {},
+}) {
+  const parishFeaturesById = new Map((parishCollection.features || []).map((feature) => [feature.properties?.pivaParishId, feature]));
+  const pieceFeatures = [];
+  const reserveFeatures = [];
+  const proposalCorridors = [];
+  const edgeFeatures = [];
+  const nodeFeatures = [];
+
+  const leadParish = parishPortfolio[0] || null;
+  const leadProject = projects[0] || null;
+
+  parishPortfolio.slice(0, 4).forEach((parish, index) => {
+    const linkedProject = projects.find((project) => project.title === parish.linkedProjectTitle) || projects[index] || leadProject || null;
+    const kind = getPivaProposalKindFromProjectKind(linkedProject?.kind || (index === 0 ? "green" : "civic"));
+    const parishFeature = parishFeaturesById.get(parish.id) || null;
+    const radiusKm = clamp(0.42 - (index * 0.05), 0.18, 0.42);
+    const pieceFeature = buildPivaBufferedFeature(
+      parishFeature || pointFeature(parish.parish, getPivaFeatureAnchor(linkedProject?.feature) || [-78.56, -0.49]),
+      radiusKm,
+      {
+        pivaProposalType: "piece",
+        pivaProposalKind: kind,
+        pivaLabel: `${parish.parish} | pieza territorial`,
+        pivaSummary: `${parish.summary} ${parish.linkedProjectTitle}.`,
+        pivaParishId: parish.id,
+        pivaParishLabel: parish.parish,
+        pivaProjectId: linkedProject?.id || "",
+        pivaPriorityScore: parish.priorityScore,
+      }
+    );
+    if (pieceFeature) {
+      pieceFeatures.push(pieceFeature);
+    }
+    const parishAnchor = getPivaFeatureAnchor(parishFeature || pieceFeature);
+    if (parishAnchor) {
+      nodeFeatures.push(pointFeature(`${parish.parish} | nodo parroquial`, parishAnchor, {
+        pivaProposalType: "node",
+        pivaProposalKind: kind,
+        pivaLabel: `${parish.parish} | nodo parroquial`,
+        pivaSummary: parish.focusLabel,
+        pivaParishId: parish.id,
+        pivaParishLabel: parish.parish,
+        pivaPriorityScore: parish.priorityScore,
+      }));
+      if (linkedProject?.centroid) {
+        const connector = buildPivaLineConnector(
+          `Conector ${parish.parish} - ${linkedProject.title}`,
+          parishAnchor,
+          linkedProject.centroid,
+          {
+            pivaProposalType: "corridor",
+            pivaProposalKind: kind,
+            pivaLabel: `${parish.parish} | conector de proyecto`,
+            pivaSummary: `Une la pieza parroquial con ${linkedProject.title} para volver visible la intervencion.`,
+            pivaProjectId: linkedProject.id,
+            pivaParishId: parish.id,
+          }
+        );
+        if (connector) {
+          proposalCorridors.push(connector);
+        }
+      }
+    }
+  });
+
+  (corridorCollection.features || []).slice(0, 8).forEach((feature, index) => {
+    proposalCorridors.push(decoratePivaFeature(feature, {
+      pivaProposalType: "corridor",
+      pivaProposalKind: feature.properties?.pivaCorridorKind || "climate",
+      pivaLabel: feature.properties?.pivaLabel || `Corredor PIVA ${index + 1}`,
+      pivaSummary: feature.properties?.summary || "Corredor estructurante del sistema verde-azul.",
+    }));
+  });
+
+  const blueProject = projects.find((project) => project.kind === "blue") || null;
+  const bankAnchor = getPivaFeatureAnchor(localSupport.bankCandidate);
+  if (blueProject?.centroid && bankAnchor) {
+    const blueConnector = buildPivaLineConnector(
+      `Conector azul ${blueProject.title}`,
+      blueProject.centroid,
+      bankAnchor,
+      {
+        pivaProposalType: "corridor",
+        pivaProposalKind: "blue",
+        pivaLabel: "Conector de drenaje y recarga",
+        pivaSummary: `Vincula ${blueProject.title} con reservas municipales y espacio publico absorbente.`,
+        pivaProjectId: blueProject.id,
+      }
+    );
+    if (blueConnector) {
+      proposalCorridors.push(blueConnector);
+    }
+  }
+
+  projects.slice(0, 5).forEach((project, index) => {
+    const kind = getPivaProposalKindFromProjectKind(project.kind);
+    if (Array.isArray(project.centroid)) {
+      nodeFeatures.push(pointFeature(project.title, project.centroid, {
+        pivaProposalType: "node",
+        pivaProposalKind: kind,
+        pivaLabel: project.title,
+        pivaSummary: project.summary,
+        pivaProjectId: project.id,
+        pivaPriorityScore: project.priorityScore,
+      }));
+    }
+    const reserveFeature = buildPivaBufferedFeature(
+      project.feature,
+      kind === "blue" ? 0.12 : kind === "climate" ? 0.1 : kind === "transition" ? 0.09 : 0.08,
+      {
+        pivaProposalType: "reserve",
+        pivaProposalKind: kind,
+        pivaLabel: kind === "blue"
+          ? `Parque lineal ${project.title}`
+          : kind === "climate"
+            ? `Reserva climatica ${project.title}`
+            : kind === "transition"
+              ? `Borde protegido ${project.title}`
+              : `Reserva verde ${project.title}`,
+        pivaSummary: project.note,
+        pivaProjectId: project.id,
+        pivaPriorityScore: project.priorityScore,
+      }
+    );
+    if (reserveFeature && index < 4) {
+      reserveFeatures.push(reserveFeature);
+    }
+  });
+
+  (zoneCollection.features || []).slice(0, 5).forEach((feature, index) => {
+    const kind = feature.properties?.pivaZoneKind || "green";
+    const reserveFeature = buildPivaBufferedFeature(feature, 0.04, {
+      pivaProposalType: "reserve",
+      pivaProposalKind: kind,
+      pivaLabel: feature.properties?.pivaLabel || `Reserva PIVA ${index + 1}`,
+      pivaSummary: feature.properties?.pivaSummary || "Superficie propuesta para consolidar la red verde-azul.",
+    });
+    if (reserveFeature) {
+      reserveFeatures.push(reserveFeature);
+    }
+  });
+
+  (localSupport.highTensionFeatures || []).slice(0, 2).forEach((feature, index) => {
+    edgeFeatures.push(decoratePivaFeature(feature, {
+      pivaProposalType: "edge",
+      pivaProposalKind: "transition",
+      pivaLabel: feature.properties?.name || `Franja segura ${index + 1}`,
+      pivaSummary: "Borde de proteccion y compatibilidad por alta tension.",
+    }));
+  });
+
+  if (localSupport.heritageCandidate?.geometry) {
+    try {
+      const heritageBuffer = buildPivaBufferedFeature(localSupport.heritageCandidate, 0.09, {
+        pivaProposalType: "reserve",
+        pivaProposalKind: "civic",
+        pivaLabel: "Entorno patrimonial activo",
+        pivaSummary: "Tratamiento del borde patrimonial con espacio publico, sombra y resguardo.",
+      });
+      if (heritageBuffer) {
+        reserveFeatures.push(heritageBuffer);
+      }
+      const heritageEdgeRaw = turf.polygonToLine(heritageBuffer || localSupport.heritageCandidate);
+      edgeFeatures.push(...normalizePivaLineFeatures(heritageEdgeRaw, {
+        pivaProposalType: "edge",
+        pivaProposalKind: "civic",
+        pivaLabel: "Resguardo patrimonial",
+        pivaSummary: "Franja de proteccion y activacion compatible con patrimonio.",
+      }));
+    } catch (error) {
+    }
+  }
+
+  const transitionZone = (zoneCollection.features || []).find((feature) => feature.properties?.pivaZoneKind === "transition") || null;
+  if (transitionZone?.geometry) {
+    try {
+      const transitionEdgeRaw = turf.polygonToLine(transitionZone);
+      edgeFeatures.push(...normalizePivaLineFeatures(transitionEdgeRaw, {
+        pivaProposalType: "edge",
+        pivaProposalKind: "transition",
+        pivaLabel: "Borde protegido",
+        pivaSummary: "Contencion del borde y compatibilidad entre suelo productivo y ocupacion urbana.",
+      }));
+    } catch (error) {
+    }
+  }
+
+  const summary = {
+    headline: leadParish
+      ? `${leadParish.parish} articula la entrada del PIVA con corredores, nodos y reservas`
+      : "Modelo espacial PIVA listo para organizar la intervencion verde-azul",
+    copy: `La propuesta completa dibuja piezas por parroquia, corredores verdes y azules, reservas climaticas, parques lineales, nodos de espacio publico y bordes protegidos sobre ${context.scopeLabel || "Mejia"}.`,
+    pieceCount: pieceFeatures.length,
+    reserveCount: reserveFeatures.length,
+    corridorCount: proposalCorridors.length,
+    edgeCount: edgeFeatures.length,
+    nodeCount: nodeFeatures.length,
+    leadParishLabel: leadParish?.parish || "Sin parroquia lider",
+    leadProjectLabel: leadProject?.title || "Sin proyecto lider",
+    leadCorridorLabel: proposalCorridors[0]?.properties?.pivaLabel || "Red verde-azul principal",
+    leadReserveLabel: reserveFeatures[0]?.properties?.pivaLabel || "Reserva estrategica",
+    systems: [
+      {
+        id: "corridors",
+        label: "Corredores propuestos",
+        count: proposalCorridors.length,
+        tone: proposalCorridors.length >= 6 ? "good" : proposalCorridors.length >= 3 ? "watch" : "critical",
+        copy: `${proposalCorridors[0]?.properties?.pivaLabel || "La red principal"} estructura continuidad entre parroquias, clima y drenaje.`,
+      },
+      {
+        id: "reserves",
+        label: "Reservas y parques lineales",
+        count: reserveFeatures.length,
+        tone: reserveFeatures.length >= 5 ? "good" : reserveFeatures.length >= 3 ? "watch" : "critical",
+        copy: `${reserveFeatures[0]?.properties?.pivaLabel || "Las reservas"} muestran donde se protege, infiltra y enfria.`,
+      },
+      {
+        id: "pieces",
+        label: "Piezas por parroquia",
+        count: pieceFeatures.length,
+        tone: pieceFeatures.length >= 3 ? "good" : pieceFeatures.length >= 2 ? "watch" : "critical",
+        copy: `${leadParish?.parish || "La parroquia lider"} y su segunda ola se vuelven visibles como frentes de intervencion.`,
+      },
+      {
+        id: "nodes",
+        label: "Nodos de espacio publico",
+        count: nodeFeatures.length,
+        tone: nodeFeatures.length >= 5 ? "good" : nodeFeatures.length >= 3 ? "watch" : "critical",
+        copy: `${leadProject?.title || "Los nodos"} conectan equipamiento, sombra, drenaje y estancia cotidiana.`,
+      },
+      {
+        id: "edges",
+        label: "Bordes de proteccion",
+        count: edgeFeatures.length,
+        tone: edgeFeatures.length >= 2 ? "watch" : "critical",
+        copy: "Visibilizan alta tension, patrimonio y transiciones sensibles para no proyectar sin control.",
+      },
+    ],
+  };
+
+  return {
+    summary,
+    pieceCollection: {
+      type: "FeatureCollection",
+      features: pieceFeatures,
+    },
+    reserveCollection: {
+      type: "FeatureCollection",
+      features: reserveFeatures,
+    },
+    corridorCollection: {
+      type: "FeatureCollection",
+      features: proposalCorridors,
+    },
+    edgeCollection: {
+      type: "FeatureCollection",
+      features: edgeFeatures,
+    },
+    nodeCollection: {
+      type: "FeatureCollection",
+      features: nodeFeatures,
+    },
+  };
+}
+
+function buildPivaSpatialModelMarkup(analysis) {
+  const model = analysis.proposalSpatialModel;
+  if (!model) {
+    return `
+      <article class="territorial-decision-hero tone-pending">
+        <div>
+          <p class="candidate-rank">Modelo espacial PIVA</p>
+          <h4>Sin propuesta espacial</h4>
+          <p>Construye el PIVA para dibujar la propuesta completa de corredores, reservas, nodos y piezas por parroquia.</p>
+        </div>
+      </article>
+    `;
+  }
+  return `
+    <article class="territorial-decision-hero tone-${analysis.summary.signal.tone}">
+      <div>
+        <p class="candidate-rank">Modelo espacial PIVA</p>
+        <h4>${escapeHtmlContent(model.summary.headline)}</h4>
+        <p>${escapeHtmlContent(model.summary.copy)}</p>
+      </div>
+      <div class="territorial-decision-score">
+        <strong>${model.summary.corridorCount + model.summary.reserveCount + model.summary.nodeCount}</strong>
+        <span>Piezas activas</span>
+      </div>
+    </article>
+    <div class="dashboard-chip-row">
+      <span class="planning-pill emphasis">${escapeHtmlContent(model.summary.leadParishLabel)}</span>
+      <span class="planning-pill emphasis">${escapeHtmlContent(model.summary.leadProjectLabel)}</span>
+      <span class="planning-pill emphasis">${escapeHtmlContent(model.summary.leadCorridorLabel)}</span>
+      <span class="planning-pill emphasis">${escapeHtmlContent(model.summary.leadReserveLabel)}</span>
+    </div>
+    <div class="piva-spatial-grid">
+      ${model.summary.systems.map((item) => `
+        <article class="decision-card tone-${item.tone}">
+          <p class="candidate-rank">${escapeHtmlContent(item.label)}</p>
+          <h5>${item.count}</h5>
+          <p>${escapeHtmlContent(item.copy)}</p>
+        </article>
+      `).join("")}
+    </div>
+    <div class="dashboard-action-row">
+      <button class="secondary-button" type="button" data-piva-parish-id="${escapeHtmlContent(analysis.dashboard.leadParish?.id || "")}" ${analysis.dashboard.leadParish ? "" : "disabled"}>Ver parroquia lider</button>
+      <button class="ghost-button" type="button" data-piva-project-id="${escapeHtmlContent(analysis.dashboard.leadProject?.id || "")}" ${analysis.dashboard.leadProject ? "" : "disabled"}>Ver proyecto detonante</button>
+      <button class="ghost-button" type="button" data-piva-parish-id="${escapeHtmlContent(analysis.dashboard.secondParish?.id || "")}" ${analysis.dashboard.secondParish ? "" : "disabled"}>Ver segunda ola</button>
+    </div>
+    <p class="territorial-readout-copy">El mapa ya no muestra solo diagnostico: aqui la propuesta completa organiza corredores, reservas, nodos y bordes para responder “asi se veria la intervencion”.</p>
+  `;
+}
+
+function createPivaMasterplanProjector(features, width = 960, height = 500, padding = 34) {
+  if (!features.length) {
+    return null;
+  }
+  try {
+    const bbox = turf.bbox({
+      type: "FeatureCollection",
+      features,
+    });
+    const [minX, minY, maxX, maxY] = bbox;
+    const spanX = Math.max(maxX - minX, 0.001);
+    const spanY = Math.max(maxY - minY, 0.001);
+    const innerWidth = width - (padding * 2);
+    const innerHeight = height - (padding * 2);
+    const scale = Math.min(innerWidth / spanX, innerHeight / spanY);
+    const offsetX = padding + ((innerWidth - (spanX * scale)) / 2);
+    const offsetY = padding + ((innerHeight - (spanY * scale)) / 2);
+    return {
+      width,
+      height,
+      project(point) {
+        return [
+          offsetX + ((point[0] - minX) * scale),
+          height - (offsetY + ((point[1] - minY) * scale)),
+        ];
+      },
+    };
+  } catch (error) {
+    return null;
+  }
+}
+
+function buildPivaSvgPathFromCoordinates(coordinates = [], projector, closePath = false) {
+  const projected = coordinates
+    .map((point) => projector.project(point))
+    .filter((point) => Array.isArray(point) && Number.isFinite(point[0]) && Number.isFinite(point[1]));
+  if (!projected.length) {
+    return "";
+  }
+  const path = projected
+    .map((point, index) => `${index === 0 ? "M" : "L"} ${point[0].toFixed(1)} ${point[1].toFixed(1)}`)
+    .join(" ");
+  return `${path}${closePath ? " Z" : ""}`;
+}
+
+function buildPivaSvgGeometryPath(geometry, projector) {
+  if (!geometry) {
+    return "";
+  }
+  if (geometry.type === "LineString") {
+    return buildPivaSvgPathFromCoordinates(geometry.coordinates, projector, false);
+  }
+  if (geometry.type === "MultiLineString") {
+    return geometry.coordinates.map((line) => buildPivaSvgPathFromCoordinates(line, projector, false)).join(" ");
+  }
+  if (geometry.type === "Polygon") {
+    return geometry.coordinates.map((ring) => buildPivaSvgPathFromCoordinates(ring, projector, true)).join(" ");
+  }
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates
+      .map((polygon) => polygon.map((ring) => buildPivaSvgPathFromCoordinates(ring, projector, true)).join(" "))
+      .join(" ");
+  }
+  return "";
+}
+
+function buildPivaMasterplanSvg(analysis) {
+  const pieceFeatures = analysis.proposalPieceCollection?.features || [];
+  const reserveFeatures = analysis.proposalReserveCollection?.features || [];
+  const corridorFeatures = analysis.proposalCorridorCollection?.features || [];
+  const edgeFeatures = analysis.proposalEdgeCollection?.features || [];
+  const nodeFeatures = analysis.proposalNodeCollection?.features || [];
+  const features = [...pieceFeatures, ...reserveFeatures, ...corridorFeatures, ...edgeFeatures, ...nodeFeatures];
+  const projector = createPivaMasterplanProjector(features, 960, 500, 38);
+  if (!projector) {
+    return `
+      <svg viewBox="0 0 960 500" role="img" aria-label="Lamina urbana del PIVA">
+        <rect x="0" y="0" width="960" height="500" rx="34" fill="#fbfaf5"></rect>
+        <text x="70" y="240" class="piva-masterplan-label">Sin geometria suficiente para dibujar la lamina PIVA</text>
+      </svg>
+    `;
+  }
+
+  const polygonMarkup = (feature) => {
+    const palette = getPivaSignalPalette(feature.properties?.pivaProposalKind || "green");
+    const path = buildPivaSvgGeometryPath(feature.geometry, projector);
+    if (!path) {
+      return "";
+    }
+    return `<path d="${path}" fill="${palette.fill}" fill-opacity="0.34" stroke="${palette.stroke}" stroke-width="2.2"></path>`;
+  };
+  const reserveMarkup = (feature) => {
+    const palette = getPivaSignalPalette(feature.properties?.pivaProposalKind || "climate");
+    const path = buildPivaSvgGeometryPath(feature.geometry, projector);
+    if (!path) {
+      return "";
+    }
+    return `<path d="${path}" fill="${palette.fill}" fill-opacity="0.2" stroke="${palette.stroke}" stroke-width="1.6" stroke-dasharray="${feature.properties?.pivaProposalKind === "climate" ? "10 8" : "4 6"}"></path>`;
+  };
+  const corridorMarkup = (feature) => {
+    const palette = getPivaSignalPalette(feature.properties?.pivaProposalKind || "green");
+    const path = buildPivaSvgGeometryPath(feature.geometry, projector);
+    if (!path) {
+      return "";
+    }
+    return `<path d="${path}" fill="none" stroke="${palette.corridor}" stroke-width="${feature.properties?.pivaProposalKind === "blue" ? "10" : "8"}" stroke-linecap="round" stroke-linejoin="round" opacity="0.92" marker-end="url(#pivaMasterplanArrow)"></path>`;
+  };
+  const edgeMarkup = (feature) => {
+    const palette = getPivaSignalPalette(feature.properties?.pivaProposalKind || "transition");
+    const path = buildPivaSvgGeometryPath(feature.geometry, projector);
+    if (!path) {
+      return "";
+    }
+    return `<path d="${path}" fill="none" stroke="${palette.stroke}" stroke-width="3.2" stroke-dasharray="12 10" stroke-linecap="round" opacity="0.9"></path>`;
+  };
+  const nodeMarkup = (feature) => {
+    const palette = getPivaSignalPalette(feature.properties?.pivaProposalKind || "green");
+    const anchor = projector.project(feature.geometry.coordinates);
+    return `
+      <g>
+        <circle cx="${anchor[0].toFixed(1)}" cy="${anchor[1].toFixed(1)}" r="8.5" fill="${palette.marker}" stroke="#fffaf2" stroke-width="3"></circle>
+        <circle cx="${anchor[0].toFixed(1)}" cy="${anchor[1].toFixed(1)}" r="16" fill="${palette.marker}" fill-opacity="0.14"></circle>
+      </g>
+    `;
+  };
+  const labelFeatures = [
+    ...pieceFeatures.slice(0, 3),
+    ...nodeFeatures.slice(0, 4),
+  ];
+  const labelMarkup = labelFeatures.map((feature, index) => {
+    const anchor = getPivaFeatureAnchor(feature);
+    if (!anchor) {
+      return "";
+    }
+    const projected = projector.project(anchor);
+    const yOffset = index % 2 === 0 ? -16 : 22;
+    return `
+      <g>
+        <circle cx="${projected[0].toFixed(1)}" cy="${(projected[1] + yOffset - 4).toFixed(1)}" r="3.4" fill="#274036"></circle>
+        <text x="${(projected[0] + 10).toFixed(1)}" y="${(projected[1] + yOffset).toFixed(1)}" class="piva-masterplan-label">${escapeHtmlContent(feature.properties?.pivaParishLabel || feature.properties?.pivaLabel || "PIVA")}</text>
+      </g>
+    `;
+  }).join("");
+
+  return `
+    <svg viewBox="0 0 960 500" role="img" aria-label="Lamina urbana y parroquial del PIVA">
+      <defs>
+        <linearGradient id="pivaMasterplanBg" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#fcfaf4"></stop>
+          <stop offset="100%" stop-color="#f2f7f1"></stop>
+        </linearGradient>
+        <marker id="pivaMasterplanArrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+          <path d="M0 0 L12 6 L0 12 z" fill="#4c8062"></path>
+        </marker>
+      </defs>
+      <rect x="12" y="12" width="936" height="476" rx="34" fill="url(#pivaMasterplanBg)" stroke="#dfe6de" stroke-width="2"></rect>
+      <rect x="34" y="34" width="892" height="432" rx="28" fill="#ffffff" fill-opacity="0.52"></rect>
+      <text x="56" y="66" class="piva-masterplan-kicker">LAMINA PIVA | MEJIA</text>
+      <text x="56" y="92" class="piva-masterplan-title">Plan maestro verde-azul por parroquia</text>
+      ${pieceFeatures.map(polygonMarkup).join("")}
+      ${reserveFeatures.map(reserveMarkup).join("")}
+      ${edgeFeatures.map(edgeMarkup).join("")}
+      ${corridorFeatures.map(corridorMarkup).join("")}
+      ${nodeFeatures.map(nodeMarkup).join("")}
+      ${labelMarkup}
+      <text x="56" y="448" class="piva-masterplan-note">Corredores, reservas, nodos y bordes muestran como se organiza la propuesta antes de pasar a proyecto.</text>
+      <text x="56" y="470" class="piva-masterplan-note">Base: clima urbano, seguridad hidrica, patrones territoriales, huella, soporte oficial e insumos municipales.</text>
+    </svg>
+  `;
+}
+
+function buildPivaMasterplanMarkup(analysis) {
+  return `
+    <article class="territorial-decision-hero tone-${analysis.summary.signal.tone}">
+      <div>
+        <p class="candidate-rank">Lamina urbana/parroquial</p>
+        <h4>Asi se veria la intervencion verde-azul sobre el territorio</h4>
+        <p>La lamina jerarquiza piezas por parroquia, corredores, reservas climaticas, nodos y bordes de proteccion para que el PIVA se lea como plan maestro.</p>
+      </div>
+      <div class="territorial-decision-score">
+        <strong>${analysis.proposalSpatialModel.summary.pieceCount}</strong>
+        <span>Piezas parroquiales</span>
+      </div>
+    </article>
+    <div class="piva-masterplan-board">
+      ${buildPivaMasterplanSvg(analysis)}
+    </div>
+    <div class="dashboard-chip-row">
+      <span class="planning-pill emphasis">${analysis.proposalSpatialModel.summary.corridorCount} corredores</span>
+      <span class="planning-pill emphasis">${analysis.proposalSpatialModel.summary.reserveCount} reservas</span>
+      <span class="planning-pill emphasis">${analysis.proposalSpatialModel.summary.nodeCount} nodos</span>
+      <span class="planning-pill emphasis">${analysis.proposalSpatialModel.summary.edgeCount} bordes</span>
+    </div>
+    <p class="territorial-readout-copy">Esta lamina responde visualmente “asi se veria la intervencion” y acerca el PIVA a una presentacion tipo plan maestro, no solo a un tablero tecnico.</p>
+  `;
+}
+
+function buildPivaProposalSceneSvg(analysis) {
+  const leadProject = analysis.projects[0] || null;
+  const secondProject = analysis.projects[1] || null;
+  const thirdProject = analysis.projects[2] || null;
+  const leadTheme = getPivaVisualTheme(leadProject?.kind || "green");
+  const blueTheme = getPivaVisualTheme("blue");
+  const climateTheme = getPivaVisualTheme("climate");
+  const transitionTheme = getPivaVisualTheme("transition");
+  const treeCount = clamp(8 + Math.round((analysis.summary.greenScore || 0) / 18), 9, 14);
+  const treeMarkup = Array.from({ length: treeCount }, (_, index) => {
+    const x = 110 + (index * 58);
+    const y = 222 + ((index % 2) * 10);
+    return `
+      <g transform="translate(${x}, ${y})">
+        <rect x="-4" y="8" width="8" height="28" rx="4" fill="#8d6c4a"></rect>
+        <circle cx="0" cy="-2" r="18" fill="#5a9865"></circle>
+        <circle cx="-12" cy="4" r="10" fill="#76af7f"></circle>
+        <circle cx="12" cy="6" r="10" fill="#76af7f"></circle>
+      </g>
+    `;
+  }).join("");
+  const buildingMarkup = [
+    { x: 126, y: 196, w: 76, h: 82, color: "#d8ccb7" },
+    { x: 226, y: 182, w: 98, h: 102, color: "#c7d9c7" },
+    { x: 360, y: 170, w: 110, h: 120, color: "#d9c3a6" },
+    { x: 520, y: 176, w: 126, h: 114, color: "#c7d7df" },
+    { x: 714, y: 190, w: 96, h: 94, color: "#d8ccb7" },
+  ].map((building, index) => {
+    const side = index % 2 === 0 ? "#b79f82" : "#9dbda0";
+    return `
+      <g>
+        <polygon points="${building.x + building.w},${building.y + 16} ${building.x + building.w + 18},${building.y} ${building.x + building.w + 18},${building.y + building.h - 16} ${building.x + building.w},${building.y + building.h}" fill="${side}"></polygon>
+        <rect x="${building.x}" y="${building.y}" width="${building.w}" height="${building.h}" rx="6" fill="${building.color}" stroke="#a49278" stroke-width="2"></rect>
+        <polygon points="${building.x},${building.y} ${building.x + 18},${building.y - 16} ${building.x + building.w + 18},${building.y - 16} ${building.x + building.w},${building.y}" fill="#efe4d3"></polygon>
+      </g>
+    `;
+  }).join("");
+  const labelA = leadProject?.title || "Corredor verde-azul";
+  const labelB = secondProject?.title || "Nodo de proximidad";
+  const labelC = thirdProject?.title || "Borde protegido";
+  const airflowMarkup = analysis.summary.climateScore >= 60
+    ? `
+      <path d="M148 78 C230 44, 318 44, 396 82" fill="none" stroke="${climateTheme.stroke}" stroke-width="6" stroke-dasharray="12 10" marker-end="url(#pivaSceneArrow)"></path>
+      <path d="M472 78 C548 42, 652 46, 766 88" fill="none" stroke="${climateTheme.stroke}" stroke-width="6" stroke-dasharray="12 10" marker-end="url(#pivaSceneArrow)"></path>
+    `
+    : "";
+  return `
+    <svg viewBox="0 0 980 420" role="img" aria-label="Escena propuesta del PIVA">
+      <defs>
+        <linearGradient id="pivaSceneSky" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#ddeaf0"></stop>
+          <stop offset="100%" stop-color="#fcfbf7"></stop>
+        </linearGradient>
+        <linearGradient id="pivaSceneGround" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stop-color="#efe5d4"></stop>
+          <stop offset="100%" stop-color="#dfd2bd"></stop>
+        </linearGradient>
+        <marker id="pivaSceneArrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto">
+          <path d="M0 0 L12 6 L0 12 z" fill="${climateTheme.stroke}"></path>
+        </marker>
+      </defs>
+      <rect x="0" y="0" width="980" height="420" rx="34" fill="url(#pivaSceneSky)"></rect>
+      <path d="M0 148 C130 116, 244 112, 366 146 S662 188, 980 126 L980 0 L0 0 Z" fill="#9fb4a1"></path>
+      <path d="M0 210 L980 162 L980 420 L0 420 Z" fill="url(#pivaSceneGround)"></path>
+      <path d="M52 252 L928 206 L928 252 L52 298 Z" fill="#d8d4cc"></path>
+      <path d="M84 244 L900 202" fill="none" stroke="#ffffff" stroke-width="4" stroke-dasharray="18 14"></path>
+      <path d="M118 286 C286 248, 494 232, 868 212" fill="none" stroke="${leadTheme.stroke}" stroke-width="32" opacity="0.18"></path>
+      <path d="M132 294 C314 256, 516 242, 862 222" fill="none" stroke="${leadTheme.corridor}" stroke-width="12" stroke-linecap="round"></path>
+      <path d="M146 308 C300 284, 532 272, 880 248" fill="none" stroke="${blueTheme.corridor}" stroke-width="12" stroke-linecap="round"></path>
+      <path d="M146 308 C300 284, 532 272, 880 248" fill="none" stroke="#dff1f6" stroke-width="4" stroke-linecap="round"></path>
+      <path d="M84 318 C262 286, 538 298, 932 266" fill="none" stroke="${transitionTheme.stroke}" stroke-width="5" stroke-dasharray="10 10"></path>
+      <rect x="112" y="300" width="772" height="36" rx="18" fill="#bdd7c0" opacity="0.9"></rect>
+      <rect x="404" y="286" width="188" height="28" rx="14" fill="#f0dfbf"></rect>
+      <rect x="632" y="282" width="152" height="24" rx="12" fill="#c6e4d7"></rect>
+      ${buildingMarkup}
+      ${treeMarkup}
+      ${airflowMarkup}
+      <text x="70" y="56" class="piva-masterplan-kicker">ESCENA PROPUESTA | PIVA MEJIA</text>
+      <text x="70" y="86" class="piva-masterplan-title">Asi cambiaria el corredor, el borde y la centralidad intervenida</text>
+      <text x="70" y="124" class="piva-masterplan-label">${escapeHtmlContent(labelA)}</text>
+      <text x="682" y="124" class="piva-masterplan-label">${escapeHtmlContent(labelB)}</text>
+      <text x="632" y="352" class="piva-masterplan-label">${escapeHtmlContent(labelC)}</text>
+      <text x="138" y="332" class="piva-masterplan-note">drenaje, recarga y corredor azul</text>
+      <text x="418" y="304" class="piva-masterplan-note">plaza, estancia y equipamiento</text>
+      <text x="646" y="300" class="piva-masterplan-note">arbolado y sombra de proximidad</text>
+      <text x="70" y="392" class="piva-masterplan-note">La escena sintetiza arboles, espacio publico, drenaje, nodos y bordes protegidos para pasar de diagnostico a imagen de proyecto.</text>
+    </svg>
+  `;
+}
+
+function buildPivaProposalSceneMarkup(analysis) {
+  const leadProject = analysis.projects[0] || null;
+  return `
+    <article class="territorial-decision-hero tone-${analysis.summary.signal.tone}">
+      <div>
+        <p class="candidate-rank">Escena 3D o pseudo-3D de propuesta</p>
+        <h4>${escapeHtmlContent(leadProject?.title || "Escena propuesta PIVA")}</h4>
+        <p>La escena traduce el PIVA a una imagen de corredor, borde o centralidad intervenida para entender como cambiaria el espacio con arbolado, drenaje, sombra y nodos publicos.</p>
+      </div>
+      <div class="territorial-decision-score">
+        <strong>${analysis.proposalSpatialModel.summary.nodeCount}</strong>
+        <span>Nodos activos</span>
+      </div>
+    </article>
+    <div class="piva-proposal-scene">
+      ${buildPivaProposalSceneSvg(analysis)}
+    </div>
+    <div class="dashboard-chip-row">
+      <span class="planning-pill emphasis">${analysis.summary.corridorCount} corredores frios</span>
+      <span class="planning-pill emphasis">${analysis.summary.bankReserveCount} reservas municipales</span>
+      <span class="planning-pill emphasis">${analysis.summary.coolingAreaHa} ha enfriamiento</span>
+      <span class="planning-pill emphasis">${analysis.summary.highTensionKm} km resguardo</span>
+    </div>
+    <p class="territorial-readout-copy">La escena no reemplaza el proyecto arquitectonico, pero si muestra el lenguaje territorial de la propuesta para que el PIVA ya no se vea solo como una lista o un score.</p>
+  `;
+}
+
 function buildPivaParishCollection(parishPortfolio, serviceFeatures, projects = []) {
   const features = parishPortfolio.map((parish, index) => {
     const serviceFeature = serviceFeatures.find((feature) => {
@@ -31284,6 +32024,21 @@ function buildPivaAnalysis() {
   }));
   const parishPortfolio = buildPivaParishPortfolio(localSupport, sortedProjects);
   const parishCollection = buildPivaParishCollection(parishPortfolio, localSupport.serviceFeatures, sortedProjects);
+  const proposalSpatialModel = buildPivaProposalSpatialModel({
+    projects: sortedProjects,
+    parishPortfolio,
+    parishCollection,
+    corridorCollection: {
+      type: "FeatureCollection",
+      features: corridorFeatures,
+    },
+    zoneCollection: {
+      type: "FeatureCollection",
+      features: zoneFeatures,
+    },
+    localSupport,
+    context: target,
+  });
   const comparator = buildPivaComparator({
     blueScore,
     greenScore,
@@ -31374,6 +32129,7 @@ function buildPivaAnalysis() {
       summary,
       projects: sortedProjects,
       parishCollection,
+      proposalSpatialModel,
       zoneCollection: {
         type: "FeatureCollection",
         features: zoneFeatures,
@@ -31382,6 +32138,11 @@ function buildPivaAnalysis() {
         type: "FeatureCollection",
         features: corridorFeatures,
       },
+      proposalPieceCollection: proposalSpatialModel.pieceCollection,
+      proposalReserveCollection: proposalSpatialModel.reserveCollection,
+      proposalCorridorCollection: proposalSpatialModel.corridorCollection,
+      proposalEdgeCollection: proposalSpatialModel.edgeCollection,
+      proposalNodeCollection: proposalSpatialModel.nodeCollection,
       projectCollection,
     })
   );
@@ -31394,6 +32155,9 @@ function renderPivaModule() {
     resetMetricGrid(dom.pivaResults, `Ejecuta el PIVA para priorizar infraestructura verde y azul sobre Canton Mejia y dejar una cartera accionable por corredor, agua y espacio publico.`);
     resetVisualPanel(dom.pivaDashboard, "Aqui aparecera el tablero ejecutivo del PIVA con parroquia critica, proyecto lider, paquete de arranque y segunda ola territorial.");
     resetVisualPanel(dom.pivaProjectVisual, "Aqui aparecera la visual conceptual del proyecto lider, con grafico de impacto por componente y la imagen sintesis de la intervencion propuesta.");
+    resetVisualPanel(dom.pivaSpatialModel, "Aqui aparecera el modelo espacial PIVA con corredores verdes, frentes azules, reservas climaticas, bordes protegidos y piezas priorizadas por parroquia.");
+    resetVisualPanel(dom.pivaMasterplan, "Aqui aparecera la lamina tipo plan maestro del PIVA, con colores, flechas, nodos, jerarquias y etiquetas de la intervencion.");
+    resetVisualPanel(dom.pivaProposalScene, "Aqui aparecera la escena propuesta del PIVA, con arbolado, drenaje, espacio publico y estructura urbana sugerida para Mejia.");
     resetVisualPanel(dom.pivaReadout, "Aqui aparecera la lectura verde-azul integrada con clima urbano, seguridad hidrica, conectividad y soporte de evidencia.");
     resetVisualPanel(dom.pivaBoard, "Aqui aparecera el semaforo PIVA con los pilares azul, verde, clima, conectividad y soporte oficial.");
     resetVisualPanel(dom.pivaLegendBoard, "Aqui aparecera la leyenda PIVA para distinguir capas azules, verdes, climaticas, transiciones y proyectos detonantes.");
@@ -31448,6 +32212,24 @@ function renderPivaModule() {
     dom.pivaProjectVisual.classList.remove("empty-state");
     dom.pivaProjectVisual.classList.add("has-data");
     setHtmlIfChanged(dom.pivaProjectVisual, buildPivaProjectVisualMarkup(analysis));
+  }
+
+  if (dom.pivaSpatialModel) {
+    dom.pivaSpatialModel.classList.remove("empty-state");
+    dom.pivaSpatialModel.classList.add("has-data");
+    setHtmlIfChanged(dom.pivaSpatialModel, buildPivaSpatialModelMarkup(analysis));
+  }
+
+  if (dom.pivaMasterplan) {
+    dom.pivaMasterplan.classList.remove("empty-state");
+    dom.pivaMasterplan.classList.add("has-data");
+    setHtmlIfChanged(dom.pivaMasterplan, buildPivaMasterplanMarkup(analysis));
+  }
+
+  if (dom.pivaProposalScene) {
+    dom.pivaProposalScene.classList.remove("empty-state");
+    dom.pivaProposalScene.classList.add("has-data");
+    setHtmlIfChanged(dom.pivaProposalScene, buildPivaProposalSceneMarkup(analysis));
   }
 
   paintMetricGrid(dom.pivaResults, [
@@ -31904,6 +32686,9 @@ async function runPivaAnalysis(silent = false) {
     state.pivaHighlightId = null;
     clearPivaOverlay();
     resetTerritorialModuleState(dom.pivaResults, "No se pudo estructurar el PIVA del canton Mejia en esta corrida.", [
+      { target: dom.pivaSpatialModel, message: "No fue posible construir el modelo espacial PIVA para el mapa." },
+      { target: dom.pivaMasterplan, message: "No fue posible generar la lamina urbana y parroquial del PIVA." },
+      { target: dom.pivaProposalScene, message: "No fue posible generar la escena de propuesta del PIVA." },
       { target: dom.pivaReadout, message: "No fue posible construir la lectura verde-azul integrada." },
       { target: dom.pivaBoard, message: "No fue posible consolidar el semaforo PIVA y sus pilares." },
       { target: dom.pivaLegendBoard, message: "No fue posible generar la leyenda y claves de lectura del PIVA." },
@@ -31923,7 +32708,17 @@ async function runPivaAnalysis(silent = false) {
 }
 
 function clearPivaOverlay() {
-  ["pivaParishLayer", "pivaZoneLayer", "pivaCorridorLayer", "pivaProjectLayer"].forEach((layerName) => {
+  [
+    "pivaParishLayer",
+    "pivaZoneLayer",
+    "pivaCorridorLayer",
+    "pivaProjectLayer",
+    "pivaProposalPieceLayer",
+    "pivaProposalReserveLayer",
+    "pivaProposalCorridorLayer",
+    "pivaProposalEdgeLayer",
+    "pivaProposalNodeLayer",
+  ].forEach((layerName) => {
     if (mapState[layerName]) {
       mapState.map?.removeLayer(mapState[layerName]);
       mapState[layerName] = null;
@@ -32010,9 +32805,104 @@ function renderPivaOverlay(analysis) {
     }).addTo(mapState.map);
   }
 
+  if (analysis.proposalPieceCollection?.features?.length) {
+    mapState.pivaProposalPieceLayer = L.geoJSON(analysis.proposalPieceCollection, {
+      style: (feature) => {
+        const palette = getPivaSignalPalette(feature.properties?.pivaProposalKind || "green");
+        return {
+          color: palette.stroke,
+          weight: 1.8,
+          fillColor: palette.fill,
+          fillOpacity: 0.24,
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(`<h3 class="popup-title">${feature.properties?.pivaLabel || "Pieza PIVA"}</h3><p class="popup-copy">${feature.properties?.pivaSummary || "Pieza priorizada del modelo espacial PIVA."}</p>`);
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (analysis.proposalReserveCollection?.features?.length) {
+    mapState.pivaProposalReserveLayer = L.geoJSON(analysis.proposalReserveCollection, {
+      style: (feature) => {
+        const palette = getPivaSignalPalette(feature.properties?.pivaProposalKind || "climate");
+        return {
+          color: palette.stroke,
+          weight: 1.6,
+          fillColor: palette.fill,
+          fillOpacity: 0.14,
+          dashArray: feature.properties?.pivaProposalKind === "climate" ? "10 8" : "4 6",
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(`<h3 class="popup-title">${feature.properties?.pivaLabel || "Reserva PIVA"}</h3><p class="popup-copy">${feature.properties?.pivaSummary || "Reserva o parque lineal priorizado dentro del PIVA."}</p>`);
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (analysis.proposalCorridorCollection?.features?.length) {
+    mapState.pivaProposalCorridorLayer = L.geoJSON(analysis.proposalCorridorCollection, {
+      style: (feature) => {
+        const palette = getPivaSignalPalette(feature.properties?.pivaProposalKind || "green");
+        return {
+          color: palette.corridor,
+          weight: feature.properties?.pivaProposalKind === "blue" ? 6.4 : 5.4,
+          opacity: 0.94,
+          dashArray: feature.properties?.pivaProposalKind === "climate" ? "12 8" : null,
+          lineCap: "round",
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(`<h3 class="popup-title">${feature.properties?.pivaLabel || "Corredor propuesto"}</h3><p class="popup-copy">${feature.properties?.pivaSummary || "Corredor propuesto dentro del modelo espacial PIVA."}</p>`);
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (analysis.proposalEdgeCollection?.features?.length) {
+    mapState.pivaProposalEdgeLayer = L.geoJSON(analysis.proposalEdgeCollection, {
+      style: (feature) => {
+        const palette = getPivaSignalPalette(feature.properties?.pivaProposalKind || "transition");
+        return {
+          color: palette.stroke,
+          weight: 3.6,
+          opacity: 0.9,
+          dashArray: "12 10",
+          lineCap: "round",
+        };
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(`<h3 class="popup-title">${feature.properties?.pivaLabel || "Borde protegido"}</h3><p class="popup-copy">${feature.properties?.pivaSummary || "Borde o franja de proteccion del PIVA."}</p>`);
+      },
+    }).addTo(mapState.map);
+  }
+
+  if (analysis.proposalNodeCollection?.features?.length) {
+    mapState.pivaProposalNodeLayer = L.geoJSON(analysis.proposalNodeCollection, {
+      pointToLayer: (feature, latlng) => {
+        const active = feature.properties?.pivaProjectId === state.pivaHighlightId || feature.properties?.pivaParishId === state.pivaHighlightId;
+        const palette = getPivaSignalPalette(feature.properties?.pivaProposalKind || "green");
+        return L.circleMarker(latlng, {
+          radius: active ? 8.8 : 6.8,
+          color: "#fff9ef",
+          weight: active ? 2.6 : 2,
+          fillColor: palette.marker,
+          fillOpacity: 0.96,
+        });
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(`<h3 class="popup-title">${feature.properties?.pivaLabel || "Nodo PIVA"}</h3><p class="popup-copy">${feature.properties?.pivaSummary || "Nodo propuesto dentro del PIVA."}</p>`);
+      },
+    }).addTo(mapState.map);
+  }
+
   mapState.pivaZoneLayer?.bringToFront?.();
   mapState.pivaCorridorLayer?.bringToFront?.();
   mapState.pivaParishLayer?.bringToFront?.();
+  mapState.pivaProposalPieceLayer?.bringToFront?.();
+  mapState.pivaProposalReserveLayer?.bringToFront?.();
+  mapState.pivaProposalCorridorLayer?.bringToFront?.();
+  mapState.pivaProposalEdgeLayer?.bringToFront?.();
+  mapState.pivaProposalNodeLayer?.bringToFront?.();
   mapState.pivaProjectLayer?.bringToFront?.();
   if (mapState.currentPlotLayer) {
     mapState.currentPlotLayer.bringToFront();
@@ -32033,6 +32923,11 @@ function focusPivaStudy() {
     ...(analysis.zoneCollection?.features || []),
     ...(analysis.corridorCollection?.features || []),
     ...(analysis.projectCollection?.features || []),
+    ...(analysis.proposalPieceCollection?.features || []),
+    ...(analysis.proposalReserveCollection?.features || []),
+    ...(analysis.proposalCorridorCollection?.features || []),
+    ...(analysis.proposalEdgeCollection?.features || []),
+    ...(analysis.proposalNodeCollection?.features || []),
   ]);
   if (bounds?.isValid?.()) {
     mapState.map.fitBounds(bounds, {
@@ -32053,7 +32948,12 @@ function focusPivaProject(projectId) {
   renderPivaModule();
   renderPivaOverlay(analysis);
   updateMapSummary();
-  const bounds = buildBoundsFromFeatures([project.feature]);
+  const bounds = buildBoundsFromFeatures([
+    project.feature,
+    ...(analysis.proposalReserveCollection?.features || []).filter((feature) => feature.properties?.pivaProjectId === projectId),
+    ...(analysis.proposalCorridorCollection?.features || []).filter((feature) => feature.properties?.pivaProjectId === projectId),
+    ...(analysis.proposalNodeCollection?.features || []).filter((feature) => feature.properties?.pivaProjectId === projectId),
+  ]);
   if (bounds?.isValid?.()) {
     mapState.map.fitBounds(bounds, {
       padding: [56, 56],
@@ -32080,6 +32980,9 @@ function focusPivaParish(parishId) {
   const bounds = buildBoundsFromFeatures([
     ...(feature ? [feature] : []),
     ...(linkedProject?.feature ? [linkedProject.feature] : []),
+    ...(analysis.proposalPieceCollection?.features || []).filter((item) => item.properties?.pivaParishId === parishId),
+    ...(analysis.proposalCorridorCollection?.features || []).filter((item) => item.properties?.pivaParishId === parishId),
+    ...(analysis.proposalNodeCollection?.features || []).filter((item) => item.properties?.pivaParishId === parishId),
   ]);
   if (bounds?.isValid?.()) {
     mapState.map.fitBounds(bounds, {
@@ -32093,7 +32996,13 @@ function focusPivaParish(parishId) {
 
 function handlePivaInteraction(event) {
   const button = event.target.closest("[data-piva-project-id], [data-piva-parish-id]");
-  if (!button || !(dom.pivaDashboard?.contains(button) || dom.pivaBoard?.contains(button) || dom.pivaParishes?.contains(button) || dom.pivaProjects?.contains(button))) {
+  if (!button || !(
+    dom.pivaDashboard?.contains(button)
+    || dom.pivaSpatialModel?.contains(button)
+    || dom.pivaBoard?.contains(button)
+    || dom.pivaParishes?.contains(button)
+    || dom.pivaProjects?.contains(button)
+  )) {
     return;
   }
   if (button.dataset.pivaParishId) {
@@ -32121,11 +33030,17 @@ function buildPivaJsonExport() {
     deliverables: analysis.deliverables,
     legend: analysis.legend,
     comparator: analysis.comparator,
+    proposalSpatialModel: analysis.proposalSpatialModel,
     packages: analysis.packages,
     phases: analysis.phases,
     profiles: analysis.profiles,
     parishPortfolio: analysis.parishPortfolio,
     parishCollection: analysis.parishCollection,
+    proposalPieceCollection: analysis.proposalPieceCollection,
+    proposalReserveCollection: analysis.proposalReserveCollection,
+    proposalCorridorCollection: analysis.proposalCorridorCollection,
+    proposalEdgeCollection: analysis.proposalEdgeCollection,
+    proposalNodeCollection: analysis.proposalNodeCollection,
     localSupport: {
       supportLabel: analysis.localSupport.supportLabel,
       localSupportScore: analysis.localSupport.localSupportScore,
@@ -32203,6 +33118,8 @@ function buildPivaReportHtml() {
         .card{border:1px solid #d8ddd5;border-radius:14px;padding:16px;background:#fbfaf7}
         .metric{font-size:28px;font-weight:700;margin:8px 0}
         .sheet{margin-bottom:14px}
+        .scene{margin:18px 0 26px;border:1px solid #d8ddd5;border-radius:18px;overflow:hidden;background:#fcfaf5}
+        .scene svg{display:block;width:100%;height:auto}
       </style>
     </head>
     <body>
@@ -32262,6 +33179,30 @@ function buildPivaReportHtml() {
               <p>${escapeHtmlContent(item.note)}</p>
             </article>
           `).join("")}
+        </div>
+      </section>
+      <section>
+        <h2>Modelo espacial PIVA</h2>
+        <p>${escapeHtmlContent(analysis.proposalSpatialModel.summary.headline)}</p>
+        <p>${escapeHtmlContent(analysis.proposalSpatialModel.summary.copy)}</p>
+        <div class="grid">
+          ${analysis.proposalSpatialModel.summary.systems.map((item) => `
+            <article class="card">
+              <p class="kicker">${escapeHtmlContent(item.label)}</p>
+              <div class="metric">${item.count}</div>
+              <p>${escapeHtmlContent(item.copy)}</p>
+            </article>
+          `).join("")}
+        </div>
+        <div class="scene">
+          ${buildPivaMasterplanSvg(analysis)}
+        </div>
+      </section>
+      <section>
+        <h2>Escena propuesta</h2>
+        <p>La escena sintetiza como cambiarian corredor, borde y centralidad al pasar de diagnostico a proyecto PIVA.</p>
+        <div class="scene">
+          ${buildPivaProposalSceneSvg(analysis)}
         </div>
       </section>
       <section>

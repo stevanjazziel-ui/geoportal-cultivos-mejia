@@ -3570,6 +3570,12 @@ button {
   gap: 12px;
 }
 
+.piva-spatial-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
 .piva-visual-bar {
   display: grid;
   gap: 8px;
@@ -3608,6 +3614,54 @@ button {
 .piva-visual-bar-track .target {
   background: linear-gradient(90deg, rgba(87, 166, 184, 0.82), rgba(62, 147, 114, 0.88));
   opacity: 0.94;
+}
+
+.piva-masterplan-board,
+.piva-proposal-scene {
+  margin: 16px 0 14px;
+  border: 1px solid rgba(43, 65, 56, 0.12);
+  border-radius: 24px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at top left, rgba(172, 212, 186, 0.18), transparent 38%),
+    radial-gradient(circle at top right, rgba(159, 212, 227, 0.18), transparent 34%),
+    linear-gradient(180deg, rgba(252, 250, 245, 0.98), rgba(244, 248, 242, 0.98));
+}
+
+.piva-masterplan-board svg,
+.piva-proposal-scene svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.piva-masterplan-kicker,
+.piva-masterplan-title,
+.piva-masterplan-label,
+.piva-masterplan-note {
+  font-family: "Segoe UI", sans-serif;
+  fill: #274036;
+}
+
+.piva-masterplan-kicker {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.piva-masterplan-title {
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.piva-masterplan-label {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.piva-masterplan-note {
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .territorial-alert-card.tone-critical {
