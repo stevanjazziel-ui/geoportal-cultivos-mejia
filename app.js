@@ -1,10 +1,10 @@
-const localeDate = new Intl.DateTimeFormat("es-EC", {
+﻿const localeDate = new Intl.DateTimeFormat("es-EC", {
   day: "2-digit",
   month: "short",
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260529-2";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260602-1";
 
 const layerCatalog = [
   {
@@ -182,8 +182,8 @@ const layerCatalog = [
       },
       {
         id: "limaLomas",
-        title: "Lomas y montaña costera",
-        description: "Frecuencia oficial de aparicion de lomas como soporte ecologico y de borde de montaña.",
+        title: "Lomas y montaÃ±a costera",
+        description: "Frecuencia oficial de aparicion de lomas como soporte ecologico y de borde de montaÃ±a.",
       },
       {
         id: "limaDistrictRisk",
@@ -530,7 +530,7 @@ const hydroFeatureCatalog = {
       hydroRole: "Cauce principal",
       protectionM: 55,
       irrigationValue: 0.86,
-      summary: "Corredor fluvial principal con influencia sobre drenaje y proteccion ribereña.",
+      summary: "Corredor fluvial principal con influencia sobre drenaje y proteccion ribereÃ±a.",
     }),
     lineFeature("Rio Cutuchi", [
       [-78.702, -0.468],
@@ -587,7 +587,7 @@ const hydroFeatureCatalog = {
       protectionM: 34,
       irrigationValue: 0.63,
       territoryId: "quevedo",
-      summary: "Estero de drenaje productivo y soporte para evacuacion de excedentes hídricos.",
+      summary: "Estero de drenaje productivo y soporte para evacuacion de excedentes hÃ­dricos.",
     }),
   ],
   acequias: [
@@ -714,7 +714,7 @@ const hydroFeatureCatalog = {
       protectionM: 22,
       irrigationValue: 0.24,
       territoryId: "quevedo",
-      summary: "Quebrada baja de desagüe con alta sensibilidad a saturacion e inundacion local.",
+      summary: "Quebrada baja de desagÃ¼e con alta sensibilidad a saturacion e inundacion local.",
     }),
     lineFeature("Quebrada Loma Alta", [
       [-79.507, -1.012],
@@ -2230,7 +2230,7 @@ const geoSources = {
           serviceType: "social",
           source: "MIES / IEDG",
           level: "cantonal",
-          summary: "Infraestructura social para apoyo a cuidado, niñez y vulnerabilidad.",
+          summary: "Infraestructura social para apoyo a cuidado, niÃ±ez y vulnerabilidad.",
         }),
         pointFeature("Centro social Quevedo", [-79.481, -1.041], {
           category: "social",
@@ -4093,6 +4093,7 @@ const mapState = {
   urbanClimateZoneLayer: null,
   urbanClimateCorridorLayer: null,
   urbanClimateNodeLayer: null,
+  pivaParishLayer: null,
   pivaZoneLayer: null,
   pivaCorridorLayer: null,
   pivaProjectLayer: null,
@@ -4372,9 +4373,9 @@ function setTextIfChanged(element, text) {
   const normalized = text == null
     ? ""
     : String(text)
-      .replace(/Â·/g, " | ")
-      .replace(/\s*·\s*/g, " | ")
-      .replace(/Â/g, "")
+      .replace(/Ã‚|/g, " | ")
+      .replace(/\s*|\s*/g, " | ")
+      .replace(/Ã‚/g, "")
       .replace(/\uFFFD/g, "");
   if (uiRenderCache.text.get(element) === normalized) {
     return false;
@@ -5980,7 +5981,7 @@ const workflowGuideCatalog = {
       { id: "signal", title: "Conectar senal", pending: "Activa GPS del navegador, feed o emisor externo." },
       { id: "corridor", title: "Cargar corredor", pending: "Sube KML o GeoJSON para vigilar la ruta esperada." },
       { id: "tracking", title: "Seguir recorrido", pending: "Lee posiciones y valida velocidad, precision y estado." },
-      { id: "replay", title: "Reproducir trayectoria", pending: "Revisa hitos, desvíos y secuencia temporal." },
+      { id: "replay", title: "Reproducir trayectoria", pending: "Revisa hitos, desvÃ­os y secuencia temporal." },
       { id: "alerts", title: "Registrar alertas", pending: "Guarda salidas del corredor y bitacora operativa." },
     ],
     actions: [
@@ -6376,8 +6377,10 @@ function cacheDom() {
   dom.focusPivaBtn = document.querySelector("#focusPivaBtn");
   dom.exportPivaHtmlBtn = document.querySelector("#exportPivaHtmlBtn");
   dom.exportPivaJsonBtn = document.querySelector("#exportPivaJsonBtn");
+  dom.exportPivaCsvBtn = document.querySelector("#exportPivaCsvBtn");
   dom.clearPivaBtn = document.querySelector("#clearPivaBtn");
   dom.pivaResults = document.querySelector("#pivaResults");
+  dom.pivaDashboard = document.querySelector("#pivaDashboard");
   dom.pivaReadout = document.querySelector("#pivaReadout");
   dom.pivaBoard = document.querySelector("#pivaBoard");
   dom.pivaLegendBoard = document.querySelector("#pivaLegendBoard");
@@ -6765,7 +6768,7 @@ function syncPlotToolsState(route = state.entryRoute || "agronomia") {
   const editing = !!state.currentPlotEditing;
   if (dom.plotToolsState) {
     dom.plotToolsState.textContent = editing
-      ? `${state.currentPlotLabel} · ajustando`
+      ? `${state.currentPlotLabel} | ajustando`
       : hasPlot
         ? state.currentPlotLabel
         : "Sin poligono";
@@ -7402,6 +7405,7 @@ function bindUI() {
   dom.clearUrbanClimateBtn?.addEventListener("click", clearUrbanClimateAnalysis);
   dom.runPivaBtn?.addEventListener("click", () => {
     setModulePendingState(dom.pivaResults, "Integrando clima urbano, seguridad hidrica, corredores verdes y soporte oficial para estructurar el PIVA...", [
+      { target: dom.pivaDashboard, message: "Armando el tablero ejecutivo del PIVA con parroquia critica, proyecto lider y paquetes listos para decision..." },
       { target: dom.pivaReadout, message: "Armando la lectura verde-azul integrada del canton Mejia..." },
       { target: dom.pivaBoard, message: "Calculando semaforo PIVA, pilares y prioridad de intervencion..." },
       { target: dom.pivaLegendBoard, message: "Preparando leyenda verde-azul y claves de lectura para el mapa y la cartera..." },
@@ -7416,8 +7420,11 @@ function bindUI() {
   dom.focusPivaBtn?.addEventListener("click", focusPivaStudy);
   dom.exportPivaHtmlBtn?.addEventListener("click", exportPivaHtmlReport);
   dom.exportPivaJsonBtn?.addEventListener("click", exportPivaJson);
+  dom.exportPivaCsvBtn?.addEventListener("click", exportPivaCsv);
   dom.clearPivaBtn?.addEventListener("click", clearPivaAnalysis);
+  dom.pivaDashboard?.addEventListener("click", handlePivaInteraction);
   dom.pivaBoard?.addEventListener("click", handlePivaInteraction);
+  dom.pivaParishes?.addEventListener("click", handlePivaInteraction);
   dom.pivaProjects?.addEventListener("click", handlePivaInteraction);
   dom.runZoningPatternsBtn?.addEventListener("click", () => {
     setModulePendingState(dom.zoningPatternsResults, "Leyendo patrones territoriales, vitalidad y contrastes espaciales...", [
@@ -9409,7 +9416,7 @@ function renderModuleSearchSummary() {
   if (!query) {
     setTextIfChanged(
       dom.moduleSearchSummary,
-      `${visibleCards.length} modulos listos · ${filterLabel.toLowerCase()} · ${routeLabel}.`
+      `${visibleCards.length} modulos listos | ${filterLabel.toLowerCase()} | ${routeLabel}.`
     );
     return;
   }
@@ -9869,7 +9876,7 @@ function getSidebarDockConfig(route = state.entryRoute || "agronomia") {
           tone: analysis?.summary?.corridorCount ? "ready" : "pending",
           stateLabel: analysis
             ? `${analysis.summary.corridorCount} corredores y ${analysis.summary.hydricPriorityCount} frentes azules`
-            : "Define corredores, frentes hidricos y conectividad ecológica.",
+            : "Define corredores, frentes hidricos y conectividad ecolÃ³gica.",
         },
         {
           id: "packages",
@@ -10053,7 +10060,7 @@ function runWorkflowGuideAction(actionId) {
       focusGpsModuleCard();
       if (state.gpsTracking.geofence) {
         focusGpsGeofenceStudy();
-        setStatus("Corredor GPS centrado para validar desvíos sobre el mapa.");
+        setStatus("Corredor GPS centrado para validar desvÃ­os sobre el mapa.");
       } else {
         setStatus("Sube un archivo KML o GeoJSON para vigilar el corredor operativo.");
       }
@@ -11194,7 +11201,7 @@ function buildLayerDescription(layerId, properties = {}) {
     return `${formatFacilityTypeLabel(properties.serviceType)} de escala ${properties.level || "local"} usado para medir cobertura territorial.`;
   }
   if (layerId === "bancoSueloMunicipal") {
-    return `${properties.descr || "Banco de suelo"} en ${properties.parroquia || "Mejia"} con ${Number.isFinite(Number(properties.areaTerrenoM2)) ? `${formatIrrigationNumber(Number(properties.areaTerrenoM2), 0)} m²` : "area sin dato"}. ${properties.summary || "Reserva municipal util para espacio publico, drenaje o nodo verde."}`;
+    return `${properties.descr || "Banco de suelo"} en ${properties.parroquia || "Mejia"} con ${Number.isFinite(Number(properties.areaTerrenoM2)) ? `${formatIrrigationNumber(Number(properties.areaTerrenoM2), 0)} mÂ²` : "area sin dato"}. ${properties.summary || "Reserva municipal util para espacio publico, drenaje o nodo verde."}`;
   }
   if (layerId === "equipamientoMunicipal") {
     return `${properties.tipologia || "Equipamiento"}${properties.serviceTypeLabel ? ` de tipo ${properties.serviceTypeLabel}` : ""}. ${properties.summary || "Punto municipal para cobertura y proximidad."}`;
@@ -11320,7 +11327,7 @@ function getPointMarkerStyle(layerId, feature = null) {
         fillOpacity: 0.93,
       };
     }
-    if (/ÁREAS VERDES|AREAS VERDES|RECREACI/.test(localType)) {
+    if (/ÃREAS VERDES|AREAS VERDES|RECREACI/.test(localType)) {
       return {
         radius: 7,
         weight: 2,
@@ -11790,7 +11797,7 @@ function normalizeMunicipalPivaText(value) {
     return value;
   }
   let normalized = value;
-  if (/[ÃÂ]/.test(normalized)) {
+  if (/[ÃƒÃ‚]/.test(normalized)) {
     try {
       normalized = decodeURIComponent(escape(normalized));
     } catch (error) {
@@ -11798,21 +11805,21 @@ function normalizeMunicipalPivaText(value) {
     }
   }
   return normalized
-    .replace(/Ã/g, "A")
-    .replace(/Ã‰/g, "E")
-    .replace(/Ã/g, "I")
-    .replace(/Ã“/g, "O")
-    .replace(/Ãš/g, "U")
-    .replace(/Ã¡/g, "a")
-    .replace(/Ã©/g, "e")
-    .replace(/Ã­/g, "i")
-    .replace(/Ã³/g, "o")
-    .replace(/Ãº/g, "u")
-    .replace(/Ã±/g, "n")
-    .replace(/Ã‘/g, "N")
-    .replace(/Ã¼/g, "u")
-    .replace(/Ãœ/g, "U")
-    .replace(/Â/g, "")
+    .replace(/ÃƒÂ/g, "A")
+    .replace(/Ãƒâ€°/g, "E")
+    .replace(/ÃƒÂ/g, "I")
+    .replace(/Ãƒâ€œ/g, "O")
+    .replace(/ÃƒÅ¡/g, "U")
+    .replace(/ÃƒÂ¡/g, "a")
+    .replace(/ÃƒÂ©/g, "e")
+    .replace(/ÃƒÂ­/g, "i")
+    .replace(/ÃƒÂ³/g, "o")
+    .replace(/ÃƒÂº/g, "u")
+    .replace(/ÃƒÂ±/g, "n")
+    .replace(/Ãƒâ€˜/g, "N")
+    .replace(/ÃƒÂ¼/g, "u")
+    .replace(/ÃƒÅ“/g, "U")
+    .replace(/Ã‚/g, "")
     .replace(/\uFFFD/g, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -11826,8 +11833,8 @@ function normalizeMunicipalPivaParish(value) {
   if (normalized === "ALOAG") {
     return "Aloag";
   }
-  if (normalized === "ALOASI" || normalized === "ALOASÍ") {
-    return "Aloasí";
+  if (normalized === "ALOASI" || normalized === "ALOASÃ") {
+    return "AloasÃ­";
   }
   if (normalized === "CUTUGLAHUA" || normalized === "CUTUGLAGUA") {
     return "Cutuglagua";
@@ -11865,7 +11872,7 @@ function mapMunicipalEquipmentServiceType(tipologia) {
   if (/SEGURIDAD/.test(label)) {
     return { serviceType: "institucional", serviceTypeLabel: "Seguridad" };
   }
-  if (/ÁREAS VERDES|AREAS VERDES|RECREACI/.test(label)) {
+  if (/ÃREAS VERDES|AREAS VERDES|RECREACI/.test(label)) {
     return { serviceType: "equipamiento", serviceTypeLabel: "Espacio publico" };
   }
   if (/CULTO/.test(label)) {
@@ -11876,7 +11883,7 @@ function mapMunicipalEquipmentServiceType(tipologia) {
 
 function buildMunicipalPivaFeatureName(layerId, properties, index) {
   if (layerId === "bancoSueloMunicipal") {
-    return properties.nombre || `${properties.descr || "Banco de suelo"} · ${properties.parroquia || "Mejia"}`;
+    return properties.nombre || `${properties.descr || "Banco de suelo"} | ${properties.parroquia || "Mejia"}`;
   }
   if (layerId === "equipamientoMunicipal") {
     return properties.nombre || properties.descr || `${properties.tipologia || "Equipamiento"} ${index + 1}`;
@@ -11896,7 +11903,7 @@ function buildMunicipalPivaFeatureName(layerId, properties, index) {
 function buildMunicipalPivaFeatureSummary(layerId, properties) {
   if (layerId === "bancoSueloMunicipal") {
     const terrainCopy = Number.isFinite(Number(properties.areaTerrenoM2))
-      ? `${formatIrrigationNumber(Number(properties.areaTerrenoM2), 0)} m²`
+      ? `${formatIrrigationNumber(Number(properties.areaTerrenoM2), 0)} mÂ²`
       : "area sin dato";
     return `${properties.parroquia || "Mejia"}: ${properties.descr || "banco de suelo"} con ${terrainCopy} y ambito ${properties.ambito || "sin dato"}.`;
   }
@@ -14979,12 +14986,12 @@ async function runInamhiAnalysis(silent = false) {
       },
       {
         label: "Mes mas lluvioso",
-        value: `${wetSignal.month} · ${wetSignal.meanMm.toFixed(0)} mm`,
+        value: `${wetSignal.month} | ${wetSignal.meanMm.toFixed(0)} mm`,
         copy: `Dominante en ${wetSignal.supportCount}/${stations.length} estaciones.`,
       },
       {
         label: "Mes mas seco",
-        value: `${drySignal.month} · ${drySignal.meanMm.toFixed(0)} mm`,
+        value: `${drySignal.month} | ${drySignal.meanMm.toFixed(0)} mm`,
         copy: `Ventana seca dominante en ${drySignal.supportCount}/${stations.length} estaciones.`,
       },
       {
@@ -14996,7 +15003,7 @@ async function runInamhiAnalysis(silent = false) {
 
     paintMetricGrid(dom.inamhiResults, cards);
     Array.from(dom.inamhiResults.querySelectorAll(".metric-card strong")).forEach((node) => {
-      node.textContent = node.textContent.replace(/·/g, " - ");
+      node.textContent = node.textContent.replace(/|/g, " - ");
     });
     const result = {
       reference,
@@ -15353,9 +15360,9 @@ function renderInamhiLiveVisual(result = null) {
       ${(result.stations || []).map((station) => `
         <article class="gps-device-card">
           <strong>${station.name}</strong>
-          <p>${station.stationCode || "Sin codigo"} · ${station.provider || "INAMHI"}</p>
-          <p>${station.temperatureC.toFixed(1)} C · ${station.humidityPct}% HR · ${station.precip1hMm.toFixed(1)} mm/h</p>
-          <p>${station.windKmh.toFixed(1)} km/h · ${formatMinutesAgo(station.updateAgeMinutes)}</p>
+          <p>${station.stationCode || "Sin codigo"} | ${station.provider || "INAMHI"}</p>
+          <p>${station.temperatureC.toFixed(1)} C | ${station.humidityPct}% HR | ${station.precip1hMm.toFixed(1)} mm/h</p>
+          <p>${station.windKmh.toFixed(1)} km/h | ${formatMinutesAgo(station.updateAgeMinutes)}</p>
         </article>
       `).join("")}
     </div>
@@ -15407,7 +15414,7 @@ function renderInamhiLiveOverlay(result = state.agronomyOutputs.inamhiLive) {
       const properties = feature.properties || {};
       layer.bindPopup(`
         <strong>${properties.name || "Estacion"}</strong><br>
-        ${properties.stationCode || "Sin codigo"} · ${properties.provider || "INAMHI"}<br>
+        ${properties.stationCode || "Sin codigo"} | ${properties.provider || "INAMHI"}<br>
         Temp: ${Number(properties.temperatureC || 0).toFixed(1)} C<br>
         Humedad: ${Number(properties.humidityPct || 0).toFixed(0)}%<br>
         Lluvia 1 h: ${Number(properties.precip1hMm || 0).toFixed(1)} mm<br>
@@ -15493,7 +15500,7 @@ function syncIrrigationAreaFieldFromPlot(force = false) {
   if (force || !String(dom.irrigationAreaInput.value || "").trim()) {
     dom.irrigationAreaInput.value = String(Math.round(plotAreaM2));
   }
-  setStatus(`Area del lote cargada para riego: ${formatIrrigationNumber(plotAreaM2, 0)} m².`);
+  setStatus(`Area del lote cargada para riego: ${formatIrrigationNumber(plotAreaM2, 0)} mÂ².`);
   return plotAreaM2;
 }
 
@@ -15696,7 +15703,7 @@ function renderIrrigationFlowVisual(result = null) {
     </div>
     <div class="agronomy-tag-row">
       <span class="agronomy-visual-pill">${result.systemLabel}</span>
-      ${result.areaM2 ? `<span class="agronomy-visual-pill">${formatIrrigationNumber(result.areaM2, 0)} m²</span>` : ""}
+      ${result.areaM2 ? `<span class="agronomy-visual-pill">${formatIrrigationNumber(result.areaM2, 0)} mÂ²</span>` : ""}
       ${Number.isFinite(result.netLayerMm) ? `<span class="agronomy-visual-pill">${formatIrrigationNumber(result.netLayerMm, 1)} mm netos</span>` : ""}
       ${result.hours > 0 ? `<span class="agronomy-visual-pill">${formatIrrigationNumber(result.hours, 1)} h</span>` : ""}
       <span class="agronomy-visual-pill tone-${result.supplyTone}">${result.supplyPriorityLabel}</span>
@@ -15721,7 +15728,7 @@ function renderIrrigationFlowVisual(result = null) {
         </article>
       `).join("")}
     </div>
-    <p class="agronomy-visual-copy">${result.recommendation} 1 mm sobre 1 m² equivale a 1 litro aplicado.</p>
+    <p class="agronomy-visual-copy">${result.recommendation} 1 mm sobre 1 mÂ² equivale a 1 litro aplicado.</p>
   `);
 }
 
@@ -15758,7 +15765,7 @@ function renderIrrigationFlowVisual(result = null) {
   }
 
   const maxFlow = Math.max(...bars.map((item) => item.value), 1);
-  const areaTag = result.areaM2 ? `<span class="agronomy-visual-pill">${formatIrrigationNumber(result.areaM2, 0)} m²</span>` : "";
+  const areaTag = result.areaM2 ? `<span class="agronomy-visual-pill">${formatIrrigationNumber(result.areaM2, 0)} mÂ²</span>` : "";
   const netTag = Number.isFinite(result.netLayerMm) ? `<span class="agronomy-visual-pill">${formatIrrigationNumber(result.netLayerMm, 1)} mm netos</span>` : "";
   const hourTag = result.hours > 0 ? `<span class="agronomy-visual-pill">${formatIrrigationNumber(result.hours, 1)} h</span>` : "";
 
@@ -15799,7 +15806,7 @@ function renderIrrigationFlowVisual(result = null) {
         </article>
       `).join("")}
     </div>
-    <p class="agronomy-visual-copy">${result.recommendation} ${result.supplyRecommendation} 1 mm sobre 1 m² equivale a 1 litro aplicado.</p>
+    <p class="agronomy-visual-copy">${result.recommendation} ${result.supplyRecommendation} 1 mm sobre 1 mÂ² equivale a 1 litro aplicado.</p>
   `);
 }
 
@@ -16341,7 +16348,7 @@ function renderHydroNetworkVisual(result = null) {
       <span class="agronomy-visual-pill">${lineSupportLabel}</span>
       <span class="agronomy-visual-pill">${result.summary.meanPpaMm ? `${formatIrrigationNumber(result.summary.meanPpaMm, 0)} mm/anio` : "Sin lluvia media"}</span>
       <span class="agronomy-visual-pill">${result.summary.stationCount} estaciones</span>
-      <span class="agronomy-visual-pill">${result.summary.rioCount} rios · ${result.summary.acequiaCount} acequias · ${result.summary.quebradaCount} quebradas</span>
+      <span class="agronomy-visual-pill">${result.summary.rioCount} rios | ${result.summary.acequiaCount} acequias | ${result.summary.quebradaCount} quebradas</span>
       <span class="agronomy-visual-pill">${result.summary.priorityCount} prioridades altas</span>
       <span class="agronomy-visual-pill">${result.summary.officialSourceCount} fuentes oficiales</span>
     </div>
@@ -16449,7 +16456,7 @@ function renderHydroNetworkOverlay(result = state.agronomyOutputs.hydroNetwork) 
       },
       onEachFeature: (feature, layer) => {
         layer.bindPopup(
-          `<h3 class="popup-title">${feature.properties?.name || "Hidrologia oficial"}</h3><p class="popup-copy">${feature.properties?.kindLabel || "Elemento"} · ${feature.properties?.priorityLabel || "Prioridad"} · ${feature.properties?.displayMetric || "Sin medida"} · ${formatDistanceKm(feature.properties?.distanceKm || 0)} del ambito. ${feature.properties?.summary || ""}</p>`
+          `<h3 class="popup-title">${feature.properties?.name || "Hidrologia oficial"}</h3><p class="popup-copy">${feature.properties?.kindLabel || "Elemento"} | ${feature.properties?.priorityLabel || "Prioridad"} | ${feature.properties?.displayMetric || "Sin medida"} | ${formatDistanceKm(feature.properties?.distanceKm || 0)} del ambito. ${feature.properties?.summary || ""}</p>`
         );
       },
     }).addTo(mapState.map);
@@ -16469,7 +16476,7 @@ function renderHydroNetworkOverlay(result = state.agronomyOutputs.hydroNetwork) 
       },
       onEachFeature: (feature, layer) => {
         layer.bindPopup(
-          `<h3 class="popup-title">${feature.properties?.name || "Red lineal"}</h3><p class="popup-copy">${feature.properties?.kindLabel || "Elemento"} · ${feature.properties?.priorityLabel || "Prioridad"} · ${feature.properties?.displayMetric || "Sin medida"} · ${formatDistanceKm(feature.properties?.distanceKm || 0)} del ambito. ${feature.properties?.summary || ""}</p>`
+          `<h3 class="popup-title">${feature.properties?.name || "Red lineal"}</h3><p class="popup-copy">${feature.properties?.kindLabel || "Elemento"} | ${feature.properties?.priorityLabel || "Prioridad"} | ${feature.properties?.displayMetric || "Sin medida"} | ${formatDistanceKm(feature.properties?.distanceKm || 0)} del ambito. ${feature.properties?.summary || ""}</p>`
         );
       },
     }).addTo(mapState.map);
@@ -16664,7 +16671,7 @@ async function runIrrigationFlowAnalysis(silent = false) {
       label: "Demanda del cultivo",
       value: formatFlowLh(result.designFlowLh),
       copy: Number.isFinite(result.designFlowLh)
-        ? `${formatIrrigationNumber(result.netLayerMm, 1)} mm netos sobre ${formatIrrigationNumber(result.areaM2, 0)} m² en ${formatIrrigationNumber(result.hours, 1)} h.`
+        ? `${formatIrrigationNumber(result.netLayerMm, 1)} mm netos sobre ${formatIrrigationNumber(result.areaM2, 0)} mÂ² en ${formatIrrigationNumber(result.hours, 1)} h.`
         : "Completa ETc, lluvia, area y tiempo de riego.",
       highlight: true,
     },
@@ -16696,7 +16703,7 @@ async function runIrrigationFlowAnalysis(silent = false) {
     },
     {
       label: "Area usada",
-      value: result.areaM2 ? `${formatIrrigationNumber(result.areaM2, 0)} m²` : "Sin area",
+      value: result.areaM2 ? `${formatIrrigationNumber(result.areaM2, 0)} mÂ²` : "Sin area",
       copy: result.areaM2
         ? result.context.scopeType === "plot"
           ? `Tomada desde ${result.context.scopeLabel}.`
@@ -16989,9 +16996,9 @@ function renderAgroSuitabilityVisual(result = null) {
       ${result.lots.slice(0, 5).map((lot) => `
         <article class="gps-device-card">
           <strong>${lot.label}</strong>
-          <p>${lot.fitLabel} · Prioridad ${lot.rank}</p>
-          <p>${lot.meanTempC.toFixed(1)} C · ${lot.rainfallMm.toFixed(1)} mm · ${lot.moisture}% humedad</p>
-          <p>${lot.slope.toFixed(1)}% pendiente · ${formatDistanceKm(lot.waterDistanceKm)} al agua</p>
+          <p>${lot.fitLabel} | Prioridad ${lot.rank}</p>
+          <p>${lot.meanTempC.toFixed(1)} C | ${lot.rainfallMm.toFixed(1)} mm | ${lot.moisture}% humedad</p>
+          <p>${lot.slope.toFixed(1)}% pendiente | ${formatDistanceKm(lot.waterDistanceKm)} al agua</p>
           <p>${lot.recommendation}</p>
         </article>
       `).join("")}
@@ -17138,7 +17145,7 @@ function renderAgroSuitabilityOverlay(result = state.agronomyOutputs.agroSuitabi
     },
     onEachFeature: (feature, layer) => {
       layer.bindPopup(
-        `<h3 class="popup-title">${feature.properties?.suitabilityLabel || "Lote"}</h3><p class="popup-copy">${feature.properties?.fitLabel || "Aptitud"} · ${feature.properties?.suitabilityScore || 0}/100. ${feature.properties?.recommendation || ""}</p>`
+        `<h3 class="popup-title">${feature.properties?.suitabilityLabel || "Lote"}</h3><p class="popup-copy">${feature.properties?.fitLabel || "Aptitud"} | ${feature.properties?.suitabilityScore || 0}/100. ${feature.properties?.recommendation || ""}</p>`
       );
     },
   }).addTo(mapState.map);
@@ -17154,7 +17161,7 @@ function renderAgroSuitabilityOverlay(result = state.agronomyOutputs.agroSuitabi
       }),
       onEachFeature: (feature, layer) => {
         layer.bindPopup(
-          `<h3 class="popup-title">${feature.properties?.name || "Lote recomendado"}</h3><p class="popup-copy">${feature.properties?.fitLabel || "Aptitud"} · ${feature.properties?.suitabilityScore || 0}/100. ${feature.properties?.recommendation || ""}</p>`
+          `<h3 class="popup-title">${feature.properties?.name || "Lote recomendado"}</h3><p class="popup-copy">${feature.properties?.fitLabel || "Aptitud"} | ${feature.properties?.suitabilityScore || 0}/100. ${feature.properties?.recommendation || ""}</p>`
         );
       },
     }).addTo(mapState.map);
@@ -17475,7 +17482,7 @@ function buildGpsReadout(result) {
   }
   const speed = Number(active.speedKmh || 0).toFixed(1);
   const signalAge = formatGpsSignalAge(active.timestamp);
-  return `${result.sourceLabel} sobre ${result.targetLabel}: ${active.label} reporta ${speed} km/h, rumbo ${active.headingDeg || 0}° y ultima senal ${signalAge}.`;
+  return `${result.sourceLabel} sobre ${result.targetLabel}: ${active.label} reporta ${speed} km/h, rumbo ${active.headingDeg || 0}Â° y ultima senal ${signalAge}.`;
 }
 
 function appendGpsTrackPoint(device) {
@@ -17630,7 +17637,7 @@ function renderGpsReplayPanel(result = state.agronomyOutputs.gps) {
     <div class="gps-replay-head">
       <div>
         <p class="section-kicker">Replay operativo</p>
-        <h4>Reproduce el recorrido y revisa desvíos</h4>
+        <h4>Reproduce el recorrido y revisa desvÃ­os</h4>
       </div>
       <span class="agronomy-visual-pill tone-${state.gpsTracking.replayPlaying ? "low" : "mid"}">${samples.length} puntos</span>
     </div>
@@ -17647,7 +17654,7 @@ function renderGpsReplayPanel(result = state.agronomyOutputs.gps) {
       <article class="decision-card tone-base">
         <p class="candidate-rank">Dispositivo</p>
         <h5>${activeSample.label || result.activeDevice.label}</h5>
-        <p>${activeSample.deviceType || result.activeDevice.deviceType || "GPS"} · ${Number(activeSample.speedKmh || 0).toFixed(1)} km/h</p>
+        <p>${activeSample.deviceType || result.activeDevice.deviceType || "GPS"} | ${Number(activeSample.speedKmh || 0).toFixed(1)} km/h</p>
       </article>
       <article class="decision-card tone-${activeFenceState?.inside === false ? "high" : "low"}">
         <p class="candidate-rank">Corredor</p>
@@ -18576,7 +18583,7 @@ function renderGpsTrackingResults(result = null) {
     {
       label: "Dispositivo activo",
       value: active.label,
-      copy: `${active.deviceType || "Dispositivo"} · rumbo ${active.headingDeg || 0}°`,
+      copy: `${active.deviceType || "Dispositivo"} | rumbo ${active.headingDeg || 0}Â°`,
       highlight: true,
     },
     {
@@ -18682,8 +18689,8 @@ function renderGpsTrackingVisual(result = null) {
         return `
         <article class="gps-device-card">
           <strong>${device.label}</strong>
-          <p>${device.deviceType || "Dispositivo"} · ${device.statusLabel || "En seguimiento"}</p>
-          <p>${Number(device.speedKmh || 0).toFixed(1)} km/h · ${Math.round(Number(device.batteryPct || 0))}% bateria</p>
+          <p>${device.deviceType || "Dispositivo"} | ${device.statusLabel || "En seguimiento"}</p>
+          <p>${Number(device.speedKmh || 0).toFixed(1)} km/h | ${Math.round(Number(device.batteryPct || 0))}% bateria</p>
           <p>${formatGpsSignalAge(device.timestamp)}</p>
         </article>
       `;
@@ -18732,7 +18739,7 @@ function renderGpsTrackingOverlay(result = state.agronomyOutputs.gps) {
       const properties = feature.properties || {};
       layer.bindPopup(`
         <strong>${properties.name || properties.label || "Dispositivo"}</strong><br>
-        ${properties.deviceType || "GPS"} · ${properties.statusLabel || "En seguimiento"}<br>
+        ${properties.deviceType || "GPS"} | ${properties.statusLabel || "En seguimiento"}<br>
         Velocidad: ${Number(properties.speedKmh || 0).toFixed(1)} km/h<br>
         Bateria: ${Math.round(Number(properties.batteryPct || 0))}%<br>
         Ultima senal: ${formatGpsSignalAge(properties.timestamp)}
@@ -18807,7 +18814,7 @@ function renderGpsTrackingResults(result = null) {
     {
       label: "Dispositivo activo",
       value: active.label,
-      copy: `${active.deviceType || "Dispositivo"} · rumbo ${active.headingDeg || 0} deg`,
+      copy: `${active.deviceType || "Dispositivo"} | rumbo ${active.headingDeg || 0} deg`,
       highlight: true,
     },
     {
@@ -18945,8 +18952,8 @@ function renderGpsTrackingVisual(result = null) {
       ${listedDevices.map((device) => `
         <article class="gps-device-card">
           <strong>${device.label}</strong>
-          <p>${device.deviceType || "Dispositivo"} · ${device.flightStatus || device.statusLabel || "En seguimiento"}</p>
-          <p>${Number(device.speedKmh || 0).toFixed(1)} km/h · ${Math.round(Number(device.batteryPct || 0))}% bateria${isAerialTelemetryDevice(device) ? ` · ${formatGpsAltitude(device.altitudeM)}` : ""}</p>
+          <p>${device.deviceType || "Dispositivo"} | ${device.flightStatus || device.statusLabel || "En seguimiento"}</p>
+          <p>${Number(device.speedKmh || 0).toFixed(1)} km/h | ${Math.round(Number(device.batteryPct || 0))}% bateria${isAerialTelemetryDevice(device) ? ` | ${formatGpsAltitude(device.altitudeM)}` : ""}</p>
           <p>${formatGpsSignalAge(device.timestamp)}</p>
         </article>
       `).join("")}
@@ -19003,7 +19010,7 @@ function renderGpsTrackingOverlay(result = state.agronomyOutputs.gps) {
       const aerial = isAerialTelemetryDevice(properties);
       layer.bindPopup(`
         <strong>${properties.name || properties.label || "Dispositivo"}</strong><br>
-        ${properties.deviceType || "GPS"} · ${properties.flightStatus || properties.statusLabel || "En seguimiento"}<br>
+        ${properties.deviceType || "GPS"} | ${properties.flightStatus || properties.statusLabel || "En seguimiento"}<br>
         Velocidad: ${Number(properties.speedKmh || 0).toFixed(1)} km/h<br>
         ${aerial ? `Altura: ${formatGpsAltitude(properties.altitudeM)}<br>` : ""}
         ${aerial ? `Ascenso: ${formatGpsVerticalSpeed(properties.verticalSpeedMps)}<br>` : ""}
@@ -19052,7 +19059,7 @@ function renderGpsTrackingOverlay(result = state.agronomyOutputs.gps) {
       onEachFeature(feature, layer) {
         layer.bindPopup(`
           <strong>Base de salida</strong><br>
-          ${feature.properties.deviceType || "Dispositivo"} · ${feature.properties.label || "Equipo activo"}<br>
+          ${feature.properties.deviceType || "Dispositivo"} | ${feature.properties.label || "Equipo activo"}<br>
           Coordenada de referencia para despegue o control.
         `);
       },
@@ -19513,7 +19520,7 @@ function renderGpsRelayReceptionStarted(device, connectedDevices = getGpsRelayCo
         ${connectedDevices.map((entry) => `
           <article class="gps-device-card">
             <strong>${entry.label}</strong>
-            <p>${entry.deviceType || "GPS"} · ${entry.statusLabel || "Conectado"}</p>
+            <p>${entry.deviceType || "GPS"} | ${entry.statusLabel || "Conectado"}</p>
             <p>${hasGpsCoordinates(entry) ? "Posicion recibida y visible en el mapa." : "Esperando primera coordenada GPS."}</p>
             <p>${formatGpsSignalAge(entry.timestamp)}</p>
           </article>
@@ -21049,7 +21056,7 @@ function buildPlanning3dModeReportHtml() {
   <body>
     <div class="wrap">
       <section class="card">
-        <p class="kicker">Centro 3D urbano · ${escapeHtmlContent(payload.area.scopeLabel)}</p>
+        <p class="kicker">Centro 3D urbano | ${escapeHtmlContent(payload.area.scopeLabel)}</p>
         <h1 class="title">${escapeHtmlContent(payload.focus.title)}</h1>
         <p class="copy">${escapeHtmlContent(payload.focus.copy)}</p>
         <p class="copy"><strong>Recomendacion:</strong> ${escapeHtmlContent(payload.focus.recommendation)}</p>
@@ -21099,7 +21106,7 @@ function buildPlanning3dModeReportHtml() {
         </div>
         ${(payload.scene.materialSummary || []).length ? `
           <div class="pill-row" style="margin-top:14px">
-            ${payload.scene.materialSummary.map((item) => `<span class="pill">${escapeHtmlContent(item.label)} · ${escapeHtmlContent(String(item.count))}</span>`).join("")}
+            ${payload.scene.materialSummary.map((item) => `<span class="pill">${escapeHtmlContent(item.label)} | ${escapeHtmlContent(String(item.count))}</span>`).join("")}
           </div>
         ` : ""}
       </section>
@@ -21110,7 +21117,7 @@ function buildPlanning3dModeReportHtml() {
             <article class="metric"><span>ID</span><strong>${escapeHtmlContent(String(payload.selectedBuilding.buildingId || "-"))}</strong></article>
             <article class="metric"><span>Pisos</span><strong>${escapeHtmlContent(String(payload.selectedBuilding.floors))}</strong></article>
             <article class="metric"><span>Altura</span><strong>${escapeHtmlContent(String(payload.selectedBuilding.heightM))} m</strong></article>
-            <article class="metric"><span>Huella</span><strong>${escapeHtmlContent(String(payload.selectedBuilding.footprintM2))} m²</strong></article>
+            <article class="metric"><span>Huella</span><strong>${escapeHtmlContent(String(payload.selectedBuilding.footprintM2))} mÂ²</strong></article>
             <article class="metric"><span>Tipologia</span><strong>${escapeHtmlContent(payload.selectedBuilding.typology || "Sin tipologia")}</strong></article>
             <article class="metric"><span>Material</span><strong>${escapeHtmlContent(payload.selectedBuilding.material || "Catalogo base")}</strong></article>
           </div>
@@ -21118,7 +21125,7 @@ function buildPlanning3dModeReportHtml() {
         </section>
       ` : ""}
       <section class="card">
-        <p class="copy">Version ${escapeHtmlContent(payload.version)} · ${escapeHtmlContent(fileDate)} · Modos activos: ${escapeHtmlContent(payload.activeModes.label)}</p>
+        <p class="copy">Version ${escapeHtmlContent(payload.version)} | ${escapeHtmlContent(fileDate)} | Modos activos: ${escapeHtmlContent(payload.activeModes.label)}</p>
       </section>
     </div>
   </body>
@@ -24568,8 +24575,8 @@ function renderPlanning3dSummary(force = false) {
       : ` Para ${solarStamp} el sol queda bajo el horizonte local, por eso no se proyectan sombras en el visor.`;
   const solarLabel = sunPosition
     ? sunPosition.daylight
-      ? `Az ${sunPosition.azimuth}° | El ${sunPosition.elevation}°`
-      : `Sol bajo horizonte | El ${sunPosition.elevation}°`
+      ? `Az ${sunPosition.azimuth}Â° | El ${sunPosition.elevation}Â°`
+      : `Sol bajo horizonte | El ${sunPosition.elevation}Â°`
     : "Calculando sol";
 
   if (!buildings?.features?.length) {
@@ -26753,6 +26760,9 @@ function renderPlanningModule(force = false) {
   if (dom.exportPivaJsonBtn) {
     dom.exportPivaJsonBtn.disabled = !isCurrentTerritorialAnalysis(state.pivaData);
   }
+  if (dom.exportPivaCsvBtn) {
+    dom.exportPivaCsvBtn.disabled = !isCurrentTerritorialAnalysis(state.pivaData);
+  }
   if (dom.clearPivaBtn) {
     dom.clearPivaBtn.disabled = !isCurrentTerritorialAnalysis(state.pivaData);
   }
@@ -26827,7 +26837,7 @@ function renderPlanningModule(force = false) {
     const demand = getHydrologyDemandProfile();
     setTextIfChanged(
       dom.hydrologySourceNote,
-      `Replica metodologica inspirada en el estudio hidrico del DMQ: cubo hidroclimatico, modelo semidistribuido tipo GR4, demanda 2020-2100 y sesgo climatico corregido. En esta fase el geoportal usa una simulacion territorial sintetica para ${areaProfile.scopeLabel} con ${climate.label}, ${horizon.label} y ${demand.label}. La calibracion local ya se incorpora dentro del modelo sin añadir ruido a la lectura grafica.`
+      `Replica metodologica inspirada en el estudio hidrico del DMQ: cubo hidroclimatico, modelo semidistribuido tipo GR4, demanda 2020-2100 y sesgo climatico corregido. En esta fase el geoportal usa una simulacion territorial sintetica para ${areaProfile.scopeLabel} con ${climate.label}, ${horizon.label} y ${demand.label}. La calibracion local ya se incorpora dentro del modelo sin aÃ±adir ruido a la lectura grafica.`
     );
   }
   if (dom.pivaSourceNote) {
@@ -28053,7 +28063,7 @@ function renderLandChangeDoctrine(analysis = null) {
       <article class="risk-doctrine-item">
         <p class="risk-doctrine-kicker">Principio 2</p>
         <h4>Planificar antes de ocupar</h4>
-        <p>La huella urbana se interpreta como señal de alerta para ordenar crecimiento, cerrar vacios y evitar saltos dispersos antes de habilitar nuevo suelo.</p>
+        <p>La huella urbana se interpreta como seÃ±al de alerta para ordenar crecimiento, cerrar vacios y evitar saltos dispersos antes de habilitar nuevo suelo.</p>
       </article>
       <article class="risk-doctrine-item">
         <p class="risk-doctrine-kicker">Principio 3</p>
@@ -29110,7 +29120,7 @@ function renderMobilityOverlay(analysis) {
       };
     },
     onEachFeature: (feature, layer) => {
-      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.coverageLabel || "Cobertura"} · ${feature.properties?.score || 0}/100. ${feature.properties?.summary || ""}</p>`);
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.coverageLabel || "Cobertura"} | ${feature.properties?.score || 0}/100. ${feature.properties?.summary || ""}</p>`);
     },
   }).addTo(mapState.map);
 
@@ -29515,7 +29525,7 @@ function renderRiskOverlay(analysis) {
       };
     },
     onEachFeature: (feature, layer) => {
-      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.riskLabel || "Riesgo"} · ${feature.properties?.score || 0}/100. ${feature.properties?.summary || ""}</p>`);
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.riskLabel || "Riesgo"} | ${feature.properties?.score || 0}/100. ${feature.properties?.summary || ""}</p>`);
     },
   }).addTo(mapState.map);
 
@@ -29548,7 +29558,7 @@ function renderRiskOverlay(analysis) {
       active: feature.properties?.riskSectorId === state.riskHighlightId,
     })),
     onEachFeature: (feature, layer) => {
-      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Hotspot"}</h3><p class="popup-copy">${feature.properties?.riskLabel || "Riesgo"} · ${feature.properties?.score || 0}/100. ${feature.properties?.summary || ""}</p>`);
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Hotspot"}</h3><p class="popup-copy">${feature.properties?.riskLabel || "Riesgo"} | ${feature.properties?.score || 0}/100. ${feature.properties?.summary || ""}</p>`);
     },
   }).addTo(mapState.map);
 
@@ -30187,7 +30197,7 @@ function renderUrbanClimateOverlay(analysis) {
       });
     },
     onEachFeature: (feature, layer) => {
-      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Nodo"}</h3><p class="popup-copy">${feature.properties?.classLabel || "Clima urbano"} · ${feature.properties?.summary || ""}</p>`);
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Nodo"}</h3><p class="popup-copy">${feature.properties?.classLabel || "Clima urbano"} | ${feature.properties?.summary || ""}</p>`);
     },
   }).addTo(mapState.map);
 
@@ -30450,6 +30460,101 @@ function buildPivaComparator(summary, localSupport, packages, projects) {
   };
 }
 
+function buildPivaExecutiveSnapshot(analysis) {
+  const leadProject = analysis.projects[0] || null;
+  const leadParish = analysis.parishPortfolio[0] || null;
+  const secondParish = analysis.parishPortfolio[1] || null;
+  const firstPackage = analysis.packages[0] || null;
+  return {
+    headline: analysis.summary.pivaScore >= 75
+      ? "PIVA listo para pasar de diagnostico a cartera ejecutable"
+      : analysis.summary.pivaScore >= 58
+        ? "PIVA listo para entrar por paquetes demostrativos"
+        : "PIVA en fase de contencion, soporte y activacion inicial",
+    copy: leadParish
+      ? `${leadParish.parish} debe entrar primero, mientras ${leadProject?.title || "la cartera lider"} concentra la accion detonante del plan.`
+      : "Corre el PIVA para construir el tablero ejecutivo, la cartera y la secuencia de arranque.",
+    leadProject,
+    leadParish,
+    secondParish,
+    firstPackage,
+    chips: [
+      `${analysis.summary.projectCount} proyectos`,
+      `${analysis.summary.packageCount} paquetes`,
+      `${analysis.summary.profileCount} perfiles`,
+      `${analysis.summary.officialLayerCount} capas oficiales`,
+      `${analysis.summary.bankReserveCount} reservas municipales`,
+      `${analysis.summary.heritageCount} patrimonios`,
+    ],
+    items: [
+      {
+        label: "Parroquia prioritaria",
+        value: leadParish ? leadParish.parish : "Sin priorizar",
+        tone: leadParish?.priorityScore >= 72 ? "high" : leadParish?.priorityScore >= 56 ? "mid" : "low",
+        copy: leadParish
+          ? `${leadParish.priorityScore}/100 | ${leadParish.actionLabel}. ${leadParish.linkedProjectTitle}.`
+          : "La corrida dejara aqui la parroquia que debe entrar primero.",
+      },
+      {
+        label: "Proyecto lider",
+        value: leadProject ? leadProject.title : "Sin cartera",
+        tone: leadProject?.priorityScore >= 76 ? "low" : leadProject?.priorityScore >= 58 ? "mid" : "high",
+        copy: leadProject
+          ? `${leadProject.priorityScore}/100 | ${leadProject.module}. ${leadProject.summary}`
+          : "La corrida dejara aqui el proyecto detonante del PIVA.",
+      },
+      {
+        label: "Paquete de arranque",
+        value: firstPackage ? firstPackage.title : "Sin paquete",
+        tone: firstPackage?.tone === "high" ? "low" : firstPackage?.tone === "mid" ? "mid" : "high",
+        copy: firstPackage
+          ? `${firstPackage.priority}. ${firstPackage.focus}`
+          : "La corrida ordenara aqui el paquete de entrada del plan.",
+      },
+      {
+        label: "Segunda ola",
+        value: secondParish ? secondParish.parish : "En preparacion",
+        tone: secondParish?.priorityScore >= 72 ? "high" : secondParish?.priorityScore >= 56 ? "mid" : "low",
+        copy: secondParish
+          ? `${secondParish.priorityScore}/100 | ${secondParish.focusLabel}.`
+          : "Aqui aparecera la siguiente parroquia para escalar la red verde-azul.",
+      },
+    ],
+  };
+}
+
+function buildPivaParishCollection(parishPortfolio, serviceFeatures, projects = []) {
+  const features = parishPortfolio.map((parish, index) => {
+    const serviceFeature = serviceFeatures.find((feature) => {
+      const source = normalizeMunicipalPivaParish(feature.properties?.parroquia || "");
+      return source === normalizeMunicipalPivaParish(parish.parish);
+    });
+    const baseFeature = serviceFeature?.geometry
+      ? cloneFeature(serviceFeature)
+      : pointFeature(parish.parish, [-78.56, -0.49]);
+    baseFeature.properties = {
+      ...(baseFeature.properties || {}),
+      pivaParishId: parish.id,
+      pivaLabel: parish.parish,
+      pivaSummary: parish.summary,
+      pivaPriorityScore: parish.priorityScore,
+      pivaActionLabel: parish.actionLabel,
+      pivaFocusLabel: parish.focusLabel,
+      pivaLinkedProject: parish.linkedProjectTitle,
+      pivaSupportScore: parish.supportScore,
+      pivaServiceIndex: parish.serviceIndex,
+      pivaTone: parish.tone,
+      pivaRank: index + 1,
+      pivaProjectId: projects.find((project) => project.title === parish.linkedProjectTitle)?.id || "",
+    };
+    return baseFeature;
+  });
+  return {
+    type: "FeatureCollection",
+    features,
+  };
+}
+
 function getPivaLocalSupportLabel(score = 0) {
   if (score >= 72) {
     return "Soporte municipal fuerte";
@@ -30480,8 +30585,8 @@ function buildMejiaPivaLocalSupport(targetFeature) {
   const highTensionFeatures = filterFeaturesByTerritorialArea(geoSources.altaTensionMejia?.features || [], "mejia").map(cloneFeature);
   const serviceFeatures = filterFeaturesByTerritorialArea(geoSources.serviciosBasicosParroquia?.features || [], "mejia").map(cloneFeature);
 
-  const greenBankFeatures = bankFeatures.filter((feature) => /AREA VERDE|ÁREA VERDE|ÁREAS VERDES|AREAS VERDES/i.test(String(feature.properties?.descr || "")));
-  const parkEquipmentFeatures = municipalEquipmentFeatures.filter((feature) => /ÁREAS VERDES|AREAS VERDES|RECREACI/i.test(String(feature.properties?.tipologia || "")));
+  const greenBankFeatures = bankFeatures.filter((feature) => /AREA VERDE|ÃREA VERDE|ÃREAS VERDES|AREAS VERDES/i.test(String(feature.properties?.descr || "")));
+  const parkEquipmentFeatures = municipalEquipmentFeatures.filter((feature) => /ÃREAS VERDES|AREAS VERDES|RECREACI/i.test(String(feature.properties?.tipologia || "")));
   const healthFeatures = municipalEquipmentFeatures.filter((feature) => feature.properties?.serviceType === "hospital");
   const educationFeatures = municipalEquipmentFeatures.filter((feature) => feature.properties?.serviceType === "escuela");
   const securityFeatures = municipalEquipmentFeatures.filter((feature) => /SEGURIDAD/i.test(String(feature.properties?.tipologia || "")));
@@ -31026,6 +31131,7 @@ function buildPivaAnalysis() {
     module: project.module,
   }));
   const parishPortfolio = buildPivaParishPortfolio(localSupport, sortedProjects);
+  const parishCollection = buildPivaParishCollection(parishPortfolio, localSupport.serviceFeatures, sortedProjects);
   const comparator = buildPivaComparator({
     blueScore,
     greenScore,
@@ -31035,6 +31141,21 @@ function buildPivaAnalysis() {
     corridorCount: urbanClimate.summary.priorityCorridorCount || corridorFeatures.length,
   }, localSupport, packages, sortedProjects);
   const legend = getPivaLegendItems();
+  const dashboard = buildPivaExecutiveSnapshot({
+    projects: sortedProjects,
+    parishPortfolio,
+    packages,
+    profiles,
+    comparator,
+    summary: {
+      pivaScore,
+      officialLayerCount: official.activeLayerCount || 0,
+      bankReserveCount: localSupport.greenBankCount,
+      heritageCount: localSupport.heritageCount,
+      packageCount: packages.length,
+      profileCount: profiles.length,
+    },
+  });
   const summary = {
     pivaScore,
     signal,
@@ -31096,9 +31217,11 @@ function buildPivaAnalysis() {
       profiles,
       parishPortfolio,
       comparator,
+      dashboard,
       legend,
       summary,
       projects: sortedProjects,
+      parishCollection,
       zoneCollection: {
         type: "FeatureCollection",
         features: zoneFeatures,
@@ -31117,6 +31240,7 @@ function renderPivaModule() {
   const analysis = isCurrentTerritorialAnalysis(state.pivaData) ? state.pivaData : null;
   if (!analysis) {
     resetMetricGrid(dom.pivaResults, `Ejecuta el PIVA para priorizar infraestructura verde y azul sobre Canton Mejia y dejar una cartera accionable por corredor, agua y espacio publico.`);
+    resetVisualPanel(dom.pivaDashboard, "Aqui aparecera el tablero ejecutivo del PIVA con parroquia critica, proyecto lider, paquete de arranque y segunda ola territorial.");
     resetVisualPanel(dom.pivaReadout, "Aqui aparecera la lectura verde-azul integrada con clima urbano, seguridad hidrica, conectividad y soporte de evidencia.");
     resetVisualPanel(dom.pivaBoard, "Aqui aparecera el semaforo PIVA con los pilares azul, verde, clima, conectividad y soporte oficial.");
     resetVisualPanel(dom.pivaLegendBoard, "Aqui aparecera la leyenda PIVA para distinguir capas azules, verdes, climaticas, transiciones y proyectos detonantes.");
@@ -31129,6 +31253,42 @@ function renderPivaModule() {
       setTextIfChanged(dom.pivaSourceNote, `Modulo PIVA orientado a ${areaProfile.scopeLabel === "Canton Mejia" ? areaProfile.scopeLabel : "Canton Mejia"}. Si el ambito activo no es Mejia, al ejecutar la corrida se ajusta para construir la cartera verde-azul del canton con banco de suelo, equipamiento, servicios basicos y patrimonio municipal.`);
     }
     return;
+  }
+
+  if (dom.pivaDashboard) {
+    const dashboard = analysis.dashboard;
+    dom.pivaDashboard.classList.remove("empty-state");
+    dom.pivaDashboard.classList.add("has-data");
+    setHtmlIfChanged(dom.pivaDashboard, `
+      <article class="territorial-decision-hero tone-${analysis.summary.signal.tone}">
+        <div>
+          <p class="candidate-rank">Tablero ejecutivo PIVA</p>
+          <h4>${escapeHtmlContent(dashboard.headline)}</h4>
+          <p>${escapeHtmlContent(dashboard.copy)}</p>
+        </div>
+        <div class="territorial-decision-score">
+          <strong>${analysis.summary.pivaScore}/100</strong>
+          <span>${escapeHtmlContent(analysis.summary.signal.label)}</span>
+        </div>
+      </article>
+      <div class="dashboard-chip-row">
+        ${dashboard.chips.map((chip) => `<span class="planning-pill emphasis">${escapeHtmlContent(chip)}</span>`).join("")}
+      </div>
+      <div class="dashboard-action-row">
+        <button class="secondary-button" type="button" data-piva-parish-id="${escapeHtmlContent(dashboard.leadParish?.id || "")}" ${dashboard.leadParish ? "" : "disabled"}>Abrir parroquia critica</button>
+        <button class="ghost-button" type="button" data-piva-project-id="${escapeHtmlContent(dashboard.leadProject?.id || "")}" ${dashboard.leadProject ? "" : "disabled"}>Ver proyecto lider</button>
+        <button class="ghost-button" type="button" data-piva-parish-id="${escapeHtmlContent(dashboard.secondParish?.id || "")}" ${dashboard.secondParish ? "" : "disabled"}>Ver segunda ola</button>
+      </div>
+      <div class="decision-grid">
+        ${dashboard.items.map((item) => `
+          <article class="decision-card tone-${item.tone}">
+            <p class="candidate-rank">${escapeHtmlContent(item.label)}</p>
+            <h5>${escapeHtmlContent(item.value)}</h5>
+            <p>${escapeHtmlContent(item.copy)}</p>
+          </article>
+        `).join("")}
+      </div>
+    `);
   }
 
   paintMetricGrid(dom.pivaResults, [
@@ -31361,7 +31521,7 @@ function renderPivaModule() {
           <p>${escapeHtmlContent(analysis.comparator.recommendation)}</p>
         </div>
         <div class="territorial-decision-score">
-          <strong>${analysis.comparator.currentScore} → ${analysis.comparator.targetScore}</strong>
+          <strong>${analysis.comparator.currentScore} &rarr; ${analysis.comparator.targetScore}</strong>
           <span>${analysis.comparator.delta >= 0 ? `+${analysis.comparator.delta}` : analysis.comparator.delta} pts</span>
         </div>
       </article>
@@ -31439,7 +31599,7 @@ function renderPivaModule() {
           <article class="official-source-card">
             <div class="official-source-card-head">
               <div>
-                <h5>${escapeHtmlContent(phase.label)} · ${escapeHtmlContent(phase.title)}</h5>
+                <h5>${escapeHtmlContent(phase.label)} | ${escapeHtmlContent(phase.title)}</h5>
                 <p>${escapeHtmlContent(phase.copy)}</p>
               </div>
             </div>
@@ -31471,7 +31631,7 @@ function renderPivaModule() {
     dom.pivaParishes.classList.remove("empty-state");
     dom.pivaParishes.classList.add("has-data");
     setHtmlIfChanged(dom.pivaParishes, analysis.parishPortfolio.map((parish, index) => `
-      <article class="territorial-sector-sheet tone-${parish.tone}">
+      <article class="territorial-sector-sheet tone-${parish.tone} ${parish.id === state.pivaHighlightId ? "active" : ""}">
         <div class="territorial-sector-head">
           <div>
             <p class="candidate-rank">Parroquia ${index + 1}</p>
@@ -31489,6 +31649,12 @@ function renderPivaModule() {
           <span>Alta tension: ${parish.highTensionKm} km</span>
         </div>
         <p class="land-change-sector-note">${escapeHtmlContent(parish.focusLabel)} | Proyecto sugerido: ${escapeHtmlContent(parish.linkedProjectTitle)}</p>
+        <div class="piva-parish-actions">
+          <button class="ghost-button" type="button" data-piva-parish-id="${escapeHtmlContent(parish.id)}">Ver parroquia</button>
+          ${parish.linkedProjectTitle && analysis.projects.find((project) => project.title === parish.linkedProjectTitle)
+            ? `<button class="ghost-button" type="button" data-piva-project-id="${escapeHtmlContent(analysis.projects.find((project) => project.title === parish.linkedProjectTitle).id)}">Ver proyecto</button>`
+            : ""}
+        </div>
       </article>
     `).join(""));
   }
@@ -31598,7 +31764,7 @@ async function runPivaAnalysis(silent = false) {
 }
 
 function clearPivaOverlay() {
-  ["pivaZoneLayer", "pivaCorridorLayer", "pivaProjectLayer"].forEach((layerName) => {
+  ["pivaParishLayer", "pivaZoneLayer", "pivaCorridorLayer", "pivaProjectLayer"].forEach((layerName) => {
     if (mapState[layerName]) {
       mapState.map?.removeLayer(mapState[layerName]);
       mapState[layerName] = null;
@@ -31610,6 +31776,25 @@ function renderPivaOverlay(analysis) {
   clearPivaOverlay();
   if (!mapState.map || !analysis || !isPivaRoute(state.entryRoute)) {
     return;
+  }
+
+  if (analysis.parishCollection?.features?.length) {
+    mapState.pivaParishLayer = L.geoJSON(analysis.parishCollection, {
+      pointToLayer: (feature, latlng) => {
+        const active = feature.properties?.pivaParishId === state.pivaHighlightId;
+        const radius = active ? 11 : clamp(5 + (Number(feature.properties?.pivaPriorityScore || 0) / 24), 6, 10);
+        return L.circleMarker(latlng, {
+          radius,
+          color: active ? "#fffaf2" : "#2f4f4d",
+          weight: active ? 2.8 : 1.8,
+          fillColor: getPivaSignalPalette("civic").marker,
+          fillOpacity: active ? 0.96 : 0.82,
+        });
+      },
+      onEachFeature: (feature, layer) => {
+        layer.bindPopup(`<h3 class="popup-title">${feature.properties?.pivaLabel || "Parroquia PIVA"}</h3><p class="popup-copy">${feature.properties?.pivaSummary || "Parroquia priorizada dentro de la cartera PIVA."}</p>`);
+      },
+    }).addTo(mapState.map);
   }
 
   if (analysis.zoneCollection?.features?.length) {
@@ -31668,6 +31853,7 @@ function renderPivaOverlay(analysis) {
 
   mapState.pivaZoneLayer?.bringToFront?.();
   mapState.pivaCorridorLayer?.bringToFront?.();
+  mapState.pivaParishLayer?.bringToFront?.();
   mapState.pivaProjectLayer?.bringToFront?.();
   if (mapState.currentPlotLayer) {
     mapState.currentPlotLayer.bringToFront();
@@ -31684,6 +31870,7 @@ function focusPivaStudy() {
   renderPivaOverlay(analysis);
   updateMapSummary();
   const bounds = buildBoundsFromFeatures([
+    ...(analysis.parishCollection?.features || []),
     ...(analysis.zoneCollection?.features || []),
     ...(analysis.corridorCollection?.features || []),
     ...(analysis.projectCollection?.features || []),
@@ -31718,12 +31905,45 @@ function focusPivaProject(projectId) {
   }
 }
 
-function handlePivaInteraction(event) {
-  const button = event.target.closest("[data-piva-project-id]");
-  if (!button || !(dom.pivaBoard?.contains(button) || dom.pivaProjects?.contains(button))) {
+function focusPivaParish(parishId) {
+  const analysis = isCurrentTerritorialAnalysis(state.pivaData) ? state.pivaData : null;
+  const parish = analysis?.parishPortfolio?.find((item) => item.id === parishId);
+  const feature = analysis?.parishCollection?.features?.find((item) => item.properties?.pivaParishId === parishId) || null;
+  if (!parish || !mapState.map) {
     return;
   }
-  focusPivaProject(button.dataset.pivaProjectId);
+  state.pivaHighlightId = parishId;
+  state.territorialFocus = "piva";
+  renderPivaModule();
+  renderPivaOverlay(analysis);
+  updateMapSummary();
+  const linkedProject = analysis.projects.find((project) => project.title === parish.linkedProjectTitle);
+  const bounds = buildBoundsFromFeatures([
+    ...(feature ? [feature] : []),
+    ...(linkedProject?.feature ? [linkedProject.feature] : []),
+  ]);
+  if (bounds?.isValid?.()) {
+    mapState.map.fitBounds(bounds, {
+      padding: [56, 56],
+      maxZoom: 13,
+    });
+  } else if (feature?.geometry?.type === "Point") {
+    mapState.map.setView([feature.geometry.coordinates[1], feature.geometry.coordinates[0]], Math.max(mapState.map.getZoom(), 12));
+  }
+}
+
+function handlePivaInteraction(event) {
+  const button = event.target.closest("[data-piva-project-id], [data-piva-parish-id]");
+  if (!button || !(dom.pivaDashboard?.contains(button) || dom.pivaBoard?.contains(button) || dom.pivaParishes?.contains(button) || dom.pivaProjects?.contains(button))) {
+    return;
+  }
+  if (button.dataset.pivaParishId) {
+    focusPivaParish(button.dataset.pivaParishId);
+    return;
+  }
+  if (button.dataset.pivaProjectId) {
+    focusPivaProject(button.dataset.pivaProjectId);
+  }
 }
 
 function buildPivaJsonExport() {
@@ -31738,6 +31958,7 @@ function buildPivaJsonExport() {
     context: analysis.context,
     sourceStudy: analysis.sourceStudy,
     summary: analysis.summary,
+    dashboard: analysis.dashboard,
     deliverables: analysis.deliverables,
     legend: analysis.legend,
     comparator: analysis.comparator,
@@ -31745,6 +31966,7 @@ function buildPivaJsonExport() {
     phases: analysis.phases,
     profiles: analysis.profiles,
     parishPortfolio: analysis.parishPortfolio,
+    parishCollection: analysis.parishCollection,
     localSupport: {
       supportLabel: analysis.localSupport.supportLabel,
       localSupportScore: analysis.localSupport.localSupportScore,
@@ -31772,6 +31994,35 @@ function buildPivaJsonExport() {
     evidence: analysis.evidence,
     projects: analysis.projects,
   };
+}
+
+function buildPivaCsvExport() {
+  const analysis = isCurrentTerritorialAnalysis(state.pivaData) ? state.pivaData : null;
+  if (!analysis) {
+    return "";
+  }
+  const rows = [
+    ["tipo", "nombre", "prioridad", "score", "detalle_1", "detalle_2", "detalle_3"],
+    ...analysis.parishPortfolio.map((item) => ([
+      "parroquia",
+      item.parish,
+      item.actionLabel,
+      item.priorityScore,
+      `servicios ${item.serviceIndex}/100`,
+      `soporte ${item.supportScore}/100`,
+      item.linkedProjectTitle,
+    ])),
+    ...analysis.projects.map((project) => ([
+      "proyecto",
+      project.title,
+      project.priorityLabel,
+      project.priorityScore,
+      project.module,
+      project.summary,
+      project.note,
+    ])),
+  ];
+  return rows.map((row) => row.map(escapeCsvValue).join(",")).join("\n");
 }
 
 function buildPivaReportHtml() {
@@ -31867,7 +32118,7 @@ function buildPivaReportHtml() {
         </div>
         ${analysis.packages.map((item) => `
           <article class="card sheet">
-            <p class="kicker">${escapeHtmlContent(item.label)} · ${escapeHtmlContent(item.priority)}</p>
+            <p class="kicker">${escapeHtmlContent(item.label)} | ${escapeHtmlContent(item.priority)}</p>
             <h3>${escapeHtmlContent(item.title)}</h3>
             <p>${escapeHtmlContent(item.summary)}</p>
             <p>${escapeHtmlContent(item.focus)}</p>
@@ -31887,7 +32138,7 @@ function buildPivaReportHtml() {
         </div>
         ${analysis.profiles.map((item) => `
           <article class="card sheet">
-            <p class="kicker">${escapeHtmlContent(item.label)} · ${escapeHtmlContent(item.module)}</p>
+            <p class="kicker">${escapeHtmlContent(item.label)} | ${escapeHtmlContent(item.module)}</p>
             <h3>${escapeHtmlContent(item.title)}</h3>
             <p>${escapeHtmlContent(item.summary)}</p>
             <p>${escapeHtmlContent(item.rationale)}</p>
@@ -31915,7 +32166,179 @@ function buildPivaReportHtml() {
         <h2>Cartera inicial de proyectos</h2>
         ${analysis.projects.map((project, index) => `
           <article class="card sheet">
-            <p class="kicker">${escapeHtmlContent(project.module)} · Prioridad ${index + 1}</p>
+            <p class="kicker">${escapeHtmlContent(project.module)} | Prioridad ${index + 1}</p>
+            <h3>${escapeHtmlContent(project.title)}</h3>
+            <p>${escapeHtmlContent(project.summary)}</p>
+            <p>${escapeHtmlContent(project.note)}</p>
+            <ul>
+              ${project.metrics.map((metric) => `<li>${escapeHtmlContent(metric.label)}: ${escapeHtmlContent(metric.value)}</li>`).join("")}
+            </ul>
+          </article>
+        `).join("")}
+      </section>
+    </body>
+  </html>`;
+}
+
+function buildPivaExecutiveReportHtml() {
+  const analysis = isCurrentTerritorialAnalysis(state.pivaData) ? state.pivaData : null;
+  if (!analysis) {
+    return "";
+  }
+  const dashboard = analysis.dashboard;
+  return `<!doctype html>
+  <html lang="es">
+    <head>
+      <meta charset="utf-8">
+      <title>PIVA Canton Mejia</title>
+      <style>
+        body{font-family:Arial,sans-serif;margin:28px;color:#243129}
+        h1,h2,h3{margin:0 0 12px}
+        p{line-height:1.55}
+        .kicker{text-transform:uppercase;letter-spacing:.08em;font-size:12px;color:#2f7f5f;margin-bottom:8px}
+        .grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));margin:18px 0 26px}
+        .card{border:1px solid #d8ddd5;border-radius:14px;padding:16px;background:#fbfaf7}
+        .metric{font-size:28px;font-weight:700;margin:8px 0}
+        .sheet{margin-bottom:14px}
+      </style>
+    </head>
+    <body>
+      <p class="kicker">Infraestructura verde y azul</p>
+      <h1>PIVA del canton Mejia</h1>
+      <p>Corrida generada para ${escapeHtmlContent(analysis.context.scopeLabel)} con soporte de clima urbano, seguridad hidrica, huella, patrones territoriales, evidencia, capas oficiales e insumos municipales de banco de suelo, equipamiento, servicios basicos y patrimonio.</p>
+      <p><strong>Marco Ecuador:</strong> ${escapeHtmlContent(analysis.sourceStudy.methodLabel)}.</p>
+      <ul>
+        ${analysis.sourceStudy.references.map((reference) => `<li>${escapeHtmlContent(reference)}</li>`).join("")}
+      </ul>
+      <section>
+        <h2>Tablero ejecutivo</h2>
+        <p>${escapeHtmlContent(dashboard.headline)}</p>
+        <p>${escapeHtmlContent(dashboard.copy)}</p>
+        <div class="grid">
+          ${dashboard.items.map((item) => `
+            <article class="card">
+              <p class="kicker">${escapeHtmlContent(item.label)}</p>
+              <div class="metric">${escapeHtmlContent(item.value)}</div>
+              <p>${escapeHtmlContent(item.copy)}</p>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+      <section>
+        <h2>${escapeHtmlContent(analysis.summary.headline)}</h2>
+        <p>${escapeHtmlContent(analysis.summary.recommendation)}</p>
+        <div class="grid">
+          ${[
+            ["Score PIVA", `${analysis.summary.pivaScore}/100`, "Semaforo verde-azul integrado."],
+            ["Sistema azul", `${analysis.summary.blueScore}/100`, `${analysis.summary.hydricPriorityCount} frentes hidricos priorizados.`],
+            ["Sistema verde", `${analysis.summary.greenScore}/100`, `${formatLandChangeHa(analysis.landChange.summary.productiveLossHa)} ha de suelo productivo en tension.`],
+            ["Clima urbano", `${analysis.summary.climateScore}/100`, `${analysis.summary.corridorCount} corredores y ${analysis.summary.coolingAreaHa} ha de enfriamiento.`],
+            ["Conectividad", `${analysis.summary.connectivityScore}/100`, `${analysis.mobility.summary.coverageLabel} y ${analysis.planning.serviceCoverage.overallCoverage}% de cobertura.`],
+            ["Soporte municipal", `${analysis.summary.localSupportScore}/100`, `${analysis.summary.bankReserveCount} reservas, ${analysis.summary.heritageCount} patrimonios y ${analysis.summary.highTensionKm} km de resguardo.`],
+            ["Soporte", analysis.summary.supportLabel, `${analysis.summary.officialLayerCount} capas oficiales y score ${analysis.summary.supportScore}/100.`],
+          ].map((item) => `
+            <article class="card">
+              <p class="kicker">${escapeHtmlContent(item[0])}</p>
+              <div class="metric">${escapeHtmlContent(item[1])}</div>
+              <p>${escapeHtmlContent(item[2])}</p>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+      <section>
+        <h2>Insumos municipales integrados</h2>
+        <div class="grid">
+          ${[
+            ["Servicios basicos", `${analysis.summary.localServiceIndex}/100`, `${analysis.summary.weakestServiceParish} concentra la brecha mas urgente.`],
+            ["Banco de suelo", `${analysis.summary.bankReserveCount}`, "Predios municipales utiles para nodos verdes, drenaje y espacio publico."],
+            ["Patrimonio", `${analysis.summary.heritageCount}`, "Predios con restriccion patrimonial para ajustar ocupacion y tratamiento del borde."],
+            ["Alta tension", `${analysis.summary.highTensionKm} km`, "Resguardos que condicionan arbolado, mobiliario y ocupacion segura."],
+          ].map((item) => `
+            <article class="card">
+              <p class="kicker">${escapeHtmlContent(item[0])}</p>
+              <div class="metric">${escapeHtmlContent(item[1])}</div>
+              <p>${escapeHtmlContent(item[2])}</p>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+      <section>
+        <h2>Comparador actual vs propuesta</h2>
+        <p><strong>Actual:</strong> ${analysis.comparator.currentScore}/100. <strong>Propuesta:</strong> ${analysis.comparator.targetScore}/100. <strong>Delta:</strong> +${analysis.comparator.delta} puntos.</p>
+        <div class="grid">
+          ${analysis.comparator.dimensions.map((item) => `
+            <article class="card">
+              <p class="kicker">${escapeHtmlContent(item.label)}</p>
+              <div class="metric">${item.current}/100 -> ${item.target}/100</div>
+              <p>${escapeHtmlContent(item.note)}</p>
+            </article>
+          `).join("")}
+        </div>
+      </section>
+      <section>
+        <h2>Modelo, red y paquetes territoriales</h2>
+        <div class="grid">
+          ${analysis.deliverables.map((item) => `
+            <article class="card">
+              <p class="kicker">${escapeHtmlContent(item.label)}</p>
+              <p>${escapeHtmlContent(item.copy)}</p>
+              <p>${escapeHtmlContent(item.note)}</p>
+            </article>
+          `).join("")}
+        </div>
+        ${analysis.packages.map((item) => `
+          <article class="card sheet">
+            <p class="kicker">${escapeHtmlContent(item.label)} | ${escapeHtmlContent(item.priority)}</p>
+            <h3>${escapeHtmlContent(item.title)}</h3>
+            <p>${escapeHtmlContent(item.summary)}</p>
+            <p>${escapeHtmlContent(item.focus)}</p>
+          </article>
+        `).join("")}
+      </section>
+      <section>
+        <h2>Fases y perfiles prioritarios</h2>
+        <div class="grid">
+          ${analysis.phases.map((item) => `
+            <article class="card">
+              <p class="kicker">${escapeHtmlContent(item.label)}</p>
+              <h3>${escapeHtmlContent(item.title)}</h3>
+              <p>${escapeHtmlContent(item.copy)}</p>
+            </article>
+          `).join("")}
+        </div>
+        ${analysis.profiles.map((item) => `
+          <article class="card sheet">
+            <p class="kicker">${escapeHtmlContent(item.label)} | ${escapeHtmlContent(item.module)}</p>
+            <h3>${escapeHtmlContent(item.title)}</h3>
+            <p>${escapeHtmlContent(item.summary)}</p>
+            <p>${escapeHtmlContent(item.rationale)}</p>
+          </article>
+        `).join("")}
+      </section>
+      <section>
+        <h2>Cartera por parroquia</h2>
+        ${analysis.parishPortfolio.map((item, index) => `
+          <article class="card sheet">
+            <p class="kicker">Parroquia ${index + 1} | ${escapeHtmlContent(item.actionLabel)}</p>
+            <h3>${escapeHtmlContent(item.parish)}</h3>
+            <p>${escapeHtmlContent(item.summary)}</p>
+            <ul>
+              <li>Servicios: ${item.serviceIndex}/100</li>
+              <li>Soporte: ${item.supportScore}/100</li>
+              <li>Banco verde: ${item.bankCount}</li>
+              <li>Equipamientos: ${item.equipmentCount}</li>
+              <li>Patrimonio: ${item.heritageCount}</li>
+              <li>Alta tension: ${item.highTensionKm} km</li>
+              <li>Proyecto sugerido: ${escapeHtmlContent(item.linkedProjectTitle)}</li>
+            </ul>
+          </article>
+        `).join("")}
+      </section>
+      <section>
+        <h2>Cartera inicial de proyectos</h2>
+        ${analysis.projects.map((project, index) => `
+          <article class="card sheet">
+            <p class="kicker">${escapeHtmlContent(project.module)} | Prioridad ${index + 1}</p>
             <h3>${escapeHtmlContent(project.title)}</h3>
             <p>${escapeHtmlContent(project.summary)}</p>
             <p>${escapeHtmlContent(project.note)}</p>
@@ -31937,7 +32360,7 @@ function exportPivaHtmlReport() {
   }
   downloadTerritorialFile(
     `piva_mejia_${getTerritorialExportSlug()}_${formatDateInput(new Date())}.html`,
-    buildPivaReportHtml(),
+    buildPivaExecutiveReportHtml(),
     "text/html;charset=utf-8"
   );
   setStatus("Informe HTML del PIVA descargado.");
@@ -31955,6 +32378,20 @@ function exportPivaJson() {
     "application/json;charset=utf-8"
   );
   setStatus("JSON del PIVA descargado.");
+}
+
+function exportPivaCsv() {
+  const content = buildPivaCsvExport();
+  if (!content) {
+    setStatus("Primero construye el PIVA para exportar el CSV.");
+    return;
+  }
+  downloadTerritorialFile(
+    `piva_mejia_${getTerritorialExportSlug()}_${formatDateInput(new Date())}.csv`,
+    content,
+    "text/csv;charset=utf-8"
+  );
+  setStatus("CSV del PIVA descargado.");
 }
 
 function clearPivaAnalysis() {
@@ -32480,7 +32917,7 @@ function renderZoningPatternsOverlay(analysis) {
       };
     },
     onEachFeature: (feature, layer) => {
-      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.patternLabel || "Patron"} · ${feature.properties?.vitalityIndex || 0}/100. ${feature.properties?.summary || ""}</p>`);
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.patternLabel || "Patron"} | ${feature.properties?.vitalityIndex || 0}/100. ${feature.properties?.summary || ""}</p>`);
     },
   }).addTo(mapState.map);
 
@@ -32504,7 +32941,7 @@ function renderZoningPatternsOverlay(analysis) {
       }));
     },
     onEachFeature: (feature, layer) => {
-      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.patternLabel || "Patron"} · ${feature.properties?.vitalityIndex || 0}/100. ${feature.properties?.summary || ""}</p>`);
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.patternLabel || "Patron"} | ${feature.properties?.vitalityIndex || 0}/100. ${feature.properties?.summary || ""}</p>`);
     },
   }).addTo(mapState.map);
 
@@ -32952,7 +33389,7 @@ function renderHousingPatternsOverlay(analysis) {
       };
     },
     onEachFeature: (feature, layer) => {
-      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.typologyLabel || "Tipologia"} · ${feature.properties?.housingStress || 0}/100. ${feature.properties?.summary || ""}</p>`);
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.typologyLabel || "Tipologia"} | ${feature.properties?.housingStress || 0}/100. ${feature.properties?.summary || ""}</p>`);
     },
   }).addTo(mapState.map);
 
@@ -32976,7 +33413,7 @@ function renderHousingPatternsOverlay(analysis) {
       }));
     },
     onEachFeature: (feature, layer) => {
-      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.typologyLabel || "Tipologia"} · ${feature.properties?.housingStress || 0}/100. ${feature.properties?.summary || ""}</p>`);
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.name || "Sector"}</h3><p class="popup-copy">${feature.properties?.typologyLabel || "Tipologia"} | ${feature.properties?.housingStress || 0}/100. ${feature.properties?.summary || ""}</p>`);
     },
   }).addTo(mapState.map);
 
@@ -33757,15 +34194,15 @@ function buildFieldEvidenceAnalysis(catalog = state.fieldEvidenceCatalog) {
       id: String(theme.id),
       rank: index + 1,
       label: theme.label || `Tema ${index + 1}`,
-      group: theme.group || "Áreas sensibles",
-      groupLabel: theme.groupLabel || theme.group || "Áreas sensibles",
+      group: theme.group || "Ãreas sensibles",
+      groupLabel: theme.groupLabel || theme.group || "Ãreas sensibles",
       tone: theme.tone || "base",
       featureCount: sensitiveThemeCountMap.get(String(theme.id)) || 0,
       geometryType: theme.geometryType || "Unknown",
       renderMode: theme.renderMode || "union",
       coverageHa: Number(theme.coverageHa) || 0,
       sourceLayer: theme.sourceLayer || "subproducto",
-      description: theme.description || "Tema sensible sin descripción.",
+      description: theme.description || "Tema sensible sin descripciÃ³n.",
       summary: `${theme.description || "Tema sensible disponible"} ${sensitiveThemeCountMap.get(String(theme.id)) || 0} elementos del procedimiento tecnico.`,
       feature: sensitiveFeatures.find((feature) => String(feature?.properties?.sensitiveThemeId || feature?.id) === String(theme.id)) || null,
     }));
@@ -33869,7 +34306,7 @@ function buildFieldEvidenceAnalysis(catalog = state.fieldEvidenceCatalog) {
       coverageLabel: summary.surveyedAreaHa >= 1200 ? "Cobertura extensa" : summary.surveyedAreaHa >= 500 ? "Cobertura media" : "Cobertura puntual",
       stationLabel: summary.dominantStationType === "precipitacion" ? "Predomina lluvia observada" : summary.dominantStationType === "caudal" ? "Predomina caudal observado" : "Sin lectura dominante",
       historicalLabel: summary.historyCount ? "Memoria historica activa" : "Memoria historica pendiente",
-      sensitiveLabel: summary.sensitiveThemeCount ? `Áreas sensibles activas (${summary.dominantSensitiveGroup.toLowerCase()})` : "Áreas sensibles pendientes",
+      sensitiveLabel: summary.sensitiveThemeCount ? `Ãreas sensibles activas (${summary.dominantSensitiveGroup.toLowerCase()})` : "Ãreas sensibles pendientes",
     },
     sectorsCollection: {
       type: "FeatureCollection",
@@ -36429,7 +36866,7 @@ function buildTerritorialDecisionSnapshot() {
       title: "Asoleamiento",
       metric: `${planning.solarReadout.longestShadow?.toFixed?.(1) || "0.0"} m`,
       copy: `${planning.solarReadout.solarLabel} con lectura de sombras sobre candidatos y espacio urbano.`,
-      note: `${planning3dState.sunDate} ${planning3dState.sunTime} | Az ${planning.solarReadout.sunPosition.azimuth}° | El ${planning.solarReadout.sunPosition.elevation}°.`,
+      note: `${planning3dState.sunDate} ${planning3dState.sunTime} | Az ${planning.solarReadout.sunPosition.azimuth}Â° | El ${planning.solarReadout.sunPosition.elevation}Â°.`,
     });
   }
 
@@ -36584,7 +37021,7 @@ function buildTerritorialDecisionSnapshot() {
       ? "El territorio analizado muestra condiciones favorables para implantar, densificar o proteger con medidas manejables y soporte tecnico."
       : overallSignal.tone === "watch"
         ? "El territorio requiere condicionantes claras, mitigacion y secuencia de inversion antes de habilitar nuevos proyectos o consolidar ocupacion."
-        : "El territorio pide contencion, proteccion o rediseño fuerte. La prevencion debe anteceder a cualquier ocupacion o licencia.",
+        : "El territorio pide contencion, proteccion o rediseÃ±o fuerte. La prevencion debe anteceder a cualquier ocupacion o licencia.",
     items,
     breakdown,
   };
@@ -37168,7 +37605,7 @@ function buildTerritorialOpsAnalysis() {
       title: "Primer candidato",
       tone: getPlanningScoreTone(primaryCandidate.score),
       value: primaryCandidate.title,
-      copy: `${primaryCandidate.score}/100 · ${primaryCandidate.summary}`,
+      copy: `${primaryCandidate.score}/100 | ${primaryCandidate.summary}`,
       actionAttr: `data-candidate-id="${primaryCandidate.id}"`,
     } : null,
     weakestService ? {
@@ -37182,42 +37619,42 @@ function buildTerritorialOpsAnalysis() {
       title: "Acceso a corregir",
       tone: mobilitySector.tone,
       value: mobilitySector.name,
-      copy: `${mobilitySector.score}/100 · ${mobilitySector.summary}`,
+      copy: `${mobilitySector.score}/100 | ${mobilitySector.summary}`,
       actionAttr: `data-mobility-sector-id="${mobilitySector.id}"`,
     } : null,
     riskSector ? {
       title: "Contencion prioritaria",
       tone: riskSector.tone,
       value: riskSector.name,
-      copy: `${riskSector.riskLabel} · ${riskSector.summary}`,
+      copy: `${riskSector.riskLabel} | ${riskSector.summary}`,
       actionAttr: `data-risk-sector-id="${riskSector.id}"`,
     } : null,
     hydrologySector ? {
       title: "Frente hidrico",
       tone: hydrologySector.balanceHm3 >= 0 ? "low" : "high",
       value: hydrologySector.name,
-      copy: `${hydrologySector.balanceLabel} · ${hydrologySector.summary}`,
+      copy: `${hydrologySector.balanceLabel} | ${hydrologySector.summary}`,
       actionAttr: `data-hydrology-sector-id="${hydrologySector.id}"`,
     } : null,
     urbanClimateSector ? {
       title: "Corredor o calor",
       tone: urbanClimateSector.tone,
       value: urbanClimateSector.name,
-      copy: `${urbanClimateSector.classLabel} · ${urbanClimateSector.summary}`,
+      copy: `${urbanClimateSector.classLabel} | ${urbanClimateSector.summary}`,
       actionAttr: `data-urban-climate-sector-id="${urbanClimateSector.id}"`,
     } : null,
     zoningSector ? {
       title: "Patron clave",
       tone: zoningSector.tone,
       value: zoningSector.name,
-      copy: `${zoningSector.patternLabel} · ${zoningSector.summary}`,
+      copy: `${zoningSector.patternLabel} | ${zoningSector.summary}`,
       actionAttr: `data-zoning-sector-id="${zoningSector.id}"`,
     } : null,
     housingSector ? {
       title: "Tension de vivienda",
       tone: housingSector.tone,
       value: housingSector.name,
-      copy: `${housingSector.typologyLabel} · ${housingSector.summary}`,
+      copy: `${housingSector.typologyLabel} | ${housingSector.summary}`,
       actionAttr: `data-housing-sector-id="${housingSector.id}"`,
     } : null,
   ].filter(Boolean);
@@ -38926,6 +39363,47 @@ function buildExecutiveDashboardSnapshot() {
 
   if (isTerritorialRoute(route)) {
     const area = getTerritorialAreaProfile();
+    if (isPivaRoute(route)) {
+      const piva = state.pivaData;
+      const score = piva?.summary?.pivaScore || 0;
+      const leadParish = piva?.parishPortfolio?.[0] || null;
+      const leadProject = piva?.projects?.[0] || null;
+      const headline = piva?.dashboard?.headline || `Dashboard PIVA listo para ${area.scopeLabel}`;
+      const copy = piva?.dashboard?.copy || "Integra clima, agua, conectividad, soporte municipal y cartera verde-azul en una sola lectura ejecutiva.";
+      const items = [
+        {
+          label: "Score PIVA",
+          value: score ? `${score}/100` : "Sin corrida",
+          tone: score >= 75 ? "low" : score >= 58 ? "mid" : "high",
+          copy,
+        },
+        {
+          label: "Parroquia critica",
+          value: leadParish ? `${leadParish.parish} ${leadParish.priorityScore}/100` : "Sin priorizar",
+          tone: leadParish?.priorityScore >= 72 ? "high" : leadParish?.priorityScore >= 56 ? "mid" : leadParish ? "low" : "pending",
+          copy: leadParish ? `${leadParish.actionLabel}. ${leadParish.linkedProjectTitle}.` : "Construye el PIVA para descubrir la parroquia de entrada.",
+        },
+        {
+          label: "Proyecto lider",
+          value: leadProject ? leadProject.title : "Sin cartera",
+          tone: leadProject?.priorityScore >= 76 ? "low" : leadProject?.priorityScore >= 58 ? "mid" : leadProject ? "high" : "pending",
+          copy: leadProject ? `${leadProject.priorityScore}/100 | ${leadProject.module}.` : "La cartera detonante aparecera aqui.",
+        },
+        {
+          label: "Soporte municipal",
+          value: piva ? `${piva.summary.localSupportScore}/100` : "Pendiente",
+          tone: piva?.summary?.localSupportScore >= 70 ? "low" : piva?.summary?.localSupportScore >= 55 ? "mid" : piva ? "high" : "pending",
+          copy: piva ? `${piva.summary.bankReserveCount} reservas y ${piva.summary.heritageCount} patrimonios bajo gestion.` : "Servicios, banco de suelo y patrimonio entraran aqui.",
+        },
+        {
+          label: "Alertas",
+          value: `${alerts.length}`,
+          tone: alerts.length >= 5 ? "high" : alerts.length >= 2 ? "mid" : "low",
+          copy: `${backendLabel} y ${role.label.toLowerCase()} listo para seguimiento y reporte.`,
+        },
+      ];
+      return { route, role, headline, copy, score, items, alerts };
+    }
     const planning = state.planningData;
     const ops = state.territorialOpsData;
     const risk = state.riskData;
@@ -39791,7 +40269,7 @@ async function saveCurrentProject() {
   await persistProjectCollection();
   recordDecisionLogEntry({
     title: `Proyecto guardado: ${snapshot.name}`,
-    copy: `${snapshot.scopeLabel || "Sin ambito"} · ${snapshot.owner}.`,
+    copy: `${snapshot.scopeLabel || "Sin ambito"} | ${snapshot.owner}.`,
     module: "Proyecto",
     route: snapshot.route,
   }, { persist: true, silentStatus: true });
@@ -40034,7 +40512,7 @@ function renderDecisionLogCard() {
     <article class="territorial-alert tone-base">
       <div class="territorial-alert-head">
         <div>
-          <p class="candidate-rank">${escapeHtmlContent(entry.module)} · ${escapeHtmlContent(new Date(entry.timestamp).toLocaleString("es-EC"))}</p>
+          <p class="candidate-rank">${escapeHtmlContent(entry.module)} | ${escapeHtmlContent(new Date(entry.timestamp).toLocaleString("es-EC"))}</p>
           <h4>${escapeHtmlContent(entry.title)}</h4>
         </div>
         ${entry.focusAction ? `<button class="ghost-button" type="button" data-decision-action="${escapeHtmlContent(entry.focusAction)}">Abrir</button>` : ""}
@@ -42058,7 +42536,7 @@ function renderAccessRolesCard() {
     <article class="decision-hero tone-${role.id === "administrador" ? "low" : role.id === "tecnico" ? "mid" : "base"}">
       <div>
         <p class="section-kicker">Perfil activo</p>
-        <h4>${escapeHtmlContent(role.label)} · ${escapeHtmlContent(state.userProfile.name)}</h4>
+        <h4>${escapeHtmlContent(role.label)} | ${escapeHtmlContent(state.userProfile.name)}</h4>
         <p>${escapeHtmlContent(role.summary)}</p>
       </div>
       <div class="decision-score-stack">
@@ -44508,8 +44986,8 @@ function renderDigitalCadastreFichaBoard(analysis = state.digitalCadastreData) {
         ${history.length ? history.map((item) => `
           <article class="cadastre-history-item">
             <strong>${escapeHtmlContent(new Date(item.savedAt).toLocaleString("es-EC"))}</strong>
-            <p>${escapeHtmlContent(item.savedBy || "Usuario publico")} · ${escapeHtmlContent(item.reviewStatus || "gabinete")} · ${escapeHtmlContent(item.qualityLabel || geometryAudit.status.label)}</p>
-            <p>${formatIrrigationNumber(item.areaHa || metrics.areaHa, (item.areaHa || metrics.areaHa) >= 10 ? 1 : 2)} ha · ${Math.round(item.perimeterM || metrics.perimeterM)} m · ${escapeHtmlContent(item.supportLabel || activeCandidate.supportLabel)}</p>
+            <p>${escapeHtmlContent(item.savedBy || "Usuario publico")} | ${escapeHtmlContent(item.reviewStatus || "gabinete")} | ${escapeHtmlContent(item.qualityLabel || geometryAudit.status.label)}</p>
+            <p>${formatIrrigationNumber(item.areaHa || metrics.areaHa, (item.areaHa || metrics.areaHa) >= 10 ? 1 : 2)} ha | ${Math.round(item.perimeterM || metrics.perimeterM)} m | ${escapeHtmlContent(item.supportLabel || activeCandidate.supportLabel)}</p>
           </article>
         `).join("") : `<article class="cadastre-history-item"><strong>Sin historial previo</strong><p>La ficha aun no tiene versiones guardadas en la cartera local.</p></article>`}
       </div>
@@ -44595,13 +45073,13 @@ function renderDigitalCadastreCompareBoard() {
             <strong>${previousComparison.deltaPerimeterM >= 0 ? "+" : ""}${Math.round(previousComparison.deltaPerimeterM)} m</strong>
           </article>
         </div>
-        <p class="territorial-readout-copy">Se comparo el predio activo contra una ficha anterior del mismo ambito para detectar cambios de borde, division o ajuste geométrico.</p>` : ""}
+        <p class="territorial-readout-copy">Se comparo el predio activo contra una ficha anterior del mismo ambito para detectar cambios de borde, division o ajuste geomÃ©trico.</p>` : ""}
       <div class="cadastre-history-list">
         ${history.length ? history.map((item) => `
           <article class="cadastre-history-item">
             <strong>${escapeHtmlContent(new Date(item.savedAt).toLocaleString("es-EC"))}</strong>
-            <p>${escapeHtmlContent(item.savedBy || "Usuario publico")} · ${escapeHtmlContent(item.reviewStatus || "gabinete")} · ${escapeHtmlContent(item.geometryStatus || "Sin control")}</p>
-            <p>${formatIrrigationNumber(item.areaHa || 0, item.areaHa >= 10 ? 1 : 2)} ha · ${Math.round(item.perimeterM || 0)} m · ${escapeHtmlContent(item.supportLabel || "Sin soporte")}</p>
+            <p>${escapeHtmlContent(item.savedBy || "Usuario publico")} | ${escapeHtmlContent(item.reviewStatus || "gabinete")} | ${escapeHtmlContent(item.geometryStatus || "Sin control")}</p>
+            <p>${formatIrrigationNumber(item.areaHa || 0, item.areaHa >= 10 ? 1 : 2)} ha | ${Math.round(item.perimeterM || 0)} m | ${escapeHtmlContent(item.supportLabel || "Sin soporte")}</p>
           </article>
         `).join("") : `<article class="cadastre-history-item"><strong>Sin historial</strong><p>Aun no hay versiones guardadas para comparar la evolucion del predio.</p></article>`}
       </div>
@@ -44702,7 +45180,7 @@ function renderDigitalCadastreBatchBoard(analysis = state.digitalCadastreData) {
         <article class="decision-card tone-${(geometryBuckets.critical || 0) ? "high" : (geometryBuckets.watch || 0) ? "mid" : "low"}">
           <p class="candidate-rank">Semaforo tecnico</p>
           <h5>${geometryBuckets.critical || 0} por corregir</h5>
-          <p>${geometryBuckets.watch || 0} requieren revision y ${geometryBuckets.good || 0} ya estan geométricamente estables.</p>
+          <p>${geometryBuckets.watch || 0} requieren revision y ${geometryBuckets.good || 0} ya estan geomÃ©tricamente estables.</p>
         </article>
         <article class="decision-card tone-${analysis.summary.meanConfidence >= 80 ? "low" : analysis.summary.meanConfidence >= 65 ? "mid" : "high"}">
           <p class="candidate-rank">Cobertura visible</p>
@@ -44712,7 +45190,7 @@ function renderDigitalCadastreBatchBoard(analysis = state.digitalCadastreData) {
         <article class="decision-card tone-${integrationSummary.gpsTone === "good" ? "low" : integrationSummary.gpsTone === "watch" ? "mid" : integrationSummary.gpsTone === "critical" ? "high" : "base"}">
           <p class="candidate-rank">GPS / RTK / dron</p>
           <h5>${escapeHtmlContent(integrationSummary.gpsLabel)}</h5>
-          <p>${integrationSummary.gpsDistanceM == null ? "Sin punto en vivo ligado al predio." : `Distancia al lindero: ${Math.round(integrationSummary.gpsDistanceM)} m.`} ${escapeHtmlContent(integrationSummary.orthomosaicLabel)} · ${escapeHtmlContent(integrationSummary.fieldSupportLabel)}</p>
+          <p>${integrationSummary.gpsDistanceM == null ? "Sin punto en vivo ligado al predio." : `Distancia al lindero: ${Math.round(integrationSummary.gpsDistanceM)} m.`} ${escapeHtmlContent(integrationSummary.orthomosaicLabel)} | ${escapeHtmlContent(integrationSummary.fieldSupportLabel)}</p>
         </article>
       </div>
     </article>
@@ -45090,7 +45568,7 @@ function renderPlanningTerritoryReadout() {
             <p class="section-kicker">Asoleamiento urbano</p>
             <h4>${planning.solarReadout.solarLabel}</h4>
           </div>
-          <span class="scenario-chip tone-${planning.solarReadout.tone}">Az ${planning.solarReadout.sunPosition.azimuth}° | El ${planning.solarReadout.sunPosition.elevation}°</span>
+          <span class="scenario-chip tone-${planning.solarReadout.tone}">Az ${planning.solarReadout.sunPosition.azimuth}Â° | El ${planning.solarReadout.sunPosition.elevation}Â°</span>
         </div>
         <p class="territorial-readout-copy">${planning.solarReadout.copy}</p>
         <div class="territorial-readout-bars">
@@ -47711,7 +48189,7 @@ function renderInamhiVisual(result = null) {
       <article class="agronomy-bar-card">
         <div class="agronomy-bar-head">
           <span>Ventana humeda</span>
-          <strong>${result.wetSignal.month} · ${result.wetSignal.meanMm.toFixed(0)} mm</strong>
+          <strong>${result.wetSignal.month} | ${result.wetSignal.meanMm.toFixed(0)} mm</strong>
         </div>
         <div class="agronomy-bar-track">
           <i style="width: ${wetPct}%"></i>
@@ -47720,7 +48198,7 @@ function renderInamhiVisual(result = null) {
       <article class="agronomy-bar-card">
         <div class="agronomy-bar-head">
           <span>Ventana seca</span>
-          <strong>${result.drySignal.month} · ${result.drySignal.meanMm.toFixed(0)} mm</strong>
+          <strong>${result.drySignal.month} | ${result.drySignal.meanMm.toFixed(0)} mm</strong>
         </div>
         <div class="agronomy-bar-track">
           <i style="width: ${dryPct}%"></i>
@@ -47739,7 +48217,7 @@ function renderInamhiVisual(result = null) {
     <p class="agronomy-visual-copy">${result.readout}</p>
   `);
   Array.from(dom.inamhiVisual.querySelectorAll("strong")).forEach((node) => {
-    node.textContent = node.textContent.replace(/·/g, " - ");
+    node.textContent = node.textContent.replace(/|/g, " - ");
   });
 }
 
@@ -47857,14 +48335,14 @@ function updateMapSummary(force = false) {
       setTextIfChanged(dom.mapTitle, `Transformacion del suelo rural sobre ${landChange.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `${landChangePeriod.shortLabel} · ${landChangeScenario.label} · ${landChangeLens.label}. ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas.`
+        `${landChangePeriod.shortLabel} | ${landChangeScenario.label} | ${landChangeLens.label}. ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas.`
       );
     } else if (showHydrology) {
       setTextIfChanged(dom.overlayIndex, "Balance");
       setTextIfChanged(dom.mapTitle, `Disponibilidad hidrica sobre ${hydrology.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `${hydrologyClimate.shortLabel} · ${hydrologyHorizon.shortLabel} · ${hydrologyDemand.shortLabel}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio y ${hydrology.prioritySectors.length} prioridades.`
+        `${hydrologyClimate.shortLabel} | ${hydrologyHorizon.shortLabel} | ${hydrologyDemand.shortLabel}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio y ${hydrology.prioritySectors.length} prioridades.`
       );
     } else if (showUrbanClimate) {
       setTextIfChanged(dom.overlayIndex, "Clima");
@@ -47885,14 +48363,14 @@ function updateMapSummary(force = false) {
       setTextIfChanged(dom.mapTitle, `Patrones territoriales sobre ${zoningPatterns.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `${zoningPatterns.summary.dominantPatternLabel} · ${zoningPatterns.summary.vitalityLabel} · ${zoningPatterns.prioritySectors.length} sectores visibles.`
+        `${zoningPatterns.summary.dominantPatternLabel} | ${zoningPatterns.summary.vitalityLabel} | ${zoningPatterns.prioritySectors.length} sectores visibles.`
       );
     } else if (showHousingPatterns) {
       setTextIfChanged(dom.overlayIndex, "Vivienda");
       setTextIfChanged(dom.mapTitle, `Patrones de vivienda sobre ${housingPatterns.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `${housingPatterns.summary.dominantTypologyLabel} · oferta ${housingPatterns.summary.meanOfferIntensity}/100 · ${housingPatterns.summary.highStressCount} sectores en tension.`
+        `${housingPatterns.summary.dominantTypologyLabel} | oferta ${housingPatterns.summary.meanOfferIntensity}/100 | ${housingPatterns.summary.highStressCount} sectores en tension.`
       );
     } else if (showOfficial) {
       setTextIfChanged(dom.overlayIndex, "Oficial");
@@ -47905,7 +48383,7 @@ function updateMapSummary(force = false) {
       setTextIfChanged(dom.mapTitle, `${planning.program.longLabel} sobre ${planning.context.scopeLabel}`);
       setTextIfChanged(
         dom.mapSubtitle,
-        `${planning.imageryProfile.shortLabel} · ${planning.horizon.label} · ${planning.scenario.label}. ${planning.candidates.length} candidatos y cobertura ${planning.serviceCoverage.overallCoverage}%.`
+        `${planning.imageryProfile.shortLabel} | ${planning.horizon.label} | ${planning.scenario.label}. ${planning.candidates.length} candidatos y cobertura ${planning.serviceCoverage.overallCoverage}%.`
       );
     } else if (digitalCadastre) {
       setTextIfChanged(dom.overlayIndex, "Catastro");
@@ -47914,15 +48392,15 @@ function updateMapSummary(force = false) {
     } else if (fodaCame) {
       setTextIfChanged(dom.overlayIndex, "FODA");
       setTextIfChanged(dom.mapTitle, "Estrategia territorial lista");
-      setTextIfChanged(dom.mapSubtitle, `${fodaCame.summary.dominantSwotLabel} · ${fodaCame.summary.dominantActionLabel}. ${fodaCame.priorityZones.length} zonas visibles.`);
+      setTextIfChanged(dom.mapSubtitle, `${fodaCame.summary.dominantSwotLabel} | ${fodaCame.summary.dominantActionLabel}. ${fodaCame.priorityZones.length} zonas visibles.`);
     } else if (aiGeo?.mode === "territorial") {
       setTextIfChanged(dom.overlayIndex, "IA");
       setTextIfChanged(dom.mapTitle, "Lectura IA territorial lista");
-      setTextIfChanged(dom.mapSubtitle, `${aiGeo.summary.dominantClassLabel} · ${aiGeo.summary.alertCount} alertas sobre ${aiGeo.context.scopeLabel}.`);
+      setTextIfChanged(dom.mapSubtitle, `${aiGeo.summary.dominantClassLabel} | ${aiGeo.summary.alertCount} alertas sobre ${aiGeo.context.scopeLabel}.`);
     } else if (hydrology) {
       setTextIfChanged(dom.overlayIndex, "Balance");
       setTextIfChanged(dom.mapTitle, "Estudio hidrico de Mejia listo");
-      setTextIfChanged(dom.mapSubtitle, `${hydrology.climate.shortLabel} · ${hydrology.horizon.shortLabel} · ${hydrology.demand.shortLabel}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio.`);
+      setTextIfChanged(dom.mapSubtitle, `${hydrology.climate.shortLabel} | ${hydrology.horizon.shortLabel} | ${hydrology.demand.shortLabel}. Balance ${hydrology.summary.balanceHm3 >= 0 ? "+" : ""}${formatHydrologyHm3(hydrology.summary.balanceHm3)} hm3/anio.`);
     } else if (urbanClimate) {
       setTextIfChanged(dom.overlayIndex, "Clima");
       setTextIfChanged(dom.mapTitle, "Clima urbano listo");
@@ -47934,15 +48412,15 @@ function updateMapSummary(force = false) {
     } else if (landChange) {
       setTextIfChanged(dom.overlayIndex, "Huella");
       setTextIfChanged(dom.mapTitle, "Estudio de transformacion del suelo listo");
-      setTextIfChanged(dom.mapSubtitle, `${landChange.period.shortLabel} · ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas · ${landChange.summary.hotspotLabel}.`);
+      setTextIfChanged(dom.mapSubtitle, `${landChange.period.shortLabel} | ${formatLandChangeHa(landChange.summary.transformedHa)} ha transformadas | ${landChange.summary.hotspotLabel}.`);
     } else if (zoningPatterns) {
       setTextIfChanged(dom.overlayIndex, "Patrones");
       setTextIfChanged(dom.mapTitle, "Zonificacion territorial lista");
-      setTextIfChanged(dom.mapSubtitle, `${zoningPatterns.summary.dominantPatternLabel} · ${zoningPatterns.summary.vitalityLabel} sobre ${zoningPatterns.context.scopeLabel}.`);
+      setTextIfChanged(dom.mapSubtitle, `${zoningPatterns.summary.dominantPatternLabel} | ${zoningPatterns.summary.vitalityLabel} sobre ${zoningPatterns.context.scopeLabel}.`);
     } else if (housingPatterns) {
       setTextIfChanged(dom.overlayIndex, "Vivienda");
       setTextIfChanged(dom.mapTitle, "Patrones de vivienda listos");
-      setTextIfChanged(dom.mapSubtitle, `${housingPatterns.summary.dominantTypologyLabel} · ${housingPatterns.summary.highStressCount} sectores en tension sobre ${housingPatterns.context.scopeLabel}.`);
+      setTextIfChanged(dom.mapSubtitle, `${housingPatterns.summary.dominantTypologyLabel} | ${housingPatterns.summary.highStressCount} sectores en tension sobre ${housingPatterns.context.scopeLabel}.`);
     } else if (officialData) {
       setTextIfChanged(dom.overlayIndex, "Oficial");
       setTextIfChanged(dom.mapTitle, `Fuentes oficiales sobre ${officialData.scopeLabel}`);
@@ -48046,7 +48524,7 @@ function updateMapSummary(force = false) {
     if (state.surfaceMode === "change" && changeAnalysis && compareImage) {
       const delta = changeAnalysis.summary[state.selectedIndex];
       setTextIfChanged(dom.mapTitle, `Cambio ${indexConfig[state.selectedIndex].label} sobre ${analysis.context.scopeLabel}`);
-      setTextIfChanged(dom.mapSubtitle, `${changeAnalysis.direction} · delta medio ${formatDelta(delta.mean, indexConfig[state.selectedIndex])}.`);
+      setTextIfChanged(dom.mapSubtitle, `${changeAnalysis.direction} | delta medio ${formatDelta(delta.mean, indexConfig[state.selectedIndex])}.`);
       return;
     }
 
@@ -48062,7 +48540,7 @@ function updateMapSummary(force = false) {
     const outOfScaleNote = isSceneOutOfScaleForUrbanZoom(image)
       ? " Base satelital activa para detalle fino."
       : "";
-    setTextIfChanged(dom.mapSubtitle, `Media ${formatValue(stats.mean, indexConfig[state.selectedIndex])} · ${modeLabel}.${outOfScaleNote}`);
+    setTextIfChanged(dom.mapSubtitle, `Media ${formatValue(stats.mean, indexConfig[state.selectedIndex])} | ${modeLabel}.${outOfScaleNote}`);
     return;
   }
 
