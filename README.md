@@ -33,6 +33,7 @@ Geoportal navegable orientado al canton Mejia con rutas de agronomia y planifica
 - Matriz visible de variables territoriales por fuente satelital y ponderacion integrada al puntaje multicriterio.
 - Visualizador 3D urbano en el modulo territorial con extrusiones de construcciones reales y soporte catastral desde los shapes cargados en el proyecto.
 - Modulo estrategico `FODA + CAME` para traducir la lectura territorial a fortalezas, oportunidades, debilidades, amenazas y acciones de intervencion.
+- Modulo tecnico publicado `Quito | Equipamientos urbanos por Administracion Zonal`, enlazado dentro del portal y respaldado por un subproyecto SIG reproducible en Python.
 - Integracion local de fotos georreferenciadas para el visor 3D, con consulta por cercania desde una carpeta externa.
 - Backend local opcional con proxy STAC, cache en memoria y endpoint de analisis.
 - Estimaciones beta de relieve, clima agricola y asistente guiado por etapa.
@@ -43,6 +44,7 @@ Geoportal navegable orientado al canton Mejia con rutas de agronomia y planifica
 - `styles.css`: identidad visual y comportamiento responsive.
 - `app.js`: logica del visor, capas, escenas, modulos y rutas de trabajo.
 - `server.ps1`: backend local sin dependencias para proxy, cache y resumen analitico.
+- `proyecto_equipamientos_quito/`: subproyecto tecnico publicado con `main.py`, configuracion, reportes y pipeline SIG por administracion zonal.
 - `tools/connect_satloc_g4.ps1`: puente local para leer telemetria NMEA de una aeronave Satloc G4 por puerto serie y publicarla en el geoportal.
 - `tools/run_satloc_g4_gateway.ps1`: supervisor industrial que mantiene vivo el puente Satloc G4, reinicia si cae y deja logs locales.
 - `tools/install_satloc_g4_autostart.ps1`: registra el puente Satloc G4 en inicio automatico de Windows.

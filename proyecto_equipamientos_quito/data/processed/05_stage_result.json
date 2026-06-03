@@ -1,0 +1,13 @@
+{
+  "stage_id": "05",
+  "title": "Generacion de laminas",
+  "generated_at": "2026-06-03T03:12:13.730996Z",
+  "summary": {},
+  "warnings": [
+    {
+      "code": "maps_missing",
+      "message": "No existen mapas PNG fuente para componer laminas."
+    }
+  ],
+  "artifacts": []
+}

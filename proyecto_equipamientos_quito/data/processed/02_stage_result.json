@@ -1,0 +1,13 @@
+{
+  "stage_id": "02",
+  "title": "Calculo de indicadores",
+  "generated_at": "2026-06-03T03:12:13.696280Z",
+  "summary": {},
+  "warnings": [
+    {
+      "code": "geopandas_missing",
+      "message": "Geopandas no esta disponible; no se puede calcular area ni generar capa de indicadores."
+    }
+  ],
+  "artifacts": []
+}

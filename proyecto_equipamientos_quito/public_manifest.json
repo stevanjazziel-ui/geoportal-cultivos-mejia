@@ -1,0 +1,167 @@
+{
+  "project": {
+    "name": "Analisis territorial de equipamientos urbanos por Administracion Zonal",
+    "territory": "Distrito Metropolitano de Quito",
+    "character": "Academico referencial",
+    "landing_page": "./index.html",
+    "readme": "./README.md",
+    "general_report": "./reports/memoria_tecnica_general.md",
+    "pipeline_json": "./data/processed/pipeline_run.json",
+    "summary_csv": "./outputs/tablas_csv/resumen_pipeline.csv",
+    "warnings_csv": "./outputs/tablas_csv/advertencias_pipeline.csv",
+    "config_path": "./config/parametros_normativos.yaml"
+  },
+  "generated_at": "2026-06-03T03:12:13.740103Z",
+  "zones_configured": 10,
+  "stage_count": 6,
+  "runtime": {
+    "yaml": false,
+    "pandas": true,
+    "geopandas": false,
+    "shapely": false,
+    "matplotlib": true,
+    "contextily": false,
+    "openpyxl": true
+  },
+  "status": {
+    "code": "needs_attention",
+    "label": "Publicado y pendiente de insumos oficiales",
+    "warning_count": 18,
+    "required_inputs_missing": 13,
+    "required_inputs_ready": 0,
+    "geospatial_ready": false
+  },
+  "input_summary": {
+    "required_total": 13,
+    "required_ready": 0,
+    "required_missing": 13,
+    "ready_labels": [],
+    "missing_labels": [
+      "Limite DMQ",
+      "Administraciones zonales",
+      "Parroquias",
+      "Barrios o manzanas",
+      "Poblacion",
+      "Vivienda",
+      "Edades",
+      "Red vial",
+      "Transporte",
+      "Equipamientos",
+      "Areas verdes",
+      "Hidrografia",
+      "PUGS uso de suelo"
+    ]
+  },
+  "stages": [
+    {
+      "stage_id": "01",
+      "title": "Preparacion de datos",
+      "warning_count": 14,
+      "artifact_count": 2
+    },
+    {
+      "stage_id": "02",
+      "title": "Calculo de indicadores",
+      "warning_count": 1,
+      "artifact_count": 0
+    },
+    {
+      "stage_id": "03",
+      "title": "Calculo de coberturas",
+      "warning_count": 1,
+      "artifact_count": 0
+    },
+    {
+      "stage_id": "04",
+      "title": "Generacion de mapas",
+      "warning_count": 1,
+      "artifact_count": 0
+    },
+    {
+      "stage_id": "05",
+      "title": "Generacion de laminas",
+      "warning_count": 1,
+      "artifact_count": 0
+    },
+    {
+      "stage_id": "06",
+      "title": "Generacion de memoria tecnica",
+      "warning_count": 0,
+      "artifact_count": 1
+    }
+  ],
+  "warnings_preview": [
+    {
+      "stage_id": "01",
+      "code": "missing_required_input",
+      "message": "Falta el insumo obligatorio 'Limite DMQ' en data\\raw\\limite_dmq.",
+      "path": ""
+    },
+    {
+      "stage_id": "01",
+      "code": "missing_required_input",
+      "message": "Falta el insumo obligatorio 'Administraciones zonales' en data\\raw\\administraciones_zonales.",
+      "path": ""
+    },
+    {
+      "stage_id": "01",
+      "code": "missing_required_input",
+      "message": "Falta el insumo obligatorio 'Parroquias' en data\\raw\\parroquias.",
+      "path": ""
+    },
+    {
+      "stage_id": "01",
+      "code": "missing_required_input",
+      "message": "Falta el insumo obligatorio 'Barrios o manzanas' en data\\raw\\barrios_manzanas.",
+      "path": ""
+    },
+    {
+      "stage_id": "01",
+      "code": "missing_required_input",
+      "message": "Falta el insumo obligatorio 'Poblacion' en data\\raw\\poblacion.",
+      "path": ""
+    },
+    {
+      "stage_id": "01",
+      "code": "missing_required_input",
+      "message": "Falta el insumo obligatorio 'Vivienda' en data\\raw\\vivienda.",
+      "path": ""
+    },
+    {
+      "stage_id": "01",
+      "code": "missing_required_input",
+      "message": "Falta el insumo obligatorio 'Edades' en data\\raw\\edades.",
+      "path": ""
+    },
+    {
+      "stage_id": "01",
+      "code": "missing_required_input",
+      "message": "Falta el insumo obligatorio 'Red vial' en data\\raw\\red_vial.",
+      "path": ""
+    },
+    {
+      "stage_id": "01",
+      "code": "missing_required_input",
+      "message": "Falta el insumo obligatorio 'Transporte' en data\\raw\\transporte.",
+      "path": ""
+    },
+    {
+      "stage_id": "01",
+      "code": "missing_required_input",
+      "message": "Falta el insumo obligatorio 'Equipamientos' en data\\raw\\equipamientos.",
+      "path": ""
+    },
+    {
+      "stage_id": "01",
+      "code": "missing_required_input",
+      "message": "Falta el insumo obligatorio 'Areas verdes' en data\\raw\\areas_verdes.",
+      "path": ""
+    },
+    {
+      "stage_id": "01",
+      "code": "missing_required_input",
+      "message": "Falta el insumo obligatorio 'Hidrografia' en data\\raw\\hidrografia.",
+      "path": ""
+    }
+  ]
+}

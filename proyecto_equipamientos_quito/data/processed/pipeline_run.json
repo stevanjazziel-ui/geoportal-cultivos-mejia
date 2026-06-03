@@ -1,0 +1,154 @@
+{
+  "generated_at": "2026-06-03T03:12:13.740103Z",
+  "stages": [
+    {
+      "stage_id": "01",
+      "title": "Preparacion de datos",
+      "generated_at": "2026-06-03T03:12:13.682005Z",
+      "summary": {
+        "zones_expected": 10,
+        "missing_required_inputs": 13,
+        "prepared_layers": 0
+      },
+      "warnings": [
+        {
+          "code": "missing_required_input",
+          "message": "Falta el insumo obligatorio 'Limite DMQ' en data\\raw\\limite_dmq."
+        },
+        {
+          "code": "missing_required_input",
+          "message": "Falta el insumo obligatorio 'Administraciones zonales' en data\\raw\\administraciones_zonales."
+        },
+        {
+          "code": "missing_required_input",
+          "message": "Falta el insumo obligatorio 'Parroquias' en data\\raw\\parroquias."
+        },
+        {
+          "code": "missing_required_input",
+          "message": "Falta el insumo obligatorio 'Barrios o manzanas' en data\\raw\\barrios_manzanas."
+        },
+        {
+          "code": "missing_required_input",
+          "message": "Falta el insumo obligatorio 'Poblacion' en data\\raw\\poblacion."
+        },
+        {
+          "code": "missing_required_input",
+          "message": "Falta el insumo obligatorio 'Vivienda' en data\\raw\\vivienda."
+        },
+        {
+          "code": "missing_required_input",
+          "message": "Falta el insumo obligatorio 'Edades' en data\\raw\\edades."
+        },
+        {
+          "code": "missing_required_input",
+          "message": "Falta el insumo obligatorio 'Red vial' en data\\raw\\red_vial."
+        },
+        {
+          "code": "missing_required_input",
+          "message": "Falta el insumo obligatorio 'Transporte' en data\\raw\\transporte."
+        },
+        {
+          "code": "missing_required_input",
+          "message": "Falta el insumo obligatorio 'Equipamientos' en data\\raw\\equipamientos."
+        },
+        {
+          "code": "missing_required_input",
+          "message": "Falta el insumo obligatorio 'Areas verdes' en data\\raw\\areas_verdes."
+        },
+        {
+          "code": "missing_required_input",
+          "message": "Falta el insumo obligatorio 'Hidrografia' en data\\raw\\hidrografia."
+        },
+        {
+          "code": "missing_required_input",
+          "message": "Falta el insumo obligatorio 'PUGS uso de suelo' en data\\raw\\pugs_uso_suelo."
+        },
+        {
+          "code": "geospatial_stack_unavailable",
+          "message": "No estan disponibles geopandas y shapely; se genero el diagnostico base, pero no el recorte espacial."
+        }
+      ],
+      "artifacts": [
+        {
+          "label": "Diagnostico de insumos",
+          "path": "data\\processed\\insumos_detectados.json",
+          "kind": "json"
+        },
+        {
+          "label": "Matriz de insumos",
+          "path": "data\\processed\\insumos_detectados.csv",
+          "kind": "csv"
+        }
+      ]
+    },
+    {
+      "stage_id": "02",
+      "title": "Calculo de indicadores",
+      "generated_at": "2026-06-03T03:12:13.696280Z",
+      "summary": {},
+      "warnings": [
+        {
+          "code": "geopandas_missing",
+          "message": "Geopandas no esta disponible; no se puede calcular area ni generar capa de indicadores."
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "stage_id": "03",
+      "title": "Calculo de coberturas",
+      "generated_at": "2026-06-03T03:12:13.705581Z",
+      "summary": {},
+      "warnings": [
+        {
+          "code": "geospatial_stack_unavailable",
+          "message": "No estan disponibles geopandas y shapely; no se pueden construir buffers de cobertura."
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "stage_id": "04",
+      "title": "Generacion de mapas",
+      "generated_at": "2026-06-03T03:12:13.718532Z",
+      "summary": {},
+      "warnings": [
+        {
+          "code": "map_stack_unavailable",
+          "message": "Falta geopandas y/o matplotlib; no se pueden generar mapas en esta corrida."
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "stage_id": "05",
+      "title": "Generacion de laminas",
+      "generated_at": "2026-06-03T03:12:13.730996Z",
+      "summary": {},
+      "warnings": [
+        {
+          "code": "maps_missing",
+          "message": "No existen mapas PNG fuente para componer laminas."
+        }
+      ],
+      "artifacts": []
+    },
+    {
+      "stage_id": "06",
+      "title": "Generacion de memoria tecnica",
+      "generated_at": "2026-06-03T03:12:13.740103Z",
+      "summary": {
+        "reports_generated": 11,
+        "warnings_reported": 18
+      },
+      "warnings": [],
+      "artifacts": [
+        {
+          "label": "Memoria tecnica general",
+          "path": "reports\\memoria_tecnica_general.md",
+          "kind": "markdown"
+        }
+      ]
+    }
+  ]
+}

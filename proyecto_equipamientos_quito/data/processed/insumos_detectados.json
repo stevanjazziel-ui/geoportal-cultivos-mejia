@@ -1,0 +1,171 @@
+{
+  "generated_at": "2026-06-03T03:12:13.682005Z",
+  "runtime": {
+    "yaml": false,
+    "pandas": true,
+    "geopandas": false,
+    "shapely": false,
+    "matplotlib": true,
+    "contextily": false,
+    "openpyxl": true
+  },
+  "epsg_metrico_objetivo": 32717,
+  "insumos": [
+    {
+      "dataset_id": "limite_dmq",
+      "label": "Limite DMQ",
+      "required": true,
+      "kind": "spatial",
+      "folder": "data\\raw\\limite_dmq",
+      "status": "missing",
+      "file_count": 0,
+      "spatial_count": 0,
+      "tabular_count": 0,
+      "files": []
+    },
+    {
+      "dataset_id": "administraciones_zonales",
+      "label": "Administraciones zonales",
+      "required": true,
+      "kind": "spatial",
+      "folder": "data\\raw\\administraciones_zonales",
+      "status": "missing",
+      "file_count": 0,
+      "spatial_count": 0,
+      "tabular_count": 0,
+      "files": []
+    },
+    {
+      "dataset_id": "parroquias",
+      "label": "Parroquias",
+      "required": true,
+      "kind": "spatial",
+      "folder": "data\\raw\\parroquias",
+      "status": "missing",
+      "file_count": 0,
+      "spatial_count": 0,
+      "tabular_count": 0,
+      "files": []
+    },
+    {
+      "dataset_id": "barrios_manzanas",
+      "label": "Barrios o manzanas",
+      "required": true,
+      "kind": "spatial",
+      "folder": "data\\raw\\barrios_manzanas",
+      "status": "missing",
+      "file_count": 0,
+      "spatial_count": 0,
+      "tabular_count": 0,
+      "files": []
+    },
+    {
+      "dataset_id": "poblacion",
+      "label": "Poblacion",
+      "required": true,
+      "kind": "tabular",
+      "folder": "data\\raw\\poblacion",
+      "status": "missing",
+      "file_count": 0,
+      "spatial_count": 0,
+      "tabular_count": 0,
+      "files": []
+    },
+    {
+      "dataset_id": "vivienda",
+      "label": "Vivienda",
+      "required": true,
+      "kind": "tabular",
+      "folder": "data\\raw\\vivienda",
+      "status": "missing",
+      "file_count": 0,
+      "spatial_count": 0,
+      "tabular_count": 0,
+      "files": []
+    },
+    {
+      "dataset_id": "edades",
+      "label": "Edades",
+      "required": true,
+      "kind": "tabular",
+      "folder": "data\\raw\\edades",
+      "status": "missing",
+      "file_count": 0,
+      "spatial_count": 0,
+      "tabular_count": 0,
+      "files": []
+    },
+    {
+      "dataset_id": "red_vial",
+      "label": "Red vial",
+      "required": true,
+      "kind": "spatial",
+      "folder": "data\\raw\\red_vial",
+      "status": "missing",
+      "file_count": 0,
+      "spatial_count": 0,
+      "tabular_count": 0,
+      "files": []
+    },
+    {
+      "dataset_id": "transporte",
+      "label": "Transporte",
+      "required": true,
+      "kind": "mixed",
+      "folder": "data\\raw\\transporte",
+      "status": "missing",
+      "file_count": 0,
+      "spatial_count": 0,
+      "tabular_count": 0,
+      "files": []
+    },
+    {
+      "dataset_id": "equipamientos",
+      "label": "Equipamientos",
+      "required": true,
+      "kind": "mixed",
+      "folder": "data\\raw\\equipamientos",
+      "status": "missing",
+      "file_count": 0,
+      "spatial_count": 0,
+      "tabular_count": 0,
+      "files": []
+    },
+    {
+      "dataset_id": "areas_verdes",
+      "label": "Areas verdes",
+      "required": true,
+      "kind": "mixed",
+      "folder": "data\\raw\\areas_verdes",
+      "status": "missing",
+      "file_count": 0,
+      "spatial_count": 0,
+      "tabular_count": 0,
+      "files": []
+    },
+    {
+      "dataset_id": "hidrografia",
+      "label": "Hidrografia",
+      "required": true,
+      "kind": "spatial",
+      "folder": "data\\raw\\hidrografia",
+      "status": "missing",
+      "file_count": 0,
+      "spatial_count": 0,
+      "tabular_count": 0,
+      "files": []
+    },
+    {
+      "dataset_id": "pugs_uso_suelo",
+      "label": "PUGS uso de suelo",
+      "required": true,
+      "kind": "spatial",
+      "folder": "data\\raw\\pugs_uso_suelo",
+      "status": "missing",
+      "file_count": 0,
+      "spatial_count": 0,
+      "tabular_count": 0,
+      "files": []
+    }
+  ]
+}

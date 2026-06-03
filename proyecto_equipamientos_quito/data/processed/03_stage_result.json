@@ -1,0 +1,13 @@
+{
+  "stage_id": "03",
+  "title": "Calculo de coberturas",
+  "generated_at": "2026-06-03T03:12:13.705581Z",
+  "summary": {},
+  "warnings": [
+    {
+      "code": "geospatial_stack_unavailable",
+      "message": "No estan disponibles geopandas y shapely; no se pueden construir buffers de cobertura."
+    }
+  ],
+  "artifacts": []
+}

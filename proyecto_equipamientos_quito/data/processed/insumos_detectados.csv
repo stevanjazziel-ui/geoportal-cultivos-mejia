@@ -1,0 +1,14 @@
+dataset_id,label,status,file_count,spatial_count,tabular_count,folder
+limite_dmq,Limite DMQ,missing,0,0,0,data\raw\limite_dmq
+administraciones_zonales,Administraciones zonales,missing,0,0,0,data\raw\administraciones_zonales
+parroquias,Parroquias,missing,0,0,0,data\raw\parroquias
+barrios_manzanas,Barrios o manzanas,missing,0,0,0,data\raw\barrios_manzanas
+poblacion,Poblacion,missing,0,0,0,data\raw\poblacion
+vivienda,Vivienda,missing,0,0,0,data\raw\vivienda
+edades,Edades,missing,0,0,0,data\raw\edades
+red_vial,Red vial,missing,0,0,0,data\raw\red_vial
+transporte,Transporte,missing,0,0,0,data\raw\transporte
+equipamientos,Equipamientos,missing,0,0,0,data\raw\equipamientos
+areas_verdes,Areas verdes,missing,0,0,0,data\raw\areas_verdes
+hidrografia,Hidrografia,missing,0,0,0,data\raw\hidrografia
+pugs_uso_suelo,PUGS uso de suelo,missing,0,0,0,data\raw\pugs_uso_suelo

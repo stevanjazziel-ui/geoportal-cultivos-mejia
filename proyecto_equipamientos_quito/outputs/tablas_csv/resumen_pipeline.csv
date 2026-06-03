@@ -1,0 +1,7 @@
+stage_id,title,warning_count,artifact_count
+01,Preparacion de datos,14,2
+02,Calculo de indicadores,1,0
+03,Calculo de coberturas,1,0
+04,Generacion de mapas,1,0
+05,Generacion de laminas,1,0
+06,Generacion de memoria tecnica,0,1

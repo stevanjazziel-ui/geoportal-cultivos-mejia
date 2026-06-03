@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quito Equipamientos | Publicacion tecnica</title>
+  <meta
+    name="description"
+    content="Publicacion tecnica del proyecto SIG de equipamientos urbanos por administracion zonal para el Distrito Metropolitano de Quito."
+  >
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Sora:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5f0e6;
+      --surface: rgba(255, 252, 247, 0.88);
+      --surface-strong: #fffaf2;
+      --ink: #1f2c24;
+      --muted: #5d6f63;
+      --line: rgba(55, 76, 63, 0.14);
+      --accent: #b66a3c;
+      --accent-dark: #6e3f23;
+      --forest: #2f5a49;
+      --gold: #c79d46;
+      --danger: #c95a45;
+      --shadow: 0 18px 48px rgba(39, 42, 36, 0.12);
+      --radius: 22px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top right, rgba(182, 106, 60, 0.14), transparent 30%),
+        radial-gradient(circle at bottom left, rgba(47, 90, 73, 0.12), transparent 28%),
+        linear-gradient(180deg, #f8f4ec 0%, var(--bg) 100%);
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 56px;
+    }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      background:
+        linear-gradient(135deg, rgba(47, 90, 73, 0.94), rgba(182, 106, 60, 0.92)),
+        #234538;
+      color: #f7f2ea;
+      border-radius: 32px;
+      padding: 30px;
+      box-shadow: var(--shadow);
+    }
+
+    .hero::after {
+      content: "";
+      position: absolute;
+      right: -80px;
+      top: -70px;
+      width: 260px;
+      height: 260px;
+      border-radius: 50%;
+      background: rgba(255, 245, 228, 0.1);
+      filter: blur(4px);
+    }
+
+    .eyebrow {
+      margin: 0 0 10px;
+      font-size: 0.84rem;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      opacity: 0.84;
+    }
+
+    .hero h1 {
+      margin: 0;
+      font-family: "Sora", sans-serif;
+      font-size: clamp(2rem, 4vw, 3.35rem);
+      line-height: 1.02;
+      max-width: 12ch;
+    }
+
+    .hero-copy {
+      max-width: 68ch;
+      margin: 14px 0 0;
+      color: rgba(247, 242, 234, 0.9);
+      font-size: 1.02rem;
+    }
+
+    .hero-pills,
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .pill,
+    .link-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(255, 248, 238, 0.14);
+      border: 1px solid rgba(255, 248, 238, 0.18);
+      font-size: 0.92rem;
+      text-decoration: none;
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 22px;
+    }
+
+    .hero-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 46px;
+      padding: 0 18px;
+      border-radius: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      border: 1px solid rgba(255, 248, 238, 0.2);
+      background: rgba(255, 248, 238, 0.12);
+      color: #fff7ed;
+      backdrop-filter: blur(8px);
+    }
+
+    .hero-button.primary {
+      background: #fff7ed;
+      border-color: #fff7ed;
+      color: #274234;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 20px;
+    }
+
+    .card {
+      grid-column: span 12;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 20px;
+      backdrop-filter: blur(12px);
+    }
+
+    .card h2,
+    .card h3 {
+      margin: 0;
+      font-family: "Sora", sans-serif;
+      font-size: 1.12rem;
+    }
+
+    .card-copy {
+      margin: 10px 0 0;
+      color: var(--muted);
+      line-height: 1.58;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 18px;
+    }
+
+    .metric {
+      padding: 16px;
+      border-radius: 18px;
+      background: var(--surface-strong);
+      border: 1px solid var(--line);
+    }
+
+    .metric-label {
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+
+    .metric strong {
+      display: block;
+      margin-top: 8px;
+      font-size: 1.65rem;
+      font-family: "Sora", sans-serif;
+      line-height: 1.05;
+    }
+
+    .metric small {
+      display: block;
+      margin-top: 8px;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .two-up {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 18px;
+    }
+
+    .stage-list,
+    .warning-list,
+    .input-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .stage-item,
+    .warning-item,
+    .input-item {
+      padding: 14px 16px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: var(--surface-strong);
+    }
+
+    .stage-head,
+    .input-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .stage-title,
+    .input-title {
+      font-weight: 600;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      background: rgba(47, 90, 73, 0.12);
+      color: var(--forest);
+    }
+
+    .badge.warn {
+      background: rgba(201, 90, 69, 0.12);
+      color: var(--danger);
+    }
+
+    .badge.gold {
+      background: rgba(199, 157, 70, 0.18);
+      color: #7b5b16;
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+
+    .artifact-links {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .artifact-link {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 112px;
+      padding: 16px;
+      border-radius: 18px;
+      border: 1px solid var(--line);
+      background: var(--surface-strong);
+      text-decoration: none;
+    }
+
+    .artifact-link strong {
+      font-family: "Sora", sans-serif;
+      font-size: 1rem;
+    }
+
+    .artifact-link span {
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .footer-note {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+
+    .loading {
+      color: var(--muted);
+      margin-top: 16px;
+    }
+
+    @media (min-width: 860px) {
+      .status-card {
+        grid-column: span 5;
+      }
+
+      .links-card {
+        grid-column: span 7;
+      }
+
+      .stages-card,
+      .inputs-card,
+      .warnings-card {
+        grid-column: span 4;
+      }
+
+      .report-card {
+        grid-column: span 12;
+      }
+    }
+
+    @media (max-width: 859px) {
+      .two-up {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <p class="eyebrow">Publicacion tecnica SIG</p>
+      <h1>Quito por administracion zonal, listo para crecer con datos oficiales.</h1>
+      <p class="hero-copy">
+        Este subproyecto publica la estructura reproducible del pipeline de equipamientos urbanos para el Distrito Metropolitano de Quito:
+        configuracion normativa, seis fases, reportes, advertencias y salidas listas para ser completadas con insumos oficiales.
+      </p>
+      <div id="heroPills" class="hero-pills">
+        <span class="pill">Cargando estado...</span>
+      </div>
+      <div class="hero-actions">
+        <a class="hero-button primary" href="../index.html">Abrir geoportal</a>
+        <a class="hero-button" href="./reports/memoria_tecnica_general.md">Ver memoria general</a>
+        <a class="hero-button" href="./README.md">Leer README</a>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card status-card">
+        <h2>Estado del pipeline</h2>
+        <p class="card-copy">Resumen de publicacion, dependencias geoespaciales y nivel actual de completitud.</p>
+        <div id="statusMetrics" class="metrics">
+          <div class="loading">Leyendo manifiesto publicado...</div>
+        </div>
+        <div id="statusNarrative" class="footer-note"></div>
+      </article>
+
+      <article class="card links-card">
+        <h2>Artefactos publicados</h2>
+        <p class="card-copy">Entradas directas a memoria, configuracion, resumen del pipeline y tabla de advertencias.</p>
+        <div class="artifact-links">
+          <a class="artifact-link" href="./reports/memoria_tecnica_general.md">
+            <strong>Memoria tecnica general</strong>
+            <span>Documento base con metodologia, alcance, limitaciones y fuentes.</span>
+          </a>
+          <a class="artifact-link" href="./outputs/tablas_csv/resumen_pipeline.csv">
+            <strong>Resumen del pipeline</strong>
+            <span>Estado de cada fase, total de advertencias y artefactos generados.</span>
+          </a>
+          <a class="artifact-link" href="./outputs/tablas_csv/advertencias_pipeline.csv">
+            <strong>Advertencias del proyecto</strong>
+            <span>Lista consolidada de faltantes de insumos, librerias y capas pendientes.</span>
+          </a>
+          <a class="artifact-link" href="./config/parametros_normativos.yaml">
+            <strong>Parametros normativos</strong>
+            <span>Radios, zonas, tipologias y criterios base del proyecto Quito.</span>
+          </a>
+        </div>
+      </article>
+
+      <article class="card stages-card">
+        <h3>Fases</h3>
+        <p class="card-copy">Ejecucion secuencial del proyecto desde preparacion de datos hasta memoria tecnica.</p>
+        <div id="stageList" class="stage-list">
+          <div class="loading">Cargando fases...</div>
+        </div>
+      </article>
+
+      <article class="card inputs-card">
+        <h3>Insumos</h3>
+        <p class="card-copy">Diagnostico de carpetas requeridas para DMQ, transporte, equipamientos, PUGS y variables censales.</p>
+        <div id="inputList" class="input-list">
+          <div class="loading">Cargando insumos...</div>
+        </div>
+      </article>
+
+      <article class="card warnings-card">
+        <h3>Alertas tecnicas</h3>
+        <p class="card-copy">Primeras advertencias que el pipeline ya reconoce sin inventar datos ni ocultar faltantes.</p>
+        <div id="warningList" class="warning-list">
+          <div class="loading">Cargando advertencias...</div>
+        </div>
+      </article>
+
+      <article class="card report-card">
+        <h3>Lectura actual</h3>
+        <p id="reportNarrative" class="card-copy">
+          Esta publicacion muestra el estado real del proyecto. Cuando entren los insumos oficiales y el stack geoespacial,
+          las mismas rutas generaran indicadores, coberturas, mapas, laminas y memorias por zona.
+        </p>
+        <div id="runtimePills" class="pill-row"></div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    async function fetchJson(path) {
+      const response = await fetch(`${path}?ts=${Date.now()}`, {
+        headers: { Accept: "application/json" },
+      });
+      if (!response.ok) {
+        throw new Error(`No se pudo cargar ${path} (${response.status}).`);
+      }
+      return response.json();
+    }
+
+    function renderManifest(manifest) {
+      const status = manifest.status || {};
+      const inputSummary = manifest.input_summary || {};
+      const runtime = manifest.runtime || {};
+      const heroPills = document.querySelector("#heroPills");
+      const statusMetrics = document.querySelector("#statusMetrics");
+      const statusNarrative = document.querySelector("#statusNarrative");
+      const stageList = document.querySelector("#stageList");
+      const inputList = document.querySelector("#inputList");
+      const warningList = document.querySelector("#warningList");
+      const runtimePills = document.querySelector("#runtimePills");
+      const reportNarrative = document.querySelector("#reportNarrative");
+
+      heroPills.innerHTML = [
+        `<span class="pill">${escapeHtml(manifest.project?.territory || "DMQ")}</span>`,
+        `<span class="pill">${escapeHtml(String(manifest.zones_configured || 0))} zonas</span>`,
+        `<span class="pill">${escapeHtml(String(manifest.stage_count || 0))} fases</span>`,
+        `<span class="pill">${escapeHtml(status.label || "Sin estado")}</span>`,
+      ].join("");
+
+      statusMetrics.innerHTML = [
+        {
+          label: "Estado",
+          value: status.required_inputs_missing ? "Pendiente" : "Listo",
+          copy: status.label || "Sin descripcion",
+        },
+        {
+          label: "Advertencias",
+          value: String(status.warning_count || 0),
+          copy: "Incidencias detectadas por la corrida publicada.",
+        },
+        {
+          label: "Insumos listos",
+          value: `${inputSummary.required_ready || 0}/${inputSummary.required_total || 0}`,
+          copy: "Carpetas con material util reconocido por el pipeline.",
+        },
+        {
+          label: "Stack geoespacial",
+          value: status.geospatial_ready ? "Activo" : "Pendiente",
+          copy: status.geospatial_ready ? "GeoPandas y Shapely disponibles." : "Aun faltan dependencias para recorte, buffers y mapas.",
+        },
+      ].map((metric) => `
+        <article class="metric">
+          <span class="metric-label">${escapeHtml(metric.label)}</span>
+          <strong>${escapeHtml(metric.value)}</strong>
+          <small>${escapeHtml(metric.copy)}</small>
+        </article>
+      `).join("");
+
+      statusNarrative.textContent = status.required_inputs_missing
+        ? `La publicacion ya esta visible en el repo, pero todavia faltan ${status.required_inputs_missing} insumos obligatorios antes de producir cartografia final por zona.`
+        : "La publicacion ya tiene insumos completos y puede escalar a una corrida espacial integral.";
+
+      stageList.innerHTML = (manifest.stages || []).map((stage) => `
+        <article class="stage-item">
+          <div class="stage-head">
+            <span class="stage-title">${escapeHtml(stage.stage_id || "")} · ${escapeHtml(stage.title || "")}</span>
+            <span class="badge ${Number(stage.warning_count || 0) ? "warn" : ""}">
+              ${escapeHtml(String(stage.warning_count || 0))} adv.
+            </span>
+          </div>
+          <p class="card-copy">Artefactos: ${escapeHtml(String(stage.artifact_count || 0))}</p>
+        </article>
+      `).join("") || `<div class="loading">No se encontraron fases publicadas.</div>`;
+
+      const inputItems = []
+        .concat((inputSummary.missing_labels || []).slice(0, 4).map((label) => ({ label, ready: false })))
+        .concat((inputSummary.ready_labels || []).slice(0, 4).map((label) => ({ label, ready: true })));
+      inputList.innerHTML = inputItems.map((item) => `
+        <article class="input-item">
+          <div class="input-head">
+            <span class="input-title">${escapeHtml(item.label)}</span>
+            <span class="badge ${item.ready ? "" : "gold"}">${item.ready ? "Detectado" : "Pendiente"}</span>
+          </div>
+        </article>
+      `).join("") || `<div class="loading">No hay diagnostico de insumos disponible.</div>`;
+
+      warningList.innerHTML = (manifest.warnings_preview || []).map((warning) => `
+        <article class="warning-item">
+          <strong>${escapeHtml(warning.stage_id || "")} · ${escapeHtml(warning.code || "advertencia")}</strong>
+          <p class="card-copy">${escapeHtml(warning.message || "")}</p>
+        </article>
+      `).join("") || `<div class="loading">No se registraron advertencias.</div>`;
+
+      runtimePills.innerHTML = [
+        `pandas: ${runtime.pandas ? "si" : "no"}`,
+        `matplotlib: ${runtime.matplotlib ? "si" : "no"}`,
+        `geopandas: ${runtime.geopandas ? "si" : "no"}`,
+        `shapely: ${runtime.shapely ? "si" : "no"}`,
+        `contextily: ${runtime.contextily ? "si" : "no"}`,
+      ].map((item) => `<span class="link-pill mono">${escapeHtml(item)}</span>`).join("");
+
+      reportNarrative.textContent = status.required_inputs_missing
+        ? "La corrida actual deja lista la publicacion tecnica, la memoria base y el diagnostico de faltantes. El siguiente salto es cargar insumos oficiales de Quito y activar el stack geoespacial para recorte, coberturas y mapas."
+        : "La corrida actual ya puede alimentar salidas cartograficas y reportes tecnicos por administracion zonal.";
+    }
+
+    async function main() {
+      try {
+        const manifest = await fetchJson("./public_manifest.json");
+        renderManifest(manifest);
+      } catch (error) {
+        const targetIds = ["#statusMetrics", "#stageList", "#inputList", "#warningList"];
+        targetIds.forEach((selector) => {
+          const node = document.querySelector(selector);
+          if (node) {
+            node.innerHTML = `<div class="loading">${escapeHtml(error.message || "No se pudo cargar la publicacion tecnica.")}</div>`;
+          }
+        });
+      }
+    }
+
+    main();
+  </script>
+</body>
+</html>

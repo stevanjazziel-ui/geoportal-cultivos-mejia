@@ -1,0 +1,152 @@
+{
+  "proyecto": {
+    "nombre": "Analisis territorial de equipamientos urbanos por Administracion Zonal",
+    "territorio": "Distrito Metropolitano de Quito",
+    "caracter": "Academico referencial",
+    "epsg_metrico": 32717,
+    "salida_referencial_por_defecto": true
+  },
+  "fuentes": {
+    "normativa": [
+      "Reglas Tecnicas de Arquitectura y Urbanismo del DMQ",
+      "Plan de Uso y Gestion del Suelo del DMQ"
+    ],
+    "cartografia": [
+      "Geoportal Metropolitano de Quito",
+      "SHOT / Visor PUGS",
+      "INEC / Censo Ecuador"
+    ]
+  },
+  "administraciones_zonales": [
+    "Calderon",
+    "Choco Andino",
+    "Eloy Alfaro",
+    "Eugenio Espejo",
+    "La Delicia",
+    "La Mariscal",
+    "Los Chillos",
+    "Manuela Saenz",
+    "Quitumbe",
+    "Tumbaco"
+  ],
+  "radios_cobertura": {
+    "barrial": {
+      "minimo_m": 400,
+      "maximo_m": 800
+    },
+    "sectorial": {
+      "minimo_m": 1000,
+      "maximo_m": 1500
+    },
+    "zonal": {
+      "minimo_m": 2000,
+      "maximo_m": 3000
+    },
+    "metropolitana": {
+      "criterio": "escala DMQ"
+    }
+  },
+  "tipologias_equipamientos": [
+    "Educacion",
+    "Cultura",
+    "Salud",
+    "Bienestar social",
+    "Recreacion y deporte",
+    "Seguridad ciudadana",
+    "Administracion publica",
+    "Transporte",
+    "Infraestructura"
+  ],
+  "clasificacion": {
+    "metodo": "quantiles",
+    "clases": [
+      "Muy baja",
+      "Baja",
+      "Media",
+      "Alta",
+      "Muy alta"
+    ]
+  },
+  "campos_candidatos": {
+    "codigo_territorial": [
+      "codigo",
+      "cod",
+      "id",
+      "codigo_sector",
+      "cod_sector",
+      "manzana",
+      "sector",
+      "barrio",
+      "parroquia"
+    ],
+    "administracion_zonal": [
+      "administracion_zonal",
+      "adm_zonal",
+      "zona",
+      "nombre",
+      "name"
+    ],
+    "poblacion_total": [
+      "poblacion_total",
+      "pob_total",
+      "total_poblacion",
+      "pob",
+      "habitantes"
+    ],
+    "viviendas": [
+      "viviendas",
+      "numero_viviendas",
+      "num_viviendas",
+      "viv_total",
+      "viv"
+    ],
+    "grupo_edad_0_4": [
+      "edad_0_4",
+      "pob_0_4",
+      "grupo_0_4",
+      "e0_4"
+    ],
+    "grupo_edad_5_11": [
+      "edad_5_11",
+      "pob_5_11",
+      "grupo_5_11",
+      "e5_11"
+    ],
+    "grupo_edad_12_17": [
+      "edad_12_17",
+      "pob_12_17",
+      "grupo_12_17",
+      "e12_17"
+    ],
+    "grupo_edad_18_29": [
+      "edad_18_29",
+      "pob_18_29",
+      "grupo_18_29",
+      "e18_29"
+    ],
+    "grupo_edad_30_44": [
+      "edad_30_44",
+      "pob_30_44",
+      "grupo_30_44",
+      "e30_44"
+    ],
+    "grupo_edad_45_64": [
+      "edad_45_64",
+      "pob_45_64",
+      "grupo_45_64",
+      "e45_64"
+    ],
+    "grupo_edad_65_mas": [
+      "edad_65_mas",
+      "pob_65_mas",
+      "grupo_65_mas",
+      "e65_mas"
+    ],
+    "tipologia_equipamiento": [
+      "tipologia",
+      "categoria",
+      "tipo",
+      "clase"
+    ]
+  }
+}

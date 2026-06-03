@@ -1,0 +1,26 @@
+{
+  "colores_clases": {
+    "Muy baja": "#f3efe0",
+    "Baja": "#d6c7a1",
+    "Media": "#b79a6b",
+    "Alta": "#8f6c45",
+    "Muy alta": "#5d3b23"
+  },
+  "cobertura": {
+    "adecuada": "#2a9d8f",
+    "parcial": "#e9c46a",
+    "deficit": "#e76f51"
+  },
+  "tipologias": {
+    "Educacion": "#335c67",
+    "Cultura": "#540b0e",
+    "Salud": "#6a994e",
+    "Bienestar social": "#9c6644",
+    "Recreacion y deporte": "#0a9396",
+    "Seguridad ciudadana": "#ae2012",
+    "Administracion publica": "#5f0f40",
+    "Transporte": "#005f73",
+    "Infraestructura": "#6c757d"
+  },
+  "nota_mapa": "Producto referencial condicionado a la disponibilidad y calidad de los insumos oficiales."
+}

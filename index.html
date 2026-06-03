@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="geoportal-version" content="20260602-6">
+  <meta name="geoportal-version" content="20260602-7">
   <title>Centro de Decisiones | Mejia y Quevedo</title>
   <meta
     name="description"
@@ -1114,6 +1114,40 @@
                 <button id="exportPivaJsonBtn" class="ghost-button" type="button">Exportar JSON</button>
                 <button id="exportPivaCsvBtn" class="ghost-button" type="button">Exportar CSV</button>
                 <button id="clearPivaBtn" class="ghost-button" type="button">Limpiar PIVA</button>
+              </div>
+            </article>
+
+            <article id="quitoFacilitiesCard" class="module-card planning-card hidden" data-module-track="planificacion">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Quito | Subproyecto tecnico publicado</p>
+                  <h3>Equipamientos urbanos por Administracion Zonal</h3>
+                </div>
+                <button id="runQuitoFacilitiesBtn" class="secondary-button" type="button">Cargar estado</button>
+              </div>
+              <p class="module-copy">
+                Publica dentro del repo el pipeline SIG de Quito con seis fases, configuracion normativa, memorias, advertencias y estructura reproducible por administracion zonal.
+              </p>
+              <p id="quitoFacilitiesSourceNote" class="service-note">
+                Lee el estado real del subproyecto tecnico, sin inventar datos: si faltan insumos o dependencias, el modulo lo muestra y enlaza la publicacion completa.
+              </p>
+              <div id="quitoFacilitiesResults" class="metrics-grid empty-state">
+                Carga el estado del proyecto Quito para ver fases publicadas, advertencias, insumos detectados y accesos directos a la memoria tecnica.
+              </div>
+              <div id="quitoFacilitiesStatusBoard" class="territorial-decision-board empty-state">
+                Aqui aparecera el resumen ejecutivo del pipeline, su estado de publicacion y el nivel real de completitud tecnica.
+              </div>
+              <div id="quitoFacilitiesArtifacts" class="territorial-decision-board empty-state">
+                Aqui apareceran los accesos rapidos a la pagina tecnica, memoria general, configuracion y salidas del pipeline publicado.
+              </div>
+              <div id="quitoFacilitiesWarnings" class="territorial-decision-board empty-state">
+                Aqui apareceran las advertencias principales del proyecto Quito, incluyendo faltantes de insumos y dependencias geoespaciales.
+              </div>
+              <div class="action-row analysis-actions">
+                <a class="secondary-button" href="./proyecto_equipamientos_quito/index.html" target="_blank" rel="noopener noreferrer">Publicacion</a>
+                <a class="ghost-button" href="./proyecto_equipamientos_quito/reports/memoria_tecnica_general.md" target="_blank" rel="noopener noreferrer">Memoria</a>
+                <a class="ghost-button" href="./proyecto_equipamientos_quito/outputs/tablas_csv/advertencias_pipeline.csv" target="_blank" rel="noopener noreferrer">Advertencias</a>
+                <button id="refreshQuitoFacilitiesBtn" class="ghost-button" type="button">Actualizar</button>
               </div>
             </article>
 

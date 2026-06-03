@@ -1,0 +1,13 @@
+{
+  "stage_id": "04",
+  "title": "Generacion de mapas",
+  "generated_at": "2026-06-03T03:12:13.718532Z",
+  "summary": {},
+  "warnings": [
+    {
+      "code": "map_stack_unavailable",
+      "message": "Falta geopandas y/o matplotlib; no se pueden generar mapas en esta corrida."
+    }
+  ],
+  "artifacts": []
+}

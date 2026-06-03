@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260602-6";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260602-7";
 
 const layerCatalog = [
   {
@@ -3932,6 +3932,7 @@ const state = {
   urbanClimateHighlightId: null,
   pivaData: null,
   pivaHighlightId: null,
+  quitoFacilitiesData: null,
   zoningPatternsData: null,
   zoningPatternsHighlightId: null,
   housingPatternsData: null,
@@ -6395,6 +6396,13 @@ function cacheDom() {
   dom.pivaParishes = document.querySelector("#pivaParishes");
   dom.pivaProjects = document.querySelector("#pivaProjects");
   dom.pivaSourceNote = document.querySelector("#pivaSourceNote");
+  dom.quitoFacilitiesResults = document.querySelector("#quitoFacilitiesResults");
+  dom.quitoFacilitiesStatusBoard = document.querySelector("#quitoFacilitiesStatusBoard");
+  dom.quitoFacilitiesArtifacts = document.querySelector("#quitoFacilitiesArtifacts");
+  dom.quitoFacilitiesWarnings = document.querySelector("#quitoFacilitiesWarnings");
+  dom.quitoFacilitiesSourceNote = document.querySelector("#quitoFacilitiesSourceNote");
+  dom.runQuitoFacilitiesBtn = document.querySelector("#runQuitoFacilitiesBtn");
+  dom.refreshQuitoFacilitiesBtn = document.querySelector("#refreshQuitoFacilitiesBtn");
   dom.zoningPatternsResults = document.querySelector("#zoningPatternsResults");
   dom.zoningPatternsReadout = document.querySelector("#zoningPatternsReadout");
   dom.zoningPatternsClusters = document.querySelector("#zoningPatternsClusters");
@@ -6419,6 +6427,7 @@ function cacheDom() {
   dom.riskCard = document.querySelector("#riskCard");
   dom.urbanClimateCard = document.querySelector("#urbanClimateCard");
   dom.pivaCard = document.querySelector("#pivaCard");
+  dom.quitoFacilitiesCard = document.querySelector("#quitoFacilitiesCard");
   dom.zoningPatternsCard = document.querySelector("#zoningPatternsCard");
   dom.housingPatternsCard = document.querySelector("#housingPatternsCard");
   dom.fieldEvidenceCard = document.querySelector("#fieldEvidenceCard");
@@ -6542,6 +6551,9 @@ function bootstrapApp() {
   });
   loadOfficialHydroCatalog().catch((error) => {
     console.warn("No se pudo precargar la hidrologia oficial local.", error);
+  });
+  loadQuitoFacilitiesSummary().catch((error) => {
+    console.warn("No se pudo cargar el estado publicado del proyecto Quito.", error);
   });
   hydratePlanning3dManifest();
   setTerritorialArea(state.territorialAreaId, { rerun: false, reload3d: false, silent: true });
@@ -7432,6 +7444,32 @@ function bindUI() {
   dom.exportPivaJsonBtn?.addEventListener("click", exportPivaJson);
   dom.exportPivaCsvBtn?.addEventListener("click", exportPivaCsv);
   dom.clearPivaBtn?.addEventListener("click", clearPivaAnalysis);
+  dom.runQuitoFacilitiesBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.quitoFacilitiesResults, "Leyendo el estado publicado del proyecto Quito...", [
+      { target: dom.quitoFacilitiesStatusBoard, message: "Contrastando fases, insumos y nivel real de completitud tecnica..." },
+      { target: dom.quitoFacilitiesArtifacts, message: "Preparando accesos a memoria, configuracion y artefactos publicados..." },
+      { target: dom.quitoFacilitiesWarnings, message: "Compilando advertencias y faltantes reconocidos por el pipeline..." },
+    ]);
+    return runModuleAction(dom.runQuitoFacilitiesBtn, "Leyendo Quito...", async () => {
+      try {
+        await loadQuitoFacilitiesSummary(true);
+        focusModuleCard(dom.quitoFacilitiesCard);
+        setStatus("Proyecto Quito cargado: revisa fases, memoria, advertencias y publicacion tecnica desde el portal.");
+      } catch (error) {
+        setStatus(`Quito: ${error.message || "no se pudo leer la publicacion tecnica"}.`);
+      }
+    });
+  });
+  dom.refreshQuitoFacilitiesBtn?.addEventListener("click", () => {
+    return runModuleAction(dom.refreshQuitoFacilitiesBtn, "Actualizando...", async () => {
+      try {
+        await loadQuitoFacilitiesSummary(true);
+        setStatus("Estado publicado del proyecto Quito actualizado.");
+      } catch (error) {
+        setStatus(`Quito: ${error.message || "no se pudo actualizar el estado publicado"}.`);
+      }
+    });
+  });
   dom.pivaDashboard?.addEventListener("click", handlePivaInteraction);
   dom.pivaPresentationDeck?.addEventListener("click", handlePivaInteraction);
   dom.pivaSpatialModel?.addEventListener("click", handlePivaInteraction);
@@ -8925,6 +8963,7 @@ function getModuleCardLabel(card) {
     riskCard: "Riesgo",
     urbanClimateCard: "Clima urbano",
     pivaCard: "PIVA",
+    quitoFacilitiesCard: "Quito",
     zoningPatternsCard: "Zonificacion",
     housingPatternsCard: "Vivienda",
     landChangeCard: "Huella",
@@ -9066,6 +9105,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
         { id: "planning-mobility", label: "Movilidad", copy: "Cobertura y tiempos", tone: "neutral" },
         { id: "planning-climate", label: "Clima urbano", copy: "Ventilacion y enfriamiento", tone: "neutral" },
         { id: "planning-piva", label: "PIVA", copy: "Infraestructura verde y azul", tone: "neutral" },
+        { id: "planning-quito", label: "Quito", copy: "Modulo por zonas", tone: "neutral" },
         { id: "planning-official", label: "Oficiales", copy: "Vialidad y servicios", tone: "neutral" },
         { id: "planning-water", label: "Agua", copy: "Oferta y resiliencia", tone: "neutral" },
         { id: "planning-cadastre", label: "Catastro", copy: "Predios y contornos", tone: "neutral" },
@@ -9130,10 +9170,10 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
 
   const planningFilters = {
     core: new Set(["planningCommandCard", "territorialOpsCard", "planningCard", "planningResultsCard"]),
-    official: new Set(["officialDataCard", "digitalCadastreCard"]),
+    official: new Set(["officialDataCard", "digitalCadastreCard", "quitoFacilitiesCard"]),
     risk: new Set(["riskCard", "urbanClimateCard", "hydrologyCard", "pivaCard", "territorialReadoutCard"]),
     growth: new Set(["mobilityCard", "landChangeCard", "territorialScenarioCard", "zoningPatternsCard", "housingPatternsCard", "urbanClimateCard", "pivaCard"]),
-    strategy: new Set(["fodaCameCard", "territorialDecisionCard", "territorialAlertsCard", "aiGeoCard", "zoningPatternsCard", "housingPatternsCard", "urbanClimateCard", "pivaCard"]),
+    strategy: new Set(["fodaCameCard", "territorialDecisionCard", "territorialAlertsCard", "aiGeoCard", "zoningPatternsCard", "housingPatternsCard", "urbanClimateCard", "pivaCard", "quitoFacilitiesCard"]),
     validation: new Set(["planning3dCard", "digitalCadastreCard"]),
     product: new Set(["executiveDashboardCard", "reportCenterCard", "scenarioLabCard", "timeSeriesCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
   };
@@ -10138,6 +10178,12 @@ function runWorkflowGuideAction(actionId) {
       dom.runPivaBtn?.click();
       focusModuleCard(dom.pivaCard);
       setStatus("PIVA de Mejia listo para integrar agua, clima, arbolado, espacio publico y cartera priorizada de proyectos.");
+      return;
+    case "planning-quito":
+      openSidebarWorkingPanel("modulos");
+      dom.runQuitoFacilitiesBtn?.click();
+      focusModuleCard(dom.quitoFacilitiesCard);
+      setStatus("Modulo Quito listo para revisar publicacion tecnica, memoria y faltantes de insumos.");
       return;
     case "planning-official":
       openSidebarWorkingPanel("modulos");
@@ -11662,6 +11708,12 @@ async function fetchJson(url, options = {}) {
     throw new Error(`La solicitud devolvio ${response.status}.`);
   }
   return response.json();
+}
+
+function getQuitoProjectAssetHref(relativePath = "./proyecto_equipamientos_quito/index.html", forceFresh = false) {
+  const separator = relativePath.includes("?") ? "&" : "?";
+  const base = `${relativePath}${separator}v=${encodeURIComponent(APP_VERSION)}`;
+  return forceFresh ? `${base}&ts=${Date.now()}` : base;
 }
 
 function cleanOfficialHydroText(value, fallback = "") {
@@ -33889,6 +33941,135 @@ function clearPivaAnalysis() {
   setStatus(`PIVA limpiado para ${getTerritorialAreaProfile().scopeLabel}.`);
 }
 
+function renderQuitoFacilitiesFallback(message) {
+  resetTerritorialModuleState(dom.quitoFacilitiesResults, message, [
+    { target: dom.quitoFacilitiesStatusBoard, message: "No fue posible leer el resumen ejecutivo del proyecto Quito." },
+    { target: dom.quitoFacilitiesArtifacts, message: "La publicacion tecnica sigue accesible desde sus enlaces directos dentro del repo." },
+    { target: dom.quitoFacilitiesWarnings, message: "No se pudieron compilar las advertencias publicadas en esta lectura." },
+  ]);
+}
+
+function renderQuitoFacilitiesModule() {
+  const manifest = state.quitoFacilitiesData;
+  if (!manifest) {
+    renderQuitoFacilitiesFallback("Carga el estado del proyecto Quito para ver su publicacion tecnica.");
+    return;
+  }
+
+  const status = manifest.status || {};
+  const inputSummary = manifest.input_summary || {};
+  const runtime = manifest.runtime || {};
+  const generatedAt = manifest.generated_at
+    ? new Date(manifest.generated_at).toLocaleString("es-EC")
+    : "sin fecha";
+  const warningCount = Number(status.warning_count || 0);
+  const missingRequired = Number(status.required_inputs_missing || 0);
+
+  paintMetricGrid(dom.quitoFacilitiesResults, [
+    {
+      label: "Estado publicado",
+      value: missingRequired ? "Pendiente" : "Listo",
+      copy: status.label || "Sin descripcion",
+      highlight: true,
+    },
+    {
+      label: "Fases activas",
+      value: `${manifest.stage_count || 0}/6`,
+      copy: `${manifest.zones_configured || 0} zonas configuradas en el proyecto.`,
+    },
+    {
+      label: "Advertencias",
+      value: `${warningCount}`,
+      copy: warningCount ? "La corrida muestra faltantes reales o dependencias pendientes." : "No se registran alertas en la ultima corrida.",
+    },
+    {
+      label: "Insumos obligatorios",
+      value: `${inputSummary.required_ready || 0}/${inputSummary.required_total || 0}`,
+      copy: missingRequired ? `${missingRequired} insumos faltantes antes de mapas finales.` : "La base obligatoria ya esta disponible.",
+    },
+    {
+      label: "Stack geoespacial",
+      value: status.geospatial_ready ? "Activo" : "Pendiente",
+      copy: status.geospatial_ready ? "GeoPandas y Shapely disponibles." : "Aun faltan librerias para recorte, buffers y cartografia.",
+    },
+  ]);
+
+  setTextIfChanged(
+    dom.quitoFacilitiesSourceNote,
+    `Publicacion tecnica actualizada con la corrida del ${generatedAt}. El modulo muestra el estado real del pipeline y sus faltantes sin inventar resultados.`
+  );
+
+  if (dom.quitoFacilitiesStatusBoard) {
+    dom.quitoFacilitiesStatusBoard.classList.remove("empty-state");
+    dom.quitoFacilitiesStatusBoard.classList.add("has-data");
+    setHtmlIfChanged(dom.quitoFacilitiesStatusBoard, `
+      <h4>Publicado como subproyecto tecnico</h4>
+      <p class="territorial-readout-copy">
+        ${escapeHtmlContent(status.label || "Sin estado")}
+        ${missingRequired ? ` Faltan ${missingRequired} insumos obligatorios para una corrida espacial completa.` : " La estructura base ya esta lista para escalar a productos zonales completos."}
+      </p>
+      <div class="planning-pills has-data">
+        <span class="planning-pill emphasis">${escapeHtmlContent(manifest.project?.territory || "DMQ")}</span>
+        <span class="planning-pill emphasis">${escapeHtmlContent(String(manifest.zones_configured || 0))} zonas</span>
+        <span class="planning-pill emphasis">${escapeHtmlContent(String(manifest.stage_count || 0))} fases</span>
+        <span class="planning-pill emphasis">${status.geospatial_ready ? "Stack geoespacial activo" : "Stack geoespacial pendiente"}</span>
+      </div>
+      <p class="service-note">
+        Corrida publicada: ${escapeHtmlContent(generatedAt)}.
+      </p>
+    `);
+  }
+
+  if (dom.quitoFacilitiesArtifacts) {
+    dom.quitoFacilitiesArtifacts.classList.remove("empty-state");
+    dom.quitoFacilitiesArtifacts.classList.add("has-data");
+    setHtmlIfChanged(dom.quitoFacilitiesArtifacts, `
+      <h4>Rutas publicadas</h4>
+      <p class="territorial-readout-copy">Abre el subproyecto tecnico, la memoria general o el resumen de advertencias sin salir del repositorio publicado.</p>
+      <div class="action-row analysis-actions">
+        <a class="secondary-button" href="${escapeHtmlContent(getQuitoProjectAssetHref("./proyecto_equipamientos_quito/index.html", true))}" target="_blank" rel="noopener noreferrer">Pagina tecnica</a>
+        <a class="ghost-button" href="${escapeHtmlContent(getQuitoProjectAssetHref("./proyecto_equipamientos_quito/reports/memoria_tecnica_general.md", true))}" target="_blank" rel="noopener noreferrer">Memoria</a>
+        <a class="ghost-button" href="${escapeHtmlContent(getQuitoProjectAssetHref("./proyecto_equipamientos_quito/outputs/tablas_csv/resumen_pipeline.csv", true))}" target="_blank" rel="noopener noreferrer">Resumen</a>
+        <a class="ghost-button" href="${escapeHtmlContent(getQuitoProjectAssetHref("./proyecto_equipamientos_quito/config/parametros_normativos.yaml", true))}" target="_blank" rel="noopener noreferrer">Normativa</a>
+      </div>
+    `);
+  }
+
+  if (dom.quitoFacilitiesWarnings) {
+    const warningMarkup = (manifest.warnings_preview || []).slice(0, 4).map((warning) => `
+      <p class="service-note"><strong>${escapeHtmlContent(warning.stage_id || "")}</strong> ${escapeHtmlContent(warning.message || "")}</p>
+    `).join("");
+    dom.quitoFacilitiesWarnings.classList.remove("empty-state");
+    dom.quitoFacilitiesWarnings.classList.add("has-data");
+    setHtmlIfChanged(dom.quitoFacilitiesWarnings, `
+      <h4>Advertencias actuales</h4>
+      <div class="planning-pills has-data">
+        <span class="planning-pill emphasis">${escapeHtmlContent(String(warningCount))} advertencias</span>
+        <span class="planning-pill emphasis">${escapeHtmlContent(String(missingRequired))} faltantes obligatorios</span>
+        <span class="planning-pill emphasis">GeoPandas ${runtime.geopandas ? "si" : "no"}</span>
+        <span class="planning-pill emphasis">Shapely ${runtime.shapely ? "si" : "no"}</span>
+      </div>
+      ${warningMarkup || `<p class="service-note">No hay advertencias publicadas en esta corrida.</p>`}
+    `);
+  }
+}
+
+async function loadQuitoFacilitiesSummary(force = false) {
+  try {
+    const manifest = await fetchJson(getQuitoProjectAssetHref("./proyecto_equipamientos_quito/public_manifest.json", force), {
+      headers: {
+        Accept: "application/json",
+      },
+    });
+    state.quitoFacilitiesData = manifest;
+    renderQuitoFacilitiesModule();
+    return manifest;
+  } catch (error) {
+    renderQuitoFacilitiesFallback("No se pudo leer el manifiesto publico del proyecto Quito.");
+    throw error;
+  }
+}
+
 function isCurrentTerritorialAnalysis(data, target = getCurrentTerritorialTarget()) {
   return Boolean(data?.context?.targetKey && data.context.targetKey === target.targetKey);
 }
@@ -42993,6 +43174,20 @@ function buildGeoAiRecommendationCatalog() {
       ],
       evidenceDomains: ["Territorio", "3D", "GeoAI"],
       rationale: "El PIVA funciona mejor como lectura integrada de agua, clima, conectividad, soporte municipal y cartera de proyectos.",
+    },
+    {
+      id: "territory-quito",
+      domain: "Territorio",
+      moduleLabel: "Quito por administracion zonal",
+      route: "planificacion",
+      keywords: ["quito", "dmq", "administracion zonal", "equipamientos quito", "pugs quito", "parroquias quito", "cobertura quito", "distrito metropolitano de quito"],
+      recommendation: { actionId: "planning-quito", label: "Abrir Quito", copy: "Revisa el pipeline publicado, la memoria y los faltantes del proyecto zonal." },
+      alternatives: [
+        { actionId: "planning-mobility", label: "Cruzar movilidad", copy: "Complementa cobertura funcional y accesibilidad con la lectura territorial del portal." },
+        { actionId: "planning-zoning", label: "Cruzar patrones", copy: "Contrasta tejido, vitalidad urbana y soporte espacial con el subproyecto tecnico." },
+      ],
+      evidenceDomains: ["Territorio", "GeoAI"],
+      rationale: "Cuando la consulta apunta a Quito y administraciones zonales conviene abrir la publicacion tecnica real del proyecto antes de extrapolar resultados.",
     },
     {
       id: "territory-climate",
