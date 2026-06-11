@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260602-7";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260611-1";
 
 const layerCatalog = [
   {
@@ -3909,6 +3909,7 @@ const state = {
   digitalCadastreModeId: "calibrado",
   digitalCadastreData: null,
   digitalCadastreHighlightId: null,
+  digitalCadastrePreviewId: null,
   digitalCadastreLastSavedRecordId: null,
   fodaCameData: null,
   fodaCameHighlightId: null,
@@ -4083,6 +4084,7 @@ const mapState = {
   planningFacilityLayer: null,
   planningSolarLayer: null,
   digitalCadastreLayer: null,
+  digitalCadastreHitboxLayer: null,
   digitalCadastreGuideLayer: null,
   digitalCadastreSupportLayer: null,
   mobilityLayer: null,
@@ -10849,6 +10851,7 @@ function initializeAgronomyMapPanes() {
   ensureLeafletPane("sceneRasterPane", 340, "none");
   ensureLeafletPane("analysisOverlayPane", 390, "auto");
   ensureLeafletPane("plotOverlayPane", 460, "auto");
+  ensureLeafletPane("digitalCadastreCandidatePane", 545, "auto");
 }
 
 function setMapInteractionCursor(isPointer = false) {
@@ -36619,6 +36622,7 @@ async function activateDigitalCadastreCandidate(candidateId, options = {}) {
 function clearDigitalCadastreAnalysis() {
   state.digitalCadastreData = null;
   state.digitalCadastreHighlightId = null;
+  state.digitalCadastrePreviewId = null;
   state.digitalCadastreAdjustmentSnapshot = null;
   state.digitalCadastreFichaDraft = null;
   state.digitalCadastreLastSavedRecordId = null;
@@ -48423,20 +48427,20 @@ function clearFieldEvidenceOverlay() {
 function getDigitalCadastreCandidateStyle(feature, options = {}) {
   const confidenceScore = Number(feature?.properties?.confidenceScore) || 0;
   const isActive = options.active ?? (feature?.properties?.digitalCadastreId === state.digitalCadastreHighlightId);
-  const isPreview = Boolean(options.preview) && !isActive;
+  const isPreview = Boolean(options.preview || feature?.properties?.digitalCadastreId === state.digitalCadastrePreviewId) && !isActive;
   const stroke = isActive
-    ? "#fff7ef"
+    ? "#ffffff"
     : isPreview
-      ? "#f4d35e"
+      ? "#00e5a8"
       : confidenceScore >= 84
         ? "#2f7f5f"
         : confidenceScore >= 68
           ? "#c28a34"
           : "#a5544b";
   const fill = isActive
-    ? "#f6d67b"
+    ? "#00c98b"
     : isPreview
-      ? "#f4d35e"
+      ? "#00e5a8"
       : confidenceScore >= 84
         ? "#7bbd9a"
         : confidenceScore >= 68
@@ -48444,12 +48448,66 @@ function getDigitalCadastreCandidateStyle(feature, options = {}) {
           : "#d99688";
   return {
     color: stroke,
-    weight: isActive ? 3.4 : isPreview ? 3.1 : 2.1,
+    weight: isActive ? 4.8 : isPreview ? 4.4 : 2.4,
     fillColor: fill,
-    fillOpacity: isActive ? 0.46 : isPreview ? 0.38 : 0.22,
-    opacity: isActive ? 0.98 : isPreview ? 0.96 : 0.84,
-    dashArray: isPreview ? null : undefined,
+    fillOpacity: isActive ? 0.42 : isPreview ? 0.34 : 0.2,
+    opacity: isActive ? 1 : isPreview ? 1 : 0.88,
+    dashArray: isPreview || isActive ? null : "8 5",
+    className: isActive || isPreview ? "digital-cadastre-candidate-active" : "digital-cadastre-candidate",
   };
+}
+
+function getDigitalCadastreCandidateHitboxStyle() {
+  return {
+    color: "#00e5a8",
+    weight: 16,
+    opacity: 0.001,
+    fillColor: "#00e5a8",
+    fillOpacity: 0.012,
+    className: "digital-cadastre-candidate-hitbox",
+  };
+}
+
+function attachDigitalCadastreCandidateInteraction(feature, layer, visibleLayerById) {
+  const candidateId = feature?.properties?.digitalCadastreId;
+  if (!candidateId) {
+    return;
+  }
+  const title = feature.properties?.digitalCadastreTitle || "Predio asistido";
+  const confidenceScore = Number(feature.properties?.confidenceScore) || 0;
+  const visibleLayer = () => visibleLayerById?.get(candidateId) || layer;
+
+  layer.on("mouseover", () => {
+    state.digitalCadastrePreviewId = candidateId;
+    const targetLayer = visibleLayer();
+    targetLayer.setStyle?.(getDigitalCadastreCandidateStyle(feature, { preview: true }));
+    targetLayer.bringToFront?.();
+    targetLayer.openTooltip?.();
+    setMapInteractionCursor(true);
+    if (candidateId !== state.digitalCadastreHighlightId) {
+      setStatus(`Predio detectado por contorno visible: ${title}. Haz clic para digitalizarlo.`);
+    }
+  });
+
+  layer.on("mouseout", () => {
+    if (state.digitalCadastrePreviewId === candidateId) {
+      state.digitalCadastrePreviewId = null;
+    }
+    const targetLayer = visibleLayer();
+    targetLayer.setStyle?.(getDigitalCadastreCandidateStyle(feature));
+    targetLayer.closeTooltip?.();
+    setMapInteractionCursor(false);
+  });
+
+  layer.on("click", (event) => {
+    L.DomEvent.stop(event);
+    state.digitalCadastrePreviewId = candidateId;
+    const targetLayer = visibleLayer();
+    targetLayer.setStyle?.(getDigitalCadastreCandidateStyle(feature, { preview: true }));
+    targetLayer.bringToFront?.();
+    setStatus(`Digitalizando ${title} desde la imagen y sus linderos visibles...`);
+    activateDigitalCadastreCandidate(candidateId, { source: "hover-click" });
+  });
 }
 
 function renderDigitalCadastreOverlay(analysis) {
@@ -48516,8 +48574,11 @@ function renderDigitalCadastreOverlay(analysis) {
     }).addTo(mapState.map);
   }
 
+  const visibleLayerById = new Map();
   mapState.digitalCadastreLayer = L.geoJSON(analysis.candidateCollection, {
-    pane: "plotOverlayPane",
+    pane: "digitalCadastreCandidatePane",
+    interactive: true,
+    bubblingMouseEvents: false,
     style: (feature) => getDigitalCadastreCandidateStyle(feature),
     onEachFeature: (feature, layer) => {
       const title = feature.properties?.digitalCadastreTitle || "Predio asistido";
@@ -48525,8 +48586,12 @@ function renderDigitalCadastreOverlay(analysis) {
       const areaHa = Number(feature.properties?.areaHa) || 0;
       const perimeterM = Number(feature.properties?.perimeterM) || 0;
       const supportLabel = feature.properties?.supportLabel || "Sin soporte";
+      const candidateId = feature.properties?.digitalCadastreId;
+      if (candidateId) {
+        visibleLayerById.set(candidateId, layer);
+      }
       layer.bindPopup(
-        `<h3 class="popup-title">${escapeHtmlContent(title)}</h3><p class="popup-copy">${escapeHtmlContent(getDigitalCadastreConfidenceLabel(confidenceScore))} - ${areaHa.toFixed(areaHa >= 10 ? 1 : 2)} ha - ${Math.round(perimeterM)} m. ${escapeHtmlContent(supportLabel)}. Haz clic para digitalizarlo como lote activo.</p>`
+        `<h3 class="popup-title">${escapeHtmlContent(title)}</h3><p class="popup-copy">${escapeHtmlContent(getDigitalCadastreConfidenceLabel(confidenceScore))} - ${areaHa.toFixed(areaHa >= 10 ? 1 : 2)} ha - ${Math.round(perimeterM)} m. ${escapeHtmlContent(supportLabel)}.</p><p class="popup-copy"><strong>Accion:</strong> al pasar el cursor se marca el predio; al hacer clic queda digitalizado como lote activo.</p>`
       );
       layer.bindTooltip(`${title} - ${getDigitalCadastreConfidenceLabel(confidenceScore)} - clic para digitalizar`, {
         sticky: true,
@@ -48534,31 +48599,17 @@ function renderDigitalCadastreOverlay(analysis) {
         opacity: 0.96,
         className: "digital-cadastre-preview-tooltip",
       });
-      layer.on("mouseover", () => {
-        const previewId = feature.properties?.digitalCadastreId;
-        layer.setStyle(getDigitalCadastreCandidateStyle(feature, { preview: true }));
-        layer.bringToFront?.();
-        layer.openTooltip?.();
-        if (mapState.map?.getContainer) {
-          mapState.map.getContainer().style.cursor = "pointer";
-        }
-        if (previewId && previewId !== state.digitalCadastreHighlightId) {
-          setStatus(`Predio detectado: ${title}. Haz clic para digitalizarlo.`);
-        }
-      });
-      layer.on("mouseout", () => {
-        layer.setStyle(getDigitalCadastreCandidateStyle(feature));
-        layer.closeTooltip?.();
-        if (mapState.map?.getContainer) {
-          mapState.map.getContainer().style.cursor = "";
-        }
-      });
-      layer.on("click", () => {
-        const candidateId = feature.properties?.digitalCadastreId;
-        if (candidateId) {
-          activateDigitalCadastreCandidate(candidateId);
-        }
-      });
+      attachDigitalCadastreCandidateInteraction(feature, layer, visibleLayerById);
+    },
+  }).addTo(mapState.map);
+
+  mapState.digitalCadastreHitboxLayer = L.geoJSON(analysis.candidateCollection, {
+    pane: "digitalCadastreCandidatePane",
+    interactive: true,
+    bubblingMouseEvents: false,
+    style: getDigitalCadastreCandidateHitboxStyle,
+    onEachFeature: (feature, layer) => {
+      attachDigitalCadastreCandidateInteraction(feature, layer, visibleLayerById);
     },
   }).addTo(mapState.map);
 
@@ -48566,6 +48617,7 @@ function renderDigitalCadastreOverlay(analysis) {
   mapState.currentPlotLayer?.bringToFront?.();
   mapState.digitalCadastreGuideLayer?.bringToFront?.();
   mapState.digitalCadastreLayer?.bringToFront?.();
+  mapState.digitalCadastreHitboxLayer?.bringToFront?.();
 }
 
 function clearDigitalCadastreOverlay() {
@@ -48576,6 +48628,10 @@ function clearDigitalCadastreOverlay() {
   if (mapState.digitalCadastreLayer) {
     mapState.map.removeLayer(mapState.digitalCadastreLayer);
     mapState.digitalCadastreLayer = null;
+  }
+  if (mapState.digitalCadastreHitboxLayer) {
+    mapState.map.removeLayer(mapState.digitalCadastreHitboxLayer);
+    mapState.digitalCadastreHitboxLayer = null;
   }
   if (mapState.digitalCadastreGuideLayer) {
     mapState.map.removeLayer(mapState.digitalCadastreGuideLayer);
@@ -48857,6 +48913,7 @@ function focusDigitalCadastreCandidate(candidateId, options = {}) {
   }
 
   state.digitalCadastreHighlightId = candidateId;
+  state.digitalCadastrePreviewId = null;
   state.territorialFocus = "digitalCadastre";
   renderDigitalCadastreModule();
   renderDigitalCadastreOverlay(state.digitalCadastreData);

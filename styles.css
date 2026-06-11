@@ -5125,6 +5125,26 @@ button {
   border-top-color: rgba(252, 253, 249, 0.98) !important;
 }
 
+.map-canvas .digital-cadastre-candidate,
+.map-canvas .digital-cadastre-candidate-active {
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 8px 14px rgba(0, 55, 36, 0.22));
+  transition:
+    stroke-width 120ms ease,
+    fill-opacity 120ms ease,
+    opacity 120ms ease;
+}
+
+.map-canvas .digital-cadastre-candidate-active {
+  filter:
+    drop-shadow(0 0 8px rgba(0, 229, 168, 0.62))
+    drop-shadow(0 12px 20px rgba(0, 45, 32, 0.26));
+}
+
+.map-canvas .digital-cadastre-candidate-hitbox {
+  cursor: pointer;
+}
+
 .planning-3d-entry {
   display: grid;
   gap: 14px;
