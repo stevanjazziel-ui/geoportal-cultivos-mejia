@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260611-5";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260611-6";
 
 const layerCatalog = [
   {
@@ -46249,6 +46249,97 @@ function getDigitalCadastreHoverLayerFeature() {
   return hoverFeature;
 }
 
+function normalizeDigitalCadastreHoverParcelFeature(parcelFeature, cursorPoint) {
+  if (!parcelFeature?.geometry) {
+    return null;
+  }
+  const feature = cloneFeature(parcelFeature);
+  const props = feature.properties || {};
+  const metrics = captureDigitalCadastreFeatureMetrics(feature);
+  const label = props.cadastralCode
+    ? `Predio ${props.cadastralCode}`
+    : props.lotNumber
+      ? `Lote ${props.lotNumber}`
+      : "Predio catastral bajo cursor";
+  feature.properties = {
+    ...props,
+    digitalCadastreId: "digital-cadastre-hover",
+    digitalCadastreTitle: label,
+    confidenceScore: 92,
+    boundaryLabel: "Lindero catastral local",
+    supportLabel: "Parcelario local publicado + imagen activa",
+    segmentationSource: "Parcelario local bajo cursor",
+    areaHa: metrics.areaHa,
+    perimeterM: metrics.perimeterM,
+    cursorLng: cursorPoint?.geometry?.coordinates?.[0] || null,
+    cursorLat: cursorPoint?.geometry?.coordinates?.[1] || null,
+    hoverCandidate: true,
+    localParcelHover: true,
+  };
+  return feature;
+}
+
+async function findDigitalCadastreLocalParcelAtPoint(event) {
+  if (!event?.latlng) {
+    return null;
+  }
+  const cursorPoint = turf.point([
+    Number(event.latlng.lng.toFixed(7)),
+    Number(event.latlng.lat.toFixed(7)),
+  ]);
+  const activeArea = getDigitalCadastreAreaProfile();
+  const searchAreaIds = [
+    activeArea.id,
+    "machachi",
+    "cutuglagua",
+  ].filter((areaId, index, list) => areaId && list.indexOf(areaId) === index);
+
+  for (const areaId of searchAreaIds) {
+    const profile = getDigitalCadastreAreaProfile(areaId);
+    if (!profile.localParcels) {
+      continue;
+    }
+    try {
+      const collection = await loadDigitalCadastreParcelCollection(areaId, "preview");
+      const candidates = (collection.features || []).filter((feature) => {
+        if (!feature?.geometry || !isCoordinateWithinBounds(cursorPoint.geometry.coordinates, feature.properties?.bounds)) {
+          return false;
+        }
+        try {
+          return turf.booleanPointInPolygon(cursorPoint, feature);
+        } catch (error) {
+          return false;
+        }
+      });
+      if (candidates.length) {
+        const best = candidates
+          .slice()
+          .sort((left, right) => (Number(left.properties?.areaHa) || 0) - (Number(right.properties?.areaHa) || 0))[0];
+        return normalizeDigitalCadastreHoverParcelFeature(best, cursorPoint);
+      }
+    } catch (error) {
+      // Si un parcelario local no carga, el hover continua con los otros soportes.
+    }
+  }
+  return null;
+}
+
+async function refineDigitalCadastreHoverWithLocalParcel(event, requestId) {
+  if (!event?.latlng || !isDigitalCadastreHoverEnabled()) {
+    return false;
+  }
+  const localParcel = await findDigitalCadastreLocalParcelAtPoint(event);
+  if (requestId !== mapState.digitalCadastreHoverRequestId || !isDigitalCadastreHoverEnabled()) {
+    return false;
+  }
+  if (!localParcel?.geometry) {
+    return false;
+  }
+  renderDigitalCadastreHoverPreview(localParcel);
+  setStatus("Predio real del parcelario local marcado bajo el cursor. Haz click para guardarlo si corresponde.");
+  return true;
+}
+
 async function refineDigitalCadastreHoverWithBackend(seedFeature, event, requestId) {
   if (!seedFeature?.geometry || !event?.latlng || !isDigitalCadastreHoverEnabled()) {
     return;
@@ -46315,7 +46406,11 @@ function buildDigitalCadastreHoverAnalysis(feature) {
   const imageryProfile = getPlanningImageryProfile();
   const areaHa = Number(feature.properties?.areaHa) || 0;
   const perimeterM = Number(feature.properties?.perimeterM) || 0;
-  const title = `Predio digitalizado ${new Date().toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" })}`;
+  const isLocalParcel = Boolean(feature.properties?.localParcelHover);
+  const confidenceScore = isLocalParcel ? 92 : 72;
+  const title = feature.properties?.digitalCadastreTitle && isLocalParcel
+    ? feature.properties.digitalCadastreTitle
+    : `Predio digitalizado ${new Date().toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" })}`;
   const candidate = {
     id: `digital-cadastre-hover-${Date.now()}`,
     title,
@@ -46323,7 +46418,8 @@ function buildDigitalCadastreHoverAnalysis(feature) {
     feature: cloneFeature(feature),
     centroid: turf.centroid(feature).geometry.coordinates,
     cadastralCode: null,
-    lotNumber: "hover",
+    cadastralCode: feature.properties?.cadastralCode || null,
+    lotNumber: feature.properties?.lotNumber || "hover",
     areaHa,
     perimeterM,
     roadDistanceKm: null,
@@ -46332,19 +46428,21 @@ function buildDigitalCadastreHoverAnalysis(feature) {
     fieldSupportDistanceKm: null,
     fieldSupportRole: null,
     insideUrban: false,
-    visibleHits: 1,
-    boundaryLabel: "Contorno probable por cursor",
-    confidenceScore: 72,
-    confidenceLabel: getDigitalCadastreConfidenceLabel(72),
-    confidenceTone: getDigitalCadastreConfidenceTone(72),
-    supportLabel: "Imagen satelital activa + hover automatico",
-    summary: `Predio probable de ${areaHa.toFixed(areaHa >= 10 ? 1 : 2)} ha detectado al pasar el cursor sobre la imagen.`,
-    recommendation: "Guardar como pre-digitalizacion y validar lindero con ortofoto, campo o soporte catastral antes de uso definitivo.",
+    visibleHits: isLocalParcel ? 3 : 1,
+    boundaryLabel: isLocalParcel ? "Lindero catastral local" : "Contorno probable por cursor",
+    confidenceScore,
+    confidenceLabel: getDigitalCadastreConfidenceLabel(confidenceScore),
+    confidenceTone: getDigitalCadastreConfidenceTone(confidenceScore),
+    supportLabel: isLocalParcel ? "Parcelario local publicado + imagen activa" : "Imagen satelital activa + hover automatico",
+    summary: `${isLocalParcel ? "Predio local" : "Predio probable"} de ${areaHa.toFixed(areaHa >= 10 ? 1 : 2)} ha detectado al pasar el cursor sobre la imagen.`,
+    recommendation: isLocalParcel
+      ? "Usar como base catastral local para revision tecnica, contraste de gabinete y actualizacion si corresponde."
+      : "Guardar como pre-digitalizacion y validar lindero con ortofoto, campo o soporte catastral antes de uso definitivo.",
     tags: [
       `${areaHa.toFixed(areaHa >= 10 ? 1 : 2)} ha`,
       `${Math.round(perimeterM)} m perimetro`,
-      "Hover automatico",
-      "Requiere validacion",
+      isLocalParcel ? "Parcelario local" : "Hover automatico",
+      isLocalParcel ? "Alta confianza" : "Requiere validacion",
     ],
     guideFeatures: [],
     rankScore: 72,
@@ -46376,14 +46474,18 @@ function buildDigitalCadastreHoverAnalysis(feature) {
     areaProfile,
     imageryProfile,
     officialSummary: state.officialData.planificacion || null,
-    sourceNote: "Modo hover automatico: el contorno se previsualiza al pasar el cursor sobre la imagen y se guarda con click como pre-digitalizacion.",
+    sourceNote: isLocalParcel
+      ? "Modo hover automatico: el cursor encontro un predio del parcelario local publicado y lo uso como contorno principal."
+      : "Modo hover automatico: el contorno se previsualiza al pasar el cursor sobre la imagen y se guarda con click como pre-digitalizacion.",
     readout: {
-      headline: "Predio capturado desde hover sobre imagen",
-      copy: "La geometria fue generada directamente desde el cursor sobre la imagen satelital activa.",
+      headline: isLocalParcel ? "Predio local capturado desde hover" : "Predio capturado desde hover sobre imagen",
+      copy: isLocalParcel
+        ? "La geometria corresponde al parcelario local publicado bajo el cursor."
+        : "La geometria fue generada directamente desde el cursor sobre la imagen satelital activa.",
       recommendation: candidate.recommendation,
     },
     checklist: [
-      "Hover automatico sobre imagen satelital activo.",
+      isLocalParcel ? "Parcelario local encontrado bajo el cursor." : "Hover automatico sobre imagen satelital activo.",
       "Click confirma y guarda el predio como pre-digitalizacion.",
       "Validar linderos visibles con ortofoto, campo o soporte catastral.",
       "Revisar topologia antes de exportar a SHP/KML/DXF.",
@@ -46399,23 +46501,23 @@ function buildDigitalCadastreHoverAnalysis(feature) {
       "Uso como pre-digitalizacion asistida sujeta a validacion tecnica.",
     ],
     sourceStudy: {
-      label: "Hover automatico de linderos probables",
-      methodLabel: "Previsualizacion interactiva sobre imagen",
+      label: isLocalParcel ? "Parcelario local por hover" : "Hover automatico de linderos probables",
+      methodLabel: isLocalParcel ? "Predio vectorial local bajo cursor" : "Previsualizacion interactiva sobre imagen",
     },
     summary: {
       candidateCount: 1,
-      meanConfidence: 72,
+      meanConfidence: confidenceScore,
       meanAreaHa: areaHa,
-      supportLabel: "Imagen satelital activa",
-      boundaryLabel: "Contorno probable",
+      supportLabel: isLocalParcel ? "Parcelario local publicado" : "Imagen satelital activa",
+      boundaryLabel: isLocalParcel ? "Lindero catastral local" : "Contorno probable",
       needsPlot: false,
       localParcels: areaProfile.localParcels,
       checklistCount: 4,
       activeSupportLayers: state.officialData.planificacion?.activeLayerCount || 0,
-      supportParcelCount: 0,
+      supportParcelCount: isLocalParcel ? 1 : 0,
       fieldSupportCount: 0,
       fieldSupportLabel: null,
-      segmentationModel: "hover-automatico",
+      segmentationModel: isLocalParcel ? "parcelario-local-hover" : "hover-automatico",
       segmentationCandidateCount: 1,
     },
     supportCollection: { type: "FeatureCollection", features: [] },
@@ -46441,7 +46543,11 @@ function handleDigitalCadastreMapHover(event) {
   mapState.digitalCadastreHoverRequestId += 1;
   const requestId = mapState.digitalCadastreHoverRequestId;
   renderDigitalCadastreHoverPreview(feature);
-  refineDigitalCadastreHoverWithBackend(feature, event, requestId);
+  refineDigitalCadastreHoverWithLocalParcel(event, requestId).then((matchedLocalParcel) => {
+    if (!matchedLocalParcel) {
+      refineDigitalCadastreHoverWithBackend(feature, event, requestId);
+    }
+  });
   if (now - (mapState.digitalCadastreHoverStatusAt || 0) > 1800) {
     mapState.digitalCadastreHoverStatusAt = now;
     setStatus("Predio probable marcado bajo el cursor. Si el contorno esta bien, haz click para guardarlo.");
