@@ -799,9 +799,9 @@ button {
   flex: 1;
   min-height: 0;
   overflow-y: auto;
-  gap: 10px;
+  gap: 12px;
   padding-right: 4px;
-  padding-bottom: 10px;
+  padding-bottom: 4px;
   scrollbar-gutter: stable;
 }
 
@@ -1383,13 +1383,13 @@ button {
 }
 
 .module-card {
-  gap: 10px;
-  padding: 14px;
+  gap: 11px;
+  padding: 15px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.995), rgba(249, 250, 246, 0.975)),
     radial-gradient(circle at top right, rgba(47, 109, 88, 0.045), transparent 38%);
   border: 1px solid rgba(57, 73, 66, 0.1);
-  box-shadow: 0 12px 24px rgba(22, 31, 27, 0.07);
+  box-shadow: 0 10px 20px rgba(22, 31, 27, 0.055);
   overflow: hidden;
   flex-shrink: 0;
   min-width: 0;
@@ -2470,11 +2470,32 @@ button {
 }
 
 .empty-state {
-  padding: 16px;
+  padding: 11px 13px;
   border-radius: var(--radius-md);
-  background: rgba(255, 255, 255, 0.45);
+  border: 1px dashed rgba(47, 61, 50, 0.12);
+  background: rgba(255, 255, 255, 0.5);
   color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
   min-width: 0;
+}
+
+.tab-panel[data-panel="modulos"] .empty-state {
+  max-height: 86px;
+  overflow: hidden;
+}
+
+.tab-panel[data-panel="modulos"] .territorial-decision-board.empty-state,
+.tab-panel[data-panel="modulos"] .territorial-export-panel.empty-state,
+.tab-panel[data-panel="modulos"] .territorial-sector-sheets.empty-state,
+.tab-panel[data-panel="modulos"] .territorial-readout.empty-state,
+.tab-panel[data-panel="modulos"] .decision-board.empty-state,
+.tab-panel[data-panel="modulos"] .agronomy-visual.empty-state {
+  min-height: auto;
+}
+
+.tab-panel[data-panel="modulos"] .metrics-grid.empty-state {
+  max-height: none;
 }
 
 .gps-device-list {

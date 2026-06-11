@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260611-2";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260611-3";
 
 const layerCatalog = [
   {
@@ -14476,6 +14476,7 @@ function resetTerritorialModuleState(target, message, extras = []) {
     if (!item?.target) {
       return;
     }
+    item.target.classList.remove("hidden");
     item.target.classList.add("empty-state");
     item.target.classList.remove("has-data");
     if (item.message) {
@@ -14490,6 +14491,7 @@ function setModulePendingState(target, message, extras = []) {
     if (!item?.target) {
       return;
     }
+    item.target.classList.remove("hidden");
     item.target.classList.add("empty-state");
     item.target.classList.remove("has-data");
     if (item.message) {
@@ -32576,24 +32578,41 @@ function renderPivaModule() {
   const analysis = isCurrentTerritorialAnalysis(state.pivaData) ? state.pivaData : null;
   if (!analysis) {
     resetMetricGrid(dom.pivaResults, `Ejecuta el PIVA para priorizar infraestructura verde y azul sobre Canton Mejia y dejar una cartera accionable por corredor, agua y espacio publico.`);
-    resetVisualPanel(dom.pivaDashboard, "Aqui aparecera el tablero ejecutivo del PIVA con parroquia critica, proyecto lider, paquete de arranque y segunda ola territorial.");
-    resetVisualPanel(dom.pivaProjectVisual, "Aqui aparecera la visual conceptual del proyecto lider, con grafico de impacto por componente y la imagen sintesis de la intervencion propuesta.");
-    resetVisualPanel(dom.pivaSpatialModel, "Aqui aparecera el modelo espacial PIVA con corredores verdes, frentes azules, reservas climaticas, bordes protegidos y piezas priorizadas por parroquia.");
-    resetVisualPanel(dom.pivaMasterplan, "Aqui aparecera la lamina tipo plan maestro del PIVA, con colores, flechas, nodos, jerarquias y etiquetas de la intervencion.");
-    resetVisualPanel(dom.pivaProposalScene, "Aqui aparecera la escena propuesta del PIVA, con arbolado, drenaje, espacio publico y estructura urbana sugerida para Mejia.");
-    resetVisualPanel(dom.pivaReadout, "Aqui aparecera la lectura verde-azul integrada con clima urbano, seguridad hidrica, conectividad y soporte de evidencia.");
-    resetVisualPanel(dom.pivaBoard, "Aqui aparecera el semaforo PIVA con los pilares azul, verde, clima, conectividad y soporte oficial.");
-    resetVisualPanel(dom.pivaLegendBoard, "Aqui aparecera la leyenda PIVA para distinguir capas azules, verdes, climaticas, transiciones y proyectos detonantes.");
-    resetVisualPanel(dom.pivaComparator, "Aqui aparecera el comparador entre el estado actual y la propuesta PIVA para medir mejora esperada.");
-    resetVisualPanel(dom.pivaFramework, "Aqui apareceran el modelo territorial, la red PIVA, los paquetes y la hoja de ruta de implementacion inspirada en la estructura usada en Manta.");
-    resetVisualPanel(dom.pivaProfiles, "Aqui apareceran los perfiles prioritarios que vuelven visible el PIVA en corredores, bordes productivos y frentes hidricos.");
-    resetVisualPanel(dom.pivaParishes, "Aqui aparecera la cartera PIVA por parroquia, con brecha de servicios, soporte local y accion sugerida.");
-    resetVisualPanel(dom.pivaProjects, "Aqui aparecera la cartera inicial de proyectos PIVA del canton Mejia, con acciones por corredor, drenaje y espacio publico.");
+    resetVisualPanel(dom.pivaDashboard, "Construye el PIVA para generar tablero, modelo espacial, plan maestro, escena propuesta, semaforo y cartera de proyectos.");
+    setPanelsHidden([
+      dom.pivaProjectVisual,
+      dom.pivaSpatialModel,
+      dom.pivaMasterplan,
+      dom.pivaProposalScene,
+      dom.pivaReadout,
+      dom.pivaBoard,
+      dom.pivaLegendBoard,
+      dom.pivaComparator,
+      dom.pivaFramework,
+      dom.pivaProfiles,
+      dom.pivaParishes,
+      dom.pivaProjects,
+    ], true);
     if (dom.pivaSourceNote) {
       setTextIfChanged(dom.pivaSourceNote, `Modulo PIVA orientado a ${areaProfile.scopeLabel === "Canton Mejia" ? areaProfile.scopeLabel : "Canton Mejia"}. Si el ambito activo no es Mejia, al ejecutar la corrida se ajusta para construir la cartera verde-azul del canton con banco de suelo, equipamiento, servicios basicos y patrimonio municipal.`);
     }
     return;
   }
+
+  setPanelsHidden([
+    dom.pivaProjectVisual,
+    dom.pivaSpatialModel,
+    dom.pivaMasterplan,
+    dom.pivaProposalScene,
+    dom.pivaReadout,
+    dom.pivaBoard,
+    dom.pivaLegendBoard,
+    dom.pivaComparator,
+    dom.pivaFramework,
+    dom.pivaProfiles,
+    dom.pivaParishes,
+    dom.pivaProjects,
+  ], false);
 
   if (dom.pivaDashboard) {
     const dashboard = analysis.dashboard;
@@ -46466,11 +46485,11 @@ async function buildDigitalCadastreAnalysis() {
   const visibleSupportLabel = candidates[0]?.boundaryLabel || (effectiveMode.id === "calibrado" ? "Parcelario local sin soporte puntual" : "AOI asistido");
   const segmentationChecklist = segmentationFeatures.length
     ? [
-        `${segmentationFeatures.length} contornos candidatos llegaron desde el motor de segmentacion asistida del backend local.`,
-        `Estado del modelo: ${segmentationResult.modelStatus || "asistido"}; metodo: ${segmentationResult.methodLabel || "lectura de linderos visibles"}.`,
+        `${segmentationFeatures.length} contornos candidatos generados por el motor local de segmentacion asistida.`,
+        `Metodo activo: ${segmentationResult.methodLabel || "lectura de linderos visibles"}.`,
       ]
     : [
-        "Sin respuesta de motor IA local; se uso fallback en navegador con AOI, soporte visible y parcelario local disponible.",
+        "Motor local no disponible; se uso lectura en navegador con AOI, soporte visible y parcelario local disponible.",
       ];
   const checklist = [
     ...sharedChecklist,
@@ -46496,7 +46515,7 @@ async function buildDigitalCadastreAnalysis() {
     officialSummary,
     sourceNote: `${effectiveMode.id === "calibrado"
       ? `Modo calibrado con ${areaProfile.supportLabel.toLowerCase()} sobre ${target.scopeLabel}. Se usa imagen ${imageryProfile.shortLabel} como apoyo visual${fieldSupportSummaryLabel ? ` y ${fieldSupportSummaryLabel.toLowerCase()}` : ""}, y la revision final sigue siendo tecnica.`
-      : `Modo asistido sobre ${target.scopeLabel}. La delimitacion se apoya en contornos visibles, soporte ${areaProfile.sourceLabel.toLowerCase()}${fieldSupportSummaryLabel ? ` y ${fieldSupportSummaryLabel.toLowerCase()}` : ""}, y requiere validacion posterior.`} ${segmentationFeatures.length ? `Motor IA local activo: ${segmentationResult.methodLabel || "segmentacion asistida"} (${segmentationFeatures.length} candidatos).` : "Motor IA local no disponible en esta corrida; fallback local activo."}`,
+      : `Modo asistido sobre ${target.scopeLabel}. La delimitacion se apoya en contornos visibles, soporte ${areaProfile.sourceLabel.toLowerCase()}${fieldSupportSummaryLabel ? ` y ${fieldSupportSummaryLabel.toLowerCase()}` : ""}, y requiere validacion posterior.`} ${segmentationFeatures.length ? `Motor local activo: ${segmentationFeatures.length} candidatos de contorno.` : "Motor local no disponible; lectura asistida en navegador."}`,
     readout: {
       headline: effectiveMode.id === "calibrado"
         ? `Predios visibles calibrados sobre ${target.scopeLabel}`
@@ -46988,20 +47007,26 @@ function renderDigitalCadastreModule() {
 
   if (!state.digitalCadastreData) {
     resetMetricGrid(dom.digitalCadastreResults, `Ejecuta el modulo para digitalizar predios visibles sobre ${areaProfile.label} con soporte ${effectiveMode.shortLabel.toLowerCase()}.`);
+    setPanelsHidden([
+      dom.digitalCadastreQueueBoard,
+      dom.digitalCadastreFichaBoard,
+      dom.digitalCadastreCompareBoard,
+      dom.digitalCadastreBatchBoard,
+    ], true);
     dom.digitalCadastreReadout?.classList.add("empty-state");
     dom.digitalCadastreReadout?.classList.remove("has-data");
     if (dom.digitalCadastreReadout) {
-      setTextIfChanged(dom.digitalCadastreReadout, "Aqui aparece la lectura de delimitacion predial, su precision esperada y el alcance tecnico de la corrida.");
+      setTextIfChanged(dom.digitalCadastreReadout, "Dibuja o selecciona un AOI y ejecuta el modulo. El mapa marcara candidatos al pasar el cursor y digitalizara con un click.");
     }
     dom.digitalCadastreChecklist?.classList.add("empty-state");
     dom.digitalCadastreChecklist?.classList.remove("has-data");
     if (dom.digitalCadastreChecklist) {
-      setTextIfChanged(dom.digitalCadastreChecklist, "Aqui se listan controles normativos, soporte visible y revisiones tecnicas antes de usar la delimitacion.");
+      setTextIfChanged(dom.digitalCadastreChecklist, "Controles: imagen visible, linderos fisicos, soporte oficial, topologia y revision tecnica antes de uso catastral.");
     }
     dom.digitalCadastreCandidates?.classList.add("empty-state");
     dom.digitalCadastreCandidates?.classList.remove("has-data");
     if (dom.digitalCadastreCandidates) {
-      setTextIfChanged(dom.digitalCadastreCandidates, "Aqui apareceran predios o frentes de digitalizacion con mejor apoyo por imagen y soporte territorial.");
+      setTextIfChanged(dom.digitalCadastreCandidates, "Los predios candidatos apareceran aqui despues de la corrida.");
     }
     if (dom.digitalCadastreQueueBoard) {
       dom.digitalCadastreQueueBoard.classList.add("empty-state");
@@ -47030,6 +47055,12 @@ function renderDigitalCadastreModule() {
   }
 
   const analysis = state.digitalCadastreData;
+  setPanelsHidden([
+    dom.digitalCadastreQueueBoard,
+    dom.digitalCadastreFichaBoard,
+    dom.digitalCadastreCompareBoard,
+    dom.digitalCadastreBatchBoard,
+  ], false);
   const geometryStableCount = analysis.candidates.reduce((sum, candidate) => sum + (buildDigitalCadastreGeometryAudit(candidate.feature, candidate, analysis).status.id === "good" ? 1 : 0), 0);
   const fieldBacklogCount = analysis.candidates.reduce((sum, candidate) => sum + ((resolveDigitalCadastreFichaDraft(candidate, analysis).reviewStatus || "gabinete") === "campo" ? 1 : 0), 0);
   paintMetricGrid(dom.digitalCadastreResults, [
@@ -49776,9 +49807,19 @@ function resetVisualPanel(target, message) {
   if (!target) {
     return;
   }
+  target.classList.remove("hidden");
   target.classList.remove("has-data");
   target.classList.add("empty-state");
   setTextIfChanged(target, message);
+}
+
+function setPanelsHidden(panels, hidden = true) {
+  panels.forEach((panel) => {
+    if (!panel) {
+      return;
+    }
+    panel.classList.toggle("hidden", hidden);
+  });
 }
 
 function renderIntraloteVisual(result = null) {
