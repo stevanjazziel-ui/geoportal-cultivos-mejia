@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260611-7";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260611-8";
 
 const layerCatalog = [
   {
@@ -3618,13 +3618,72 @@ const digitalCadastreAreaCatalog = {
 };
 
 const digitalCadastreDatasetCache = new Map();
+const digitalCadastreDatasetPendingCache = new Map();
 const digitalCadastreGlobalParcelSources = [
   {
     id: "mejia-preview",
-    label: "Parcelario local Mejia",
+    label: "Muestra parcelaria Mejia",
     path: "./public-data/planning3d/parcels_preview.geojson",
   },
+  {
+    id: "machachi-public",
+    label: "Parcelario publico Machachi",
+    path: "./public-data/planning3d/parcels_orthophoto.geojson",
+  },
+  {
+    id: "mejia-public",
+    label: "Parcelario publico cantonal",
+    path: "./public-data/planning3d/parcels_public.geojson",
+  },
 ];
+const DIGITAL_CADASTRE_HOVER_INDEX_CELL_DEG = 0.004;
+
+function getDigitalCadastreHoverCellKey(lng, lat) {
+  return `${Math.floor(lng / DIGITAL_CADASTRE_HOVER_INDEX_CELL_DEG)}:${Math.floor(lat / DIGITAL_CADASTRE_HOVER_INDEX_CELL_DEG)}`;
+}
+
+function buildDigitalCadastreParcelHoverIndex(features) {
+  const cells = new Map();
+  (features || []).forEach((feature, index) => {
+    const bounds = feature.properties?.bounds;
+    if (!Array.isArray(bounds) || bounds.length !== 4) {
+      return;
+    }
+    const minX = Math.floor(bounds[0] / DIGITAL_CADASTRE_HOVER_INDEX_CELL_DEG);
+    const maxX = Math.floor(bounds[2] / DIGITAL_CADASTRE_HOVER_INDEX_CELL_DEG);
+    const minY = Math.floor(bounds[1] / DIGITAL_CADASTRE_HOVER_INDEX_CELL_DEG);
+    const maxY = Math.floor(bounds[3] / DIGITAL_CADASTRE_HOVER_INDEX_CELL_DEG);
+    for (let x = minX; x <= maxX; x += 1) {
+      for (let y = minY; y <= maxY; y += 1) {
+        const key = `${x}:${y}`;
+        if (!cells.has(key)) {
+          cells.set(key, []);
+        }
+        cells.get(key).push(index);
+      }
+    }
+  });
+  return {
+    cellDeg: DIGITAL_CADASTRE_HOVER_INDEX_CELL_DEG,
+    cells,
+  };
+}
+
+function getDigitalCadastreHoverIndexedFeatures(collection, cursorPoint) {
+  const coords = cursorPoint?.geometry?.coordinates;
+  if (!collection?.hoverIndex?.cells || !Array.isArray(coords)) {
+    return collection?.features || [];
+  }
+  const baseX = Math.floor(coords[0] / collection.hoverIndex.cellDeg);
+  const baseY = Math.floor(coords[1] / collection.hoverIndex.cellDeg);
+  const indexes = new Set();
+  for (let x = baseX - 1; x <= baseX + 1; x += 1) {
+    for (let y = baseY - 1; y <= baseY + 1; y += 1) {
+      (collection.hoverIndex.cells.get(`${x}:${y}`) || []).forEach((index) => indexes.add(index));
+    }
+  }
+  return [...indexes].map((index) => collection.features[index]).filter(Boolean);
+}
 
 function getDigitalCadastreAreaProfile(areaId = state.territorialAreaId) {
   return digitalCadastreAreaCatalog[areaId] || digitalCadastreAreaCatalog.mejia;
@@ -3648,63 +3707,88 @@ function getDigitalCadastreTarget() {
 
 function normalizeDigitalCadastreCollection(areaId, collection) {
   const areaFeature = getTerritorialAreaFeature(areaId);
+  const features = (Array.isArray(collection?.features) ? collection.features : [])
+    .filter((feature) => isPlanning3dRenderablePublicGeometry(feature?.geometry))
+    .filter((feature) => doesFeatureIntersectTerritorialArea(feature, areaFeature))
+    .map((feature, index) => {
+      const props = feature?.properties || {};
+      const estimate = estimatePlanning3dMetrics(feature?.geometry);
+      const line = geometryToBoundaryLine(feature?.geometry);
+      const perimeterKm = line ? turf.length(line, { units: "kilometers" }) : 0;
+      return {
+        type: "Feature",
+        id: Number(props.id) || index + 1,
+        properties: {
+          parcelIndex: index + 1,
+          parcelId: Number(props.id) || index + 1,
+          cadastralCode: props.cod_catast || null,
+          lotNumber: props.numero_lot || null,
+          areaHa: Number((turf.area(feature) / 10000).toFixed(3)),
+          perimeterM: Number((perimeterKm * 1000).toFixed(1)),
+          centroid: estimate.centroid,
+          bounds: estimate.bounds,
+        },
+        geometry: cloneFeature(feature).geometry,
+      };
+    });
   return {
     type: "FeatureCollection",
-    features: (Array.isArray(collection?.features) ? collection.features : [])
-      .filter((feature) => isPlanning3dRenderablePublicGeometry(feature?.geometry))
-      .filter((feature) => doesFeatureIntersectTerritorialArea(feature, areaFeature))
-      .map((feature, index) => {
-        const props = feature?.properties || {};
-        const estimate = estimatePlanning3dMetrics(feature?.geometry);
-        const line = geometryToBoundaryLine(feature?.geometry);
-        const perimeterKm = line ? turf.length(line, { units: "kilometers" }) : 0;
-        return {
-          type: "Feature",
-          id: Number(props.id) || index + 1,
-          properties: {
-            parcelIndex: index + 1,
-            parcelId: Number(props.id) || index + 1,
-            cadastralCode: props.cod_catast || null,
-            lotNumber: props.numero_lot || null,
-            areaHa: Number((turf.area(feature) / 10000).toFixed(3)),
-            perimeterM: Number((perimeterKm * 1000).toFixed(1)),
-            centroid: estimate.centroid,
-            bounds: estimate.bounds,
-          },
-          geometry: cloneFeature(feature).geometry,
-        };
-      }),
+    features,
+    hoverIndex: buildDigitalCadastreParcelHoverIndex(features),
   };
 }
 
 function normalizeDigitalCadastreStandaloneCollection(sourceId, collection) {
+  const features = (Array.isArray(collection?.features) ? collection.features : [])
+    .filter((feature) => isPlanning3dRenderablePublicGeometry(feature?.geometry))
+    .map((feature, index) => {
+      const props = feature?.properties || {};
+      const estimate = estimatePlanning3dMetrics(feature?.geometry);
+      const line = geometryToBoundaryLine(feature?.geometry);
+      const perimeterKm = line ? turf.length(line, { units: "kilometers" }) : 0;
+      return {
+        type: "Feature",
+        id: props.id || props.OBJECTID || `${sourceId}-${index + 1}`,
+        properties: {
+          parcelIndex: index + 1,
+          parcelId: props.id || props.OBJECTID || `${sourceId}-${index + 1}`,
+          cadastralCode: props.cod_catast || props.codigo || props.CLAVE_CATA || null,
+          lotNumber: props.numero_lot || props.lote || props.LOTE || null,
+          areaHa: Number((turf.area(feature) / 10000).toFixed(3)),
+          perimeterM: Number((perimeterKm * 1000).toFixed(1)),
+          centroid: estimate.centroid,
+          bounds: estimate.bounds,
+          sourceId,
+        },
+        geometry: cloneFeature(feature).geometry,
+      };
+    });
   return {
     type: "FeatureCollection",
-    features: (Array.isArray(collection?.features) ? collection.features : [])
-      .filter((feature) => isPlanning3dRenderablePublicGeometry(feature?.geometry))
-      .map((feature, index) => {
-        const props = feature?.properties || {};
-        const estimate = estimatePlanning3dMetrics(feature?.geometry);
-        const line = geometryToBoundaryLine(feature?.geometry);
-        const perimeterKm = line ? turf.length(line, { units: "kilometers" }) : 0;
-        return {
-          type: "Feature",
-          id: props.id || props.OBJECTID || `${sourceId}-${index + 1}`,
-          properties: {
-            parcelIndex: index + 1,
-            parcelId: props.id || props.OBJECTID || `${sourceId}-${index + 1}`,
-            cadastralCode: props.cod_catast || props.codigo || props.CLAVE_CATA || null,
-            lotNumber: props.numero_lot || props.lote || props.LOTE || null,
-            areaHa: Number((turf.area(feature) / 10000).toFixed(3)),
-            perimeterM: Number((perimeterKm * 1000).toFixed(1)),
-            centroid: estimate.centroid,
-            bounds: estimate.bounds,
-            sourceId,
-          },
-          geometry: cloneFeature(feature).geometry,
-        };
-      }),
+    features,
+    hoverIndex: buildDigitalCadastreParcelHoverIndex(features),
   };
+}
+
+async function fetchDigitalCadastreGeoJson(dataPath, cacheKey) {
+  if (digitalCadastreDatasetPendingCache.has(cacheKey)) {
+    return digitalCadastreDatasetPendingCache.get(cacheKey);
+  }
+  const pending = fetch(dataPath, {
+    headers: {
+      Accept: "application/geo+json, application/json",
+    },
+  }).then(async (response) => {
+    if (!response.ok) {
+      throw new Error(`No se pudo cargar el parcelario ${dataPath} (${response.status}).`);
+    }
+    const text = await response.text();
+    return JSON.parse(text.replace(/^\uFEFF/, ""));
+  }).finally(() => {
+    digitalCadastreDatasetPendingCache.delete(cacheKey);
+  });
+  digitalCadastreDatasetPendingCache.set(cacheKey, pending);
+  return pending;
 }
 
 async function loadDigitalCadastreParcelCollection(areaId, mode = "preview") {
@@ -3725,15 +3809,7 @@ async function loadDigitalCadastreParcelCollection(areaId, mode = "preview") {
     return digitalCadastreDatasetCache.get(cacheKey);
   }
 
-  const response = await fetch(dataPath, {
-    headers: {
-      Accept: "application/geo+json, application/json",
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`No se pudo cargar el parcelario ${dataPath} (${response.status}).`);
-  }
-  const payload = await response.json();
+  const payload = await fetchDigitalCadastreGeoJson(dataPath, cacheKey);
   const normalized = normalizeDigitalCadastreCollection(profile.datasetAreaId, payload);
   digitalCadastreDatasetCache.set(cacheKey, normalized);
   return normalized;
@@ -3750,15 +3826,7 @@ async function loadDigitalCadastreStandaloneParcelCollection(source) {
   if (digitalCadastreDatasetCache.has(cacheKey)) {
     return digitalCadastreDatasetCache.get(cacheKey);
   }
-  const response = await fetch(source.path, {
-    headers: {
-      Accept: "application/geo+json, application/json",
-    },
-  });
-  if (!response.ok) {
-    throw new Error(`No se pudo cargar el parcelario ${source.path} (${response.status}).`);
-  }
-  const payload = await response.json();
+  const payload = await fetchDigitalCadastreGeoJson(source.path, cacheKey);
   const normalized = normalizeDigitalCadastreStandaloneCollection(source.id, payload);
   digitalCadastreDatasetCache.set(cacheKey, normalized);
   return normalized;
@@ -46403,7 +46471,8 @@ function scoreDigitalCadastreParcelHoverMatch(feature, cursorPoint, toleranceKm)
 }
 
 function findBestDigitalCadastreParcelMatch(collection, cursorPoint, toleranceKm) {
-  const matches = (collection?.features || [])
+  const nearbyFeatures = getDigitalCadastreHoverIndexedFeatures(collection, cursorPoint);
+  const matches = nearbyFeatures
     .map((feature) => scoreDigitalCadastreParcelHoverMatch(feature, cursorPoint, toleranceKm))
     .filter(Boolean);
   if (!matches.length) {
