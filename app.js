@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260611-6";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260611-7";
 
 const layerCatalog = [
   {
@@ -3618,6 +3618,13 @@ const digitalCadastreAreaCatalog = {
 };
 
 const digitalCadastreDatasetCache = new Map();
+const digitalCadastreGlobalParcelSources = [
+  {
+    id: "mejia-preview",
+    label: "Parcelario local Mejia",
+    path: "./public-data/planning3d/parcels_preview.geojson",
+  },
+];
 
 function getDigitalCadastreAreaProfile(areaId = state.territorialAreaId) {
   return digitalCadastreAreaCatalog[areaId] || digitalCadastreAreaCatalog.mejia;
@@ -3670,6 +3677,36 @@ function normalizeDigitalCadastreCollection(areaId, collection) {
   };
 }
 
+function normalizeDigitalCadastreStandaloneCollection(sourceId, collection) {
+  return {
+    type: "FeatureCollection",
+    features: (Array.isArray(collection?.features) ? collection.features : [])
+      .filter((feature) => isPlanning3dRenderablePublicGeometry(feature?.geometry))
+      .map((feature, index) => {
+        const props = feature?.properties || {};
+        const estimate = estimatePlanning3dMetrics(feature?.geometry);
+        const line = geometryToBoundaryLine(feature?.geometry);
+        const perimeterKm = line ? turf.length(line, { units: "kilometers" }) : 0;
+        return {
+          type: "Feature",
+          id: props.id || props.OBJECTID || `${sourceId}-${index + 1}`,
+          properties: {
+            parcelIndex: index + 1,
+            parcelId: props.id || props.OBJECTID || `${sourceId}-${index + 1}`,
+            cadastralCode: props.cod_catast || props.codigo || props.CLAVE_CATA || null,
+            lotNumber: props.numero_lot || props.lote || props.LOTE || null,
+            areaHa: Number((turf.area(feature) / 10000).toFixed(3)),
+            perimeterM: Number((perimeterKm * 1000).toFixed(1)),
+            centroid: estimate.centroid,
+            bounds: estimate.bounds,
+            sourceId,
+          },
+          geometry: cloneFeature(feature).geometry,
+        };
+      }),
+  };
+}
+
 async function loadDigitalCadastreParcelCollection(areaId, mode = "preview") {
   const profile = getDigitalCadastreAreaProfile(areaId);
   if (!profile.localParcels || !profile.datasetAreaId) {
@@ -3698,6 +3735,31 @@ async function loadDigitalCadastreParcelCollection(areaId, mode = "preview") {
   }
   const payload = await response.json();
   const normalized = normalizeDigitalCadastreCollection(profile.datasetAreaId, payload);
+  digitalCadastreDatasetCache.set(cacheKey, normalized);
+  return normalized;
+}
+
+async function loadDigitalCadastreStandaloneParcelCollection(source) {
+  if (!source?.path) {
+    return {
+      type: "FeatureCollection",
+      features: [],
+    };
+  }
+  const cacheKey = `standalone:${source.id}:${source.path}`;
+  if (digitalCadastreDatasetCache.has(cacheKey)) {
+    return digitalCadastreDatasetCache.get(cacheKey);
+  }
+  const response = await fetch(source.path, {
+    headers: {
+      Accept: "application/geo+json, application/json",
+    },
+  });
+  if (!response.ok) {
+    throw new Error(`No se pudo cargar el parcelario ${source.path} (${response.status}).`);
+  }
+  const payload = await response.json();
+  const normalized = normalizeDigitalCadastreStandaloneCollection(source.id, payload);
   digitalCadastreDatasetCache.set(cacheKey, normalized);
   return normalized;
 }
@@ -46189,30 +46251,34 @@ function buildDigitalCadastreHoverFeature(event) {
   const widthPx = clamp(Math.round(170 - zoom * 5.5), 72, 138);
   const heightPx = clamp(Math.round(widthPx * 0.72), 48, 104);
   const point = event.containerPoint;
-  const corners = [
-    L.point(point.x - widthPx / 2, point.y - heightPx / 2),
-    L.point(point.x + widthPx / 2, point.y - heightPx / 2),
-    L.point(point.x + widthPx / 2, point.y + heightPx / 2),
-    L.point(point.x - widthPx / 2, point.y + heightPx / 2),
+  const shapePoints = [
+    L.point(point.x - widthPx * 0.48, point.y - heightPx * 0.30),
+    L.point(point.x - widthPx * 0.15, point.y - heightPx * 0.47),
+    L.point(point.x + widthPx * 0.42, point.y - heightPx * 0.35),
+    L.point(point.x + widthPx * 0.50, point.y + heightPx * 0.08),
+    L.point(point.x + widthPx * 0.20, point.y + heightPx * 0.45),
+    L.point(point.x - widthPx * 0.32, point.y + heightPx * 0.38),
+    L.point(point.x - widthPx * 0.55, point.y + heightPx * 0.02),
   ].map((containerPoint) => {
     const latLng = mapState.map.containerPointToLatLng(containerPoint);
     return [Number(latLng.lng.toFixed(7)), Number(latLng.lat.toFixed(7))];
   });
-  corners.push(corners[0]);
+  shapePoints.push(shapePoints[0]);
   const feature = {
     type: "Feature",
     properties: {
       digitalCadastreId: "digital-cadastre-hover",
-      digitalCadastreTitle: "Predio probable bajo cursor",
-      confidenceScore: 72,
-      boundaryLabel: "Contorno probable",
+      digitalCadastreTitle: "Lindero probable bajo cursor",
+      confidenceScore: 64,
+      boundaryLabel: "Contorno provisional",
       supportLabel: "Lectura directa sobre imagen satelital",
       segmentationSource: "Hover automatico sobre imagen",
       hoverCandidate: true,
+      provisionalHover: true,
     },
     geometry: {
       type: "Polygon",
-      coordinates: [corners],
+      coordinates: [shapePoints],
     },
   };
   try {
@@ -46279,6 +46345,82 @@ function normalizeDigitalCadastreHoverParcelFeature(parcelFeature, cursorPoint) 
   return feature;
 }
 
+function expandDigitalCadastreBounds(bounds, toleranceDegrees = 0.00008) {
+  if (!Array.isArray(bounds) || bounds.length !== 4) {
+    return null;
+  }
+  return [
+    bounds[0] - toleranceDegrees,
+    bounds[1] - toleranceDegrees,
+    bounds[2] + toleranceDegrees,
+    bounds[3] + toleranceDegrees,
+  ];
+}
+
+function getDigitalCadastreHoverToleranceKm() {
+  const zoom = mapState.map?.getZoom?.() || 16;
+  return clamp((19 - zoom) * 0.0045, 0.006, 0.018);
+}
+
+function scoreDigitalCadastreParcelHoverMatch(feature, cursorPoint, toleranceKm) {
+  if (!feature?.geometry || !cursorPoint?.geometry) {
+    return null;
+  }
+  const coordinates = cursorPoint.geometry.coordinates;
+  const expandedBounds = expandDigitalCadastreBounds(feature.properties?.bounds, toleranceKm / 111);
+  if (!isCoordinateWithinBounds(coordinates, expandedBounds)) {
+    return null;
+  }
+  try {
+    if (turf.booleanPointInPolygon(cursorPoint, feature)) {
+      return {
+        feature,
+        inside: true,
+        distanceKm: 0,
+        areaHa: Number(feature.properties?.areaHa) || 999999,
+      };
+    }
+  } catch (error) {
+    // Si la geometria tiene alguna rareza, probamos distancia al lindero.
+  }
+  try {
+    const boundary = geometryToBoundaryLine(feature.geometry);
+    const distanceKm = boundary
+      ? turf.pointToLineDistance(cursorPoint, boundary, { units: "kilometers" })
+      : distanceToFeatureKm(cursorPoint, feature);
+    if (Number.isFinite(distanceKm) && distanceKm <= toleranceKm) {
+      return {
+        feature,
+        inside: false,
+        distanceKm,
+        areaHa: Number(feature.properties?.areaHa) || 999999,
+      };
+    }
+  } catch (error) {
+    return null;
+  }
+  return null;
+}
+
+function findBestDigitalCadastreParcelMatch(collection, cursorPoint, toleranceKm) {
+  const matches = (collection?.features || [])
+    .map((feature) => scoreDigitalCadastreParcelHoverMatch(feature, cursorPoint, toleranceKm))
+    .filter(Boolean);
+  if (!matches.length) {
+    return null;
+  }
+  return matches
+    .sort((left, right) => {
+      if (left.inside !== right.inside) {
+        return left.inside ? -1 : 1;
+      }
+      if (left.distanceKm !== right.distanceKm) {
+        return left.distanceKm - right.distanceKm;
+      }
+      return left.areaHa - right.areaHa;
+    })[0].feature;
+}
+
 async function findDigitalCadastreLocalParcelAtPoint(event) {
   if (!event?.latlng) {
     return null;
@@ -46287,6 +46429,7 @@ async function findDigitalCadastreLocalParcelAtPoint(event) {
     Number(event.latlng.lng.toFixed(7)),
     Number(event.latlng.lat.toFixed(7)),
   ]);
+  const toleranceKm = getDigitalCadastreHoverToleranceKm();
   const activeArea = getDigitalCadastreAreaProfile();
   const searchAreaIds = [
     activeArea.id,
@@ -46301,24 +46444,23 @@ async function findDigitalCadastreLocalParcelAtPoint(event) {
     }
     try {
       const collection = await loadDigitalCadastreParcelCollection(areaId, "preview");
-      const candidates = (collection.features || []).filter((feature) => {
-        if (!feature?.geometry || !isCoordinateWithinBounds(cursorPoint.geometry.coordinates, feature.properties?.bounds)) {
-          return false;
-        }
-        try {
-          return turf.booleanPointInPolygon(cursorPoint, feature);
-        } catch (error) {
-          return false;
-        }
-      });
-      if (candidates.length) {
-        const best = candidates
-          .slice()
-          .sort((left, right) => (Number(left.properties?.areaHa) || 0) - (Number(right.properties?.areaHa) || 0))[0];
+      const best = findBestDigitalCadastreParcelMatch(collection, cursorPoint, toleranceKm);
+      if (best) {
         return normalizeDigitalCadastreHoverParcelFeature(best, cursorPoint);
       }
     } catch (error) {
       // Si un parcelario local no carga, el hover continua con los otros soportes.
+    }
+  }
+  for (const source of digitalCadastreGlobalParcelSources) {
+    try {
+      const collection = await loadDigitalCadastreStandaloneParcelCollection(source);
+      const best = findBestDigitalCadastreParcelMatch(collection, cursorPoint, toleranceKm);
+      if (best) {
+        return normalizeDigitalCadastreHoverParcelFeature(best, cursorPoint);
+      }
+    } catch (error) {
+      // Las fuentes globales son apoyo progresivo; no deben bloquear el hover.
     }
   }
   return null;
@@ -46390,6 +46532,7 @@ async function refineDigitalCadastreHoverWithBackend(seedFeature, event, request
       digitalCadastreId: "digital-cadastre-hover",
       digitalCadastreTitle: "Predio probable refinado",
       hoverCandidate: true,
+      provisionalHover: false,
       supportLabel: refined.properties?.supportLabel || "Motor local de segmentacion + imagen activa",
       boundaryLabel: refined.properties?.boundaryLabel || "Contorno refinado",
       confidenceScore: Number(refined.properties?.confidenceScore) || 78,
@@ -46407,8 +46550,9 @@ function buildDigitalCadastreHoverAnalysis(feature) {
   const areaHa = Number(feature.properties?.areaHa) || 0;
   const perimeterM = Number(feature.properties?.perimeterM) || 0;
   const isLocalParcel = Boolean(feature.properties?.localParcelHover);
-  const confidenceScore = isLocalParcel ? 92 : 72;
-  const title = feature.properties?.digitalCadastreTitle && isLocalParcel
+  const isProvisional = Boolean(feature.properties?.provisionalHover);
+  const confidenceScore = isLocalParcel ? 92 : isProvisional ? 64 : Number(feature.properties?.confidenceScore) || 72;
+  const title = feature.properties?.digitalCadastreTitle && (isLocalParcel || isProvisional)
     ? feature.properties.digitalCadastreTitle
     : `Predio digitalizado ${new Date().toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" })}`;
   const candidate = {
@@ -46417,7 +46561,6 @@ function buildDigitalCadastreHoverAnalysis(feature) {
     rank: 1,
     feature: cloneFeature(feature),
     centroid: turf.centroid(feature).geometry.coordinates,
-    cadastralCode: null,
     cadastralCode: feature.properties?.cadastralCode || null,
     lotNumber: feature.properties?.lotNumber || "hover",
     areaHa,
@@ -46428,21 +46571,23 @@ function buildDigitalCadastreHoverAnalysis(feature) {
     fieldSupportDistanceKm: null,
     fieldSupportRole: null,
     insideUrban: false,
-    visibleHits: isLocalParcel ? 3 : 1,
-    boundaryLabel: isLocalParcel ? "Lindero catastral local" : "Contorno probable por cursor",
+    visibleHits: isLocalParcel ? 3 : isProvisional ? 1 : 2,
+    boundaryLabel: isLocalParcel ? "Lindero catastral local" : isProvisional ? "Contorno provisional por cursor" : "Contorno refinado por imagen",
     confidenceScore,
     confidenceLabel: getDigitalCadastreConfidenceLabel(confidenceScore),
     confidenceTone: getDigitalCadastreConfidenceTone(confidenceScore),
-    supportLabel: isLocalParcel ? "Parcelario local publicado + imagen activa" : "Imagen satelital activa + hover automatico",
-    summary: `${isLocalParcel ? "Predio local" : "Predio probable"} de ${areaHa.toFixed(areaHa >= 10 ? 1 : 2)} ha detectado al pasar el cursor sobre la imagen.`,
+    supportLabel: isLocalParcel ? "Parcelario local publicado + imagen activa" : isProvisional ? "Imagen satelital activa + hover automatico" : "Motor local de segmentacion + imagen activa",
+    summary: `${isLocalParcel ? "Predio local" : isProvisional ? "Contorno provisional" : "Predio refinado"} de ${areaHa.toFixed(areaHa >= 10 ? 1 : 2)} ha detectado al pasar el cursor sobre la imagen.`,
     recommendation: isLocalParcel
       ? "Usar como base catastral local para revision tecnica, contraste de gabinete y actualizacion si corresponde."
-      : "Guardar como pre-digitalizacion y validar lindero con ortofoto, campo o soporte catastral antes de uso definitivo.",
+      : isProvisional
+        ? "Usar solo como pre-marca rapida; para lindero definitivo se requiere parcelario local, ortofoto calibrada o modelo CV entrenado."
+        : "Guardar como pre-digitalizacion y validar lindero con ortofoto, campo o soporte catastral antes de uso definitivo.",
     tags: [
       `${areaHa.toFixed(areaHa >= 10 ? 1 : 2)} ha`,
       `${Math.round(perimeterM)} m perimetro`,
-      isLocalParcel ? "Parcelario local" : "Hover automatico",
-      isLocalParcel ? "Alta confianza" : "Requiere validacion",
+      isLocalParcel ? "Parcelario local" : isProvisional ? "Provisional" : "Refinado",
+      isLocalParcel ? "Alta confianza" : isProvisional ? "Requiere modelo CV" : "Requiere validacion",
     ],
     guideFeatures: [],
     rankScore: 72,
@@ -46476,16 +46621,20 @@ function buildDigitalCadastreHoverAnalysis(feature) {
     officialSummary: state.officialData.planificacion || null,
     sourceNote: isLocalParcel
       ? "Modo hover automatico: el cursor encontro un predio del parcelario local publicado y lo uso como contorno principal."
-      : "Modo hover automatico: el contorno se previsualiza al pasar el cursor sobre la imagen y se guarda con click como pre-digitalizacion.",
+      : isProvisional
+        ? "Modo hover automatico: no se encontro parcelario local bajo el cursor; se muestra una pre-marca provisional hasta conectar un modelo CV entrenado."
+        : "Modo hover automatico: el backend devolvio un contorno refinado sobre la imagen activa.",
     readout: {
-      headline: isLocalParcel ? "Predio local capturado desde hover" : "Predio capturado desde hover sobre imagen",
+      headline: isLocalParcel ? "Predio local capturado desde hover" : isProvisional ? "Contorno provisional bajo cursor" : "Predio refinado desde hover",
       copy: isLocalParcel
         ? "La geometria corresponde al parcelario local publicado bajo el cursor."
-        : "La geometria fue generada directamente desde el cursor sobre la imagen satelital activa.",
+        : isProvisional
+          ? "La geometria es una previsualizacion rapida. No sustituye el lindero real."
+          : "La geometria fue refinada por el motor local sobre la imagen satelital activa.",
       recommendation: candidate.recommendation,
     },
     checklist: [
-      isLocalParcel ? "Parcelario local encontrado bajo el cursor." : "Hover automatico sobre imagen satelital activo.",
+      isLocalParcel ? "Parcelario local encontrado bajo el cursor." : isProvisional ? "Pre-marca provisional sobre imagen satelital activa." : "Contorno refinado por motor local.",
       "Click confirma y guarda el predio como pre-digitalizacion.",
       "Validar linderos visibles con ortofoto, campo o soporte catastral.",
       "Revisar topologia antes de exportar a SHP/KML/DXF.",
@@ -46501,15 +46650,15 @@ function buildDigitalCadastreHoverAnalysis(feature) {
       "Uso como pre-digitalizacion asistida sujeta a validacion tecnica.",
     ],
     sourceStudy: {
-      label: isLocalParcel ? "Parcelario local por hover" : "Hover automatico de linderos probables",
-      methodLabel: isLocalParcel ? "Predio vectorial local bajo cursor" : "Previsualizacion interactiva sobre imagen",
+      label: isLocalParcel ? "Parcelario local por hover" : isProvisional ? "Hover automatico provisional" : "Hover refinado por backend",
+      methodLabel: isLocalParcel ? "Predio vectorial local bajo cursor" : isProvisional ? "Previsualizacion interactiva sobre imagen" : "Segmentacion local asistida",
     },
     summary: {
       candidateCount: 1,
       meanConfidence: confidenceScore,
       meanAreaHa: areaHa,
-      supportLabel: isLocalParcel ? "Parcelario local publicado" : "Imagen satelital activa",
-      boundaryLabel: isLocalParcel ? "Lindero catastral local" : "Contorno probable",
+      supportLabel: isLocalParcel ? "Parcelario local publicado" : isProvisional ? "Imagen satelital activa" : "Motor local + imagen activa",
+      boundaryLabel: isLocalParcel ? "Lindero catastral local" : isProvisional ? "Contorno provisional" : "Contorno refinado",
       needsPlot: false,
       localParcels: areaProfile.localParcels,
       checklistCount: 4,
@@ -46517,7 +46666,7 @@ function buildDigitalCadastreHoverAnalysis(feature) {
       supportParcelCount: isLocalParcel ? 1 : 0,
       fieldSupportCount: 0,
       fieldSupportLabel: null,
-      segmentationModel: isLocalParcel ? "parcelario-local-hover" : "hover-automatico",
+      segmentationModel: isLocalParcel ? "parcelario-local-hover" : isProvisional ? "hover-provisional" : "hover-refinado",
       segmentationCandidateCount: 1,
     },
     supportCollection: { type: "FeatureCollection", features: [] },
