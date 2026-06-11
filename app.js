@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260611-1";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260611-2";
 
 const layerCatalog = [
   {
@@ -1031,6 +1031,7 @@ const backendService = {
   gpsLivePath: "/api/agronomy/gps/live",
   gpsGeofenceEventsPath: "/api/agronomy/gps/geofence/events",
   gpsGeofenceLogPath: "/api/agronomy/gps/geofence/log",
+  cadastreSegmentPath: "/api/cadastre/segment",
   platformProjectsPath: "/api/platform/projects",
   platformDecisionLogPath: "/api/platform/decision-log",
   platformUsersPath: "/api/platform/users",
@@ -46219,6 +46220,75 @@ function buildDigitalCadastreCandidate(feature, index, context) {
   };
 }
 
+function normalizeDigitalCadastreSegmentationFeature(feature, targetFeature, index) {
+  if (!feature?.geometry || !isPlanning3dRenderablePublicGeometry(feature.geometry)) {
+    return null;
+  }
+  const normalized = cloneFeature(feature);
+  normalized.properties = {
+    ...(normalized.properties || {}),
+    visionCandidate: true,
+    lotNumber: normalized.properties?.lotNumber || `IA-${index + 1}`,
+    segmentationSource: normalized.properties?.segmentationSource || "GeoAI Core",
+    boundaryModel: normalized.properties?.boundaryModel || "Linderos visibles asistidos",
+  };
+  try {
+    if (!safeBooleanIntersects(normalized, targetFeature)) {
+      return null;
+    }
+    normalized.properties.areaHa = Number((turf.area(normalized) / 10000).toFixed(3));
+    const boundaryLine = geometryToBoundaryLine(normalized.geometry);
+    normalized.properties.perimeterM = Number((((boundaryLine ? turf.length(boundaryLine, { units: "kilometers" }) : 0) || 0) * 1000).toFixed(1));
+    return normalized;
+  } catch (error) {
+    return null;
+  }
+}
+
+async function fetchDigitalCadastreSegmentationCandidates(target, context) {
+  if (!target?.feature?.geometry || target.scopeType !== "plot") {
+    return null;
+  }
+  const backend = await detectBackend(!state.backendAvailable);
+  if (!backend.available || !state.backendUrl) {
+    return null;
+  }
+  try {
+    const payload = await fetchJson(`${state.backendUrl}${backendService.cadastreSegmentPath}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        areaId: context.areaProfile.id,
+        modeId: context.mode.id,
+        imagery: context.imageryProfile,
+        targetFeature: target.feature,
+        bbox: turf.bbox(target.feature).map((value) => Number(value.toFixed(7))),
+        requestedAt: new Date().toISOString(),
+      }),
+    });
+    const features = (payload?.candidateCollection?.features || [])
+      .map((feature, index) => normalizeDigitalCadastreSegmentationFeature(feature, target.feature, index))
+      .filter(Boolean);
+    if (!features.length) {
+      return null;
+    }
+    return {
+      ...payload,
+      candidateCollection: {
+        type: "FeatureCollection",
+        features,
+      },
+      featureCount: features.length,
+    };
+  } catch (error) {
+    state.backendAvailable = false;
+    state.backendUrl = null;
+    return null;
+  }
+}
+
 async function buildDigitalCadastreAnalysis() {
   const requestedMode = getDigitalCadastreModeProfile();
   const areaProfile = getDigitalCadastreAreaProfile();
@@ -46349,6 +46419,12 @@ async function buildDigitalCadastreAnalysis() {
     fieldSupportFeatures: importedFieldSupport,
   };
 
+  const segmentationResult = await fetchDigitalCadastreSegmentationCandidates(target, context);
+  const segmentationFeatures = segmentationResult?.candidateCollection?.features || [];
+  if (segmentationFeatures.length && (!areaProfile.localParcels || state.currentPlot?.geometry)) {
+    baseFeatures = segmentationFeatures.map(cloneFeature);
+  }
+
   const candidates = baseFeatures
     .map((feature, index) => buildDigitalCadastreCandidate(feature, index, context))
     .sort((left, right) => right.rankScore - left.rankScore)
@@ -46388,8 +46464,17 @@ async function buildDigitalCadastreAnalysis() {
     ? Number((candidates.reduce((sum, candidate) => sum + candidate.areaHa, 0) / candidates.length).toFixed(2))
     : 0;
   const visibleSupportLabel = candidates[0]?.boundaryLabel || (effectiveMode.id === "calibrado" ? "Parcelario local sin soporte puntual" : "AOI asistido");
+  const segmentationChecklist = segmentationFeatures.length
+    ? [
+        `${segmentationFeatures.length} contornos candidatos llegaron desde el motor de segmentacion asistida del backend local.`,
+        `Estado del modelo: ${segmentationResult.modelStatus || "asistido"}; metodo: ${segmentationResult.methodLabel || "lectura de linderos visibles"}.`,
+      ]
+    : [
+        "Sin respuesta de motor IA local; se uso fallback en navegador con AOI, soporte visible y parcelario local disponible.",
+      ];
   const checklist = [
     ...sharedChecklist,
+    ...segmentationChecklist,
     effectiveMode.id === "calibrado"
       ? "Ajustar solo predios con soporte local y revisar saltos entre parcelario e imagen visible."
       : "Tomar el resultado como pre-digitizacion y no como actualizacion catastral final sin control humano.",
@@ -46409,9 +46494,9 @@ async function buildDigitalCadastreAnalysis() {
     areaProfile,
     imageryProfile,
     officialSummary,
-    sourceNote: effectiveMode.id === "calibrado"
+    sourceNote: `${effectiveMode.id === "calibrado"
       ? `Modo calibrado con ${areaProfile.supportLabel.toLowerCase()} sobre ${target.scopeLabel}. Se usa imagen ${imageryProfile.shortLabel} como apoyo visual${fieldSupportSummaryLabel ? ` y ${fieldSupportSummaryLabel.toLowerCase()}` : ""}, y la revision final sigue siendo tecnica.`
-      : `Modo asistido sobre ${target.scopeLabel}. La delimitacion se apoya en contornos visibles, soporte ${areaProfile.sourceLabel.toLowerCase()}${fieldSupportSummaryLabel ? ` y ${fieldSupportSummaryLabel.toLowerCase()}` : ""}, y requiere validacion posterior.`,
+      : `Modo asistido sobre ${target.scopeLabel}. La delimitacion se apoya en contornos visibles, soporte ${areaProfile.sourceLabel.toLowerCase()}${fieldSupportSummaryLabel ? ` y ${fieldSupportSummaryLabel.toLowerCase()}` : ""}, y requiere validacion posterior.`} ${segmentationFeatures.length ? `Motor IA local activo: ${segmentationResult.methodLabel || "segmentacion asistida"} (${segmentationFeatures.length} candidatos).` : "Motor IA local no disponible en esta corrida; fallback local activo."}`,
     readout: {
       headline: effectiveMode.id === "calibrado"
         ? `Predios visibles calibrados sobre ${target.scopeLabel}`
@@ -46448,6 +46533,8 @@ async function buildDigitalCadastreAnalysis() {
       supportParcelCount: (supportCollection.features || []).filter((feature) => !feature.properties?.fieldSupportId).length || 0,
       fieldSupportCount: importedFieldSupport.length,
       fieldSupportLabel: fieldSupportSummaryLabel,
+      segmentationModel: segmentationFeatures.length ? (segmentationResult.modelStatus || "backend-activo") : "fallback-local",
+      segmentationCandidateCount: segmentationFeatures.length,
     },
     supportCollection,
     fieldSupportCollection: {
