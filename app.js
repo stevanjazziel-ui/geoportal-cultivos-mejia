@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260611-3";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260611-4";
 
 const layerCatalog = [
   {
@@ -6048,6 +6048,7 @@ function cacheDom() {
   dom.loginOverlay = document.querySelector("#loginOverlay");
   dom.openAgronomyBtn = document.querySelector("#openAgronomyBtn");
   dom.openPlanningBtn = document.querySelector("#openPlanningBtn");
+  dom.openQuitoBtn = document.querySelector("#openQuitoBtn");
   dom.openPivaBtn = document.querySelector("#openPivaBtn");
   dom.openCadastreBtn = document.querySelector("#openCadastreBtn");
   dom.openOperationsBtn = document.querySelector("#openOperationsBtn");
@@ -6907,6 +6908,10 @@ function bindUI() {
   });
   dom.openPlanningBtn.addEventListener("click", () => {
     state.pendingEntryAction = null;
+    enterPublicView("planificacion");
+  });
+  dom.openQuitoBtn?.addEventListener("click", () => {
+    state.pendingEntryAction = "planning-quito";
     enterPublicView("planificacion");
   });
   dom.openPivaBtn?.addEventListener("click", () => {
@@ -8554,10 +8559,14 @@ function enterPublicView(route = state.entryRoute || "agronomia") {
 function applyRouteFromUrl() {
   const params = new URLSearchParams(window.location.search);
   const routeParam = params.get("route");
+  const moduleParam = params.get("module");
   const tabParam = params.get("tab");
   const viewerParam = params.get("viewer");
-  state.pendingEntryAction = null;
-  const route = routeParam === "planificacion"
+  const openQuitoModule = routeParam === "quito" || moduleParam === "quito";
+  state.pendingEntryAction = openQuitoModule ? "planning-quito" : null;
+  const route = openQuitoModule
+    ? "planificacion"
+    : routeParam === "planificacion"
     ? "planificacion"
     : routeParam === "piva"
       ? "piva"
@@ -8592,10 +8601,11 @@ function applyRouteFromUrl() {
 
 function applyEntryRoute(route = state.entryRoute || "agronomia") {
   state.entryRoute = route;
+  const pendingEntryAction = state.pendingEntryAction;
+  state.pendingEntryAction = null;
   syncEntryRouteUi(route);
 
   if (isPlanningLikeRoute(route)) {
-    state.pendingEntryAction = null;
     state.territorialFocus = isPivaRoute(route) ? "piva" : "planning";
     clearAgronomyMapContext();
     if (mapState.studyAreaLayer) {
@@ -8674,6 +8684,10 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     }
     updateMapSummary();
     window.setTimeout(() => {
+      if (pendingEntryAction) {
+        handleWorkflowAction(pendingEntryAction);
+        return;
+      }
       if (isPivaRoute(route)) {
         focusModuleCard(dom.pivaCard);
       } else {
@@ -8684,7 +8698,6 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   }
 
   if (isCadastreRoute(route)) {
-    state.pendingEntryAction = null;
     state.territorialFocus = "digitalCadastre";
     clearAgronomyMapContext();
     if (mapState.studyAreaLayer) {
@@ -8723,7 +8736,6 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   }
 
   if (isGpsRoute(route)) {
-    state.pendingEntryAction = null;
     closePlanning3dViewer(true);
     clearPlanningOverlay();
     clearFodaCameOverlay();

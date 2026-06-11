@@ -315,6 +315,10 @@ button {
   background: rgba(255, 223, 188, 0.16);
 }
 
+.entry-option.quito {
+  background: rgba(178, 211, 223, 0.16);
+}
+
 .entry-option.piva {
   background: rgba(157, 214, 194, 0.16);
 }

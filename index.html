@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="geoportal-version" content="20260611-3">
+  <meta name="geoportal-version" content="20260611-4">
   <title>Centro de Decisiones | Mejia y Quevedo</title>
   <meta
     name="description"
@@ -33,7 +33,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260611-3">
+  <link rel="stylesheet" href="./styles.css?v=20260611-4">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -98,24 +98,29 @@
               <strong>Territorio y equipamientos</strong>
               <span>Aptitud, huella, riesgo, movilidad, estrategia y visor 3D para decisiones territoriales.</span>
             </button>
-            <button id="openPivaBtn" class="entry-option piva" type="button">
+            <button id="openQuitoBtn" class="entry-option quito" type="button">
               <span class="entry-eyebrow">Ruta 3</span>
+              <strong>Quito por zonas</strong>
+              <span>Equipamientos, memoria tecnica, artefactos publicados y faltantes oficiales del modulo zonal de Quito.</span>
+            </button>
+            <button id="openPivaBtn" class="entry-option piva" type="button">
+              <span class="entry-eyebrow">Ruta 4</span>
               <strong>PIVA del canton Mejia</strong>
               <span>Infraestructura verde y azul, clima, agua, soporte municipal y cartera de proyectos en una ruta propia.</span>
             </button>
             <button id="openCadastreBtn" class="entry-option cadastre" type="button">
-              <span class="entry-eyebrow">Ruta 4</span>
+              <span class="entry-eyebrow">Ruta 5</span>
               <strong>Catastro asistido</strong>
               <span>Predios visibles, contornos, soporte oficial y digitalizacion guiada sobre imagen y parcelario local.</span>
             </button>
             <button id="openOperationsBtn" class="entry-option operations" type="button">
-              <span class="entry-eyebrow">Ruta 5</span>
+              <span class="entry-eyebrow">Ruta 6</span>
               <strong>Centro GPS operativo</strong>
               <span>Seguimiento en tiempo real, corredores KML, replay y control operativo para campo, dron o aeronave.</span>
             </button>
           </div>
           <p class="login-note">
-            Los cinco accesos entran directo a decisiones agronomicas, territoriales, verde-azules, catastrales y operativas.
+            Los seis accesos entran directo a decisiones agronomicas, territoriales, zonales de Quito, verde-azules, catastrales y operativas.
           </p>
         </div>
       </div>
@@ -163,7 +168,7 @@
           <span class="status-dot"></span>
           <div class="user-pill-copy">
             <strong id="userNameLabel">Usuario publico</strong>
-              <span id="userVersionLabel">v20260611-3</span>
+              <span id="userVersionLabel">v20260611-4</span>
           </div>
           <label class="user-role-field" for="userRoleSelect">
             <span>Rol</span>
@@ -2135,6 +2140,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260611-3" defer></script>
+  <script src="./app.js?v=20260611-4" defer></script>
 </body>
 </html>
