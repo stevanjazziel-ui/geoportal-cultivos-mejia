@@ -4086,6 +4086,9 @@ const mapState = {
   planningSolarLayer: null,
   digitalCadastreLayer: null,
   digitalCadastreHitboxLayer: null,
+  digitalCadastreHoverLayer: null,
+  digitalCadastreHoverLastAt: 0,
+  digitalCadastreHoverStatusAt: 0,
   digitalCadastreGuideLayer: null,
   digitalCadastreSupportLayer: null,
   mobilityLayer: null,
@@ -11027,6 +11030,9 @@ function initializeMap() {
     enhanceInteractiveFeatureLayer(event.layer);
   });
 
+  mapState.map.on("mousemove", handleDigitalCadastreMapHover);
+  mapState.map.on("mouseout", clearDigitalCadastreHoverPreview);
+  mapState.map.on("click", handleDigitalCadastreMapClick);
   mapState.map.on("zoomend", maybeRefreshScenePreviewQuality);
 
   if (!mapState.resizeObserver && typeof ResizeObserver !== "undefined") {
@@ -36658,6 +36664,7 @@ function clearDigitalCadastreAnalysis() {
   state.digitalCadastreAdjustmentSnapshot = null;
   state.digitalCadastreFichaDraft = null;
   state.digitalCadastreLastSavedRecordId = null;
+  clearDigitalCadastreHoverPreview();
   clearDigitalCadastreOverlay();
   state.territorialFocus = isCadastreRoute()
     ? "digitalCadastre"
@@ -46151,6 +46158,255 @@ function focusAdjacentDigitalCadastreCandidate(direction = 1, options = {}) {
   });
 }
 
+function isDigitalCadastreHoverEnabled() {
+  return Boolean(
+    mapState.map
+    && isCadastreRoute()
+    && !state.currentPlotEditing
+    && !(mapState.drawPolygonHandler?.enabled?.())
+  );
+}
+
+function clearDigitalCadastreHoverPreview() {
+  if (mapState.digitalCadastreHoverLayer && mapState.map) {
+    mapState.map.removeLayer(mapState.digitalCadastreHoverLayer);
+  }
+  mapState.digitalCadastreHoverLayer = null;
+  state.digitalCadastrePreviewId = null;
+  setMapInteractionCursor(false);
+}
+
+function buildDigitalCadastreHoverFeature(event) {
+  if (!mapState.map || !event?.latlng || !event?.containerPoint) {
+    return null;
+  }
+  const zoom = mapState.map.getZoom();
+  const widthPx = clamp(Math.round(170 - zoom * 5.5), 72, 138);
+  const heightPx = clamp(Math.round(widthPx * 0.72), 48, 104);
+  const point = event.containerPoint;
+  const corners = [
+    L.point(point.x - widthPx / 2, point.y - heightPx / 2),
+    L.point(point.x + widthPx / 2, point.y - heightPx / 2),
+    L.point(point.x + widthPx / 2, point.y + heightPx / 2),
+    L.point(point.x - widthPx / 2, point.y + heightPx / 2),
+  ].map((containerPoint) => {
+    const latLng = mapState.map.containerPointToLatLng(containerPoint);
+    return [Number(latLng.lng.toFixed(7)), Number(latLng.lat.toFixed(7))];
+  });
+  corners.push(corners[0]);
+  const feature = {
+    type: "Feature",
+    properties: {
+      digitalCadastreId: "digital-cadastre-hover",
+      digitalCadastreTitle: "Predio probable bajo cursor",
+      confidenceScore: 72,
+      boundaryLabel: "Contorno probable",
+      supportLabel: "Lectura directa sobre imagen satelital",
+      segmentationSource: "Hover automatico sobre imagen",
+      hoverCandidate: true,
+    },
+    geometry: {
+      type: "Polygon",
+      coordinates: [corners],
+    },
+  };
+  try {
+    feature.properties.areaHa = Number((turf.area(feature) / 10000).toFixed(3));
+    const boundary = geometryToBoundaryLine(feature.geometry);
+    feature.properties.perimeterM = Number((((boundary ? turf.length(boundary, { units: "kilometers" }) : 0) || 0) * 1000).toFixed(1));
+  } catch (error) {
+    feature.properties.areaHa = 0;
+    feature.properties.perimeterM = 0;
+  }
+  return feature;
+}
+
+function renderDigitalCadastreHoverPreview(feature) {
+  clearDigitalCadastreHoverPreview();
+  if (!mapState.map || !feature?.geometry) {
+    return;
+  }
+  state.digitalCadastrePreviewId = feature.properties.digitalCadastreId;
+  mapState.digitalCadastreHoverLayer = L.geoJSON(feature, {
+    pane: "digitalCadastreCandidatePane",
+    interactive: false,
+    style: () => getDigitalCadastreCandidateStyle(feature, { preview: true }),
+  }).addTo(mapState.map);
+  mapState.digitalCadastreHoverLayer.bringToFront?.();
+  setMapInteractionCursor(true);
+}
+
+function buildDigitalCadastreHoverAnalysis(feature) {
+  const areaProfile = getDigitalCadastreAreaProfile();
+  const mode = getDigitalCadastreModeProfile("asistido");
+  const imageryProfile = getPlanningImageryProfile();
+  const areaHa = Number(feature.properties?.areaHa) || 0;
+  const perimeterM = Number(feature.properties?.perimeterM) || 0;
+  const title = `Predio digitalizado ${new Date().toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" })}`;
+  const candidate = {
+    id: `digital-cadastre-hover-${Date.now()}`,
+    title,
+    rank: 1,
+    feature: cloneFeature(feature),
+    centroid: turf.centroid(feature).geometry.coordinates,
+    cadastralCode: null,
+    lotNumber: "hover",
+    areaHa,
+    perimeterM,
+    roadDistanceKm: null,
+    hydroDistanceKm: null,
+    urbanDistanceKm: null,
+    fieldSupportDistanceKm: null,
+    fieldSupportRole: null,
+    insideUrban: false,
+    visibleHits: 1,
+    boundaryLabel: "Contorno probable por cursor",
+    confidenceScore: 72,
+    confidenceLabel: getDigitalCadastreConfidenceLabel(72),
+    confidenceTone: getDigitalCadastreConfidenceTone(72),
+    supportLabel: "Imagen satelital activa + hover automatico",
+    summary: `Predio probable de ${areaHa.toFixed(areaHa >= 10 ? 1 : 2)} ha detectado al pasar el cursor sobre la imagen.`,
+    recommendation: "Guardar como pre-digitalizacion y validar lindero con ortofoto, campo o soporte catastral antes de uso definitivo.",
+    tags: [
+      `${areaHa.toFixed(areaHa >= 10 ? 1 : 2)} ha`,
+      `${Math.round(perimeterM)} m perimetro`,
+      "Hover automatico",
+      "Requiere validacion",
+    ],
+    guideFeatures: [],
+    rankScore: 72,
+  };
+  const candidateFeature = {
+    type: "Feature",
+    properties: {
+      ...feature.properties,
+      digitalCadastreId: candidate.id,
+      digitalCadastreTitle: title,
+      confidenceScore: candidate.confidenceScore,
+      boundaryLabel: candidate.boundaryLabel,
+      supportLabel: candidate.supportLabel,
+      areaHa,
+      perimeterM,
+    },
+    geometry: cloneFeature(feature).geometry,
+  };
+  candidate.feature = cloneFeature(candidateFeature);
+  return {
+    context: {
+      feature: cloneFeature(feature),
+      scopeLabel: title,
+      scopeType: "plot",
+      targetKey: `hover:${candidate.id}`,
+    },
+    requestedMode: mode,
+    mode,
+    areaProfile,
+    imageryProfile,
+    officialSummary: state.officialData.planificacion || null,
+    sourceNote: "Modo hover automatico: el contorno se previsualiza al pasar el cursor sobre la imagen y se guarda con click como pre-digitalizacion.",
+    readout: {
+      headline: "Predio capturado desde hover sobre imagen",
+      copy: "La geometria fue generada directamente desde el cursor sobre la imagen satelital activa.",
+      recommendation: candidate.recommendation,
+    },
+    checklist: [
+      "Hover automatico sobre imagen satelital activo.",
+      "Click confirma y guarda el predio como pre-digitalizacion.",
+      "Validar linderos visibles con ortofoto, campo o soporte catastral.",
+      "Revisar topologia antes de exportar a SHP/KML/DXF.",
+    ],
+    candidates: [candidate],
+    candidateCollection: {
+      type: "FeatureCollection",
+      features: [candidateFeature],
+    },
+    guideCollection: { type: "FeatureCollection", features: [] },
+    normativeRefs: [
+      "Representacion predial poligonal georreferenciada.",
+      "Uso como pre-digitalizacion asistida sujeta a validacion tecnica.",
+    ],
+    sourceStudy: {
+      label: "Hover automatico de linderos probables",
+      methodLabel: "Previsualizacion interactiva sobre imagen",
+    },
+    summary: {
+      candidateCount: 1,
+      meanConfidence: 72,
+      meanAreaHa: areaHa,
+      supportLabel: "Imagen satelital activa",
+      boundaryLabel: "Contorno probable",
+      needsPlot: false,
+      localParcels: areaProfile.localParcels,
+      checklistCount: 4,
+      activeSupportLayers: state.officialData.planificacion?.activeLayerCount || 0,
+      supportParcelCount: 0,
+      fieldSupportCount: 0,
+      fieldSupportLabel: null,
+      segmentationModel: "hover-automatico",
+      segmentationCandidateCount: 1,
+    },
+    supportCollection: { type: "FeatureCollection", features: [] },
+    fieldSupportCollection: { type: "FeatureCollection", features: [] },
+  };
+}
+
+function handleDigitalCadastreMapHover(event) {
+  if (!isDigitalCadastreHoverEnabled()) {
+    clearDigitalCadastreHoverPreview();
+    return;
+  }
+  const now = Date.now();
+  if (now - (mapState.digitalCadastreHoverLastAt || 0) < 90) {
+    return;
+  }
+  mapState.digitalCadastreHoverLastAt = now;
+  const feature = buildDigitalCadastreHoverFeature(event);
+  if (!feature) {
+    clearDigitalCadastreHoverPreview();
+    return;
+  }
+  renderDigitalCadastreHoverPreview(feature);
+  if (now - (mapState.digitalCadastreHoverStatusAt || 0) > 1800) {
+    mapState.digitalCadastreHoverStatusAt = now;
+    setStatus("Predio probable marcado bajo el cursor. Si el contorno esta bien, haz click para guardarlo.");
+  }
+}
+
+async function handleDigitalCadastreMapClick() {
+  if (!isDigitalCadastreHoverEnabled() || !mapState.digitalCadastreHoverLayer) {
+    return;
+  }
+  let hoverFeature = null;
+  mapState.digitalCadastreHoverLayer.eachLayer?.((layer) => {
+    hoverFeature = hoverFeature || layer.toGeoJSON?.();
+  });
+  if (!hoverFeature?.geometry) {
+    return;
+  }
+  const analysis = buildDigitalCadastreHoverAnalysis(hoverFeature);
+  const candidate = analysis.candidates[0];
+  state.digitalCadastreData = analysis;
+  state.digitalCadastreHighlightId = candidate.id;
+  state.digitalCadastrePreviewId = null;
+  state.digitalCadastreAdjustmentSnapshot = null;
+  state.digitalCadastreFichaDraft = getDefaultDigitalCadastreFichaDraft(candidate, analysis);
+  setCurrentPlot(cloneFeature(candidate.feature), candidate.title, {
+    skipDigitalCadastreRefresh: true,
+  });
+  clearDigitalCadastreHoverPreview();
+  renderDigitalCadastreModule();
+  renderDigitalCadastreOverlay(analysis);
+  updateMapSummary();
+  const saved = await saveDigitalCadastreRecord({
+    silentStatus: true,
+    forceNewId: true,
+    reason: "hover-digitalized",
+  });
+  setStatus(saved
+    ? `Predio ${candidate.title} guardado desde hover automatico.`
+    : `Predio ${candidate.title} digitalizado como lote activo. Revisa rol/permisos para guardar ficha permanente.`);
+}
+
 function buildDigitalCadastreCandidate(feature, index, context) {
   const centroid = turf.centroid(feature);
   const road = getNearestFeatureMatch(centroid, context.roadFeatures);
@@ -47018,7 +47274,7 @@ function renderDigitalCadastreModule() {
   }
 
   if (!state.digitalCadastreData) {
-    resetMetricGrid(dom.digitalCadastreResults, `Ejecuta el modulo para digitalizar predios visibles sobre ${areaProfile.label} con soporte ${effectiveMode.shortLabel.toLowerCase()}.`);
+    resetMetricGrid(dom.digitalCadastreResults, `Pasa el cursor sobre la imagen satelital para marcar el predio probable. Si el contorno es correcto, haz click para guardarlo.`);
     setPanelsHidden([
       dom.digitalCadastreQueueBoard,
       dom.digitalCadastreFichaBoard,
@@ -47028,7 +47284,7 @@ function renderDigitalCadastreModule() {
     dom.digitalCadastreReadout?.classList.add("empty-state");
     dom.digitalCadastreReadout?.classList.remove("has-data");
     if (dom.digitalCadastreReadout) {
-      setTextIfChanged(dom.digitalCadastreReadout, "Dibuja o selecciona un AOI y ejecuta el modulo. El mapa marcara candidatos al pasar el cursor y digitalizara con un click.");
+      setTextIfChanged(dom.digitalCadastreReadout, "Mueve el cursor sobre la imagen: el sistema marcara automaticamente el predio probable. Click confirma y guarda.");
     }
     dom.digitalCadastreChecklist?.classList.add("empty-state");
     dom.digitalCadastreChecklist?.classList.remove("has-data");
@@ -48751,6 +49007,7 @@ function renderDigitalCadastreOverlay(analysis) {
 }
 
 function clearDigitalCadastreOverlay() {
+  clearDigitalCadastreHoverPreview();
   if (mapState.digitalCadastreSupportLayer) {
     mapState.map.removeLayer(mapState.digitalCadastreSupportLayer);
     mapState.digitalCadastreSupportLayer = null;
