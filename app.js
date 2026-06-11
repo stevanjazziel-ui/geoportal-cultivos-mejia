@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260611-4";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260611-5";
 
 const layerCatalog = [
   {
@@ -4089,6 +4089,8 @@ const mapState = {
   digitalCadastreHoverLayer: null,
   digitalCadastreHoverLastAt: 0,
   digitalCadastreHoverStatusAt: 0,
+  digitalCadastreHoverBackendAt: 0,
+  digitalCadastreHoverRequestId: 0,
   digitalCadastreGuideLayer: null,
   digitalCadastreSupportLayer: null,
   mobilityLayer: null,
@@ -46167,7 +46169,10 @@ function isDigitalCadastreHoverEnabled() {
   );
 }
 
-function clearDigitalCadastreHoverPreview() {
+function clearDigitalCadastreHoverPreview(invalidatePending = true) {
+  if (invalidatePending) {
+    mapState.digitalCadastreHoverRequestId += 1;
+  }
   if (mapState.digitalCadastreHoverLayer && mapState.map) {
     mapState.map.removeLayer(mapState.digitalCadastreHoverLayer);
   }
@@ -46222,7 +46227,7 @@ function buildDigitalCadastreHoverFeature(event) {
 }
 
 function renderDigitalCadastreHoverPreview(feature) {
-  clearDigitalCadastreHoverPreview();
+  clearDigitalCadastreHoverPreview(false);
   if (!mapState.map || !feature?.geometry) {
     return;
   }
@@ -46234,6 +46239,74 @@ function renderDigitalCadastreHoverPreview(feature) {
   }).addTo(mapState.map);
   mapState.digitalCadastreHoverLayer.bringToFront?.();
   setMapInteractionCursor(true);
+}
+
+function getDigitalCadastreHoverLayerFeature() {
+  let hoverFeature = null;
+  mapState.digitalCadastreHoverLayer?.eachLayer?.((layer) => {
+    hoverFeature = hoverFeature || layer.toGeoJSON?.();
+  });
+  return hoverFeature;
+}
+
+async function refineDigitalCadastreHoverWithBackend(seedFeature, event, requestId) {
+  if (!seedFeature?.geometry || !event?.latlng || !isDigitalCadastreHoverEnabled()) {
+    return;
+  }
+  const now = Date.now();
+  if (now - (mapState.digitalCadastreHoverBackendAt || 0) < 650) {
+    return;
+  }
+  mapState.digitalCadastreHoverBackendAt = now;
+  const backend = await detectBackend(!state.backendAvailable);
+  if (!backend.available || !state.backendUrl || requestId !== mapState.digitalCadastreHoverRequestId) {
+    return;
+  }
+  try {
+    const payload = await fetchJson(`${state.backendUrl}${backendService.cadastreSegmentPath}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        areaId: getDigitalCadastreAreaProfile().id,
+        modeId: "asistido",
+        hoverMode: true,
+        maxCandidates: 1,
+        cursor: {
+          lng: Number(event.latlng.lng.toFixed(7)),
+          lat: Number(event.latlng.lat.toFixed(7)),
+          zoom: mapState.map.getZoom(),
+        },
+        targetFeature: seedFeature,
+        bbox: turf.bbox(seedFeature).map((value) => Number(value.toFixed(7))),
+        requestedAt: new Date().toISOString(),
+      }),
+    });
+    if (requestId !== mapState.digitalCadastreHoverRequestId || !isDigitalCadastreHoverEnabled()) {
+      return;
+    }
+    const refined = normalizeDigitalCadastreSegmentationFeature(
+      payload?.candidateCollection?.features?.[0],
+      seedFeature,
+      0
+    );
+    if (!refined?.geometry) {
+      return;
+    }
+    refined.properties = {
+      ...(refined.properties || {}),
+      digitalCadastreId: "digital-cadastre-hover",
+      digitalCadastreTitle: "Predio probable refinado",
+      hoverCandidate: true,
+      supportLabel: refined.properties?.supportLabel || "Motor local de segmentacion + imagen activa",
+      boundaryLabel: refined.properties?.boundaryLabel || "Contorno refinado",
+      confidenceScore: Number(refined.properties?.confidenceScore) || 78,
+    };
+    renderDigitalCadastreHoverPreview(refined);
+  } catch (error) {
+    // El hover no debe bloquearse si el backend o el segmentador local no estan activos.
+  }
 }
 
 function buildDigitalCadastreHoverAnalysis(feature) {
@@ -46365,7 +46438,10 @@ function handleDigitalCadastreMapHover(event) {
     clearDigitalCadastreHoverPreview();
     return;
   }
+  mapState.digitalCadastreHoverRequestId += 1;
+  const requestId = mapState.digitalCadastreHoverRequestId;
   renderDigitalCadastreHoverPreview(feature);
+  refineDigitalCadastreHoverWithBackend(feature, event, requestId);
   if (now - (mapState.digitalCadastreHoverStatusAt || 0) > 1800) {
     mapState.digitalCadastreHoverStatusAt = now;
     setStatus("Predio probable marcado bajo el cursor. Si el contorno esta bien, haz click para guardarlo.");
@@ -46376,10 +46452,7 @@ async function handleDigitalCadastreMapClick() {
   if (!isDigitalCadastreHoverEnabled() || !mapState.digitalCadastreHoverLayer) {
     return;
   }
-  let hoverFeature = null;
-  mapState.digitalCadastreHoverLayer.eachLayer?.((layer) => {
-    hoverFeature = hoverFeature || layer.toGeoJSON?.();
-  });
+  const hoverFeature = getDigitalCadastreHoverLayerFeature();
   if (!hoverFeature?.geometry) {
     return;
   }
