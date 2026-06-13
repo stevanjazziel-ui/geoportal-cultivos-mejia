@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260613-2";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260613-3";
 
 const layerCatalog = [
   {
@@ -3589,8 +3589,9 @@ const digitalCadastreAreaCatalog = {
     id: "mejia",
     label: "Canton Mejia",
     localParcels: false,
-    supportLabel: "Imagen satelital, ortofoto cuando exista y linderos visibles",
-    sourceLabel: "Norma nacional + soporte visible",
+    universalParcels: true,
+    supportLabel: "Parcelario publico cantonal, imagen satelital y linderos visibles",
+    sourceLabel: "Parcelario publico + norma nacional + soporte visible",
   },
   machachi: {
     id: "machachi",
@@ -3683,6 +3684,109 @@ function getDigitalCadastreHoverIndexedFeatures(collection, cursorPoint) {
     }
   }
   return [...indexes].map((index) => collection.features[index]).filter(Boolean);
+}
+
+function getDigitalCadastreLineCoordinateSets(feature) {
+  const geometry = feature?.geometry || feature;
+  if (!geometry) {
+    return [];
+  }
+  if (geometry.type === "LineString") {
+    return [geometry.coordinates];
+  }
+  if (geometry.type === "MultiLineString") {
+    return geometry.coordinates;
+  }
+  if (geometry.type === "Polygon") {
+    return geometry.coordinates.slice(0, 1);
+  }
+  if (geometry.type === "MultiPolygon") {
+    return geometry.coordinates.map((polygon) => polygon?.[0]).filter(Boolean);
+  }
+  return [];
+}
+
+function getDigitalCadastreNearestLineBearing(pointFeature, feature) {
+  let best = {
+    distanceKm: Number.POSITIVE_INFINITY,
+    bearing: null,
+  };
+  getDigitalCadastreLineCoordinateSets(feature).forEach((coordinates) => {
+    if (!Array.isArray(coordinates) || coordinates.length < 2) {
+      return;
+    }
+    for (let index = 0; index < coordinates.length - 1; index += 1) {
+      const start = coordinates[index];
+      const end = coordinates[index + 1];
+      if (!Array.isArray(start) || !Array.isArray(end)) {
+        continue;
+      }
+      try {
+        const segment = turf.lineString([start, end]);
+        const distanceKm = turf.pointToLineDistance(pointFeature, segment, { units: "kilometers" });
+        if (Number.isFinite(distanceKm) && distanceKm < best.distanceKm) {
+          best = {
+            distanceKm,
+            bearing: turf.bearing(turf.point(start), turf.point(end)),
+          };
+        }
+      } catch (_) {
+        // Segmentos invalidos no deben bloquear el hover.
+      }
+    }
+  });
+  return Number.isFinite(best.bearing) ? best.bearing : null;
+}
+
+function getDigitalCadastreHoverSupportProfile(event) {
+  if (!event?.latlng) {
+    return {
+      bearingDeg: -12,
+      supportKind: "imagen",
+      supportLabel: "Lectura directa sobre imagen satelital",
+      confidenceBoost: 0,
+    };
+  }
+  const pointFeature = turf.point([
+    Number(event.latlng.lng.toFixed(7)),
+    Number(event.latlng.lat.toFixed(7)),
+  ]);
+  const context = getDigitalCadastreBoundaryContext();
+  const road = getNearestFeatureMatch(pointFeature, context.roadFeatures);
+  const hydro = getNearestFeatureMatch(pointFeature, context.hydroFeatures);
+  const supportOptions = [
+    {
+      kind: "vial",
+      label: "Camino/calle cercana",
+      match: road,
+      thresholdKm: 0.12,
+      boost: 8,
+    },
+    {
+      kind: "hidrico",
+      label: "Rio/quebrada/acequia cercana",
+      match: hydro,
+      thresholdKm: 0.14,
+      boost: 7,
+    },
+  ].filter((item) => item.match?.feature && item.match.distanceKm <= item.thresholdKm)
+    .sort((left, right) => left.match.distanceKm - right.match.distanceKm);
+  const selected = supportOptions[0] || null;
+  if (!selected) {
+    return {
+      bearingDeg: -12,
+      supportKind: "imagen",
+      supportLabel: "Lectura directa sobre imagen satelital",
+      confidenceBoost: 0,
+    };
+  }
+  return {
+    bearingDeg: getDigitalCadastreNearestLineBearing(pointFeature, selected.match.feature) ?? -12,
+    supportKind: selected.kind,
+    supportLabel: selected.label,
+    supportDistanceKm: selected.match.distanceKm,
+    confidenceBoost: selected.boost,
+  };
 }
 
 function getDigitalCadastreAreaProfile(areaId = state.territorialAreaId) {
@@ -46465,15 +46569,25 @@ function buildDigitalCadastreHoverFeature(event) {
   const widthPx = clamp(Math.round(170 - zoom * 5.5), 72, 138);
   const heightPx = clamp(Math.round(widthPx * 0.72), 48, 104);
   const point = event.containerPoint;
+  const supportProfile = getDigitalCadastreHoverSupportProfile(event);
+  const angleRad = ((supportProfile.bearingDeg || -12) - 90) * Math.PI / 180;
+  const rotatePoint = ([xRatio, yRatio]) => {
+    const dx = xRatio * widthPx;
+    const dy = yRatio * heightPx;
+    return L.point(
+      point.x + dx * Math.cos(angleRad) - dy * Math.sin(angleRad),
+      point.y + dx * Math.sin(angleRad) + dy * Math.cos(angleRad)
+    );
+  };
   const shapePoints = [
-    L.point(point.x - widthPx * 0.48, point.y - heightPx * 0.30),
-    L.point(point.x - widthPx * 0.15, point.y - heightPx * 0.47),
-    L.point(point.x + widthPx * 0.42, point.y - heightPx * 0.35),
-    L.point(point.x + widthPx * 0.50, point.y + heightPx * 0.08),
-    L.point(point.x + widthPx * 0.20, point.y + heightPx * 0.45),
-    L.point(point.x - widthPx * 0.32, point.y + heightPx * 0.38),
-    L.point(point.x - widthPx * 0.55, point.y + heightPx * 0.02),
-  ].map((containerPoint) => {
+    [-0.48, -0.30],
+    [-0.15, -0.47],
+    [0.42, -0.35],
+    [0.50, 0.08],
+    [0.20, 0.45],
+    [-0.32, 0.38],
+    [-0.55, 0.02],
+  ].map(rotatePoint).map((containerPoint) => {
     const latLng = mapState.map.containerPointToLatLng(containerPoint);
     return [Number(latLng.lng.toFixed(7)), Number(latLng.lat.toFixed(7))];
   });
@@ -46483,10 +46597,14 @@ function buildDigitalCadastreHoverFeature(event) {
     properties: {
       digitalCadastreId: "digital-cadastre-hover",
       digitalCadastreTitle: "Lindero probable bajo cursor",
-      confidenceScore: 64,
+      confidenceScore: 64 + (supportProfile.confidenceBoost || 0),
       boundaryLabel: "Contorno provisional",
-      supportLabel: "Lectura directa sobre imagen satelital",
+      supportLabel: supportProfile.supportLabel,
       segmentationSource: "Hover automatico sobre imagen",
+      hoverSupportKind: supportProfile.supportKind,
+      hoverSupportDistanceKm: supportProfile.supportDistanceKm || null,
+      hoverBearingDeg: supportProfile.bearingDeg,
+      universalHover: true,
       hoverCandidate: true,
       provisionalHover: true,
     },
@@ -46546,9 +46664,9 @@ function normalizeDigitalCadastreHoverParcelFeature(parcelFeature, cursorPoint) 
     digitalCadastreId: "digital-cadastre-hover",
     digitalCadastreTitle: label,
     confidenceScore: 92,
-    boundaryLabel: "Lindero catastral local",
-    supportLabel: "Parcelario local publicado + imagen activa",
-    segmentationSource: "Parcelario local bajo cursor",
+    boundaryLabel: "Lindero catastral disponible",
+    supportLabel: "Parcelario publicado + imagen activa",
+    segmentationSource: "Parcelario disponible bajo cursor",
     areaHa: metrics.areaHa,
     perimeterM: metrics.perimeterM,
     cursorLng: cursorPoint?.geometry?.coordinates?.[0] || null,
@@ -46693,7 +46811,7 @@ async function refineDigitalCadastreHoverWithLocalParcel(event, requestId) {
     return false;
   }
   renderDigitalCadastreHoverPreview(localParcel);
-  setStatus("Predio real del parcelario local marcado bajo el cursor. Haz click para guardarlo si corresponde.");
+  setStatus("Predio real del parcelario disponible marcado bajo el cursor. Haz click para guardarlo si corresponde.");
   return true;
 }
 
