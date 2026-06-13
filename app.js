@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260611-8";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260613-1";
 
 const layerCatalog = [
   {
@@ -45118,6 +45118,152 @@ function buildDigitalCadastreGuideFeature(candidate, supportMatch, kind = "via")
   );
 }
 
+function getDigitalCadastreBoundaryContext(areaId = state.territorialAreaId) {
+  return {
+    roadFeatures: filterFeaturesByTerritorialArea(geoSources.vias?.features || [], areaId).map(cloneFeature),
+    hydroFeatures: [
+      ...filterFeaturesByTerritorialArea(geoSources.canales?.features || [], areaId),
+      ...filterFeaturesByTerritorialArea(geoSources.rios?.features || [], areaId),
+      ...filterFeaturesByTerritorialArea(geoSources.quebradas?.features || [], areaId),
+    ].map(cloneFeature),
+    urbanFeatures: filterFeaturesByTerritorialArea(geoSources.manchaUrbana?.features || [], areaId).map(cloneFeature),
+    fieldSupportFeatures: Array.isArray(state.digitalCadastreFieldSupport?.collection?.features)
+      ? state.digitalCadastreFieldSupport.collection.features.map(cloneFeature)
+      : [],
+  };
+}
+
+function getDigitalCadastreFieldSupportType(feature) {
+  const props = feature?.properties || {};
+  const raw = [
+    props.fieldSupportRoleId,
+    props.fieldSupportRole,
+    props.role,
+    props.tipo,
+    props.type,
+    props.name,
+    props.label,
+  ].filter(Boolean).join(" ").toLowerCase();
+  if (raw.includes("cerca") || raw.includes("cerramiento") || raw.includes("muro") || raw.includes("alambr")) {
+    return "cerramiento";
+  }
+  if (raw.includes("vial") || raw.includes("camino") || raw.includes("calle") || raw.includes("via")) {
+    return "vial";
+  }
+  if (raw.includes("hid") || raw.includes("rio") || raw.includes("quebrada") || raw.includes("acequia") || raw.includes("canal")) {
+    return "hidrico";
+  }
+  if (raw.includes("rtk") || raw.includes("gps")) {
+    return "rtk";
+  }
+  if (raw.includes("dron") || raw.includes("uav")) {
+    return "dron";
+  }
+  return "campo";
+}
+
+function getDigitalCadastreBoundaryEvidenceLabel(type) {
+  return {
+    catastro: "Catastro",
+    vial: "Camino/calle",
+    hidrico: "Rio/quebrada/acequia",
+    urbano: "Borde urbano",
+    cerramiento: "Cerramiento/cerca viva",
+    rtk: "RTK/GPS",
+    dron: "Dron/ortofoto",
+    campo: "Campo",
+    imagen: "Imagen satelital",
+  }[type] || "Soporte visible";
+}
+
+function buildDigitalCadastreBoundaryEvidence(feature, context, metrics) {
+  const props = feature?.properties || {};
+  const evidences = [];
+  const fieldType = getDigitalCadastreFieldSupportType(metrics.fieldSupport?.feature);
+  if (props.cadastralCode || props.localParcelHover || props.sourceId || context?.areaProfile?.localParcels) {
+    evidences.push({
+      type: "catastro",
+      label: "Lindero catastral",
+      confidence: props.localParcelHover || props.cadastralCode ? 94 : 86,
+      copy: props.cadastralCode ? `Codigo ${props.cadastralCode}` : "Geometria proviene de parcelario local/publico.",
+    });
+  }
+  if (metrics.roadDistanceKm <= 0.08) {
+    evidences.push({
+      type: "vial",
+      label: "Camino/calle",
+      confidence: 84,
+      copy: `Borde vial a ${formatDistanceKm(metrics.roadDistanceKm)}.`,
+    });
+  } else if (metrics.roadDistanceKm <= 0.18) {
+    evidences.push({
+      type: "vial",
+      label: "Camino cercano",
+      confidence: 68,
+      copy: `Via cercana a ${formatDistanceKm(metrics.roadDistanceKm)}; revisar si realmente define lindero.`,
+    });
+  }
+  if (metrics.hydroDistanceKm <= 0.08) {
+    evidences.push({
+      type: "hidrico",
+      label: "Limite hidrico/natural",
+      confidence: 82,
+      copy: `Rio, quebrada, canal o acequia a ${formatDistanceKm(metrics.hydroDistanceKm)}.`,
+    });
+  } else if (metrics.hydroDistanceKm <= 0.18) {
+    evidences.push({
+      type: "hidrico",
+      label: "Drenaje cercano",
+      confidence: 64,
+      copy: `Elemento hidrico cercano a ${formatDistanceKm(metrics.hydroDistanceKm)}; requiere contraste visual.`,
+    });
+  }
+  if (metrics.fieldSupportDistanceKm <= 0.045) {
+    evidences.push({
+      type: fieldType,
+      label: getDigitalCadastreBoundaryEvidenceLabel(fieldType),
+      confidence: fieldType === "rtk" ? 92 : fieldType === "dron" ? 88 : 80,
+      copy: `Soporte de ${getDigitalCadastreBoundaryEvidenceLabel(fieldType).toLowerCase()} a ${formatDistanceKm(metrics.fieldSupportDistanceKm)}.`,
+    });
+  }
+  if (metrics.insideUrban || metrics.urbanDistanceKm <= 0.16) {
+    evidences.push({
+      type: "urbano",
+      label: metrics.insideUrban ? "Tejido urbano" : "Borde urbano cercano",
+      confidence: metrics.insideUrban ? 70 : 62,
+      copy: metrics.insideUrban ? "Predio dentro de mancha urbana; revisar frente, fondo y medianeras." : `Borde urbano a ${formatDistanceKm(metrics.urbanDistanceKm)}.`,
+    });
+  }
+  if (props.visionCandidate || props.provisionalHover || props.segmentationSource) {
+    evidences.push({
+      type: "imagen",
+      label: props.provisionalHover ? "Lectura provisional de imagen" : "Lectura de imagen refinada",
+      confidence: props.provisionalHover ? 45 : 68,
+      copy: props.provisionalHover
+        ? "Contorno estimado por hover; no confirma cerramientos ni cercas vivas."
+        : "Contorno apoyado por segmentacion/imagen; validar con catastro y campo.",
+    });
+  }
+  const sorted = evidences.sort((left, right) => right.confidence - left.confidence);
+  const strongCount = sorted.filter((item) => item.confidence >= 78).length;
+  return {
+    items: sorted,
+    strongCount,
+    visibleHits: sorted.filter((item) => item.confidence >= 62).length,
+    supportLabel: sorted.length
+      ? sorted.slice(0, 3).map((item) => item.label).join(" + ")
+      : "Sin apoyo visible claro",
+    boundaryLabel: strongCount >= 3
+      ? "Lindero con soporte mixto alto"
+      : strongCount >= 2
+        ? "Lindero con soporte visible medio"
+        : strongCount >= 1
+          ? "Lindero con soporte base"
+          : "Lindero no concluyente",
+    checklist: sorted.map((item) => `${item.label}: ${item.copy}`),
+  };
+}
+
 function getDigitalCadastreCandidateStableKey(candidate) {
   if (!candidate) {
     return null;
@@ -46616,11 +46762,42 @@ function buildDigitalCadastreHoverAnalysis(feature) {
   const areaProfile = getDigitalCadastreAreaProfile();
   const mode = getDigitalCadastreModeProfile("asistido");
   const imageryProfile = getPlanningImageryProfile();
+  const boundaryContext = {
+    ...getDigitalCadastreBoundaryContext(),
+    areaProfile,
+    mode,
+    scopeType: "plot",
+  };
   const areaHa = Number(feature.properties?.areaHa) || 0;
   const perimeterM = Number(feature.properties?.perimeterM) || 0;
   const isLocalParcel = Boolean(feature.properties?.localParcelHover);
   const isProvisional = Boolean(feature.properties?.provisionalHover);
-  const confidenceScore = isLocalParcel ? 92 : isProvisional ? 64 : Number(feature.properties?.confidenceScore) || 72;
+  const centroidFeature = turf.centroid(feature);
+  const road = getNearestFeatureMatch(centroidFeature, boundaryContext.roadFeatures);
+  const hydro = getNearestFeatureMatch(centroidFeature, boundaryContext.hydroFeatures);
+  const urban = getNearestFeatureMatch(centroidFeature, boundaryContext.urbanFeatures);
+  const fieldSupport = getNearestFeatureMatch(centroidFeature, boundaryContext.fieldSupportFeatures || []);
+  const roadDistanceKm = Number((road.distanceKm || 0).toFixed(2));
+  const hydroDistanceKm = Number((hydro.distanceKm || 0).toFixed(2));
+  const urbanDistanceKm = Number((urban.distanceKm || 0).toFixed(2));
+  const fieldSupportDistanceKm = Number((fieldSupport.distanceKm || 0).toFixed(3));
+  const insideUrban = boundaryContext.urbanFeatures.some((urbanFeature) => safeBooleanIntersects(feature, urbanFeature));
+  const boundaryEvidence = buildDigitalCadastreBoundaryEvidence(feature, boundaryContext, {
+    road,
+    hydro,
+    urban,
+    fieldSupport,
+    roadDistanceKm,
+    hydroDistanceKm,
+    urbanDistanceKm,
+    fieldSupportDistanceKm,
+    insideUrban,
+  });
+  const confidenceScore = isLocalParcel
+    ? Math.max(92, 84 + boundaryEvidence.strongCount * 3)
+    : isProvisional
+      ? Math.max(48, Math.min(68, 52 + boundaryEvidence.visibleHits * 4))
+      : Math.max(Number(feature.properties?.confidenceScore) || 72, 64 + boundaryEvidence.visibleHits * 5);
   const title = feature.properties?.digitalCadastreTitle && (isLocalParcel || isProvisional)
     ? feature.properties.digitalCadastreTitle
     : `Predio digitalizado ${new Date().toLocaleTimeString("es-EC", { hour: "2-digit", minute: "2-digit" })}`;
@@ -46634,18 +46811,19 @@ function buildDigitalCadastreHoverAnalysis(feature) {
     lotNumber: feature.properties?.lotNumber || "hover",
     areaHa,
     perimeterM,
-    roadDistanceKm: null,
-    hydroDistanceKm: null,
-    urbanDistanceKm: null,
-    fieldSupportDistanceKm: null,
-    fieldSupportRole: null,
-    insideUrban: false,
-    visibleHits: isLocalParcel ? 3 : isProvisional ? 1 : 2,
-    boundaryLabel: isLocalParcel ? "Lindero catastral local" : isProvisional ? "Contorno provisional por cursor" : "Contorno refinado por imagen",
+    roadDistanceKm,
+    hydroDistanceKm,
+    urbanDistanceKm,
+    fieldSupportDistanceKm,
+    fieldSupportRole: getDigitalCadastreFieldSupportType(fieldSupport?.feature),
+    insideUrban,
+    visibleHits: boundaryEvidence.visibleHits || (isLocalParcel ? 3 : isProvisional ? 1 : 2),
+    boundaryLabel: isLocalParcel ? boundaryEvidence.boundaryLabel : isProvisional ? "Contorno provisional por cursor" : boundaryEvidence.boundaryLabel,
     confidenceScore,
     confidenceLabel: getDigitalCadastreConfidenceLabel(confidenceScore),
     confidenceTone: getDigitalCadastreConfidenceTone(confidenceScore),
-    supportLabel: isLocalParcel ? "Parcelario local publicado + imagen activa" : isProvisional ? "Imagen satelital activa + hover automatico" : "Motor local de segmentacion + imagen activa",
+    supportLabel: boundaryEvidence.supportLabel || (isLocalParcel ? "Parcelario local publicado + imagen activa" : isProvisional ? "Imagen satelital activa + hover automatico" : "Motor local de segmentacion + imagen activa"),
+    boundaryEvidence,
     summary: `${isLocalParcel ? "Predio local" : isProvisional ? "Contorno provisional" : "Predio refinado"} de ${areaHa.toFixed(areaHa >= 10 ? 1 : 2)} ha detectado al pasar el cursor sobre la imagen.`,
     recommendation: isLocalParcel
       ? "Usar como base catastral local para revision tecnica, contraste de gabinete y actualizacion si corresponde."
@@ -46657,8 +46835,13 @@ function buildDigitalCadastreHoverAnalysis(feature) {
       `${Math.round(perimeterM)} m perimetro`,
       isLocalParcel ? "Parcelario local" : isProvisional ? "Provisional" : "Refinado",
       isLocalParcel ? "Alta confianza" : isProvisional ? "Requiere modelo CV" : "Requiere validacion",
+      ...boundaryEvidence.items.slice(0, 2).map((item) => item.label),
     ],
-    guideFeatures: [],
+    guideFeatures: [
+      buildDigitalCadastreGuideFeature({ id: "digital-cadastre-hover", centroid: centroidFeature.geometry.coordinates, title }, road, "via"),
+      buildDigitalCadastreGuideFeature({ id: "digital-cadastre-hover", centroid: centroidFeature.geometry.coordinates, title }, hydro, "hidrica"),
+      buildDigitalCadastreGuideFeature({ id: "digital-cadastre-hover", centroid: centroidFeature.geometry.coordinates, title }, fieldSupport, "campo"),
+    ].filter(Boolean),
     rankScore: 72,
   };
   const candidateFeature = {
@@ -46670,6 +46853,7 @@ function buildDigitalCadastreHoverAnalysis(feature) {
       confidenceScore: candidate.confidenceScore,
       boundaryLabel: candidate.boundaryLabel,
       supportLabel: candidate.supportLabel,
+      boundaryEvidence: JSON.stringify(boundaryEvidence.items.slice(0, 5)),
       areaHa,
       perimeterM,
     },
@@ -46704,6 +46888,7 @@ function buildDigitalCadastreHoverAnalysis(feature) {
     },
     checklist: [
       isLocalParcel ? "Parcelario local encontrado bajo el cursor." : isProvisional ? "Pre-marca provisional sobre imagen satelital activa." : "Contorno refinado por motor local.",
+      ...boundaryEvidence.checklist.slice(0, 3),
       "Click confirma y guarda el predio como pre-digitalizacion.",
       "Validar linderos visibles con ortofoto, campo o soporte catastral.",
       "Revisar topologia antes de exportar a SHP/KML/DXF.",
@@ -46713,7 +46898,7 @@ function buildDigitalCadastreHoverAnalysis(feature) {
       type: "FeatureCollection",
       features: [candidateFeature],
     },
-    guideCollection: { type: "FeatureCollection", features: [] },
+    guideCollection: { type: "FeatureCollection", features: candidate.guideFeatures },
     normativeRefs: [
       "Representacion predial poligonal georreferenciada.",
       "Uso como pre-digitalizacion asistida sujeta a validacion tecnica.",
@@ -46726,8 +46911,8 @@ function buildDigitalCadastreHoverAnalysis(feature) {
       candidateCount: 1,
       meanConfidence: confidenceScore,
       meanAreaHa: areaHa,
-      supportLabel: isLocalParcel ? "Parcelario local publicado" : isProvisional ? "Imagen satelital activa" : "Motor local + imagen activa",
-      boundaryLabel: isLocalParcel ? "Lindero catastral local" : isProvisional ? "Contorno provisional" : "Contorno refinado",
+      supportLabel: candidate.supportLabel,
+      boundaryLabel: candidate.boundaryLabel,
       needsPlot: false,
       localParcels: areaProfile.localParcels,
       checklistCount: 4,
@@ -46819,17 +47004,24 @@ function buildDigitalCadastreCandidate(feature, index, context) {
   const boundaryLine = geometryToBoundaryLine(feature.geometry);
   const perimeterM = Number((props.perimeterM || (((boundaryLine ? turf.length(boundaryLine, { units: "kilometers" }) : 0) || 0) * 1000)).toFixed(1));
   const insideUrban = context.urbanFeatures.some((urbanFeature) => safeBooleanIntersects(feature, urbanFeature));
-  const visibleHits = [
-    roadDistanceKm <= 0.08,
-    hydroDistanceKm <= 0.12,
-    insideUrban || urbanDistanceKm <= 0.18,
-    fieldSupportDistanceKm <= 0.045,
-  ].filter(Boolean).length;
   const fieldSupportRole = fieldSupport?.feature?.properties?.fieldSupportRole || null;
+  const boundaryEvidence = buildDigitalCadastreBoundaryEvidence(feature, context, {
+    road,
+    hydro,
+    urban,
+    fieldSupport,
+    roadDistanceKm,
+    hydroDistanceKm,
+    urbanDistanceKm,
+    fieldSupportDistanceKm,
+    insideUrban,
+  });
+  const visibleHits = boundaryEvidence.visibleHits;
   const confidenceScore = Math.round(clamp(
     context.mode.confidenceBase
       + (context.areaProfile.localParcels ? 10 : 0)
-      + visibleHits * 7
+      + Math.min(visibleHits, 5) * 6
+      + boundaryEvidence.strongCount * 4
       + (fieldSupportDistanceKm <= 0.02 ? 8 : fieldSupportDistanceKm <= 0.06 ? 4 : 0)
       + (props.cadastralCode ? 4 : 0)
       + (context.scopeType === "plot" ? 4 : 0)
@@ -46840,21 +47032,8 @@ function buildDigitalCadastreCandidate(feature, index, context) {
     97
   ));
   const confidenceLabel = getDigitalCadastreConfidenceLabel(confidenceScore);
-  const boundaryLabel = getDigitalCadastreBoundaryLabel(visibleHits);
-  const supportParts = [];
-  if (roadDistanceKm <= 0.18) {
-    supportParts.push(`via ${formatDistanceKm(roadDistanceKm)}`);
-  }
-  if (hydroDistanceKm <= 0.22) {
-    supportParts.push(`drenaje ${formatDistanceKm(hydroDistanceKm)}`);
-  }
-  if (insideUrban || urbanDistanceKm <= 0.24) {
-    supportParts.push(insideUrban ? "borde urbano dentro del poligono" : `borde urbano ${formatDistanceKm(urbanDistanceKm)}`);
-  }
-  if (fieldSupportDistanceKm <= 0.12) {
-    supportParts.push(`${(fieldSupportRole || "campo").toLowerCase()} ${formatDistanceKm(fieldSupportDistanceKm)}`);
-  }
-  const supportLabel = supportParts.length ? supportParts.join(" - ") : "Sin apoyo visible claro";
+  const boundaryLabel = boundaryEvidence.boundaryLabel || getDigitalCadastreBoundaryLabel(visibleHits);
+  const supportLabel = boundaryEvidence.supportLabel;
   const rankScore = confidenceScore + visibleHits * 3 - Math.min(roadDistanceKm, 1.5) * 6 - Math.min(hydroDistanceKm, 1.5) * 4;
   const titleBase = props.cadastralCode || props.lotNumber
     ? `Predio ${props.cadastralCode || `Lote ${props.lotNumber}`}`
@@ -46887,6 +47066,7 @@ function buildDigitalCadastreCandidate(feature, index, context) {
     confidenceLabel,
     confidenceTone: getDigitalCadastreConfidenceTone(confidenceScore),
     supportLabel,
+    boundaryEvidence,
     summary: `${titleBase} con ${boundaryLabel.toLowerCase()}, ${confidenceLabel.toLowerCase()} y soporte ${supportLabel.toLowerCase()} en ${context.scopeLabel}.`,
     recommendation,
     tags: [
@@ -46894,6 +47074,7 @@ function buildDigitalCadastreCandidate(feature, index, context) {
       `${Math.round(perimeterM)} m perimetro`,
       `${context.mode.shortLabel}`,
       supportLabel,
+      ...boundaryEvidence.items.slice(0, 2).map((item) => item.label),
     ],
     guideFeatures: [
       buildDigitalCadastreGuideFeature({ id: `digital-cadastre-${context.areaProfile.id}-${index + 1}`, centroid: centroid.geometry.coordinates, title: titleBase }, road, "via"),
@@ -46982,12 +47163,10 @@ async function buildDigitalCadastreAnalysis() {
   const target = getDigitalCadastreTarget();
   const imageryProfile = getPlanningImageryProfile();
   const officialSummary = state.officialData.planificacion || null;
-  const roadFeatures = filterFeaturesByTerritorialArea(geoSources.vias?.features || [], state.territorialAreaId).map(cloneFeature);
-  const hydroFeatures = [
-    ...filterFeaturesByTerritorialArea(geoSources.canales?.features || [], state.territorialAreaId),
-    ...filterFeaturesByTerritorialArea(geoSources.rios?.features || [], state.territorialAreaId),
-  ].map(cloneFeature);
-  const urbanFeatures = filterFeaturesByTerritorialArea(geoSources.manchaUrbana?.features || [], state.territorialAreaId).map(cloneFeature);
+  const boundaryContext = getDigitalCadastreBoundaryContext(state.territorialAreaId);
+  const roadFeatures = boundaryContext.roadFeatures;
+  const hydroFeatures = boundaryContext.hydroFeatures;
+  const urbanFeatures = boundaryContext.urbanFeatures;
   const targetAreaHa = Number((turf.area(target.feature) / 10000).toFixed(3));
   const targetBounds = turf.bbox(target.feature);
   const importedFieldSupport = Array.isArray(state.digitalCadastreFieldSupport?.collection?.features)
@@ -47129,6 +47308,7 @@ async function buildDigitalCadastreAnalysis() {
         confidenceScore: candidate.confidenceScore,
         boundaryLabel: candidate.boundaryLabel,
         supportLabel: candidate.supportLabel,
+        boundaryEvidence: JSON.stringify((candidate.boundaryEvidence?.items || []).slice(0, 6)),
         areaHa: candidate.areaHa,
         perimeterM: candidate.perimeterM,
       },
@@ -47773,6 +47953,7 @@ function renderDigitalCadastreModule() {
       <p class="territorial-readout-copy">${escapeHtmlContent(analysis.readout.recommendation)}</p>
       ${analysis.areaProfile.localParcels ? `<p class="territorial-readout-copy"><strong>Parcelario fino local:</strong> ${escapeHtmlContent(String(analysis.summary.supportParcelCount || 0))} predios de apoyo cargados para contraste visual y ajuste.</p>` : ""}
       ${analysis.summary.fieldSupportCount ? `<p class="territorial-readout-copy"><strong>Soporte campo / RTK / dron:</strong> ${escapeHtmlContent(String(analysis.summary.fieldSupportCount))} geometria(s) activas para reforzar snap, control geometrico y revision tecnica.</p>` : ""}
+      ${activeCandidate?.boundaryEvidence?.items?.length ? `<p class="territorial-readout-copy"><strong>Lectura de linderos:</strong> ${escapeHtmlContent(activeCandidate.boundaryEvidence.items.slice(0, 4).map((item) => `${item.label} (${item.confidence}/100)`).join(" · "))}</p>` : ""}
       ${activeCandidate ? `<p class="territorial-readout-copy"><strong>Predio activo:</strong> ${escapeHtmlContent(activeCandidate.title)}. Pasa el cursor para inspeccionarlo y haz clic para digitalizarlo como lote actual.</p>` : ""}
     `);
   }
@@ -47820,6 +48001,7 @@ function renderDigitalCadastreModule() {
         <div class="land-change-sector-tags">
           ${candidate.tags.map((tag) => `<span>${escapeHtmlContent(tag)}</span>`).join("")}
         </div>
+        ${candidate.boundaryEvidence?.items?.length ? `<div class="land-change-sector-tags">${candidate.boundaryEvidence.items.slice(0, 4).map((item) => `<span>${escapeHtmlContent(item.label)} ${escapeHtmlContent(String(item.confidence))}/100</span>`).join("")}</div>` : ""}
         <p class="land-change-sector-note">${escapeHtmlContent(candidate.recommendation)}</p>
         <button class="ghost-button" type="button" data-digital-cadastre-id="${candidate.id}">Digitalizar en mapa</button>
       </article>
