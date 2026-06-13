@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260613-1";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260613-2";
 
 const layerCatalog = [
   {
@@ -46835,7 +46835,6 @@ function buildDigitalCadastreHoverAnalysis(feature) {
       `${Math.round(perimeterM)} m perimetro`,
       isLocalParcel ? "Parcelario local" : isProvisional ? "Provisional" : "Refinado",
       isLocalParcel ? "Alta confianza" : isProvisional ? "Requiere modelo CV" : "Requiere validacion",
-      ...boundaryEvidence.items.slice(0, 2).map((item) => item.label),
     ],
     guideFeatures: [
       buildDigitalCadastreGuideFeature({ id: "digital-cadastre-hover", centroid: centroidFeature.geometry.coordinates, title }, road, "via"),
@@ -46888,7 +46887,6 @@ function buildDigitalCadastreHoverAnalysis(feature) {
     },
     checklist: [
       isLocalParcel ? "Parcelario local encontrado bajo el cursor." : isProvisional ? "Pre-marca provisional sobre imagen satelital activa." : "Contorno refinado por motor local.",
-      ...boundaryEvidence.checklist.slice(0, 3),
       "Click confirma y guarda el predio como pre-digitalizacion.",
       "Validar linderos visibles con ortofoto, campo o soporte catastral.",
       "Revisar topologia antes de exportar a SHP/KML/DXF.",
@@ -47074,7 +47072,6 @@ function buildDigitalCadastreCandidate(feature, index, context) {
       `${Math.round(perimeterM)} m perimetro`,
       `${context.mode.shortLabel}`,
       supportLabel,
-      ...boundaryEvidence.items.slice(0, 2).map((item) => item.label),
     ],
     guideFeatures: [
       buildDigitalCadastreGuideFeature({ id: `digital-cadastre-${context.areaProfile.id}-${index + 1}`, centroid: centroid.geometry.coordinates, title: titleBase }, road, "via"),
@@ -47953,7 +47950,6 @@ function renderDigitalCadastreModule() {
       <p class="territorial-readout-copy">${escapeHtmlContent(analysis.readout.recommendation)}</p>
       ${analysis.areaProfile.localParcels ? `<p class="territorial-readout-copy"><strong>Parcelario fino local:</strong> ${escapeHtmlContent(String(analysis.summary.supportParcelCount || 0))} predios de apoyo cargados para contraste visual y ajuste.</p>` : ""}
       ${analysis.summary.fieldSupportCount ? `<p class="territorial-readout-copy"><strong>Soporte campo / RTK / dron:</strong> ${escapeHtmlContent(String(analysis.summary.fieldSupportCount))} geometria(s) activas para reforzar snap, control geometrico y revision tecnica.</p>` : ""}
-      ${activeCandidate?.boundaryEvidence?.items?.length ? `<p class="territorial-readout-copy"><strong>Lectura de linderos:</strong> ${escapeHtmlContent(activeCandidate.boundaryEvidence.items.slice(0, 4).map((item) => `${item.label} (${item.confidence}/100)`).join(" · "))}</p>` : ""}
       ${activeCandidate ? `<p class="territorial-readout-copy"><strong>Predio activo:</strong> ${escapeHtmlContent(activeCandidate.title)}. Pasa el cursor para inspeccionarlo y haz clic para digitalizarlo como lote actual.</p>` : ""}
     `);
   }
@@ -48001,7 +47997,6 @@ function renderDigitalCadastreModule() {
         <div class="land-change-sector-tags">
           ${candidate.tags.map((tag) => `<span>${escapeHtmlContent(tag)}</span>`).join("")}
         </div>
-        ${candidate.boundaryEvidence?.items?.length ? `<div class="land-change-sector-tags">${candidate.boundaryEvidence.items.slice(0, 4).map((item) => `<span>${escapeHtmlContent(item.label)} ${escapeHtmlContent(String(item.confidence))}/100</span>`).join("")}</div>` : ""}
         <p class="land-change-sector-note">${escapeHtmlContent(candidate.recommendation)}</p>
         <button class="ghost-button" type="button" data-digital-cadastre-id="${candidate.id}">Digitalizar en mapa</button>
       </article>
