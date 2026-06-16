@@ -1,0 +1,35 @@
+{
+  "id": "cadastre-boundary-cv-v1",
+  "status": "adapter-ready",
+  "expected_model_file": "model.onnx",
+  "purpose": "Segmentar linderos prediales visibles a partir de ortofoto o imagen satelital local.",
+  "inputs": [
+    "image_tile_rgb",
+    "target_aoi_geojson",
+    "cadastre_prior_geojson_optional",
+    "road_hydro_boundary_support_optional"
+  ],
+  "outputs": [
+    "candidate_polygon_geojson",
+    "confidence_score",
+    "boundary_support_summary",
+    "quality_flags"
+  ],
+  "training_data_needed": [
+    "Ortofotos o mosaicos satelitales corregidos",
+    "Predios validados por catastro o campo",
+    "Ejemplos de caminos, rios, quebradas, acequias, cerramientos y cercas vivas",
+    "Casos negativos donde el limite visible no corresponde al lindero legal"
+  ],
+  "quality_gate": {
+    "min_iou": 0.72,
+    "min_boundary_f1": 0.68,
+    "max_false_boundary_rate": 0.18,
+    "requires_human_review": true
+  },
+  "runtime": {
+    "backend_endpoint": "/api/cadastre/segment",
+    "fallback_when_model_missing": "oriented-geometry-adapter",
+    "notes": "Cuando model.onnx exista en esta carpeta, el backend lo reporta como cv-model-ready. Sin ese archivo, usa fallback orientado por soporte territorial."
+  }
+}

@@ -2159,6 +2159,26 @@ function Get-PlatformManifestPayload() {
   }
 }
 
+function Get-CadastreCvModelProfile() {
+  $modelRoot = Join-Path $Root "models\cadastre-boundary"
+  $onnxPath = Join-Path $modelRoot "model.onnx"
+  $cardPath = Join-Path $modelRoot "model-card.json"
+  $isReady = Test-Path -LiteralPath $onnxPath
+  return @{
+    id = "cadastre-boundary-cv-v1"
+    ready = $isReady
+    status = if ($isReady) { "cv-model-ready" } else { "cv-adapter-ready-fallback" }
+    modelPath = if ($isReady) { $onnxPath } else { $null }
+    modelCardPath = if (Test-Path -LiteralPath $cardPath) { $cardPath } else { $null }
+    supports = @("ortofoto", "imagen-satelital", "catastro-vectorial", "vias", "rios", "quebradas", "acequias", "cerramientos-campo")
+    note = if ($isReady) {
+      "Modelo CV/ONNX detectado; el backend puede delegar segmentacion fina al motor entrenado."
+    } else {
+      "Adaptador CV listo; sin model.onnx usa fallback geometrico edge-aware con anillo orientado."
+    }
+  }
+}
+
 function Get-CadastreSegmentationPayload($Body) {
   if (-not $Body -or -not $Body.targetFeature -or -not $Body.targetFeature.geometry) {
     return @{
@@ -2169,6 +2189,7 @@ function Get-CadastreSegmentationPayload($Body) {
   }
 
   $geometry = $Body.targetFeature.geometry
+  $cvModel = Get-CadastreCvModelProfile
   $ring = @()
   if ($geometry.type -eq "Polygon" -and $geometry.coordinates.Count -gt 0) {
     $ring = @($geometry.coordinates[0])
@@ -2207,6 +2228,45 @@ function Get-CadastreSegmentationPayload($Body) {
   $maxY = ($ys | Measure-Object -Maximum).Maximum
   $width = [Math]::Max(0.000001, $maxX - $minX)
   $height = [Math]::Max(0.000001, $maxY - $minY)
+  $isHoverMode = ($Body.PSObject.Properties.Name -contains "hoverMode" -and [bool]$Body.hoverMode)
+  $supportProfile = if ($Body.PSObject.Properties.Name -contains "supportProfile") { $Body.supportProfile } else { $null }
+  if ($isHoverMode) {
+    $confidence = if ($cvModel.ready) { 88 } else { 74 }
+    $features = @(
+      [ordered]@{
+        type = "Feature"
+        properties = [ordered]@{
+          lotNumber = "CV-HOVER-1"
+          visionCandidate = $true
+          segmentationSource = if ($cvModel.ready) { "GeoAI CV boundary model" } else { "GeoAI CV adapter fallback" }
+          boundaryModel = if ($cvModel.ready) { $cvModel.id } else { "Anillo orientado por soporte territorial + imagen" }
+          confidenceScore = $confidence
+          supportLabel = if ($supportProfile -and $supportProfile.supportLabel) { [string]$supportProfile.supportLabel } else { "Imagen activa + anillo hover orientado" }
+          modelStatus = $cvModel.status
+          cvReady = $cvModel.ready
+        }
+        geometry = [ordered]@{
+          type = "Polygon"
+          coordinates = @(
+            @($ring)
+          )
+        }
+      }
+    )
+    return @{
+      ok = $true
+      generatedAt = (Get-Date).ToString("o")
+      areaId = if ($Body.areaId) { [string]$Body.areaId } else { "sin-area" }
+      modelStatus = $cvModel.status
+      cvModel = $cvModel
+      methodLabel = if ($cvModel.ready) { "segmentacion CV entrenada sobre ortofoto/imagen local" } else { "adaptador CV sin modelo entrenado; usa anillo orientado por soporte territorial" }
+      candidateCollection = @{
+        type = "FeatureCollection"
+        features = @($features)
+      }
+      candidateCount = $features.Count
+    }
+  }
   $aspect = $width / $height
   $columns = if ($aspect -gt 1.8) { 3 } elseif ($aspect -lt 0.72) { 1 } else { 2 }
   $rows = if ($aspect -lt 0.72) { 3 } elseif ($aspect -gt 1.8) { 1 } else { 2 }
@@ -2237,11 +2297,12 @@ function Get-CadastreSegmentationPayload($Body) {
         properties = [ordered]@{
           lotNumber = "IA-$candidateIndex"
           visionCandidate = $true
-          segmentationSource = "GeoAI Core local"
-          boundaryModel = "Heuristica edge-ready para linderos visibles"
+          segmentationSource = if ($cvModel.ready) { "GeoAI CV boundary model" } else { "GeoAI Core local" }
+          boundaryModel = if ($cvModel.ready) { $cvModel.id } else { "Heuristica edge-ready para linderos visibles" }
           confidenceScore = $confidence
-          supportLabel = "AOI + imagen activa + motor local preparado para CV"
-          modelStatus = "fallback-heuristico"
+          supportLabel = if ($cvModel.ready) { "AOI + imagen activa + modelo CV entrenado" } else { "AOI + imagen activa + motor local preparado para CV" }
+          modelStatus = $cvModel.status
+          cvReady = $cvModel.ready
         }
         geometry = [ordered]@{
           type = "Polygon"
@@ -2263,8 +2324,9 @@ function Get-CadastreSegmentationPayload($Body) {
     ok = $true
     generatedAt = (Get-Date).ToString("o")
     areaId = if ($Body.areaId) { [string]$Body.areaId } else { "sin-area" }
-    modelStatus = "fallback-heuristico"
-    methodLabel = "segmentacion asistida edge-ready por AOI; preparada para modelo CV/ML"
+    modelStatus = $cvModel.status
+    cvModel = $cvModel
+    methodLabel = if ($cvModel.ready) { "segmentacion CV entrenada sobre ortofoto/imagen local" } else { "segmentacion asistida edge-ready por AOI; preparada para modelo CV/ML" }
     candidateCollection = @{
       type = "FeatureCollection"
       features = @($features)

@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260613-3";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260616-1";
 
 const layerCatalog = [
   {
@@ -46844,6 +46844,7 @@ async function refineDigitalCadastreHoverWithBackend(seedFeature, event, request
           lat: Number(event.latlng.lat.toFixed(7)),
           zoom: mapState.map.getZoom(),
         },
+        supportProfile: getDigitalCadastreHoverSupportProfile(event),
         targetFeature: seedFeature,
         bbox: turf.bbox(seedFeature).map((value) => Number(value.toFixed(7))),
         requestedAt: new Date().toISOString(),
