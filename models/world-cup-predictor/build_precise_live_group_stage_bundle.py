@@ -18,7 +18,8 @@ OUTPUT_REPORT_PATH = OUTPUT_DIR / "live_group_stage_report.md"
 OUTPUT_DEMO_PATH = OUTPUT_DIR / "demo_bundle.json"
 STATSBOMB_ROOT = Path("tmp/statsbomb-open-data")
 SIMULATION_SEED = 20260619
-SIMULATIONS = 8000
+SIMULATIONS = 12000
+GROUP_TABLE_SIMULATIONS = 12000
 RIDGE_ALPHA = 1.5
 
 
@@ -79,6 +80,12 @@ TEAMS: dict[str, TeamInfo] = {
     "Ghana": TeamInfo("L", 73),
     "Panama": TeamInfo("L", 34),
 }
+
+GROUP_TEAMS: dict[str, list[str]] = {}
+for team_name, team_info in TEAMS.items():
+    GROUP_TEAMS.setdefault(team_info.group, []).append(team_name)
+for group_name in GROUP_TEAMS:
+    GROUP_TEAMS[group_name].sort(key=lambda item: (TEAMS[item].rank, item))
 
 
 PLAYED_MATCHES = [
@@ -337,6 +344,185 @@ def build_current_state() -> dict[str, dict[str, float]]:
     return state
 
 
+def build_empty_group_stats() -> dict[str, dict[str, dict[str, float]]]:
+    return {
+        group: {
+            team: {
+                "team": team,
+                "group": group,
+                "points": 0.0,
+                "gf": 0.0,
+                "ga": 0.0,
+                "gd": 0.0,
+                "wins": 0.0,
+                "draws": 0.0,
+                "losses": 0.0,
+                "matches": 0.0,
+            }
+            for team in teams
+        }
+        for group, teams in GROUP_TEAMS.items()
+    }
+
+
+def apply_group_match(
+    group_stats: dict[str, dict[str, dict[str, float]]],
+    group_matches: dict[str, list[dict[str, Any]]],
+    group: str,
+    match_id: str,
+    match_date: str,
+    team_a: str,
+    team_b: str,
+    goals_a: int,
+    goals_b: int,
+) -> None:
+    row_a = group_stats[group][team_a]
+    row_b = group_stats[group][team_b]
+    row_a["matches"] += 1.0
+    row_b["matches"] += 1.0
+    row_a["gf"] += float(goals_a)
+    row_a["ga"] += float(goals_b)
+    row_b["gf"] += float(goals_b)
+    row_b["ga"] += float(goals_a)
+    row_a["gd"] = row_a["gf"] - row_a["ga"]
+    row_b["gd"] = row_b["gf"] - row_b["ga"]
+
+    if goals_a > goals_b:
+        row_a["points"] += 3.0
+        row_a["wins"] += 1.0
+        row_b["losses"] += 1.0
+    elif goals_b > goals_a:
+        row_b["points"] += 3.0
+        row_b["wins"] += 1.0
+        row_a["losses"] += 1.0
+    else:
+        row_a["points"] += 1.0
+        row_b["points"] += 1.0
+        row_a["draws"] += 1.0
+        row_b["draws"] += 1.0
+
+    group_matches[group].append(
+        {
+            "match_id": match_id,
+            "match_date": match_date,
+            "team_a": team_a,
+            "team_b": team_b,
+            "goals_a": int(goals_a),
+            "goals_b": int(goals_b),
+        }
+    )
+
+
+def build_actual_group_snapshot() -> tuple[dict[str, dict[str, dict[str, float]]], dict[str, list[dict[str, Any]]]]:
+    group_stats = build_empty_group_stats()
+    group_matches = {group: [] for group in GROUP_TEAMS}
+    for match_date, match_id, group, team_a, team_b, goals_a, goals_b in PLAYED_MATCHES:
+        apply_group_match(group_stats, group_matches, group, match_id, match_date, team_a, team_b, goals_a, goals_b)
+    return group_stats, group_matches
+
+
+def clone_group_snapshot(
+    group_stats: dict[str, dict[str, dict[str, float]]],
+    group_matches: dict[str, list[dict[str, Any]]],
+) -> tuple[dict[str, dict[str, dict[str, float]]], dict[str, list[dict[str, Any]]]]:
+    cloned_stats = {
+        group: {team: values.copy() for team, values in team_rows.items()}
+        for group, team_rows in group_stats.items()
+    }
+    cloned_matches = {
+        group: [row.copy() for row in rows]
+        for group, rows in group_matches.items()
+    }
+    return cloned_stats, cloned_matches
+
+
+def build_mini_league_stats(tied_teams: list[str], matches: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
+    tied_set = set(tied_teams)
+    mini_stats = {
+        team: {"points": 0.0, "gf": 0.0, "ga": 0.0}
+        for team in tied_teams
+    }
+    for match in matches:
+        if match["team_a"] not in tied_set or match["team_b"] not in tied_set:
+            continue
+        team_a = match["team_a"]
+        team_b = match["team_b"]
+        goals_a = int(match["goals_a"])
+        goals_b = int(match["goals_b"])
+        mini_stats[team_a]["gf"] += float(goals_a)
+        mini_stats[team_a]["ga"] += float(goals_b)
+        mini_stats[team_b]["gf"] += float(goals_b)
+        mini_stats[team_b]["ga"] += float(goals_a)
+        if goals_a > goals_b:
+            mini_stats[team_a]["points"] += 3.0
+        elif goals_b > goals_a:
+            mini_stats[team_b]["points"] += 3.0
+        else:
+            mini_stats[team_a]["points"] += 1.0
+            mini_stats[team_b]["points"] += 1.0
+    return mini_stats
+
+
+def sort_tied_group_teams(
+    group: str,
+    tied_teams: list[str],
+    group_stats: dict[str, dict[str, dict[str, float]]],
+    group_matches: dict[str, list[dict[str, Any]]],
+) -> list[str]:
+    mini_stats = build_mini_league_stats(tied_teams, group_matches[group])
+
+    def tie_key(team: str) -> tuple[float, float, float, float, float, float]:
+        overall = group_stats[group][team]
+        mini = mini_stats[team]
+        return (
+            mini["points"],
+            mini["gf"] - mini["ga"],
+            mini["gf"],
+            overall["gd"],
+            overall["gf"],
+            -float(TEAMS[team].rank),
+        )
+
+    return sorted(tied_teams, key=tie_key, reverse=True)
+
+
+def rank_group_table(
+    group: str,
+    group_stats: dict[str, dict[str, dict[str, float]]],
+    group_matches: dict[str, list[dict[str, Any]]],
+) -> list[dict[str, Any]]:
+    points_buckets: dict[float, list[str]] = {}
+    for team, row in group_stats[group].items():
+        points_buckets.setdefault(row["points"], []).append(team)
+
+    ordered_teams: list[str] = []
+    for points in sorted(points_buckets.keys(), reverse=True):
+        bucket = points_buckets[points]
+        if len(bucket) == 1:
+            ordered_teams.extend(bucket)
+            continue
+        ordered_teams.extend(sort_tied_group_teams(group, bucket, group_stats, group_matches))
+
+    ranked_rows: list[dict[str, Any]] = []
+    for position, team in enumerate(ordered_teams, start=1):
+        row = group_stats[group][team].copy()
+        row["position"] = position
+        ranked_rows.append(row)
+    return ranked_rows
+
+
+def qualification_tier(advance_prob: float, current_points: float, matches_played: float) -> str:
+    if advance_prob >= 0.9:
+        return "lock"
+    if advance_prob >= 0.7:
+        return "strong"
+    if advance_prob >= 0.45:
+        return "bubble"
+    if matches_played >= 2.0 and current_points <= 1.0:
+        return "critical"
+    return "under-pressure"
+
+
 def fit_goal_strength_model(state: dict[str, dict[str, float]]) -> dict[str, Any]:
     teams = list(TEAMS.keys())
     team_to_idx = {team: idx for idx, team in enumerate(teams)}
@@ -553,6 +739,272 @@ def build_driver_rows(match_id: str, match_date: str, team: str, xg_for: float, 
     return rows
 
 
+def simulate_group_outlooks(future_fixture_specs: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    base_group_stats, base_group_matches = build_actual_group_snapshot()
+    counts = {
+        team: {
+            "first": 0,
+            "second": 0,
+            "third": 0,
+            "fourth": 0,
+            "advance": 0,
+            "best_third": 0,
+            "eliminated": 0,
+            "projected_points": 0.0,
+            "projected_gd": 0.0,
+            "projected_gf": 0.0,
+        }
+        for team in TEAMS
+    }
+    rng = np.random.default_rng(SIMULATION_SEED + 17)
+
+    for _ in range(GROUP_TABLE_SIMULATIONS):
+        sim_group_stats, sim_group_matches = clone_group_snapshot(base_group_stats, base_group_matches)
+        for spec in future_fixture_specs:
+            goals_a = int(rng.poisson(max(float(spec["xg_a"]), 0.05)))
+            goals_b = int(rng.poisson(max(float(spec["xg_b"]), 0.05)))
+            apply_group_match(
+                sim_group_stats,
+                sim_group_matches,
+                str(spec["group"]),
+                str(spec["match_id"]),
+                str(spec["match_date"]),
+                str(spec["team_a"]),
+                str(spec["team_b"]),
+                goals_a,
+                goals_b,
+            )
+
+        ranked_groups: dict[str, list[dict[str, Any]]] = {}
+        third_rows: list[dict[str, Any]] = []
+        for group in sorted(GROUP_TEAMS):
+            ranked_rows = rank_group_table(group, sim_group_stats, sim_group_matches)
+            ranked_groups[group] = ranked_rows
+            for row in ranked_rows:
+                team = str(row["team"])
+                counts[team]["projected_points"] += float(row["points"])
+                counts[team]["projected_gd"] += float(row["gd"])
+                counts[team]["projected_gf"] += float(row["gf"])
+                if row["position"] == 1:
+                    counts[team]["first"] += 1
+                elif row["position"] == 2:
+                    counts[team]["second"] += 1
+                elif row["position"] == 3:
+                    counts[team]["third"] += 1
+                    third_rows.append(row)
+                else:
+                    counts[team]["fourth"] += 1
+
+        ranked_thirds = sorted(
+            third_rows,
+            key=lambda row: (
+                float(row["points"]),
+                float(row["gd"]),
+                float(row["gf"]),
+                -float(TEAMS[str(row["team"])].rank),
+            ),
+            reverse=True,
+        )
+        best_third_teams = {str(row["team"]) for row in ranked_thirds[:8]}
+
+        for ranked_rows in ranked_groups.values():
+            for row in ranked_rows:
+                team = str(row["team"])
+                if row["position"] <= 2:
+                    counts[team]["advance"] += 1
+                elif team in best_third_teams:
+                    counts[team]["advance"] += 1
+                    counts[team]["best_third"] += 1
+                else:
+                    counts[team]["eliminated"] += 1
+
+    current_ranked_by_group = {
+        group: rank_group_table(group, base_group_stats, base_group_matches)
+        for group in sorted(GROUP_TEAMS)
+    }
+    current_positions = {
+        row["team"]: row["position"]
+        for rows in current_ranked_by_group.values()
+        for row in rows
+    }
+
+    group_outlooks: list[dict[str, Any]] = []
+    for group in sorted(GROUP_TEAMS):
+        for team in GROUP_TEAMS[group]:
+            current_row = base_group_stats[group][team]
+            team_counts = counts[team]
+            advance_prob = team_counts["advance"] / GROUP_TABLE_SIMULATIONS
+            group_outlooks.append(
+                {
+                    "team": team,
+                    "group": group,
+                    "current_position": int(current_positions.get(team, 4)),
+                    "matches_played": int(current_row["matches"]),
+                    "current_points": round(float(current_row["points"]), 2),
+                    "current_goals_for": round(float(current_row["gf"]), 2),
+                    "current_goals_against": round(float(current_row["ga"]), 2),
+                    "current_goal_diff": round(float(current_row["gd"]), 2),
+                    "projected_points": round(team_counts["projected_points"] / GROUP_TABLE_SIMULATIONS, 2),
+                    "projected_goal_diff": round(team_counts["projected_gd"] / GROUP_TABLE_SIMULATIONS, 2),
+                    "projected_goals_for": round(team_counts["projected_gf"] / GROUP_TABLE_SIMULATIONS, 2),
+                    "first_place_prob": round(team_counts["first"] / GROUP_TABLE_SIMULATIONS, 4),
+                    "second_place_prob": round(team_counts["second"] / GROUP_TABLE_SIMULATIONS, 4),
+                    "third_place_prob": round(team_counts["third"] / GROUP_TABLE_SIMULATIONS, 4),
+                    "fourth_place_prob": round(team_counts["fourth"] / GROUP_TABLE_SIMULATIONS, 4),
+                    "best_third_advancement_prob": round(team_counts["best_third"] / GROUP_TABLE_SIMULATIONS, 4),
+                    "advance_prob": round(advance_prob, 4),
+                    "elimination_prob": round(team_counts["eliminated"] / GROUP_TABLE_SIMULATIONS, 4),
+                    "pressure_tier": qualification_tier(advance_prob, float(current_row["points"]), float(current_row["matches"])),
+                }
+            )
+
+    group_summaries: list[dict[str, Any]] = []
+    for group in sorted(GROUP_TEAMS):
+        rows = [row for row in group_outlooks if row["group"] == group]
+        by_group_win = sorted(rows, key=lambda row: (-float(row["first_place_prob"]), -float(row["advance_prob"]), row["team"]))
+        by_advance = sorted(rows, key=lambda row: (-float(row["advance_prob"]), -float(row["projected_points"]), row["team"]))
+        bubble_team = min(rows, key=lambda row: abs(float(row["advance_prob"]) - 0.5))
+        gap_second_third = float(by_advance[1]["advance_prob"]) - float(by_advance[2]["advance_prob"])
+        group_summaries.append(
+            {
+                "group": group,
+                "favorite_team": by_group_win[0]["team"],
+                "favorite_group_win_prob": round(float(by_group_win[0]["first_place_prob"]), 4),
+                "likely_advancers": [by_advance[0]["team"], by_advance[1]["team"]],
+                "bubble_team": bubble_team["team"],
+                "bubble_advance_prob": round(float(bubble_team["advance_prob"]), 4),
+                "second_third_gap": round(gap_second_third, 4),
+            }
+        )
+
+    group_outlooks = sorted(
+        group_outlooks,
+        key=lambda row: (row["group"], float(row["current_position"]), -float(row["advance_prob"]), row["team"]),
+    )
+    return group_outlooks, group_summaries
+
+
+def build_pattern_signals(
+    match_simulations: list[dict[str, Any]],
+    group_outlooks: list[dict[str, Any]],
+    group_summaries: list[dict[str, Any]],
+    team_profiles: list[dict[str, Any]],
+    state: dict[str, dict[str, float]],
+) -> list[dict[str, Any]]:
+    played_count = max(len(PLAYED_MATCHES), 1)
+    total_goals = sum(goals_a + goals_b for _, _, _, _, _, goals_a, goals_b in PLAYED_MATCHES)
+    over_2_5 = sum(1 for _, _, _, _, _, goals_a, goals_b in PLAYED_MATCHES if (goals_a + goals_b) >= 3)
+    draws = sum(1 for _, _, _, _, _, goals_a, goals_b in PLAYED_MATCHES if goals_a == goals_b)
+    clean_sheets = sum(
+        1
+        for _, _, _, _, _, goals_a, goals_b in PLAYED_MATCHES
+        if goals_a == 0 or goals_b == 0
+    )
+
+    host_teams = [team for team, info in TEAMS.items() if info.host]
+    host_matches = sum(state[team]["actual_matches"] for team in host_teams)
+    host_points = sum(state[team]["actual_points"] for team in host_teams)
+    host_goal_diff = sum(state[team]["actual_gf"] - state[team]["actual_ga"] for team in host_teams)
+    host_ppg = host_points / max(host_matches, 1.0)
+
+    advance_rows = sorted(group_outlooks, key=lambda row: (-float(row["advance_prob"]), row["team"]))
+    lower_seed_rows: list[dict[str, Any]] = []
+    upper_seed_rows: list[dict[str, Any]] = []
+    for row in group_outlooks:
+        ordered = GROUP_TEAMS[str(row["group"])]
+        seed_position = ordered.index(str(row["team"])) + 1
+        enriched = {**row, "seed_position": seed_position}
+        if seed_position >= 3:
+            lower_seed_rows.append(enriched)
+        else:
+            upper_seed_rows.append(enriched)
+
+    rising_team = max(lower_seed_rows, key=lambda row: (float(row["advance_prob"]), float(row["projected_points"])))
+    fragile_favorite = min(upper_seed_rows, key=lambda row: (float(row["advance_prob"]), -float(row["projected_points"])))
+    open_group = min(group_summaries, key=lambda row: float(row["second_third_gap"]))
+    knife_edge_match = min(
+        match_simulations,
+        key=lambda row: abs(float(row["team_a_win_prob_90m"]) - float(row["team_b_win_prob_90m"])),
+    )
+    highest_tempo = max(
+        match_simulations,
+        key=lambda row: (float(row["over_2_5_prob"]), float(row["team_a_predicted_goals"]) + float(row["team_b_predicted_goals"])),
+    )
+    form_leader = team_profiles[0] if team_profiles else None
+
+    return [
+        {
+            "title": "Clima de goles",
+            "tone": "base",
+            "summary": (
+                f"El torneo llega con {total_goals / played_count:.2f} goles por partido, "
+                f"{(over_2_5 / played_count) * 100:.1f}% de overs 2.5 y {(draws / played_count) * 100:.1f}% de empates."
+            ),
+        },
+        {
+            "title": "Pulso anfitrion",
+            "tone": "low",
+            "summary": (
+                f"Mexico, Canada y Estados Unidos suman {host_points:.0f} puntos en {host_matches:.0f} partidos "
+                f"({host_ppg:.2f} por juego) y un diferencial conjunto de {host_goal_diff:+.0f}."
+            ),
+        },
+        {
+            "title": "Sorpresa positiva",
+            "tone": "low",
+            "summary": (
+                f"{rising_team['team']} llega como semilla {rising_team['seed_position']} y aun asi proyecta "
+                f"{float(rising_team['advance_prob']) * 100:.1f}% de avance con {float(rising_team['projected_points']):.2f} puntos esperados."
+            ),
+        },
+        {
+            "title": "Favorito bajo presion",
+            "tone": "mid",
+            "summary": (
+                f"{fragile_favorite['team']} era semilla {fragile_favorite['seed_position']} en su grupo, "
+                f"pero solo marca {float(fragile_favorite['advance_prob']) * 100:.1f}% de pase."
+            ),
+        },
+        {
+            "title": "Grupo mas abierto",
+            "tone": "mid",
+            "summary": (
+                f"El Grupo {open_group['group']} es el mas fino: el margen entre el segundo y el tercero en probabilidad "
+                f"de clasificar es de solo {float(open_group['second_third_gap']) * 100:.1f} puntos."
+            ),
+        },
+        {
+            "title": "Cruce de maxima friccion",
+            "tone": "mid",
+            "summary": (
+                f"{knife_edge_match['team_a']} vs {knife_edge_match['team_b']} es el partido mas equilibrado; "
+                f"la diferencia entre ambos lados es minima y el empate vive en {float(knife_edge_match['draw_prob_90m']) * 100:.1f}%."
+            ),
+        },
+        {
+            "title": "Cruce mas caliente",
+            "tone": "low",
+            "summary": (
+                f"{highest_tempo['team_a']} vs {highest_tempo['team_b']} concentra la mayor probabilidad de over 2.5 "
+                f"({float(highest_tempo['over_2_5_prob']) * 100:.1f}%) y el mayor pulso ofensivo esperado."
+            ),
+        },
+        {
+            "title": "Equipo mas estable",
+            "tone": "low",
+            "summary": (
+                f"{form_leader['team']} lidera el corte por forma combinada, con indice de forma {float(form_leader['form_score']):.2f} "
+                f"y ataque relativo de {float(form_leader['attack_index']):.2f}."
+            ) if form_leader else "Sin perfiles suficientes para detectar estabilidad.",
+        },
+        {
+            "title": "Puertas cerradas",
+            "tone": "base",
+            "summary": f"El {clean_sheets / played_count:.1%} de los partidos ya jugados termino con al menos un arco en cero.",
+        },
+    ]
+
+
 def build_predictions() -> dict[str, Any]:
     historical_frame = load_statsbomb_world_cup_rows()
     ancillary_models = fit_ancillary_models(historical_frame)
@@ -563,6 +1015,7 @@ def build_predictions() -> dict[str, Any]:
     match_predictions: list[dict[str, Any]] = []
     match_simulations: list[dict[str, Any]] = []
     fixture_drivers: list[dict[str, Any]] = []
+    future_fixture_specs: list[dict[str, Any]] = []
 
     for match_date, match_id, group, team_a, team_b in FUTURE_FIXTURES:
         xg_a, xg_b, form_a, form_b = expected_xg(team_a, team_b, goal_model, state, match_date)
@@ -626,6 +1079,17 @@ def build_predictions() -> dict[str, Any]:
                 "predicted_winner": predicted_winner,
             }
         )
+        future_fixture_specs.append(
+            {
+                "match_id": match_id,
+                "match_date": match_date,
+                "group": group,
+                "team_a": team_a,
+                "team_b": team_b,
+                "xg_a": round(xg_a, 4),
+                "xg_b": round(xg_b, 4),
+            }
+        )
 
         state[team_a]["forecast_matches"] += 1.0
         state[team_b]["forecast_matches"] += 1.0
@@ -636,6 +1100,9 @@ def build_predictions() -> dict[str, Any]:
         state[team_b]["forecast_gf"] += xg_b
         state[team_b]["forecast_ga"] += xg_a
 
+    group_outlooks, group_summaries = simulate_group_outlooks(future_fixture_specs)
+    group_outlook_map = {row["team"]: row for row in group_outlooks}
+
     team_profiles = []
     for team, info in TEAMS.items():
         form = blended_form(team, state)
@@ -643,6 +1110,7 @@ def build_predictions() -> dict[str, Any]:
         attack_rating = goal_model["attack"][idx]
         defense_rating = goal_model["defense"][idx]
         shots_proxy = 4.9 + (4.3 * max(math.exp(goal_model["mu"] + attack_rating), 0.2))
+        group_outlook = group_outlook_map.get(team, {})
         team_profiles.append(
             {
                 "team": team,
@@ -657,9 +1125,14 @@ def build_predictions() -> dict[str, Any]:
                 "recent_shots_for": round(shots_proxy, 3),
                 "discipline_pressure": round(1.0 + max(form["pressure"], 0.0), 3),
                 "form_score": round((form["points_pm"] * 1.05) + (form["goal_diff_pm"] * 0.6) + (0.8 * state[team]["strength"]) - (0.18 * defense_rating), 3),
+                "advance_prob": round(float(group_outlook.get("advance_prob", 0.0)), 4),
+                "first_place_prob": round(float(group_outlook.get("first_place_prob", 0.0)), 4),
+                "current_position": int(group_outlook.get("current_position", 4)),
+                "projected_points": round(float(group_outlook.get("projected_points", 0.0)), 2),
             }
         )
     team_profiles = sorted(team_profiles, key=lambda row: (-row["form_score"], row["team"]))
+    pattern_signals = build_pattern_signals(match_simulations, group_outlooks, group_summaries, team_profiles, state)
 
     report_lines = [
         "# Mundial 2026 | Corte de fase de grupos con calibracion historica",
@@ -668,7 +1141,27 @@ def build_predictions() -> dict[str, Any]:
         "Modelo de goles: Poisson con ataque/defensa latentes, prior por ranking FIFA de junio 2026 y actualizacion por resultados reales del torneo.",
         "Metricas complementarias: remates, corners, tarjetas y offsides calibradas con eventos abiertos de StatsBomb de los Mundiales 2018 y 2022.",
         "",
+        "## Patrones y tendencias detectadas",
     ]
+    for signal in pattern_signals:
+        report_lines.append(f"- {signal['title']}: {signal['summary']}")
+    report_lines.extend(["", "## Probabilidades de clasificacion por grupo"])
+    for group in sorted(GROUP_TEAMS):
+        report_lines.append(f"### Grupo {group}")
+        group_rows = [row for row in group_outlooks if row["group"] == group]
+        group_rows = sorted(
+            group_rows,
+            key=lambda row: (-float(row["advance_prob"]), -float(row["first_place_prob"]), row["team"]),
+        )
+        for row in group_rows:
+            report_lines.append(
+                f"- {row['team']}: avance {float(row['advance_prob']) * 100:.1f}% | "
+                f"1ro {float(row['first_place_prob']) * 100:.1f}% | "
+                f"2do {float(row['second_place_prob']) * 100:.1f}% | "
+                f"mejor 3ro {float(row['best_third_advancement_prob']) * 100:.1f}% | "
+                f"puntos proyectados {float(row['projected_points']):.2f} | presion {row['pressure_tier']}."
+            )
+    report_lines.extend(["", "## Predicciones partido a partido"])
     last_date = ""
     for match in match_simulations:
         if match["match_date"] != last_date:
@@ -683,21 +1176,23 @@ def build_predictions() -> dict[str, Any]:
     analysis_report = "\n".join(report_lines)
 
     return {
-        "sourceLabel": "Mundial 2026 | fase de grupos restante | calibracion historica",
+        "sourceLabel": "Mundial 2026 | fase de grupos restante | calibracion historica + patrones + clasificacion",
         "createdAt": datetime(2026, 6, 19, 12, 0, 0).isoformat(),
         "modelSummary": {
             "model_name": "world-cup-live-bayesian-poisson-calibrated",
-            "model_type": "latent-attack-defense-poisson-plus-historical-calibration",
+            "model_type": "latent-attack-defense-poisson-plus-historical-calibration-and-group-simulation",
             "notes": [
                 "Base de fuerza con ranking FIFA de junio 2026.",
                 "Actualizacion con resultados reales del Mundial jugados hasta el 18 de junio de 2026.",
                 "Remates, corners, tarjetas y offsides calibrados con eventos abiertos de StatsBomb de los Mundiales 2018 y 2022.",
+                "La tabla se simula con desempates de mini-liga para equipos empatados en puntos dentro de cada grupo.",
                 "La capa de jugador no se publica en esta version porque no hay feed abierto uniforme de remates por jugador del Mundial 2026 en tiempo real dentro del proyecto.",
             ],
             "metadata": {
                 "available_targets": ["goals", "corners", "yellow_cards", "red_cards", "offsides", "shots"],
                 "simulations": SIMULATIONS,
                 "simulation_seed": SIMULATION_SEED,
+                "group_table_simulations": GROUP_TABLE_SIMULATIONS,
                 "cutoff_date": "2026-06-19",
                 "played_matches_in_cutoff": len(PLAYED_MATCHES),
                 "predicted_matches_remaining_in_groups": len(FUTURE_FIXTURES),
@@ -708,6 +1203,9 @@ def build_predictions() -> dict[str, Any]:
         "matchPredictions": match_predictions,
         "matchSimulations": match_simulations,
         "teamProfiles": team_profiles,
+        "groupOutlooks": group_outlooks,
+        "groupSummaries": group_summaries,
+        "patternSignals": pattern_signals,
         "fixtureDrivers": fixture_drivers,
         "playerPredictions": [],
         "analysisReport": analysis_report,

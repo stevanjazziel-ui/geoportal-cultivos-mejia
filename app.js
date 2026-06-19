@@ -46600,6 +46600,9 @@ function normalizeWorldCupBundle(bundle = {}) {
     matchPredictions: Array.isArray(bundle.matchPredictions) ? bundle.matchPredictions : [],
     matchSimulations: Array.isArray(bundle.matchSimulations) ? bundle.matchSimulations : [],
     teamProfiles: Array.isArray(bundle.teamProfiles) ? bundle.teamProfiles : [],
+    groupOutlooks: Array.isArray(bundle.groupOutlooks) ? bundle.groupOutlooks : [],
+    groupSummaries: Array.isArray(bundle.groupSummaries) ? bundle.groupSummaries : [],
+    patternSignals: Array.isArray(bundle.patternSignals) ? bundle.patternSignals : [],
     fixtureDrivers: Array.isArray(bundle.fixtureDrivers) ? bundle.fixtureDrivers : [],
     playerPredictions: Array.isArray(bundle.playerPredictions) ? bundle.playerPredictions : [],
     analysisReport: String(bundle.analysisReport || ""),
@@ -46626,6 +46629,14 @@ function getWorldCupMetricTargets(bundle) {
     : [];
 }
 
+function getWorldCupGroupOutlooks(bundle) {
+  return Array.isArray(bundle?.groupOutlooks) ? bundle.groupOutlooks : [];
+}
+
+function getWorldCupPatternSignals(bundle) {
+  return Array.isArray(bundle?.patternSignals) ? bundle.patternSignals : [];
+}
+
 function getWorldCupDriverRows(bundle, matchId, team, target) {
   return (bundle?.fixtureDrivers || [])
     .filter((row) => String(row.match_id || "") === String(matchId || "") && String(row.team || "") === String(team || "") && String(row.target || "") === String(target || ""))
@@ -46646,6 +46657,7 @@ function buildWorldCupDriverSummary(bundle, matchId, team, target, limit = 2) {
 function buildWorldCupHighlights(bundle) {
   const simulations = Array.isArray(bundle.matchSimulations) ? bundle.matchSimulations : [];
   const profiles = Array.isArray(bundle.teamProfiles) ? bundle.teamProfiles : [];
+  const outlooks = getWorldCupGroupOutlooks(bundle);
   const players = Array.isArray(bundle.playerPredictions) ? bundle.playerPredictions : [];
   const bestFavorite = simulations.reduce((best, item) => {
     const teamAProb = toWorldCupNumber(item.team_a_win_prob_90m);
@@ -46667,11 +46679,27 @@ function buildWorldCupHighlights(bundle) {
     const candidate = { playerName: item.player_name, team: item.team, shots: toWorldCupNumber(item.predicted_player_shots) };
     return !best || candidate.shots > best.shots ? candidate : best;
   }, null);
+  const qualificationLock = outlooks.reduce((best, item) => {
+    const candidate = { team: item.team, advanceProb: toWorldCupNumber(item.advance_prob), group: item.group };
+    return !best || candidate.advanceProb > best.advanceProb ? candidate : best;
+  }, null);
+  const bubbleTeam = outlooks
+    .filter((item) => {
+      const advanceProb = toWorldCupNumber(item.advance_prob);
+      return advanceProb > 0.15 && advanceProb < 0.85;
+    })
+    .reduce((best, item) => {
+      const advanceProb = toWorldCupNumber(item.advance_prob);
+      const candidate = { team: item.team, group: item.group, advanceProb };
+      return !best || Math.abs(candidate.advanceProb - 0.5) < Math.abs(best.advanceProb - 0.5) ? candidate : best;
+    }, null);
   return {
     bestFavorite,
     topOver,
     formLeader,
     topShooter,
+    qualificationLock,
+    bubbleTeam,
   };
 }
 
@@ -46692,6 +46720,9 @@ function renderWorldCupPredictorCard() {
 
   const simulations = bundle.matchSimulations || [];
   const profiles = bundle.teamProfiles || [];
+  const outlooks = getWorldCupGroupOutlooks(bundle);
+  const groupSummaries = Array.isArray(bundle.groupSummaries) ? bundle.groupSummaries : [];
+  const signals = getWorldCupPatternSignals(bundle);
   const players = bundle.playerPredictions || [];
   const targets = getWorldCupMetricTargets(bundle);
   const highlights = buildWorldCupHighlights(bundle);
@@ -46725,9 +46756,13 @@ function renderWorldCupPredictorCard() {
       copy: highlights.formLeader ? `Form score ${highlights.formLeader.formScore.toFixed(2)}` : "Sin perfiles cargados",
     },
     {
-      label: "Rematador top",
-      value: highlights.topShooter ? highlights.topShooter.playerName : "Sin dato",
-      copy: highlights.topShooter ? `${highlights.topShooter.team} | ${highlights.topShooter.shots.toFixed(2)} remates esperados` : "Sin jugadores cargados",
+      label: highlights.topShooter ? "Rematador top" : "Pase mas solido",
+      value: highlights.topShooter ? highlights.topShooter.playerName : highlights.qualificationLock ? highlights.qualificationLock.team : "Sin dato",
+      copy: highlights.topShooter
+        ? `${highlights.topShooter.team} | ${highlights.topShooter.shots.toFixed(2)} remates esperados`
+        : highlights.qualificationLock
+          ? `Grupo ${highlights.qualificationLock.group} | ${formatWorldCupPercent(highlights.qualificationLock.advanceProb)} de avance`
+          : "Sin jugadores ni outlooks cargados",
     },
   ]);
 
@@ -46738,11 +46773,14 @@ function renderWorldCupPredictorCard() {
       <div>
         <p class="section-kicker">Radar del torneo</p>
         <h4>${escapeHtmlContent(highlights.bestFavorite ? `${highlights.bestFavorite.team} llega como favorito mas fuerte` : "Corrida cargada")}</h4>
-        <p>${escapeHtmlContent(highlights.topOver ? `${highlights.topOver.matchLabel} es el cruce con mayor over 2.5 (${formatWorldCupPercent(highlights.topOver.probability)}).` : "La corrida ya puede compararse por cruces, drivers y volumen ofensivo.")}</p>
+        <p>${escapeHtmlContent(
+          signals[0]?.summary
+            || (highlights.topOver ? `${highlights.topOver.matchLabel} es el cruce con mayor over 2.5 (${formatWorldCupPercent(highlights.topOver.probability)}).` : "La corrida ya puede compararse por cruces, drivers y volumen ofensivo.")
+        )}</p>
       </div>
       <div class="decision-score-stack">
         <strong>${escapeHtmlContent(bundle.sourceLabel)}</strong>
-        <span>${simulations.length || Math.round(bundle.matchPredictions.length / 2)} cruces</span>
+        <span>${simulations.length || Math.round(bundle.matchPredictions.length / 2)} cruces | ${outlooks.length || 0} outlooks</span>
       </div>
     </article>
     <div class="decision-grid">
@@ -46793,7 +46831,54 @@ function renderWorldCupPredictorCard() {
   `).join(""));
 
   if (!players.length) {
-    resetVisualPanel(dom.worldCupPredictorPlayers, "No hay remates por jugador en esta carga. Sube tambien player_predictions.csv o un bundle que lo incluya.");
+    if (!outlooks.length && !signals.length) {
+      resetVisualPanel(dom.worldCupPredictorPlayers, "No hay remates por jugador ni outlooks de clasificacion en esta carga.");
+    } else {
+      const groupedOutlooks = Array.from(new Set(outlooks.map((item) => item.group))).map((group) => ({
+        group,
+        summary: groupSummaries.find((item) => item.group === group) || null,
+        teams: outlooks
+          .filter((item) => item.group === group)
+          .sort((left, right) => toWorldCupNumber(right.advance_prob) - toWorldCupNumber(left.advance_prob)),
+      }));
+      dom.worldCupPredictorPlayers.classList.remove("empty-state");
+      dom.worldCupPredictorPlayers.classList.add("has-data");
+      setHtmlIfChanged(dom.worldCupPredictorPlayers, `
+        <article>
+          <p class="section-kicker">Patrones y clasificacion</p>
+          <h4>Lectura completa de grupos</h4>
+        </article>
+        <div class="decision-grid">
+          ${signals.slice(0, 6).map((item) => `
+            <article class="decision-card tone-${escapeHtmlAttribute(item.tone || "base")}">
+              <p class="candidate-rank">senal</p>
+              <h5>${escapeHtmlContent(item.title || "Lectura activa")}</h5>
+              <p>${escapeHtmlContent(item.summary || "Sin resumen cargado.")}</p>
+            </article>
+          `).join("")}
+        </div>
+        ${groupedOutlooks.map((entry) => `
+          <article class="territorial-sector-sheet tone-base">
+            <div class="territorial-sector-head">
+              <div>
+                <p class="candidate-rank">Grupo ${escapeHtmlContent(entry.group)}</p>
+                <h4>${escapeHtmlContent(entry.summary ? `${entry.summary.favorite_team} lidera la proyeccion` : `Lectura del Grupo ${entry.group}`)}</h4>
+              </div>
+              <span class="planning-pill emphasis">${entry.summary ? formatWorldCupPercent(entry.summary.favorite_group_win_prob) : "n/d"}</span>
+            </div>
+            <p class="territorial-readout-copy">${escapeHtmlContent(entry.summary ? `Burbuja: ${entry.summary.bubble_team} con ${formatWorldCupPercent(entry.summary.bubble_advance_prob)} de avance.` : "Sin resumen de grupo cargado.")}</p>
+            <div class="decision-list compact">
+              ${entry.teams.map((item) => `
+                <article>
+                  <strong>${escapeHtmlContent(item.team)}</strong>
+                  <p>Avance ${formatWorldCupPercent(item.advance_prob)} | 1ro ${formatWorldCupPercent(item.first_place_prob)} | mejor 3ro ${formatWorldCupPercent(item.best_third_advancement_prob)} | puntos ${toWorldCupNumber(item.projected_points).toFixed(2)}.</p>
+                </article>
+              `).join("")}
+            </div>
+          </article>
+        `).join("")}
+      `);
+    }
   } else {
     dom.worldCupPredictorPlayers.classList.remove("empty-state");
     dom.worldCupPredictorPlayers.classList.add("has-data");
