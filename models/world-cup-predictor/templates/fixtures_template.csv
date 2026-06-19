@@ -1,0 +1,5 @@
+match_id,match_date,team,opponent,stage,team_rank,opponent_rank
+F001,2026-06-21,Mexico,Czechia,group,15,29
+F001,2026-06-21,Czechia,Mexico,group,29,15
+F002,2026-06-21,South Africa,Korea Republic,group,42,23
+F002,2026-06-21,Korea Republic,South Africa,group,23,42

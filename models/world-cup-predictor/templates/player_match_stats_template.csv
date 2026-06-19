@@ -1,0 +1,10 @@
+match_id,match_date,team,player_id,player_name,minutes_played,shots
+M001,2026-06-11,Mexico,MEX_09,Santiago Gimenez,90,4
+M001,2026-06-11,Mexico,MEX_10,Orbelin Pineda,84,2
+M001,2026-06-11,Mexico,MEX_07,Hirving Lozano,76,3
+M001,2026-06-11,South Africa,SAF_09,Player 9,90,3
+M001,2026-06-11,South Africa,SAF_10,Player 10,81,2
+M002,2026-06-11,Korea Republic,KOR_07,Player 7,90,2
+M002,2026-06-11,Korea Republic,KOR_09,Player 9,88,3
+M002,2026-06-11,Czechia,CZE_09,Player 9,90,2
+M002,2026-06-11,Czechia,CZE_11,Player 11,72,2

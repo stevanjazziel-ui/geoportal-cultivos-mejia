@@ -4,7 +4,8 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260616-1";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260619-1";
+const WORLD_CUP_DEMO_BUNDLE_URL = "./public-data/world-cup-predictor/demo_bundle.json";
 
 const layerCatalog = [
   {
@@ -236,6 +237,7 @@ const gpsRouteVisibleModuleCardIds = new Set([
   "gpsCard",
   "executiveDashboardCard",
   "reportCenterCard",
+  "worldCupPredictorCard",
   "alertCenterCard",
   "projectRegistryCard",
   "decisionLogCard",
@@ -250,6 +252,7 @@ const cadastreRouteVisibleModuleCardIds = new Set([
   "digitalCadastreCard",
   "executiveDashboardCard",
   "reportCenterCard",
+  "worldCupPredictorCard",
   "alertCenterCard",
   "projectRegistryCard",
   "decisionLogCard",
@@ -278,6 +281,7 @@ const pivaRouteVisibleModuleCardIds = new Set([
   "officialDataCard",
   "executiveDashboardCard",
   "reportCenterCard",
+  "worldCupPredictorCard",
   "alertCenterCard",
   "projectRegistryCard",
   "decisionLogCard",
@@ -295,6 +299,7 @@ const limaPlanningVisibleGlobalModuleCardIds = new Set([
   "officialDataCard",
   "executiveDashboardCard",
   "reportCenterCard",
+  "worldCupPredictorCard",
   "projectRegistryCard",
   "decisionLogCard",
   "accessRolesCard",
@@ -4210,6 +4215,7 @@ const state = {
     planificacion: null,
   },
   territorialOpsData: null,
+  worldCupPredictorBundle: null,
   userProfile: {
     name: "Usuario publico",
     roleId: "tecnico",
@@ -6437,6 +6443,18 @@ function cacheDom() {
   dom.timeSeriesCard = document.querySelector("#timeSeriesCard");
   dom.refreshTimeSeriesBtn = document.querySelector("#refreshTimeSeriesBtn");
   dom.timeSeriesBoard = document.querySelector("#timeSeriesBoard");
+  dom.worldCupPredictorCard = document.querySelector("#worldCupPredictorCard");
+  dom.loadWorldCupDemoBtn = document.querySelector("#loadWorldCupDemoBtn");
+  dom.openWorldCupBundleBtn = document.querySelector("#openWorldCupBundleBtn");
+  dom.downloadWorldCupBundleBtn = document.querySelector("#downloadWorldCupBundleBtn");
+  dom.downloadWorldCupReportBtn = document.querySelector("#downloadWorldCupReportBtn");
+  dom.clearWorldCupPredictorBtn = document.querySelector("#clearWorldCupPredictorBtn");
+  dom.worldCupBundleInput = document.querySelector("#worldCupBundleInput");
+  dom.worldCupPredictorSummary = document.querySelector("#worldCupPredictorSummary");
+  dom.worldCupPredictorBoard = document.querySelector("#worldCupPredictorBoard");
+  dom.worldCupPredictorFixtures = document.querySelector("#worldCupPredictorFixtures");
+  dom.worldCupPredictorPlayers = document.querySelector("#worldCupPredictorPlayers");
+  dom.worldCupPredictorNarrative = document.querySelector("#worldCupPredictorNarrative");
   dom.alertCenterCard = document.querySelector("#alertCenterCard");
   dom.refreshAlertCenterBtn = document.querySelector("#refreshAlertCenterBtn");
   dom.alertCenterBoard = document.querySelector("#alertCenterBoard");
@@ -6798,6 +6816,7 @@ function bootstrapApp() {
   loadQuitoFacilitiesSummary().catch((error) => {
     console.warn("No se pudo cargar el estado publicado del proyecto Quito.", error);
   });
+  loadWorldCupDemoBundle(true).catch(() => {});
   hydratePlanning3dManifest();
   setTerritorialArea(state.territorialAreaId, { rerun: false, reload3d: false, silent: true });
   applyRouteFromUrl();
@@ -7238,6 +7257,16 @@ function bindUI() {
   dom.refreshScenarioLabBtn?.addEventListener("click", renderScenarioLabCard);
   dom.scenarioLabBoard?.addEventListener("click", handleScenarioLabInteraction);
   dom.refreshTimeSeriesBtn?.addEventListener("click", renderTimeSeriesCard);
+  dom.loadWorldCupDemoBtn?.addEventListener("click", () => {
+    loadWorldCupDemoBundle();
+  });
+  dom.openWorldCupBundleBtn?.addEventListener("click", () => {
+    dom.worldCupBundleInput?.click();
+  });
+  dom.worldCupBundleInput?.addEventListener("change", handleWorldCupBundleSelection);
+  dom.downloadWorldCupBundleBtn?.addEventListener("click", downloadWorldCupBundleJson);
+  dom.downloadWorldCupReportBtn?.addEventListener("click", downloadWorldCupBundleReport);
+  dom.clearWorldCupPredictorBtn?.addEventListener("click", clearWorldCupPredictorBundle);
   dom.refreshAlertCenterBtn?.addEventListener("click", renderAlertCenterCard);
   dom.saveProjectBtn?.addEventListener("click", saveCurrentProject);
   dom.refreshProjectsBtn?.addEventListener("click", () => loadPlatformProjects(true));
@@ -9232,6 +9261,7 @@ function getModuleCardLabel(card) {
     reportCenterCard: "Reportes",
     scenarioLabCard: "Escenarios+",
     timeSeriesCard: "Series",
+    worldCupPredictorCard: "Mundial",
     alertCenterCard: "Alertas IA",
     projectRegistryCard: "Proyectos",
     decisionLogCard: "Bitacora",
@@ -9287,6 +9317,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
         { id: "planning-risk", label: "Riesgo", copy: "Contencion y borde", tone: "neutral" },
         { id: "planning-official", label: "Oficiales", copy: "Capas y soporte", tone: "neutral" },
         { id: "planning-3d", label: "3D", copy: "Corredor y propuesta", tone: "accent" },
+        { id: "suite-worldcup", label: "Mundial", copy: "Prediccion y cruces", tone: "neutral" },
         { id: "suite-dashboard", label: "Dashboard", copy: "Semaforos y avance", tone: "neutral" },
       ],
       filters: [
@@ -9310,6 +9341,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
         { id: "planning-cadastre", label: "Leer predios", copy: "Contornos visibles", tone: "accent" },
         { id: "planning-official", label: "Oficiales", copy: "Vias y drenaje", tone: "neutral" },
         { id: "cadastre-focus", label: "Centrar", copy: "Predios detectados", tone: "neutral" },
+        { id: "suite-worldcup", label: "Mundial", copy: "Prediccion y cruces", tone: "neutral" },
         { id: "gps-reports", label: "Reportes", copy: "HTML, JSON y CSV", tone: "neutral" },
       ],
       filters: [
@@ -9335,6 +9367,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
         { id: "gps-alerts", label: "Alertas", copy: "Desvios y registro", tone: "neutral" },
         { id: "gps-reports", label: "Reportes", copy: "Exporte y lectura", tone: "neutral" },
         { id: "gps-projects", label: "Proyectos", copy: "Guardar sesion", tone: "neutral" },
+        { id: "suite-worldcup", label: "Mundial", copy: "Prediccion y cruces", tone: "neutral" },
         { id: "gps-dashboard", label: "Dashboard", copy: "Control ejecutivo", tone: "neutral" },
       ],
       filters: [
@@ -9367,6 +9400,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
         { id: "planning-housing", label: "Vivienda", copy: "Oferta y tension", tone: "neutral" },
         { id: "planning-strategy", label: "FODA + CAME", copy: "Diagnostico y accion", tone: "neutral" },
         { id: "planning-3d", label: "Visor 3D", copy: "Volumen y sombra", tone: "accent" },
+        { id: "suite-worldcup", label: "Mundial", copy: "Prediccion y cruces", tone: "neutral" },
         { id: "suite-dashboard", label: "Dashboard", copy: "Reporte y control", tone: "neutral" },
       ],
       filters: [
@@ -9394,6 +9428,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
       { id: "agronomy-suitability", label: "Cultivo", copy: "Aptitud agroclimatica", tone: "neutral" },
       { id: "agronomy-gps", label: "GPS", copy: "Seguimiento y corredor", tone: "accent" },
       { id: "agronomy-assistant", label: "Asistente", copy: "Plan guiado por etapa", tone: "neutral" },
+      { id: "suite-worldcup", label: "Mundial", copy: "Prediccion y cruces", tone: "neutral" },
       { id: "suite-dashboard", label: "Dashboard", copy: "Reporte y control", tone: "neutral" },
     ],
     filters: [
@@ -9419,7 +9454,7 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
     structure: new Set(["hydrologyCard", "urbanClimateCard", "mobilityCard", "riskCard", "landChangeCard", "zoningPatternsCard", "planning3dCard", "territorialScenarioCard"]),
     official: new Set(["officialDataCard"]),
     projects: new Set(["pivaCard", "territorialScenarioCard", "planning3dCard", "projectRegistryCard", "reportCenterCard"]),
-    product: new Set(["executiveDashboardCard", "reportCenterCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
+    product: new Set(["executiveDashboardCard", "reportCenterCard", "worldCupPredictorCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
   };
 
   const planningFilters = {
@@ -9429,14 +9464,14 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
     growth: new Set(["mobilityCard", "landChangeCard", "territorialScenarioCard", "zoningPatternsCard", "housingPatternsCard", "urbanClimateCard", "pivaCard"]),
     strategy: new Set(["fodaCameCard", "territorialDecisionCard", "territorialAlertsCard", "aiGeoCard", "zoningPatternsCard", "housingPatternsCard", "urbanClimateCard", "pivaCard", "quitoFacilitiesCard"]),
     validation: new Set(["planning3dCard", "digitalCadastreCard"]),
-    product: new Set(["executiveDashboardCard", "reportCenterCard", "scenarioLabCard", "timeSeriesCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
+    product: new Set(["executiveDashboardCard", "reportCenterCard", "scenarioLabCard", "timeSeriesCard", "worldCupPredictorCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
   };
 
   const cadastreFilters = {
     core: new Set(["digitalCadastreCard"]),
     official: new Set(["officialDataCard", "digitalCadastreCard"]),
     validation: new Set(["digitalCadastreCard"]),
-    product: new Set(["executiveDashboardCard", "reportCenterCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
+    product: new Set(["executiveDashboardCard", "reportCenterCard", "worldCupPredictorCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
   };
 
   const agronomyFilters = {
@@ -9446,14 +9481,14 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
     climate: new Set(["climateCard", "inamhiCard", "agroSuitabilityCard"]),
     operations: new Set(["gpsCard"]),
     assistant: new Set(["wizardCard", "aiGeoCard"]),
-    product: new Set(["executiveDashboardCard", "reportCenterCard", "scenarioLabCard", "timeSeriesCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
+    product: new Set(["executiveDashboardCard", "reportCenterCard", "scenarioLabCard", "timeSeriesCard", "worldCupPredictorCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
   };
 
   const gpsFilters = {
     tracking: new Set(["gpsCard"]),
     alerts: new Set(["gpsCard", "alertCenterCard", "decisionLogCard"]),
     records: new Set(["reportCenterCard", "projectRegistryCard", "decisionLogCard"]),
-    management: new Set(["executiveDashboardCard", "reportCenterCard", "projectRegistryCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
+    management: new Set(["executiveDashboardCard", "reportCenterCard", "worldCupPredictorCard", "projectRegistryCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
   };
 
   const filters = isCadastreRoute(route)
@@ -9498,6 +9533,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
       planning3dCard: true,
       executiveDashboardCard: false,
       reportCenterCard: true,
+      worldCupPredictorCard: true,
       alertCenterCard: false,
       projectRegistryCard: true,
       decisionLogCard: true,
@@ -9514,6 +9550,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
       digitalCadastreCard: false,
       executiveDashboardCard: false,
       reportCenterCard: true,
+      worldCupPredictorCard: true,
       alertCenterCard: false,
       projectRegistryCard: true,
       decisionLogCard: true,
@@ -9551,6 +9588,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
       reportCenterCard: true,
       scenarioLabCard: true,
       timeSeriesCard: true,
+      worldCupPredictorCard: true,
       alertCenterCard: false,
       projectRegistryCard: true,
       decisionLogCard: true,
@@ -9566,6 +9604,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
       gpsCard: false,
       executiveDashboardCard: false,
       reportCenterCard: true,
+      worldCupPredictorCard: true,
       alertCenterCard: false,
       projectRegistryCard: true,
       decisionLogCard: true,
@@ -9591,6 +9630,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
     reportCenterCard: true,
     scenarioLabCard: true,
     timeSeriesCard: true,
+    worldCupPredictorCard: true,
     alertCenterCard: false,
     projectRegistryCard: true,
     decisionLogCard: true,
@@ -9842,6 +9882,9 @@ function clearPlanningModuleFocus() {
   }
   if (dom.riskCard) {
     dom.riskCard.classList.remove("entry-focus");
+  }
+  if (dom.worldCupPredictorCard) {
+    dom.worldCupPredictorCard.classList.remove("entry-focus");
   }
 }
 
@@ -10481,6 +10524,16 @@ function runWorkflowGuideAction(actionId) {
     case "planning-3d":
       openSidebarWorkingPanel("modulos");
       dom.openPlanning3dBtn?.click();
+      return;
+    case "suite-worldcup":
+      openSidebarWorkingPanel("modulos");
+      focusModuleCard(dom.worldCupPredictorCard);
+      if (!state.worldCupPredictorBundle) {
+        loadWorldCupDemoBundle(true).catch((error) => {
+          console.warn("No se pudo cargar la demo del predictor del Mundial.", error);
+        });
+      }
+      setStatus("Modulo del Mundial listo para cargar cruces, simulaciones y remates esperados en una vista aparte.");
       return;
     case "suite-dashboard":
       openSidebarWorkingPanel("modulos");
@@ -44637,6 +44690,7 @@ function renderProductSuite() {
   renderReportCenterCard();
   renderScenarioLabCard();
   renderTimeSeriesCard();
+  renderWorldCupPredictorCard();
   renderAlertCenterCard();
   renderProjectRegistryCard();
   renderDecisionLogCard();
@@ -46469,6 +46523,408 @@ function readTextFile(file) {
     reader.onerror = () => reject(new Error(`No se pudo leer ${file?.name || "el archivo"}.`));
     reader.readAsText(file);
   });
+}
+
+function parseCsvRow(text = "") {
+  const values = [];
+  let current = "";
+  let inQuotes = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (char === '"') {
+      if (inQuotes && text[index + 1] === '"') {
+        current += '"';
+        index += 1;
+      } else {
+        inQuotes = !inQuotes;
+      }
+      continue;
+    }
+    if (char === "," && !inQuotes) {
+      values.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  values.push(current);
+  return values;
+}
+
+function parseCsvText(text = "") {
+  const normalized = String(text || "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+  if (!normalized) {
+    return [];
+  }
+  const lines = normalized.split("\n").filter((line) => line.trim().length);
+  if (!lines.length) {
+    return [];
+  }
+  const headers = parseCsvRow(lines[0]).map((header) => String(header || "").trim());
+  return lines.slice(1).map((line) => {
+    const cells = parseCsvRow(line);
+    return headers.reduce((row, header, index) => {
+      row[header] = cells[index] ?? "";
+      return row;
+    }, {});
+  });
+}
+
+function toWorldCupNumber(value, fallback = 0) {
+  if (value === null || value === undefined || value === "") {
+    return fallback;
+  }
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : fallback;
+}
+
+function normalizeWorldCupBundle(bundle = {}) {
+  return {
+    sourceLabel: String(bundle.sourceLabel || bundle.source || "Carga manual"),
+    createdAt: String(bundle.createdAt || new Date().toISOString()),
+    modelSummary: bundle.modelSummary && typeof bundle.modelSummary === "object" ? bundle.modelSummary : {},
+    matchPredictions: Array.isArray(bundle.matchPredictions) ? bundle.matchPredictions : [],
+    matchSimulations: Array.isArray(bundle.matchSimulations) ? bundle.matchSimulations : [],
+    teamProfiles: Array.isArray(bundle.teamProfiles) ? bundle.teamProfiles : [],
+    fixtureDrivers: Array.isArray(bundle.fixtureDrivers) ? bundle.fixtureDrivers : [],
+    playerPredictions: Array.isArray(bundle.playerPredictions) ? bundle.playerPredictions : [],
+    analysisReport: String(bundle.analysisReport || ""),
+  };
+}
+
+function getWorldCupConfidenceTone(confidence = "") {
+  if (confidence === "high") {
+    return "low";
+  }
+  if (confidence === "medium") {
+    return "mid";
+  }
+  return "base";
+}
+
+function formatWorldCupPercent(value) {
+  return `${(toWorldCupNumber(value) * 100).toFixed(1)}%`;
+}
+
+function getWorldCupMetricTargets(bundle) {
+  return Array.isArray(bundle?.modelSummary?.metadata?.available_targets)
+    ? bundle.modelSummary.metadata.available_targets
+    : [];
+}
+
+function getWorldCupDriverRows(bundle, matchId, team, target) {
+  return (bundle?.fixtureDrivers || [])
+    .filter((row) => String(row.match_id || "") === String(matchId || "") && String(row.team || "") === String(team || "") && String(row.target || "") === String(target || ""))
+    .sort((left, right) => toWorldCupNumber(left.rank, 99) - toWorldCupNumber(right.rank, 99));
+}
+
+function buildWorldCupDriverSummary(bundle, matchId, team, target, limit = 2) {
+  const rows = getWorldCupDriverRows(bundle, matchId, team, target).slice(0, limit);
+  if (!rows.length) {
+    return "Sin driver dominante disponible.";
+  }
+  return rows.map((row) => {
+    const contribution = toWorldCupNumber(row.contribution);
+    return `${row.feature} (${contribution >= 0 ? "+" : "-"}${Math.abs(contribution).toFixed(2)})`;
+  }).join(" | ");
+}
+
+function buildWorldCupHighlights(bundle) {
+  const simulations = Array.isArray(bundle.matchSimulations) ? bundle.matchSimulations : [];
+  const profiles = Array.isArray(bundle.teamProfiles) ? bundle.teamProfiles : [];
+  const players = Array.isArray(bundle.playerPredictions) ? bundle.playerPredictions : [];
+  const bestFavorite = simulations.reduce((best, item) => {
+    const teamAProb = toWorldCupNumber(item.team_a_win_prob_90m);
+    const teamBProb = toWorldCupNumber(item.team_b_win_prob_90m);
+    const candidate = teamAProb >= teamBProb
+      ? { team: item.team_a, opponent: item.team_b, probability: teamAProb, matchId: item.match_id }
+      : { team: item.team_b, opponent: item.team_a, probability: teamBProb, matchId: item.match_id };
+    return !best || candidate.probability > best.probability ? candidate : best;
+  }, null);
+  const topOver = simulations.reduce((best, item) => {
+    const candidate = { matchLabel: `${item.team_a} vs ${item.team_b}`, probability: toWorldCupNumber(item.over_2_5_prob) };
+    return !best || candidate.probability > best.probability ? candidate : best;
+  }, null);
+  const formLeader = profiles.reduce((best, item) => {
+    const candidate = { team: item.team, formScore: toWorldCupNumber(item.form_score) };
+    return !best || candidate.formScore > best.formScore ? candidate : best;
+  }, null);
+  const topShooter = players.reduce((best, item) => {
+    const candidate = { playerName: item.player_name, team: item.team, shots: toWorldCupNumber(item.predicted_player_shots) };
+    return !best || candidate.shots > best.shots ? candidate : best;
+  }, null);
+  return {
+    bestFavorite,
+    topOver,
+    formLeader,
+    topShooter,
+  };
+}
+
+function renderWorldCupPredictorCard() {
+  if (!dom.worldCupPredictorSummary || !dom.worldCupPredictorBoard || !dom.worldCupPredictorFixtures || !dom.worldCupPredictorPlayers || !dom.worldCupPredictorNarrative) {
+    return;
+  }
+
+  const bundle = state.worldCupPredictorBundle;
+  if (!bundle?.matchPredictions?.length) {
+    resetMetricGrid(dom.worldCupPredictorSummary, "Carga una corrida del predictor o usa la demo para ver cruces, simulaciones y lideres de remate.");
+    resetVisualPanel(dom.worldCupPredictorBoard, "Aqui aparecera la lectura ejecutiva del torneo con favorito dominante, partido mas abierto y lectura general del modelo.");
+    resetVisualPanel(dom.worldCupPredictorFixtures, "Aqui apareceran los cruces simulados, sus probabilidades en 90 minutos y los drivers principales por equipo.");
+    resetVisualPanel(dom.worldCupPredictorPlayers, "Aqui apareceran los jugadores con mayor volumen esperado de remates en cada partido cargado.");
+    resetVisualPanel(dom.worldCupPredictorNarrative, "Aqui aparecera el reporte narrativo de la corrida para lectura rapida.");
+    return;
+  }
+
+  const simulations = bundle.matchSimulations || [];
+  const profiles = bundle.teamProfiles || [];
+  const players = bundle.playerPredictions || [];
+  const targets = getWorldCupMetricTargets(bundle);
+  const highlights = buildWorldCupHighlights(bundle);
+  const createdAtLabel = bundle.createdAt ? new Date(bundle.createdAt).toLocaleString("es-EC") : "sin fecha";
+
+  paintMetricGrid(dom.worldCupPredictorSummary, [
+    {
+      label: "Cruces cargados",
+      value: `${simulations.length || Math.round(bundle.matchPredictions.length / 2)}`,
+      copy: `${bundle.sourceLabel} | ${createdAtLabel}`,
+      highlight: true,
+    },
+    {
+      label: "Objetivos",
+      value: `${targets.length || 0}`,
+      copy: targets.length ? targets.join(", ") : "Sin metadata declarada",
+    },
+    {
+      label: "Simulaciones",
+      value: `${bundle.modelSummary?.metadata?.simulations || 0}`,
+      copy: `Semilla ${bundle.modelSummary?.metadata?.simulation_seed || "n/d"}`,
+    },
+    {
+      label: "Favorito lider",
+      value: highlights.bestFavorite ? highlights.bestFavorite.team : "Sin dato",
+      copy: highlights.bestFavorite ? `${formatWorldCupPercent(highlights.bestFavorite.probability)} sobre ${highlights.bestFavorite.opponent}` : "Sin favorito dominante",
+    },
+    {
+      label: "Equipo en forma",
+      value: highlights.formLeader ? highlights.formLeader.team : "Sin dato",
+      copy: highlights.formLeader ? `Form score ${highlights.formLeader.formScore.toFixed(2)}` : "Sin perfiles cargados",
+    },
+    {
+      label: "Rematador top",
+      value: highlights.topShooter ? highlights.topShooter.playerName : "Sin dato",
+      copy: highlights.topShooter ? `${highlights.topShooter.team} | ${highlights.topShooter.shots.toFixed(2)} remates esperados` : "Sin jugadores cargados",
+    },
+  ]);
+
+  dom.worldCupPredictorBoard.classList.remove("empty-state");
+  dom.worldCupPredictorBoard.classList.add("has-data");
+  setHtmlIfChanged(dom.worldCupPredictorBoard, `
+    <article class="decision-hero tone-${highlights.bestFavorite?.probability >= 0.55 ? "low" : highlights.bestFavorite?.probability >= 0.45 ? "mid" : "base"}">
+      <div>
+        <p class="section-kicker">Radar del torneo</p>
+        <h4>${escapeHtmlContent(highlights.bestFavorite ? `${highlights.bestFavorite.team} llega como favorito mas fuerte` : "Corrida cargada")}</h4>
+        <p>${escapeHtmlContent(highlights.topOver ? `${highlights.topOver.matchLabel} es el cruce con mayor over 2.5 (${formatWorldCupPercent(highlights.topOver.probability)}).` : "La corrida ya puede compararse por cruces, drivers y volumen ofensivo.")}</p>
+      </div>
+      <div class="decision-score-stack">
+        <strong>${escapeHtmlContent(bundle.sourceLabel)}</strong>
+        <span>${simulations.length || Math.round(bundle.matchPredictions.length / 2)} cruces</span>
+      </div>
+    </article>
+    <div class="decision-grid">
+      ${simulations.map((item) => {
+        const topTeam = toWorldCupNumber(item.team_a_win_prob_90m) >= toWorldCupNumber(item.team_b_win_prob_90m) ? item.team_a : item.team_b;
+        const topProb = Math.max(toWorldCupNumber(item.team_a_win_prob_90m), toWorldCupNumber(item.team_b_win_prob_90m));
+        return `
+          <article class="decision-card tone-${getWorldCupConfidenceTone(item.confidence_level)}">
+            <p class="candidate-rank">${escapeHtmlContent(item.stage_bucket || "group")}</p>
+            <h5>${escapeHtmlContent(item.team_a)} vs ${escapeHtmlContent(item.team_b)}</h5>
+            <p>${escapeHtmlContent(topTeam)} lidera con ${formatWorldCupPercent(topProb)}. Scoreline mas probable: ${escapeHtmlContent(item.top_scoreline || "n/d")}.</p>
+          </article>
+        `;
+      }).join("")}
+    </div>
+  `);
+
+  dom.worldCupPredictorFixtures.classList.remove("empty-state");
+  dom.worldCupPredictorFixtures.classList.add("has-data");
+  setHtmlIfChanged(dom.worldCupPredictorFixtures, simulations.map((item) => `
+    <article class="territorial-sector-sheet tone-${getWorldCupConfidenceTone(item.confidence_level)}">
+      <div class="territorial-sector-head">
+        <div>
+          <p class="candidate-rank">${escapeHtmlContent(item.stage_bucket || "group")} | ${escapeHtmlContent(item.confidence_level || "low")}</p>
+          <h4>${escapeHtmlContent(item.team_a)} vs ${escapeHtmlContent(item.team_b)}</h4>
+        </div>
+        <span class="planning-pill emphasis">${escapeHtmlContent(item.top_scoreline || "n/d")}</span>
+      </div>
+      <p class="territorial-readout-copy">Marcador esperado ${escapeHtmlContent(item.team_a)} ${toWorldCupNumber(item.team_a_predicted_goals).toFixed(2)} - ${toWorldCupNumber(item.team_b_predicted_goals).toFixed(2)} ${escapeHtmlContent(item.team_b)}.</p>
+      <div class="territorial-export-pills">
+        <span class="planning-pill emphasis">${escapeHtmlContent(item.team_a)} ${formatWorldCupPercent(item.team_a_win_prob_90m)}</span>
+        <span class="planning-pill emphasis">Empate ${formatWorldCupPercent(item.draw_prob_90m)}</span>
+        <span class="planning-pill emphasis">${escapeHtmlContent(item.team_b)} ${formatWorldCupPercent(item.team_b_win_prob_90m)}</span>
+        <span class="planning-pill emphasis">Over 2.5 ${formatWorldCupPercent(item.over_2_5_prob)}</span>
+        <span class="planning-pill emphasis">BTTS ${formatWorldCupPercent(item.btts_prob)}</span>
+      </div>
+      <div class="decision-list compact">
+        <article>
+          <strong>${escapeHtmlContent(item.team_a)}</strong>
+          <p>Driver goles: ${escapeHtmlContent(buildWorldCupDriverSummary(bundle, item.match_id, item.team_a, "goals", 1))}. Driver remates: ${escapeHtmlContent(buildWorldCupDriverSummary(bundle, item.match_id, item.team_a, "shots", 1))}.</p>
+        </article>
+        <article>
+          <strong>${escapeHtmlContent(item.team_b)}</strong>
+          <p>Driver goles: ${escapeHtmlContent(buildWorldCupDriverSummary(bundle, item.match_id, item.team_b, "goals", 1))}. Driver remates: ${escapeHtmlContent(buildWorldCupDriverSummary(bundle, item.match_id, item.team_b, "shots", 1))}.</p>
+        </article>
+      </div>
+    </article>
+  `).join(""));
+
+  if (!players.length) {
+    resetVisualPanel(dom.worldCupPredictorPlayers, "No hay remates por jugador en esta carga. Sube tambien player_predictions.csv o un bundle que lo incluya.");
+  } else {
+    dom.worldCupPredictorPlayers.classList.remove("empty-state");
+    dom.worldCupPredictorPlayers.classList.add("has-data");
+    setHtmlIfChanged(dom.worldCupPredictorPlayers, players.slice(0, 8).map((item) => `
+      <article class="territorial-sector-sheet tone-base">
+        <div class="territorial-sector-head">
+          <div>
+            <p class="candidate-rank">${escapeHtmlContent(item.team)} vs ${escapeHtmlContent(item.opponent)}</p>
+            <h4>${escapeHtmlContent(item.player_name)}</h4>
+          </div>
+          <span class="planning-pill emphasis">${toWorldCupNumber(item.predicted_player_shots).toFixed(2)} remates</span>
+        </div>
+        <p class="territorial-readout-copy">Cuota esperada ${toWorldCupNumber(item.predicted_share).toFixed(2)} | minutos previstos ${toWorldCupNumber(item.expected_minutes).toFixed(0)} | ultimos partidos ${toWorldCupNumber(item.recent_matches).toFixed(0)}.</p>
+      </article>
+    `).join(""));
+  }
+
+  dom.worldCupPredictorNarrative.classList.remove("empty-state");
+  dom.worldCupPredictorNarrative.classList.add("has-data");
+  setHtmlIfChanged(dom.worldCupPredictorNarrative, `
+    <article>
+      <p class="section-kicker">Reporte narrativo</p>
+      <h4>Lectura consolidada del modelo</h4>
+      <pre class="worldcup-report-pre">${escapeHtmlContent(bundle.analysisReport || "Sin reporte textual cargado.")}</pre>
+    </article>
+  `);
+}
+
+async function loadWorldCupDemoBundle(silentStatus = false) {
+  const response = await fetch(WORLD_CUP_DEMO_BUNDLE_URL, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error("No se pudo cargar la demo del predictor del Mundial.");
+  }
+  const payload = await response.json();
+  state.worldCupPredictorBundle = normalizeWorldCupBundle(payload);
+  renderWorldCupPredictorCard();
+  if (!silentStatus) {
+    setStatus("Demo del predictor del Mundial cargada. Ya puedes revisar cruces, drivers y remates esperados.");
+  }
+}
+
+async function handleWorldCupBundleSelection(event) {
+  const input = event?.target;
+  const files = Array.from(input?.files || []);
+  if (!files.length) {
+    return;
+  }
+
+  try {
+    const bundle = {
+      sourceLabel: "Carga manual",
+      createdAt: new Date().toISOString(),
+      modelSummary: null,
+      matchPredictions: [],
+      matchSimulations: [],
+      teamProfiles: [],
+      fixtureDrivers: [],
+      playerPredictions: [],
+      analysisReport: "",
+    };
+
+    for (const file of files) {
+      const lowerName = String(file.name || "").toLowerCase();
+      const text = await readTextFile(file);
+      if (lowerName.endsWith(".json")) {
+        const payload = JSON.parse(text);
+        if (payload && Array.isArray(payload.matchPredictions)) {
+          Object.assign(bundle, normalizeWorldCupBundle(payload));
+          bundle.sourceLabel = String(payload.sourceLabel || "Bundle manual");
+          continue;
+        }
+        if (lowerName.includes("model_summary")) {
+          bundle.modelSummary = payload;
+          continue;
+        }
+      }
+      if (lowerName.endsWith(".md") || lowerName.endsWith(".txt")) {
+        if (lowerName.includes("analysis_report")) {
+          bundle.analysisReport = text;
+        }
+        continue;
+      }
+      if (lowerName.endsWith(".csv")) {
+        const rows = parseCsvText(text);
+        if (lowerName.includes("match_predictions")) {
+          bundle.matchPredictions = rows;
+        } else if (lowerName.includes("match_simulations")) {
+          bundle.matchSimulations = rows;
+        } else if (lowerName.includes("team_profiles")) {
+          bundle.teamProfiles = rows;
+        } else if (lowerName.includes("fixture_drivers")) {
+          bundle.fixtureDrivers = rows;
+        } else if (lowerName.includes("player_predictions")) {
+          bundle.playerPredictions = rows;
+        }
+      }
+    }
+
+    const normalized = normalizeWorldCupBundle(bundle);
+    if (!normalized.matchPredictions.length) {
+      throw new Error("La carga no trae match_predictions. Sube el bundle JSON o los CSV exportados por el predictor.");
+    }
+    state.worldCupPredictorBundle = normalized;
+    renderWorldCupPredictorCard();
+    setStatus(`Resultados del Mundial cargados desde ${files.length} archivo(s).`);
+  } catch (error) {
+    console.warn("No se pudieron cargar los resultados del predictor del Mundial.", error);
+    setStatus(error?.message || "No se pudieron cargar los resultados del predictor del Mundial.");
+  } finally {
+    if (input) {
+      input.value = "";
+    }
+  }
+}
+
+function clearWorldCupPredictorBundle() {
+  state.worldCupPredictorBundle = null;
+  renderWorldCupPredictorCard();
+  setStatus("Modulo del Mundial limpiado. Puedes volver a cargar una corrida o usar la demo.");
+}
+
+function downloadWorldCupBundleJson() {
+  if (!state.worldCupPredictorBundle) {
+    setStatus("Primero carga una corrida del predictor para descargar su JSON.");
+    return;
+  }
+  downloadTerritorialFile(
+    `predictor_mundial_${formatDateInput(new Date())}.json`,
+    JSON.stringify(state.worldCupPredictorBundle, null, 2),
+    "application/json;charset=utf-8"
+  );
+  setStatus("Bundle JSON del predictor del Mundial descargado.");
+}
+
+function downloadWorldCupBundleReport() {
+  if (!state.worldCupPredictorBundle?.analysisReport) {
+    setStatus("La corrida actual no trae analysis_report.md para descargar.");
+    return;
+  }
+  downloadTerritorialFile(
+    `predictor_mundial_reporte_${formatDateInput(new Date())}.md`,
+    state.worldCupPredictorBundle.analysisReport,
+    "text/markdown;charset=utf-8"
+  );
+  setStatus("Reporte narrativo del predictor del Mundial descargado.");
 }
 
 async function handleDigitalCadastreFieldSupportSelection(event) {

@@ -3193,6 +3193,14 @@ button {
   border: 0;
 }
 
+.worldcup-report-pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font: 500 0.92rem/1.7 "IBM Plex Sans", monospace;
+  color: rgba(24, 31, 39, 0.82);
+}
+
 .scenario-compare-stack {
   display: grid;
   gap: 14px;

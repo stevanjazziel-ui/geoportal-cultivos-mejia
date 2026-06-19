@@ -25,6 +25,7 @@ Geoportal navegable orientado al canton Mejia con rutas de agronomia y planifica
 - Landsat 8/9 y Sentinel-1 se muestran como escena recortada a la huella real usando el thumbnail publico del catalogo.
 - El render de escena prioriza previews web mas utiles y mejora el color/contraste del raster exacto para lectura mas limpia en el mapa.
 - Modulo de `Inteligencia Geoespacial` para clasificacion IA, deteccion de cambios, alertas y una interpretacion automatizada orientada a agronomia y planificacion.
+- Modulo separado `Predictor del Mundial` para cargar corridas del modelo, revisar cruces, probabilidades, drivers y remates esperados por jugador.
 - Analisis intralote con dibujo de poligonos o seleccion de lotes demo.
 - Modulo de planificacion territorial con calculo multivariable para VIS, escuelas, hospitales y equipamientos.
 - Modulo territorial adicional de `Huella urbana / Transformacion del suelo rural` para comparar 2010, 2016, 2022 y una proyeccion 2030 sobre Mejia.
@@ -43,6 +44,8 @@ Geoportal navegable orientado al canton Mejia con rutas de agronomia y planifica
 - `index.html`: estructura del geoportal.
 - `styles.css`: identidad visual y comportamiento responsive.
 - `app.js`: logica del visor, capas, escenas, modulos y rutas de trabajo.
+- `models/world-cup-predictor/`: modelo reproducible para proyectar partidos del Mundial y exportar bundles consumibles por el modulo web.
+- `public-data/world-cup-predictor/demo_bundle.json`: demo lista para abrir el modulo del Mundial en local o publicado.
 - `server.ps1`: backend local sin dependencias para proxy, cache y resumen analitico.
 - `proyecto_equipamientos_quito/`: subproyecto tecnico publicado con `main.py`, configuracion, reportes y pipeline SIG por administracion zonal.
 - `tools/connect_satloc_g4.ps1`: puente local para leer telemetria NMEA de una aeronave Satloc G4 por puerto serie y publicarla en el geoportal.

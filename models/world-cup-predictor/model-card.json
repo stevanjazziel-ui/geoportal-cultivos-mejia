@@ -1,0 +1,35 @@
+{
+  "name": "world-cup-predictor-baseline",
+  "version": "0.2.0",
+  "type": "tabular-sports-forecasting",
+  "framework": "custom-numpy-ridge",
+  "targets": [
+    "goals",
+    "winner_90m",
+    "corners",
+    "yellow_cards",
+    "red_cards",
+    "offsides",
+    "shots",
+    "player_shots"
+  ],
+  "inputs": {
+    "matches": "CSV largo, una fila por equipo y partido",
+    "fixtures": "CSV largo de partidos a proyectar",
+    "player_match_stats": "CSV opcional para distribuir remates por jugador"
+  },
+  "outputs": [
+    "match_predictions.csv",
+    "match_simulations.csv",
+    "team_profiles.csv",
+    "fixture_drivers.csv",
+    "analysis_report.md",
+    "player_predictions.csv"
+  ],
+  "limitations": [
+    "La calidad del proveedor de datos determina gran parte del rendimiento.",
+    "No incorpora alineaciones confirmadas, lesiones ni sanciones salvo que se reflejen indirectamente en el historico.",
+    "La capa de ganador usa probabilidades de 90 minutos; no modela tiempo extra ni penales.",
+    "Con muestras cortas, las explicaciones pueden sobrerrepresentar variables como el ranking."
+  ]
+}
