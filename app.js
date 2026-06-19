@@ -4,8 +4,8 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260619-1";
-const WORLD_CUP_DEMO_BUNDLE_URL = "./public-data/world-cup-predictor/demo_bundle.json";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260619-2";
+const WORLD_CUP_DEMO_BUNDLE_URL = "./public-data/world-cup-predictor/live_group_stage_bundle.json";
 
 const layerCatalog = [
   {
@@ -8830,10 +8830,17 @@ function applyRouteFromUrl() {
   const moduleParam = params.get("module");
   const tabParam = params.get("tab");
   const viewerParam = params.get("viewer");
+  const openWorldCupModule = moduleParam === "worldcup" || routeParam === "mundial";
   const openQuitoModule = routeParam === "quito" || moduleParam === "quito";
-  state.pendingEntryAction = openQuitoModule ? "planning-quito" : null;
+  state.pendingEntryAction = openQuitoModule
+    ? "planning-quito"
+    : openWorldCupModule
+      ? "suite-worldcup"
+      : null;
   const route = openQuitoModule
     ? "planificacion"
+    : openWorldCupModule
+      ? "agronomia"
     : routeParam === "planificacion"
     ? "planificacion"
     : routeParam === "piva"
@@ -8953,7 +8960,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     updateMapSummary();
     window.setTimeout(() => {
       if (pendingEntryAction) {
-        handleWorkflowAction(pendingEntryAction);
+        runWorkflowGuideAction(pendingEntryAction);
         return;
       }
       if (isPivaRoute(route)) {
@@ -9101,6 +9108,10 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   clearPlanningModuleFocus();
   updateMapSummary();
   window.setTimeout(() => {
+    if (pendingEntryAction) {
+      runWorkflowGuideAction(pendingEntryAction);
+      return;
+    }
     if (state.entryRoute === "agronomia" && !dom.hydroNetworkResults?.classList.contains("has-data")) {
       runHydroNetworkAnalysis(true);
     }
@@ -10527,13 +10538,16 @@ function runWorkflowGuideAction(actionId) {
       return;
     case "suite-worldcup":
       openSidebarWorkingPanel("modulos");
+      state.moduleFilterId = isGpsRoute(state.entryRoute || "agronomia") ? "management" : "product";
+      renderModuleActionHub(state.entryRoute || "agronomia");
+      applyModuleSearchFilter({ preserveActive: true });
       focusModuleCard(dom.worldCupPredictorCard);
       if (!state.worldCupPredictorBundle) {
         loadWorldCupDemoBundle(true).catch((error) => {
           console.warn("No se pudo cargar la demo del predictor del Mundial.", error);
         });
       }
-      setStatus("Modulo del Mundial listo para cargar cruces, simulaciones y remates esperados en una vista aparte.");
+      setStatus("Modulo del Mundial listo en una vista dedicada, con el corte actual de la fase de grupos.");
       return;
     case "suite-dashboard":
       openSidebarWorkingPanel("modulos");
@@ -46817,7 +46831,7 @@ async function loadWorldCupDemoBundle(silentStatus = false) {
   state.worldCupPredictorBundle = normalizeWorldCupBundle(payload);
   renderWorldCupPredictorCard();
   if (!silentStatus) {
-    setStatus("Demo del predictor del Mundial cargada. Ya puedes revisar cruces, drivers y remates esperados.");
+    setStatus("Corte actual del predictor del Mundial cargado. Ya puedes revisar cruces, drivers y remates esperados.");
   }
 }
 
