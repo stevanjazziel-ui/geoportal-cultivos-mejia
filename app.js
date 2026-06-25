@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260625-1";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260625-2";
 const WORLD_CUP_DEMO_BUNDLE_URL = `./public-data/world-cup-predictor/live_group_stage_bundle.json?v=${encodeURIComponent(APP_VERSION)}`;
 
 const layerCatalog = [
