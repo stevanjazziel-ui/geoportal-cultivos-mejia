@@ -1,0 +1,176 @@
+{
+  "generated_at": "2026-06-25T15:45:00Z",
+  "event_name": "Doble terremoto de Venezuela",
+  "event_date_local": "24 junio 2026",
+  "sequence_seconds": 39,
+  "mapping_disclaimer": "Las zonas del mapa son representativas y derivadas del epicentro y las intensidades USGS; no sustituyen un perimetro oficial de dano edificio por edificio.",
+  "reporting_note": "El saldo humano reportado en prensa sigue siendo provisional. No debe mezclarse con el modelado PAGER, que es una estimacion probabilistica.",
+  "tectonic_summary": "USGS describe el evento como ruptura transcurrente superficial asociada al sistema de fallas de San Sebastian, en el limite Caribe-Sudamerica.",
+  "reported_toll": {
+    "deaths": 164,
+    "injured": 971,
+    "status": "Provisional al 25 junio 2026",
+    "source_label": "Reuters citado por El Pais y The Guardian",
+    "source_url": "https://elpais.com/internacional/2026-06-25/mapas-y-primeros-datos-del-devastador-doble-terremoto-en-venezuela.html"
+  },
+  "mainshock": {
+    "id": "us6000t7zp",
+    "magnitude": 7.5,
+    "depth_km": 10.0,
+    "place": "28 km SE of Yumare, Venezuela",
+    "time_utc": "2026-06-24T22:05:11Z",
+    "time_local_label": "24 junio 2026 | 18:05 VET",
+    "coordinates": [-68.4716, 10.4351],
+    "mmi": 8.857,
+    "felt_reports": 453,
+    "alert": "red",
+    "event_url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000t7zp",
+    "pager_url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000t7zp/pager",
+    "shakemap_url": "https://earthquake.usgs.gov/product/shakemap/us6000t7zp/us/1782367573148/download/intensity.jpg",
+    "dyfi_url": "https://earthquake.usgs.gov/product/dyfi/us6000t7zp/us/1782400193084/us6000t7zp_ciim_geo.jpg",
+    "liquefaction_url": "https://earthquake.usgs.gov/product/ground-failure/6000t7zp/us/1782368071480/zhu_2017_general.png",
+    "landslide_url": "https://earthquake.usgs.gov/product/ground-failure/6000t7zp/us/1782368071480/jessee_2018.png"
+  },
+  "foreshock": {
+    "id": "us6000t7zc",
+    "magnitude": 7.2,
+    "depth_km": 20.294,
+    "place": "23 km SE of Yumare, Venezuela",
+    "time_utc": "2026-06-24T22:04:33Z",
+    "time_local_label": "24 junio 2026 | 18:04 VET",
+    "coordinates": [-68.5277, 10.436],
+    "mmi": 8.888,
+    "alert": "red",
+    "event_url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000t7zc",
+    "pager_url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000t7zc/pager"
+  },
+  "pager": {
+    "fatality_alert": "red",
+    "economic_alert": "red",
+    "fatality_prob_over_1000_pct": 91.83,
+    "fatality_prob_over_10000_pct": 59.00,
+    "empirical_fatalities": 15675,
+    "semi_empirical_fatalities": 9480,
+    "economic_usd": 17725152057,
+    "summary": "La alerta PAGER marca perdida humana y economica en rojo para el mainshock. El modelo de mortalidad sugiere un rango probable muy superior al saldo oficial inicial."
+  },
+  "ground_failure": {
+    "liquefaction_alert": "red",
+    "landslide_alert": "orange",
+    "liquefaction_population": 140000,
+    "landslide_population": 4800
+  },
+  "top_cities": [
+    { "name": "Puerto Cabello", "lat": 10.4667, "lon": -68.0167, "pop": 209080, "mmi": 7.99 },
+    { "name": "Catia La Mar", "lat": 10.6, "lon": -67.0333, "pop": 661897, "mmi": 7.85 },
+    { "name": "Ocumare de la Costa", "lat": 10.4861, "lon": -67.7725, "pop": 7000, "mmi": 7.63 },
+    { "name": "Maiquetia", "lat": 10.5958, "lon": -66.9772, "pop": 87909, "mmi": 7.08 },
+    { "name": "San Felipe", "lat": 10.3353, "lon": -68.7458, "pop": 220786, "mmi": 6.83 },
+    { "name": "Caracas", "lat": 10.4806, "lon": -66.9036, "pop": 2245744, "mmi": 6.80 },
+    { "name": "La Guaira", "lat": 10.6, "lon": -66.9331, "pop": 203520, "mmi": 6.61 },
+    { "name": "Los Teques", "lat": 10.3411, "lon": -67.0406, "pop": 251200, "mmi": 6.30 },
+    { "name": "Petare", "lat": 10.4833, "lon": -66.8167, "pop": 369000, "mmi": 6.29 },
+    { "name": "Valencia", "lat": 10.1667, "lon": -68.0, "pop": 1484430, "mmi": 6.24 }
+  ],
+  "timeline": [
+    {
+      "label": "Foreshock",
+      "time_label": "18:04:33 VET",
+      "detail": "El primer evento alcanza magnitud 7.2 y profundidad de 20.3 km. USGS lo clasifica con alerta roja."
+    },
+    {
+      "label": "Mainshock",
+      "time_label": "18:05:11 VET",
+      "detail": "Treinta y nueve segundos despues llega el M7.5 principal, mas somero y con energia liberada mucho mayor."
+    },
+    {
+      "label": "Corredor mas agitado",
+      "time_label": "Nodos PAGER",
+      "detail": "Puerto Cabello, Catia La Mar, Maiquetia, San Felipe, Caracas y La Guaira concentran intensidades urbanas relevantes."
+    },
+    {
+      "label": "Saldo oficial inicial",
+      "time_label": "25 junio 2026",
+      "detail": "Reuters y medios reportan 164 muertos y 971 heridos, con balance aun provisional."
+    },
+    {
+      "label": "Estimacion probabilistica",
+      "time_label": "USGS PAGER",
+      "detail": "El modelo USGS estima 91.83% de probabilidad de superar 1,000 muertes y 59.00% de superar 10,000."
+    }
+  ],
+  "media_panels": [
+    {
+      "title": "ShakeMap de intensidad",
+      "source": "USGS ShakeMap",
+      "copy": "Mapa derivado de intensidad macrosismica con maximo MMI 8.86 para el mainshock.",
+      "image_url": "https://earthquake.usgs.gov/product/shakemap/us6000t7zp/us/1782367573148/download/intensity.jpg",
+      "open_url": "https://earthquake.usgs.gov/product/shakemap/us6000t7zp/us/1782367573148/download/intensity.jpg"
+    },
+    {
+      "title": "Licuefaccion probable",
+      "source": "USGS Ground Failure",
+      "copy": "Modelo regional de licuefaccion con exposicion poblacional estimada en 140,000 personas.",
+      "image_url": "https://earthquake.usgs.gov/product/ground-failure/6000t7zp/us/1782368071480/zhu_2017_general.png",
+      "open_url": "https://earthquake.usgs.gov/product/ground-failure/6000t7zp/us/1782368071480/zhu_2017_general.png"
+    },
+    {
+      "title": "Deslizamientos potenciales",
+      "source": "USGS Ground Failure",
+      "copy": "Superficie de deslizamientos inducidos, con alerta naranja y exposicion poblacional cercana a 4,800 personas.",
+      "image_url": "https://earthquake.usgs.gov/product/ground-failure/6000t7zp/us/1782368071480/jessee_2018.png",
+      "open_url": "https://earthquake.usgs.gov/product/ground-failure/6000t7zp/us/1782368071480/jessee_2018.png"
+    },
+    {
+      "title": "Intensidad reportada por personas",
+      "source": "USGS DYFI",
+      "copy": "Lectura participativa de sacudida con 453 reportes en la actualizacion usada por el modulo.",
+      "image_url": "https://earthquake.usgs.gov/product/dyfi/us6000t7zp/us/1782400193084/us6000t7zp_ciim_geo.jpg",
+      "open_url": "https://earthquake.usgs.gov/product/dyfi/us6000t7zp/us/1782400193084/us6000t7zp_ciim_geo.jpg"
+    }
+  ],
+  "satellite_viewers": [
+    {
+      "label": "NASA Worldview 25 junio 2026",
+      "url": "https://worldview.earthdata.nasa.gov/?v=-70.3,9.6,-65.7,11.7&t=2026-06-25",
+      "copy": "Abrir una base satelital regional alrededor del corredor costero afectado."
+    },
+    {
+      "label": "Copernicus Browser 24-26 junio",
+      "url": "https://browser.dataspace.copernicus.eu/?zoom=8&lat=10.45&lng=-68.47&themeId=DEFAULT-THEME&datasetId=S2_L2A_CDAS&fromTime=2026-06-24T00%3A00%3A00.000Z&toTime=2026-06-26T23%3A59%3A59.999Z",
+      "copy": "Explorar Sentinel-2 sobre Yumare, Puerto Cabello, Caracas y la costa central."
+    }
+  ],
+  "source_links": [
+    {
+      "label": "USGS mainshock us6000t7zp",
+      "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000t7zp",
+      "type": "official"
+    },
+    {
+      "label": "USGS foreshock us6000t7zc",
+      "url": "https://earthquake.usgs.gov/earthquakes/eventpage/us6000t7zc",
+      "type": "official"
+    },
+    {
+      "label": "USGS PAGER alertas",
+      "url": "https://earthquake.usgs.gov/product/losspager/us6000t7zp/us/1782367744138/alerts.json",
+      "type": "official"
+    },
+    {
+      "label": "USGS PAGER perdidas",
+      "url": "https://earthquake.usgs.gov/product/losspager/us6000t7zp/us/1782367744138/losses.json",
+      "type": "official"
+    },
+    {
+      "label": "El Pais mapas y primeros datos",
+      "url": "https://elpais.com/internacional/2026-06-25/mapas-y-primeros-datos-del-devastador-doble-terremoto-en-venezuela.html",
+      "type": "media"
+    },
+    {
+      "label": "The Guardian resumen inicial",
+      "url": "https://www.theguardian.com/us-news/2026/jun/25/first-thing-earthquakes-venezuela-death-toll",
+      "type": "media"
+    }
+  ]
+}

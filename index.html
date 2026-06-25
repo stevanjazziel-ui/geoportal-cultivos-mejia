@@ -6,7 +6,7 @@
   <meta http-equiv="Cache-Control" content="no-store">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <meta name="geoportal-version" content="20260619-3">
+  <meta name="geoportal-version" content="20260625-1">
   <title>Centro de Decisiones | Mejia y Quevedo</title>
   <meta
     name="description"
@@ -33,7 +33,7 @@
     rel="stylesheet"
     href="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.css"
   >
-  <link rel="stylesheet" href="./styles.css?v=20260619-3">
+  <link rel="stylesheet" href="./styles.css?v=20260625-1">
 </head>
 <body>
   <div class="ambient ambient-top"></div>
@@ -103,24 +103,29 @@
               <strong>Quito por zonas</strong>
               <span>Equipamientos, memoria tecnica, artefactos publicados y faltantes oficiales del modulo zonal de Quito.</span>
             </button>
-            <button id="openPivaBtn" class="entry-option piva" type="button">
+            <button id="openVenezuelaEarthquakeBtn" class="entry-option earthquake" type="button">
               <span class="entry-eyebrow">Ruta 4</span>
+              <strong>Terremoto de Venezuela</strong>
+              <span>Doble sismo, ShakeMap, saldo reportado, estimaciones de muertos y lectura cartografica sobre base satelital.</span>
+            </button>
+            <button id="openPivaBtn" class="entry-option piva" type="button">
+              <span class="entry-eyebrow">Ruta 5</span>
               <strong>PIVA del canton Mejia</strong>
               <span>Infraestructura verde y azul, clima, agua, soporte municipal y cartera de proyectos en una ruta propia.</span>
             </button>
             <button id="openCadastreBtn" class="entry-option cadastre" type="button">
-              <span class="entry-eyebrow">Ruta 5</span>
+              <span class="entry-eyebrow">Ruta 6</span>
               <strong>Catastro asistido</strong>
               <span>Predios visibles, contornos, soporte oficial y digitalizacion guiada sobre imagen y parcelario local.</span>
             </button>
             <button id="openOperationsBtn" class="entry-option operations" type="button">
-              <span class="entry-eyebrow">Ruta 6</span>
+              <span class="entry-eyebrow">Ruta 7</span>
               <strong>Centro GPS operativo</strong>
               <span>Seguimiento en tiempo real, corredores KML, replay y control operativo para campo, dron o aeronave.</span>
             </button>
           </div>
           <p class="login-note">
-            Los seis accesos entran directo a decisiones agronomicas, territoriales, zonales de Quito, verde-azules, catastrales y operativas.
+            Los siete accesos entran directo a decisiones agronomicas, territoriales, zonales de Quito, sismicas, verde-azules, catastrales y operativas.
           </p>
         </div>
       </div>
@@ -168,7 +173,7 @@
           <span class="status-dot"></span>
           <div class="user-pill-copy">
             <strong id="userNameLabel">Usuario publico</strong>
-              <span id="userVersionLabel">v20260616-1</span>
+              <span id="userVersionLabel">v20260625-1</span>
           </div>
           <label class="user-role-field" for="userRoleSelect">
             <span>Rol</span>
@@ -1153,6 +1158,47 @@
                 <a class="ghost-button" href="./proyecto_equipamientos_quito/reports/memoria_tecnica_general.md" target="_blank" rel="noopener noreferrer">Memoria</a>
                 <a class="ghost-button" href="./proyecto_equipamientos_quito/outputs/tablas_csv/advertencias_pipeline.csv" target="_blank" rel="noopener noreferrer">Advertencias</a>
                 <button id="refreshQuitoFacilitiesBtn" class="ghost-button" type="button">Actualizar</button>
+              </div>
+            </article>
+
+            <article id="venezuelaEarthquakeCard" class="module-card planning-card hidden" data-module-track="planificacion">
+              <div class="module-head">
+                <div>
+                  <p class="module-kicker">Evento extremo | Venezuela 24 junio 2026</p>
+                  <h3>Modulo de lectura sismica y dano probable</h3>
+                </div>
+                <button id="runVenezuelaEarthquakeBtn" class="secondary-button" type="button">Cargar modulo</button>
+              </div>
+              <p class="module-copy">
+                Organiza en una sola lectura el doble terremoto de Venezuela con secuencia temporal, ShakeMap, zonas representativas, nodos urbanos afectados, saldo reportado y estimaciones probabilisticas de mortalidad.
+              </p>
+              <p id="venezuelaEarthquakeSourceNote" class="service-note">
+                El modulo separa claramente el saldo humano reportado en prensa del modelado PAGER de USGS. La cartografia mostrada es representativa y se apoya sobre la base satelital del visor.
+              </p>
+              <div id="venezuelaEarthquakeResults" class="metrics-grid empty-state">
+                Carga el modulo para ver magnitudes, profundidad, victimas reportadas, modelado de mortalidad, perdida economica y nodos urbanos priorizados.
+              </div>
+              <div id="venezuelaEarthquakeReadout" class="territorial-decision-board empty-state">
+                Aqui aparecera la lectura ejecutiva del doble sismo, con separacion entre observacion reportada, modelado probabilistico y mensaje tectonico.
+              </div>
+              <div id="venezuelaEarthquakeMapBoard" class="territorial-decision-board empty-state">
+                Aqui apareceran los nodos urbanos mas expuestos y la interpretacion cartografica que el modulo coloca sobre el mapa.
+              </div>
+              <div id="venezuelaEarthquakeMediaBoard" class="territorial-decision-board empty-state">
+                Aqui apareceran los productos visuales principales: ShakeMap, licuefaccion, deslizamientos y lectura de intensidad reportada.
+              </div>
+              <div id="venezuelaEarthquakeTimelineBoard" class="territorial-decision-board empty-state">
+                Aqui aparecera la cronologia corta del doblete sismico con tiempos locales y actualizaciones del impacto humano.
+              </div>
+              <div id="venezuelaEarthquakeSourcesBoard" class="territorial-decision-board empty-state">
+                Aqui apareceran las fuentes oficiales y enlaces de apoyo satelital usados por el modulo.
+              </div>
+              <div class="action-row analysis-actions">
+                <button id="focusVenezuelaEarthquakeBtn" class="secondary-button" type="button">Ver en mapa</button>
+                <a class="ghost-button" href="https://earthquake.usgs.gov/earthquakes/eventpage/us6000t7zp" target="_blank" rel="noopener noreferrer">USGS mainshock</a>
+                <a class="ghost-button" href="https://earthquake.usgs.gov/earthquakes/eventpage/us6000t7zp/pager" target="_blank" rel="noopener noreferrer">PAGER</a>
+                <button id="refreshVenezuelaEarthquakeBtn" class="ghost-button" type="button">Actualizar</button>
+                <button id="clearVenezuelaEarthquakeBtn" class="ghost-button" type="button">Limpiar mapa</button>
               </div>
             </article>
 
@@ -2181,6 +2227,6 @@
   <script src="https://unpkg.com/georaster-layer-for-leaflet/dist/georaster-layer-for-leaflet.min.js"></script>
   <script src="https://unpkg.com/shpjs@6.1.0/dist/shp.js"></script>
   <script src="https://unpkg.com/maplibre-gl@5.22.0/dist/maplibre-gl.js"></script>
-  <script src="./app.js?v=20260619-3" defer></script>
+  <script src="./app.js?v=20260625-1" defer></script>
 </body>
 </html>

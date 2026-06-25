@@ -319,6 +319,10 @@ button {
   background: rgba(178, 211, 223, 0.16);
 }
 
+.entry-option.earthquake {
+  background: rgba(226, 190, 172, 0.18);
+}
+
 .entry-option.piva {
   background: rgba(157, 214, 194, 0.16);
 }
@@ -2385,6 +2389,31 @@ button {
   margin: 0;
   font-family: var(--font-display);
   font-size: 1rem;
+}
+
+.earthquake-media-grid,
+.earthquake-city-grid,
+.earthquake-source-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.earthquake-media-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.earthquake-city-grid,
+.earthquake-source-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.earthquake-preview-image {
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  object-fit: cover;
+  border-radius: 14px;
+  border: 1px solid rgba(57, 73, 66, 0.08);
+  background: rgba(240, 243, 238, 0.9);
 }
 
 .official-source-tags {

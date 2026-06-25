@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260619-3";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260625-1";
 const WORLD_CUP_DEMO_BUNDLE_URL = `./public-data/world-cup-predictor/live_group_stage_bundle.json?v=${encodeURIComponent(APP_VERSION)}`;
 
 const layerCatalog = [
@@ -4174,6 +4174,7 @@ const state = {
   pivaData: null,
   pivaHighlightId: null,
   quitoFacilitiesData: null,
+  venezuelaEarthquakeData: null,
   zoningPatternsData: null,
   zoningPatternsHighlightId: null,
   housingPatternsData: null,
@@ -4346,6 +4347,9 @@ const mapState = {
   pivaZoneLayer: null,
   pivaCorridorLayer: null,
   pivaProjectLayer: null,
+  venezuelaEarthquakeZoneLayer: null,
+  venezuelaEarthquakeCityLayer: null,
+  venezuelaEarthquakeEpicenterLayer: null,
   zoningPatternsLayer: null,
   zoningPatternsHotspotLayer: null,
   housingPatternsLayer: null,
@@ -6294,6 +6298,7 @@ function cacheDom() {
   dom.openAgronomyBtn = document.querySelector("#openAgronomyBtn");
   dom.openPlanningBtn = document.querySelector("#openPlanningBtn");
   dom.openQuitoBtn = document.querySelector("#openQuitoBtn");
+  dom.openVenezuelaEarthquakeBtn = document.querySelector("#openVenezuelaEarthquakeBtn");
   dom.openPivaBtn = document.querySelector("#openPivaBtn");
   dom.openCadastreBtn = document.querySelector("#openCadastreBtn");
   dom.openOperationsBtn = document.querySelector("#openOperationsBtn");
@@ -6664,6 +6669,17 @@ function cacheDom() {
   dom.quitoFacilitiesSourceNote = document.querySelector("#quitoFacilitiesSourceNote");
   dom.runQuitoFacilitiesBtn = document.querySelector("#runQuitoFacilitiesBtn");
   dom.refreshQuitoFacilitiesBtn = document.querySelector("#refreshQuitoFacilitiesBtn");
+  dom.venezuelaEarthquakeResults = document.querySelector("#venezuelaEarthquakeResults");
+  dom.venezuelaEarthquakeReadout = document.querySelector("#venezuelaEarthquakeReadout");
+  dom.venezuelaEarthquakeMapBoard = document.querySelector("#venezuelaEarthquakeMapBoard");
+  dom.venezuelaEarthquakeMediaBoard = document.querySelector("#venezuelaEarthquakeMediaBoard");
+  dom.venezuelaEarthquakeTimelineBoard = document.querySelector("#venezuelaEarthquakeTimelineBoard");
+  dom.venezuelaEarthquakeSourcesBoard = document.querySelector("#venezuelaEarthquakeSourcesBoard");
+  dom.venezuelaEarthquakeSourceNote = document.querySelector("#venezuelaEarthquakeSourceNote");
+  dom.runVenezuelaEarthquakeBtn = document.querySelector("#runVenezuelaEarthquakeBtn");
+  dom.focusVenezuelaEarthquakeBtn = document.querySelector("#focusVenezuelaEarthquakeBtn");
+  dom.refreshVenezuelaEarthquakeBtn = document.querySelector("#refreshVenezuelaEarthquakeBtn");
+  dom.clearVenezuelaEarthquakeBtn = document.querySelector("#clearVenezuelaEarthquakeBtn");
   dom.zoningPatternsResults = document.querySelector("#zoningPatternsResults");
   dom.zoningPatternsReadout = document.querySelector("#zoningPatternsReadout");
   dom.zoningPatternsClusters = document.querySelector("#zoningPatternsClusters");
@@ -6689,6 +6705,7 @@ function cacheDom() {
   dom.urbanClimateCard = document.querySelector("#urbanClimateCard");
   dom.pivaCard = document.querySelector("#pivaCard");
   dom.quitoFacilitiesCard = document.querySelector("#quitoFacilitiesCard");
+  dom.venezuelaEarthquakeCard = document.querySelector("#venezuelaEarthquakeCard");
   dom.zoningPatternsCard = document.querySelector("#zoningPatternsCard");
   dom.housingPatternsCard = document.querySelector("#housingPatternsCard");
   dom.fieldEvidenceCard = document.querySelector("#fieldEvidenceCard");
@@ -6815,6 +6832,9 @@ function bootstrapApp() {
   });
   loadQuitoFacilitiesSummary().catch((error) => {
     console.warn("No se pudo cargar el estado publicado del proyecto Quito.", error);
+  });
+  loadVenezuelaEarthquakeSummary().catch((error) => {
+    console.warn("No se pudo cargar el resumen publicado del terremoto de Venezuela.", error);
   });
   loadWorldCupDemoBundle(true).catch(() => {});
   hydratePlanning3dManifest();
@@ -7170,6 +7190,10 @@ function bindUI() {
   });
   dom.openQuitoBtn?.addEventListener("click", () => {
     state.pendingEntryAction = "planning-quito";
+    enterPublicView("planificacion");
+  });
+  dom.openVenezuelaEarthquakeBtn?.addEventListener("click", () => {
+    state.pendingEntryAction = "planning-venezuela";
     enterPublicView("planificacion");
   });
   dom.openPivaBtn?.addEventListener("click", () => {
@@ -7745,6 +7769,56 @@ function bindUI() {
         setStatus(`Quito: ${error.message || "no se pudo actualizar el estado publicado"}.`);
       }
     });
+  });
+  dom.runVenezuelaEarthquakeBtn?.addEventListener("click", () => {
+    setModulePendingState(dom.venezuelaEarthquakeResults, "Leyendo el evento, su saldo reportado y el modelado PAGER...", [
+      { target: dom.venezuelaEarthquakeReadout, message: "Separando cronologia, lectura tectonica y contraste entre saldo reportado y mortalidad modelada..." },
+      { target: dom.venezuelaEarthquakeMapBoard, message: "Preparando epicentros, nodos urbanos e intensidades representativas sobre el mapa..." },
+      { target: dom.venezuelaEarthquakeMediaBoard, message: "Montando ShakeMap, licuefaccion, deslizamientos y lectura de intensidad reportada..." },
+      { target: dom.venezuelaEarthquakeTimelineBoard, message: "Ordenando la secuencia temporal del doblete y sus hitos principales..." },
+      { target: dom.venezuelaEarthquakeSourcesBoard, message: "Compilando fuentes oficiales y visores satelitales de apoyo..." },
+    ]);
+    return runModuleAction(dom.runVenezuelaEarthquakeBtn, "Armando modulo...", async () => {
+      try {
+        await loadVenezuelaEarthquakeSummary(true);
+        focusModuleCard(dom.venezuelaEarthquakeCard);
+        focusVenezuelaEarthquakeMap();
+        setStatus("Modulo de Venezuela listo: doblete sismico, PAGER, nodos urbanos y lectura cartografica sobre base satelital.");
+      } catch (error) {
+        setStatus(`Venezuela: ${error.message || "no se pudo cargar el modulo sismico"}.`);
+      }
+    });
+  });
+  dom.focusVenezuelaEarthquakeBtn?.addEventListener("click", async () => {
+    if (!state.venezuelaEarthquakeData) {
+      try {
+        await loadVenezuelaEarthquakeSummary(true);
+      } catch (error) {
+        setStatus(`Venezuela: ${error.message || "no se pudo preparar la capa del mapa"}.`);
+        return;
+      }
+    }
+    focusVenezuelaEarthquakeMap();
+    focusModuleCard(dom.venezuelaEarthquakeCard);
+    setStatus("Capa sismica de Venezuela centrada sobre el mapa.");
+  });
+  dom.refreshVenezuelaEarthquakeBtn?.addEventListener("click", () => {
+    return runModuleAction(dom.refreshVenezuelaEarthquakeBtn, "Actualizando...", async () => {
+      try {
+        await loadVenezuelaEarthquakeSummary(true);
+        if (mapState.venezuelaEarthquakeZoneLayer || mapState.venezuelaEarthquakeCityLayer || mapState.venezuelaEarthquakeEpicenterLayer) {
+          focusVenezuelaEarthquakeMap({ fit: false });
+        }
+        setStatus("Modulo de Venezuela actualizado con la ultima lectura local publicada.");
+      } catch (error) {
+        setStatus(`Venezuela: ${error.message || "no se pudo actualizar el modulo"}.`);
+      }
+    });
+  });
+  dom.clearVenezuelaEarthquakeBtn?.addEventListener("click", () => {
+    clearVenezuelaEarthquakeOverlay();
+    updateMapSummary();
+    setStatus("Lectura cartografica del terremoto de Venezuela retirada del mapa.");
   });
   dom.pivaDashboard?.addEventListener("click", handlePivaInteraction);
   dom.pivaPresentationDeck?.addEventListener("click", handlePivaInteraction);
@@ -8831,13 +8905,18 @@ function applyRouteFromUrl() {
   const tabParam = params.get("tab");
   const viewerParam = params.get("viewer");
   const openWorldCupModule = moduleParam === "worldcup" || routeParam === "mundial";
+  const openVenezuelaEarthquakeModule = routeParam === "venezuela" || moduleParam === "venezuela" || moduleParam === "sismo-venezuela";
   const openQuitoModule = routeParam === "quito" || moduleParam === "quito";
-  state.pendingEntryAction = openQuitoModule
+  state.pendingEntryAction = openVenezuelaEarthquakeModule
+    ? "planning-venezuela"
+    : openQuitoModule
     ? "planning-quito"
     : openWorldCupModule
       ? "suite-worldcup"
       : null;
-  const route = openQuitoModule
+  const route = openVenezuelaEarthquakeModule
+    ? "planificacion"
+    : openQuitoModule
     ? "planificacion"
     : openWorldCupModule
       ? "agronomia"
@@ -8932,6 +9011,9 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     } else {
       clearPivaOverlay();
     }
+    if (isPivaRoute(route)) {
+      clearVenezuelaEarthquakeOverlay();
+    }
     if (state.hydrologyData && isPivaRoute(route)) {
       clearHydrologyOverlay();
     }
@@ -8985,6 +9067,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     clearHydrologyOverlay();
     clearMobilityOverlay();
     clearRiskOverlay();
+    clearVenezuelaEarthquakeOverlay();
     clearFieldEvidenceOverlay();
     clearAiGeoOverlay();
     if (state.currentPlot) {
@@ -9018,6 +9101,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     clearHydrologyOverlay();
     clearMobilityOverlay();
     clearRiskOverlay();
+    clearVenezuelaEarthquakeOverlay();
     clearFieldEvidenceOverlay();
     clearAiGeoOverlay();
     renderStudyAreaLayer();
@@ -9059,6 +9143,7 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   clearHydrologyOverlay();
   clearMobilityOverlay();
   clearRiskOverlay();
+  clearVenezuelaEarthquakeOverlay();
   clearFieldEvidenceOverlay();
   clearAiGeoOverlay();
   renderStudyAreaLayer();
@@ -9258,6 +9343,7 @@ function getModuleCardLabel(card) {
     urbanClimateCard: "Clima urbano",
     pivaCard: "PIVA",
     quitoFacilitiesCard: "Quito",
+    venezuelaEarthquakeCard: "Sismo VE",
     zoningPatternsCard: "Zonificacion",
     housingPatternsCard: "Vivienda",
     landChangeCard: "Huella",
@@ -9404,6 +9490,7 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
         { id: "planning-climate", label: "Clima urbano", copy: "Ventilacion y enfriamiento", tone: "neutral" },
         { id: "planning-piva", label: "PIVA", copy: "Infraestructura verde y azul", tone: "neutral" },
         { id: "planning-quito", label: "Quito", copy: "Modulo por zonas", tone: "neutral" },
+        { id: "planning-venezuela", label: "Venezuela", copy: "Sismo y dano probable", tone: "neutral" },
         { id: "planning-official", label: "Oficiales", copy: "Vialidad y servicios", tone: "neutral" },
         { id: "planning-water", label: "Agua", copy: "Oferta y resiliencia", tone: "neutral" },
         { id: "planning-cadastre", label: "Catastro", copy: "Predios y contornos", tone: "neutral" },
@@ -9470,10 +9557,10 @@ function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "a
 
   const planningFilters = {
     core: new Set(["planningCommandCard", "territorialOpsCard", "planningCard", "planningResultsCard"]),
-    official: new Set(["officialDataCard", "digitalCadastreCard", "quitoFacilitiesCard"]),
-    risk: new Set(["riskCard", "urbanClimateCard", "hydrologyCard", "pivaCard", "territorialReadoutCard"]),
+    official: new Set(["officialDataCard", "digitalCadastreCard", "quitoFacilitiesCard", "venezuelaEarthquakeCard"]),
+    risk: new Set(["riskCard", "urbanClimateCard", "hydrologyCard", "pivaCard", "territorialReadoutCard", "venezuelaEarthquakeCard"]),
     growth: new Set(["mobilityCard", "landChangeCard", "territorialScenarioCard", "zoningPatternsCard", "housingPatternsCard", "urbanClimateCard", "pivaCard"]),
-    strategy: new Set(["fodaCameCard", "territorialDecisionCard", "territorialAlertsCard", "aiGeoCard", "zoningPatternsCard", "housingPatternsCard", "urbanClimateCard", "pivaCard", "quitoFacilitiesCard"]),
+    strategy: new Set(["fodaCameCard", "territorialDecisionCard", "territorialAlertsCard", "aiGeoCard", "zoningPatternsCard", "housingPatternsCard", "urbanClimateCard", "pivaCard", "quitoFacilitiesCard", "venezuelaEarthquakeCard"]),
     validation: new Set(["planning3dCard", "digitalCadastreCard"]),
     product: new Set(["executiveDashboardCard", "reportCenterCard", "scenarioLabCard", "timeSeriesCard", "worldCupPredictorCard", "alertCenterCard", "projectRegistryCard", "decisionLogCard", "accessRolesCard", "apiCenterCard", "geoAiCoreCard"]),
   };
@@ -10492,6 +10579,12 @@ function runWorkflowGuideAction(actionId) {
       dom.runQuitoFacilitiesBtn?.click();
       focusModuleCard(dom.quitoFacilitiesCard);
       setStatus("Modulo Quito listo para revisar publicacion tecnica, memoria y faltantes de insumos.");
+      return;
+    case "planning-venezuela":
+      openSidebarWorkingPanel("modulos");
+      dom.runVenezuelaEarthquakeBtn?.click();
+      focusModuleCard(dom.venezuelaEarthquakeCard);
+      setStatus("Modulo Venezuela listo para revisar doblete sismico, saldo humano y dano probable sobre el mapa.");
       return;
     case "planning-official":
       openSidebarWorkingPanel("modulos");
@@ -27064,6 +27157,8 @@ function renderPlanningModule(force = false) {
   renderRiskModule();
   renderUrbanClimateModule();
   renderPivaModule();
+  renderQuitoFacilitiesModule();
+  renderVenezuelaEarthquakeModule();
   renderZoningPatternsModule();
   renderHousingPatternsModule();
   renderLandChangeModule();
@@ -34410,6 +34505,491 @@ async function loadQuitoFacilitiesSummary(force = false) {
     return manifest;
   } catch (error) {
     renderQuitoFacilitiesFallback("No se pudo leer el manifiesto publico del proyecto Quito.");
+    throw error;
+  }
+}
+
+function getVenezuelaEarthquakeSummaryHref(force = false) {
+  const basePath = "./public-data/venezuela-earthquake-2026-summary.json";
+  return force
+    ? `${basePath}?ts=${Date.now()}`
+    : `${basePath}?v=${encodeURIComponent(APP_VERSION)}`;
+}
+
+function formatEarthquakeCount(value, digits = 0) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "Sin dato";
+  }
+  return numeric.toLocaleString("es-EC", {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
+function formatEarthquakePercent(value, digits = 1) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "Sin dato";
+  }
+  return `${numeric.toFixed(digits)}%`;
+}
+
+function formatEarthquakeMoney(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) {
+    return "Sin dato";
+  }
+  if (numeric >= 1e9) {
+    return `US$${(numeric / 1e9).toFixed(1)}B`;
+  }
+  if (numeric >= 1e6) {
+    return `US$${(numeric / 1e6).toFixed(1)}M`;
+  }
+  return `US$${formatEarthquakeCount(numeric, 0)}`;
+}
+
+function getVenezuelaEarthquakeTone(mmi = 0) {
+  const numeric = Number(mmi);
+  if (numeric >= 7.4) {
+    return "high";
+  }
+  if (numeric >= 6.2) {
+    return "mid";
+  }
+  return "base";
+}
+
+function buildVenezuelaEarthquakeOverlayCollections(summary) {
+  const mainshockCoords = Array.isArray(summary?.mainshock?.coordinates)
+    ? summary.mainshock.coordinates.map((value) => Number(value))
+    : null;
+  const foreshockCoords = Array.isArray(summary?.foreshock?.coordinates)
+    ? summary.foreshock.coordinates.map((value) => Number(value))
+    : null;
+  if (!Array.isArray(mainshockCoords) || mainshockCoords.length < 2 || mainshockCoords.some((value) => !Number.isFinite(value))) {
+    return null;
+  }
+
+  const zoneSpecs = [
+    {
+      id: "critical",
+      label: "Nucleo critico",
+      radiusKm: 35,
+      fill: "#c65d4b",
+      stroke: "#8f2f2b",
+      opacity: 0.18,
+      summary: "Anillo representativo del dano severo alrededor del doblete principal.",
+    },
+    {
+      id: "strong",
+      label: "Sacudida fuerte",
+      radiusKm: 95,
+      fill: "#e3a454",
+      stroke: "#b26f24",
+      opacity: 0.14,
+      summary: "Zona aproximada donde la sacudida pudo escalar a dano estructural notable.",
+    },
+    {
+      id: "regional",
+      label: "Impacto regional",
+      radiusKm: 250,
+      fill: "#f0d9a9",
+      stroke: "#9b845d",
+      opacity: 0.08,
+      summary: "Radio representativo de la secuencia revisada por USGS para la ventana regional.",
+    },
+  ];
+
+  const zoneCollection = {
+    type: "FeatureCollection",
+    features: zoneSpecs.map((zone) => {
+      const feature = turf.circle(mainshockCoords, zone.radiusKm, {
+        steps: 96,
+        units: "kilometers",
+      });
+      feature.properties = {
+        earthquakeType: "zone",
+        zoneId: zone.id,
+        label: zone.label,
+        radiusKm: zone.radiusKm,
+        summary: zone.summary,
+        fill: zone.fill,
+        stroke: zone.stroke,
+        opacity: zone.opacity,
+      };
+      return feature;
+    }),
+  };
+
+  const epicenterFeatures = [];
+  if (Array.isArray(foreshockCoords) && foreshockCoords.length >= 2 && foreshockCoords.every((value) => Number.isFinite(value))) {
+    epicenterFeatures.push(pointFeature("Foreshock M7.2", foreshockCoords, {
+      earthquakeType: "epicenter",
+      phase: "foreshock",
+      label: "Foreshock M7.2",
+      magnitude: Number(summary.foreshock?.magnitude || 0),
+      depthKm: Number(summary.foreshock?.depth_km || 0),
+      alert: summary.foreshock?.alert || "red",
+      summary: "Primer evento del doblete, 39 segundos antes del mainshock.",
+    }));
+  }
+  epicenterFeatures.push(pointFeature("Mainshock M7.5", mainshockCoords, {
+    earthquakeType: "epicenter",
+    phase: "mainshock",
+    label: "Mainshock M7.5",
+    magnitude: Number(summary.mainshock?.magnitude || 0),
+    depthKm: Number(summary.mainshock?.depth_km || 0),
+    alert: summary.mainshock?.alert || "red",
+    summary: "Evento principal del doblete, mas somero y energeticamente dominante.",
+  }));
+
+  const cityCollection = {
+    type: "FeatureCollection",
+    features: (summary?.top_cities || []).map((city, index) => pointFeature(city.name || `Nodo ${index + 1}`, [
+      Number(city.lon),
+      Number(city.lat),
+    ], {
+      earthquakeType: "city",
+      cityRank: index + 1,
+      label: city.name || `Nodo ${index + 1}`,
+      mmi: Number(city.mmi || 0),
+      population: Number(city.pop || 0),
+      tone: getVenezuelaEarthquakeTone(city.mmi),
+      summary: `Nodo urbano priorizado por PAGER con intensidad aproximada MMI ${Number(city.mmi || 0).toFixed(2)}.`,
+    })).filter((feature) => feature.geometry.coordinates.every((value) => Number.isFinite(value))),
+  };
+
+  return {
+    zoneCollection,
+    epicenterCollection: {
+      type: "FeatureCollection",
+      features: epicenterFeatures,
+    },
+    cityCollection,
+  };
+}
+
+function clearVenezuelaEarthquakeOverlay() {
+  [
+    "venezuelaEarthquakeZoneLayer",
+    "venezuelaEarthquakeCityLayer",
+    "venezuelaEarthquakeEpicenterLayer",
+  ].forEach((layerName) => {
+    if (mapState[layerName]) {
+      mapState.map?.removeLayer(mapState[layerName]);
+      mapState[layerName] = null;
+    }
+  });
+}
+
+function renderVenezuelaEarthquakeOverlay(summary, options = {}) {
+  clearVenezuelaEarthquakeOverlay();
+  if (!mapState.map || !summary || !isPlanningRoute(state.entryRoute)) {
+    return null;
+  }
+
+  const collections = buildVenezuelaEarthquakeOverlayCollections(summary);
+  if (!collections) {
+    return null;
+  }
+
+  mapState.venezuelaEarthquakeZoneLayer = L.geoJSON(collections.zoneCollection, {
+    style: (feature) => ({
+      color: feature.properties?.stroke || "#8f2f2b",
+      weight: feature.properties?.zoneId === "critical" ? 2.2 : 1.6,
+      fillColor: feature.properties?.fill || "#c65d4b",
+      fillOpacity: feature.properties?.opacity || 0.12,
+      dashArray: feature.properties?.zoneId === "regional" ? "10 8" : null,
+    }),
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.label || "Zona sismica"}</h3><p class="popup-copy">${feature.properties?.summary || ""} Radio representativo ${formatEarthquakeCount(feature.properties?.radiusKm || 0)} km.</p>`);
+    },
+  }).addTo(mapState.map);
+
+  mapState.venezuelaEarthquakeCityLayer = L.geoJSON(collections.cityCollection, {
+    pointToLayer: (feature, latlng) => {
+      const mmi = Number(feature.properties?.mmi || 0);
+      const tone = getVenezuelaEarthquakeTone(mmi);
+      return L.circleMarker(latlng, {
+        radius: clamp(5.5 + (mmi - 5), 6, 11),
+        color: "#fffaf2",
+        weight: 2,
+        fillColor: tone === "high" ? "#c65d4b" : tone === "mid" ? "#d89a45" : "#5d7c8a",
+        fillOpacity: 0.92,
+      });
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.label || "Nodo urbano"}</h3><p class="popup-copy">MMI ${Number(feature.properties?.mmi || 0).toFixed(2)} | Poblacion ${formatEarthquakeCount(feature.properties?.population || 0)}. ${feature.properties?.summary || ""}</p>`);
+    },
+  }).addTo(mapState.map);
+
+  mapState.venezuelaEarthquakeEpicenterLayer = L.geoJSON(collections.epicenterCollection, {
+    pointToLayer: (feature, latlng) => {
+      const isMainshock = feature.properties?.phase === "mainshock";
+      return L.circleMarker(latlng, {
+        radius: isMainshock ? 12 : 9,
+        color: isMainshock ? "#fff7f0" : "#fff2da",
+        weight: isMainshock ? 2.8 : 2.2,
+        fillColor: isMainshock ? "#9e2d2a" : "#d27d38",
+        fillOpacity: 0.96,
+      });
+    },
+    onEachFeature: (feature, layer) => {
+      layer.bindPopup(`<h3 class="popup-title">${feature.properties?.label || "Epicentro"}</h3><p class="popup-copy">Magnitud ${Number(feature.properties?.magnitude || 0).toFixed(1)} | Profundidad ${Number(feature.properties?.depthKm || 0).toFixed(1)} km. ${feature.properties?.summary || ""}</p>`);
+    },
+  }).addTo(mapState.map);
+
+  if (options.fit !== false) {
+    const bounds = buildBoundsFromFeatures([
+      ...collections.zoneCollection.features,
+      ...collections.cityCollection.features,
+      ...collections.epicenterCollection.features,
+    ]);
+    if (bounds) {
+      mapState.map.fitBounds(bounds, {
+        padding: [52, 52],
+        maxZoom: 7,
+      });
+    }
+  }
+
+  return collections;
+}
+
+function focusVenezuelaEarthquakeMap(options = {}) {
+  if (!state.venezuelaEarthquakeData || !mapState.map) {
+    return null;
+  }
+  setBaseLayer("satellite", false, {
+    silent: true,
+    skipSceneRender: true,
+  });
+  const collections = renderVenezuelaEarthquakeOverlay(state.venezuelaEarthquakeData, options);
+  if (collections) {
+    setTextIfChanged(dom.overlayIndex, "Sismo VE");
+    setTextIfChanged(dom.mapTitle, "Venezuela | doble terremoto del 24 junio 2026");
+    setTextIfChanged(dom.mapSubtitle, "Epicentros cercanos a Yumare, anillos representativos de dano y nodos urbanos PAGER sobre base satelital.");
+    setTextIfChanged(dom.overlayMode, "Sismico");
+  }
+  return collections;
+}
+
+function renderVenezuelaEarthquakeFallback(message) {
+  resetTerritorialModuleState(dom.venezuelaEarthquakeResults, message, [
+    { target: dom.venezuelaEarthquakeReadout, message: "No fue posible consolidar la lectura ejecutiva del evento." },
+    { target: dom.venezuelaEarthquakeMapBoard, message: "No fue posible preparar la lectura cartografica del doblete sismico." },
+    { target: dom.venezuelaEarthquakeMediaBoard, message: "No fue posible listar los productos visuales principales del evento." },
+    { target: dom.venezuelaEarthquakeTimelineBoard, message: "No fue posible reconstruir la cronologia corta del evento." },
+    { target: dom.venezuelaEarthquakeSourcesBoard, message: "No fue posible listar las fuentes y visores de apoyo del modulo." },
+  ]);
+}
+
+function renderVenezuelaEarthquakeModule() {
+  const summary = state.venezuelaEarthquakeData;
+  if (!summary) {
+    renderVenezuelaEarthquakeFallback("Carga el modulo de Venezuela para ver el doblete sismico y su dano probable.");
+    return;
+  }
+
+  const mainshock = summary.mainshock || {};
+  const foreshock = summary.foreshock || {};
+  const reported = summary.reported_toll || {};
+  const pager = summary.pager || {};
+  const groundFailure = summary.ground_failure || {};
+  const topCities = (summary.top_cities || []).slice(0, 6);
+  const generatedAt = summary.generated_at ? new Date(summary.generated_at).toLocaleString("es-EC") : "sin fecha";
+
+  paintMetricGrid(dom.venezuelaEarthquakeResults, [
+    {
+      label: "Mainshock",
+      value: `M${Number(mainshock.magnitude || 0).toFixed(1)}`,
+      copy: `${Number(mainshock.depth_km || 0).toFixed(1)} km de profundidad | alerta ${String(mainshock.alert || "").toUpperCase()}`,
+      highlight: true,
+    },
+    {
+      label: "Foreshock",
+      value: `M${Number(foreshock.magnitude || 0).toFixed(1)}`,
+      copy: `${Number(foreshock.depth_km || 0).toFixed(1)} km | ${formatEarthquakeCount(summary.sequence_seconds || 0)} s antes del evento principal.`,
+    },
+    {
+      label: "Saldo reportado",
+      value: `${formatEarthquakeCount(reported.deaths || 0)} muertos`,
+      copy: `${formatEarthquakeCount(reported.injured || 0)} heridos reportados. Balance provisional.`,
+    },
+    {
+      label: "PAGER muertes",
+      value: `${formatEarthquakeCount(pager.semi_empirical_fatalities || 0)}-${formatEarthquakeCount(pager.empirical_fatalities || 0)}`,
+      copy: `${formatEarthquakePercent(pager.fatality_prob_over_1000_pct || 0)} de probabilidad de superar 1,000 muertes.`,
+    },
+    {
+      label: "Perdida economica",
+      value: formatEarthquakeMoney(pager.economic_usd || 0),
+      copy: `Alerta ${String(pager.economic_alert || "").toUpperCase()} en el modelado economico.`,
+    },
+    {
+      label: "Falla secundaria",
+      value: `${formatEarthquakeCount(groundFailure.liquefaction_population || 0)} pers.`,
+      copy: `Licuefaccion ${String(groundFailure.liquefaction_alert || "").toUpperCase()} | deslizamientos ${String(groundFailure.landslide_alert || "").toUpperCase()}.`,
+    },
+  ]);
+
+  setTextIfChanged(
+    dom.venezuelaEarthquakeSourceNote,
+    `Dataset local actualizado el ${generatedAt}. El modulo separa saldo reportado, modelado USGS PAGER y cartografia representativa del dano probable.`
+  );
+
+  if (dom.venezuelaEarthquakeReadout) {
+    dom.venezuelaEarthquakeReadout.classList.remove("empty-state");
+    dom.venezuelaEarthquakeReadout.classList.add("has-data");
+    setHtmlIfChanged(dom.venezuelaEarthquakeReadout, `
+      <div class="decision-board has-data">
+        <article class="decision-hero tone-high">
+          <div>
+            <h4>${escapeHtmlContent(summary.event_name || "Doble terremoto de Venezuela")}</h4>
+            <p>${escapeHtmlContent(summary.tectonic_summary || "")}</p>
+          </div>
+          <div class="decision-score-stack">
+            <strong>M${Number(mainshock.magnitude || 0).toFixed(1)}</strong>
+            <span>mainshock</span>
+          </div>
+        </article>
+        <div class="decision-grid">
+          <article class="decision-card tone-high">
+            <h5>Saldo reportado</h5>
+            <p>${formatEarthquakeCount(reported.deaths || 0)} muertos y ${formatEarthquakeCount(reported.injured || 0)} heridos. ${escapeHtmlContent(reported.status || "Dato provisional")}.</p>
+          </article>
+          <article class="decision-card tone-high">
+            <h5>Estimacion PAGER</h5>
+            <p>${formatEarthquakePercent(pager.fatality_prob_over_1000_pct || 0)} de probabilidad de superar 1,000 muertes y ${formatEarthquakePercent(pager.fatality_prob_over_10000_pct || 0)} de superar 10,000.</p>
+          </article>
+          <article class="decision-card tone-mid">
+            <h5>Doblete sismico</h5>
+            <p>Foreshock M${Number(foreshock.magnitude || 0).toFixed(1)} a las ${escapeHtmlContent(foreshock.time_local_label || "")}; mainshock M${Number(mainshock.magnitude || 0).toFixed(1)} solo ${formatEarthquakeCount(summary.sequence_seconds || 0)} segundos despues.</p>
+          </article>
+          <article class="decision-card tone-mid">
+            <h5>Mensaje de trabajo</h5>
+            <p>${escapeHtmlContent(summary.reporting_note || "")}</p>
+          </article>
+        </div>
+      </div>
+    `);
+  }
+
+  if (dom.venezuelaEarthquakeMapBoard) {
+    dom.venezuelaEarthquakeMapBoard.classList.remove("empty-state");
+    dom.venezuelaEarthquakeMapBoard.classList.add("has-data");
+    setHtmlIfChanged(dom.venezuelaEarthquakeMapBoard, `
+      <div class="decision-board has-data">
+        <article class="decision-card tone-mid">
+          <h5>Lectura cartografica representativa</h5>
+          <p>${escapeHtmlContent(summary.mapping_disclaimer || "")}</p>
+        </article>
+        <div class="earthquake-city-grid">
+          ${topCities.map((city) => `
+            <article class="decision-card tone-${getVenezuelaEarthquakeTone(city.mmi)}">
+              <h5>${escapeHtmlContent(city.name || "Nodo")}</h5>
+              <p>MMI ${Number(city.mmi || 0).toFixed(2)} | Poblacion ${formatEarthquakeCount(city.pop || 0)}.</p>
+            </article>
+          `).join("")}
+        </div>
+        <div class="planning-pills has-data">
+          <span class="planning-pill emphasis">Yumare epicentral</span>
+          <span class="planning-pill emphasis">Puerto Cabello MMI ${Number(topCities[0]?.mmi || 0).toFixed(2)}</span>
+          <span class="planning-pill emphasis">Caracas MMI ${Number((summary.top_cities || []).find((city) => city.name === "Caracas")?.mmi || 0).toFixed(2)}</span>
+          <span class="planning-pill emphasis">La Guaira MMI ${Number((summary.top_cities || []).find((city) => city.name === "La Guaira")?.mmi || 0).toFixed(2)}</span>
+        </div>
+      </div>
+    `);
+  }
+
+  if (dom.venezuelaEarthquakeMediaBoard) {
+    dom.venezuelaEarthquakeMediaBoard.classList.remove("empty-state");
+    dom.venezuelaEarthquakeMediaBoard.classList.add("has-data");
+    setHtmlIfChanged(dom.venezuelaEarthquakeMediaBoard, `
+      <div class="earthquake-media-grid">
+        ${(summary.media_panels || []).map((panel) => `
+          <article class="official-source-card">
+            <img class="earthquake-preview-image" src="${escapeHtmlContent(panel.image_url || "")}" alt="${escapeHtmlContent(panel.title || "Producto visual")}" loading="lazy">
+            <div class="official-source-card-head">
+              <div>
+                <h5>${escapeHtmlContent(panel.title || "Producto visual")}</h5>
+                <p>${escapeHtmlContent(panel.copy || "")}</p>
+              </div>
+            </div>
+            <div class="official-source-tags">
+              <span>${escapeHtmlContent(panel.source || "Fuente")}</span>
+            </div>
+            <a class="ghost-button" href="${escapeHtmlContent(panel.open_url || panel.image_url || "#")}" target="_blank" rel="noopener noreferrer">Abrir</a>
+          </article>
+        `).join("")}
+      </div>
+    `);
+  }
+
+  if (dom.venezuelaEarthquakeTimelineBoard) {
+    dom.venezuelaEarthquakeTimelineBoard.classList.remove("empty-state");
+    dom.venezuelaEarthquakeTimelineBoard.classList.add("has-data");
+    setHtmlIfChanged(dom.venezuelaEarthquakeTimelineBoard, `
+      <div class="workflow-guide-steps">
+        ${(summary.timeline || []).map((step, index) => `
+          <article class="workflow-guide-step ${index < 2 ? "tone-live" : index === 3 ? "tone-ready" : "tone-available"}">
+            <span class="workflow-guide-step-index">${index + 1}</span>
+            <div class="workflow-guide-step-copy">
+              <strong>${escapeHtmlContent(step.label || "Hito")}</strong>
+              <span class="candidate-rank">${escapeHtmlContent(step.time_label || "")}</span>
+              <span class="land-change-sector-note">${escapeHtmlContent(step.detail || "")}</span>
+            </div>
+          </article>
+        `).join("")}
+      </div>
+    `);
+  }
+
+  if (dom.venezuelaEarthquakeSourcesBoard) {
+    dom.venezuelaEarthquakeSourcesBoard.classList.remove("empty-state");
+    dom.venezuelaEarthquakeSourcesBoard.classList.add("has-data");
+    setHtmlIfChanged(dom.venezuelaEarthquakeSourcesBoard, `
+      <div class="earthquake-source-grid">
+        ${(summary.satellite_viewers || []).map((entry) => `
+          <article class="official-source-card">
+            <div class="official-source-card-head">
+              <div>
+                <h5>${escapeHtmlContent(entry.label || "Visor")}</h5>
+                <p>${escapeHtmlContent(entry.copy || "")}</p>
+              </div>
+            </div>
+            <a class="secondary-button" href="${escapeHtmlContent(entry.url || "#")}" target="_blank" rel="noopener noreferrer">Abrir visor</a>
+          </article>
+        `).join("")}
+        ${(summary.source_links || []).map((entry) => `
+          <article class="official-source-card">
+            <div class="official-source-card-head">
+              <div>
+                <h5>${escapeHtmlContent(entry.label || "Fuente")}</h5>
+                <p>${entry.type === "official" ? "Fuente oficial usada para parametros, PAGER o productos derivados." : "Fuente periodistica usada para el saldo humano reportado y la narrativa inicial del impacto."}</p>
+              </div>
+            </div>
+            <a class="ghost-button" href="${escapeHtmlContent(entry.url || "#")}" target="_blank" rel="noopener noreferrer">Abrir fuente</a>
+          </article>
+        `).join("")}
+      </div>
+    `);
+  }
+}
+
+async function loadVenezuelaEarthquakeSummary(force = false) {
+  try {
+    const summary = await fetchJson(getVenezuelaEarthquakeSummaryHref(force), {
+      headers: {
+        Accept: "application/json",
+      },
+    });
+    state.venezuelaEarthquakeData = summary;
+    renderVenezuelaEarthquakeModule();
+    return summary;
+  } catch (error) {
+    renderVenezuelaEarthquakeFallback("No se pudo leer el resumen local del terremoto de Venezuela.");
     throw error;
   }
 }
@@ -43534,6 +44114,20 @@ function buildGeoAiRecommendationCatalog() {
       ],
       evidenceDomains: ["Territorio", "GeoAI"],
       rationale: "Cuando la consulta apunta a Quito y administraciones zonales conviene abrir la publicacion tecnica real del proyecto antes de extrapolar resultados.",
+    },
+    {
+      id: "territory-venezuela-earthquake",
+      domain: "Territorio",
+      moduleLabel: "Terremoto Venezuela 2026",
+      route: "planificacion",
+      keywords: ["venezuela", "terremoto", "sismo", "yumare", "puerto cabello", "caracas", "la guaira", "shake map", "pager", "muertos", "licuefaccion", "deslizamientos"],
+      recommendation: { actionId: "planning-venezuela", label: "Abrir Venezuela", copy: "Cruza doblete sismico, PAGER, nodos urbanos y lectura satelital del dano probable." },
+      alternatives: [
+        { actionId: "planning-risk", label: "Cruzar riesgo", copy: "Relaciona intensidad, exposicion y dano probable con la lectura de riesgo del portal." },
+        { actionId: "planning-water", label: "Cruzar agua", copy: "Evalua soporte hidrico y frentes costeros en la zona mas expuesta del evento." },
+      ],
+      evidenceDomains: ["Territorio", "GeoAI"],
+      rationale: "Cuando la consulta trata del terremoto de Venezuela conviene separar saldo reportado, modelado PAGER y lectura cartografica representativa antes de concluir impactos.",
     },
     {
       id: "territory-climate",
