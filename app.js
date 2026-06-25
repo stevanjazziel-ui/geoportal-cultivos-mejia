@@ -4,7 +4,7 @@
   year: "numeric",
 });
 
-const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260625-2";
+const APP_VERSION = document.querySelector('meta[name="geoportal-version"]')?.content || "20260625-3";
 const WORLD_CUP_DEMO_BUNDLE_URL = `./public-data/world-cup-predictor/live_group_stage_bundle.json?v=${encodeURIComponent(APP_VERSION)}`;
 
 const layerCatalog = [
@@ -6291,7 +6291,30 @@ const workflowGuideCatalog = {
       { id: "planning-3d", label: "Abrir visor 3D", tone: "ghost" },
     ],
   },
+  venezuelaEarthquake: {
+    badge: "Ruta sismica",
+    title: "Secuencia corta para leer el terremoto de Venezuela",
+    defaultCopy: "Secuencia del doblete, saldo reportado, PAGER, mapa afectado y fuentes satelitales en un frente dedicado.",
+    steps: [
+      { id: "sequence", title: "Reconstruir la secuencia", pending: "Carga el modulo para ver foreshock, mainshock y tiempos locales." },
+      { id: "toll", title: "Separar saldo humano", pending: "Contrasta muertos y heridos reportados sin mezclarlo con el modelado." },
+      { id: "pager", title: "Leer PAGER y fallas secundarias", pending: "Cruza mortalidad probable, dano economico, licuefaccion y deslizamientos." },
+      { id: "map", title: "Centrar zonas afectadas", pending: "Activa el mapa para ver anillos, epicentros y nodos urbanos priorizados." },
+      { id: "sources", title: "Abrir fuentes y visores", pending: "Usa USGS, PAGER y visores satelitales para profundizar la lectura." },
+    ],
+    actions: [
+      { id: "planning-venezuela", label: "Cargar modulo", tone: "secondary" },
+      { id: "venezuela-focus", label: "Ver en mapa", tone: "ghost" },
+      { id: "venezuela-refresh", label: "Actualizar lectura", tone: "ghost" },
+      { id: "venezuela-sources", label: "Ver fuentes", tone: "ghost" },
+      { id: "venezuela-clear", label: "Limpiar mapa", tone: "ghost" },
+    ],
+  },
 };
+
+function isVenezuelaEarthquakePlanningFocus(route = state.entryRoute || "agronomia") {
+  return isPlanningRoute(route) && state.territorialFocus === "venezuelaEarthquake";
+}
 
 function cacheDom() {
   dom.loginOverlay = document.querySelector("#loginOverlay");
@@ -7771,6 +7794,8 @@ function bindUI() {
     });
   });
   dom.runVenezuelaEarthquakeBtn?.addEventListener("click", () => {
+    state.territorialFocus = "venezuelaEarthquake";
+    syncVenezuelaEarthquakePlanningUi();
     setModulePendingState(dom.venezuelaEarthquakeResults, "Leyendo el evento, su saldo reportado y el modelado PAGER...", [
       { target: dom.venezuelaEarthquakeReadout, message: "Separando cronologia, lectura tectonica y contraste entre saldo reportado y mortalidad modelada..." },
       { target: dom.venezuelaEarthquakeMapBoard, message: "Preparando epicentros, nodos urbanos e intensidades representativas sobre el mapa..." },
@@ -7790,6 +7815,7 @@ function bindUI() {
     });
   });
   dom.focusVenezuelaEarthquakeBtn?.addEventListener("click", async () => {
+    state.territorialFocus = "venezuelaEarthquake";
     if (!state.venezuelaEarthquakeData) {
       try {
         await loadVenezuelaEarthquakeSummary(true);
@@ -7799,10 +7825,12 @@ function bindUI() {
       }
     }
     focusVenezuelaEarthquakeMap();
+    syncVenezuelaEarthquakePlanningUi();
     focusModuleCard(dom.venezuelaEarthquakeCard);
     setStatus("Capa sismica de Venezuela centrada sobre el mapa.");
   });
   dom.refreshVenezuelaEarthquakeBtn?.addEventListener("click", () => {
+    state.territorialFocus = "venezuelaEarthquake";
     return runModuleAction(dom.refreshVenezuelaEarthquakeBtn, "Actualizando...", async () => {
       try {
         await loadVenezuelaEarthquakeSummary(true);
@@ -7816,7 +7844,9 @@ function bindUI() {
     });
   });
   dom.clearVenezuelaEarthquakeBtn?.addEventListener("click", () => {
+    state.territorialFocus = "venezuelaEarthquake";
     clearVenezuelaEarthquakeOverlay();
+    renderWorkflowGuide();
     updateMapSummary();
     setStatus("Lectura cartografica del terremoto de Venezuela retirada del mapa.");
   });
@@ -8957,10 +8987,17 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
   state.entryRoute = route;
   const pendingEntryAction = state.pendingEntryAction;
   state.pendingEntryAction = null;
+  if (isPivaRoute(route)) {
+    state.territorialFocus = "piva";
+  } else if (isPlanningRoute(route)) {
+    state.territorialFocus = pendingEntryAction === "planning-venezuela" ? "venezuelaEarthquake" : "planning";
+    if (pendingEntryAction === "planning-venezuela") {
+      state.moduleFilterId = "all";
+    }
+  }
   syncEntryRouteUi(route);
 
   if (isPlanningLikeRoute(route)) {
-    state.territorialFocus = isPivaRoute(route) ? "piva" : "planning";
     clearAgronomyMapContext();
     if (mapState.studyAreaLayer) {
       mapState.map.removeLayer(mapState.studyAreaLayer);
@@ -9029,15 +9066,19 @@ function applyEntryRoute(route = state.entryRoute || "agronomia") {
     if (dom.sidebarTitle) {
       dom.sidebarTitle.textContent = isPivaRoute(route)
         ? "Centro PIVA del canton Mejia"
+        : isVenezuelaEarthquakePlanningFocus(route)
+        ? "Centro sismico de Venezuela"
         : "Modulo territorial inteligente";
     }
     if (dom.sidebarSubtitle) {
       dom.sidebarSubtitle.textContent = isPivaRoute(route)
         ? "Una ruta dedicada a infraestructura verde y azul, con modelo territorial, red priorizada, paquetes, perfiles y cartera de proyectos."
+        : isVenezuelaEarthquakePlanningFocus(route)
+        ? "Secuencia del doblete, saldo reportado, modelado PAGER, mapa afectado y productos visuales del evento en un solo frente."
         : "Una ruta guiada para resolver aptitud, riesgo, agua, movilidad, estrategia y validacion 3D.";
     }
     if (dom.overlayMode) {
-      dom.overlayMode.textContent = isPivaRoute(route) ? "PIVA" : "Territorial";
+      dom.overlayMode.textContent = isPivaRoute(route) ? "PIVA" : isVenezuelaEarthquakePlanningFocus(route) ? "Sismico" : "Territorial";
     }
     updateMapSummary();
     window.setTimeout(() => {
@@ -9478,6 +9519,23 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
   }
 
   if (isPlanningRoute(route)) {
+    if (isVenezuelaEarthquakePlanningFocus(route)) {
+      return {
+        kicker: "Copiloto sismico",
+        title: "Solo el terremoto de Venezuela en una ruta dedicada",
+        copy: "El frente activo se reduce al doblete sismico, sus zonas afectadas, el contraste entre saldo reportado y PAGER, y las fuentes satelitales de apoyo.",
+        actions: [
+          { id: "planning-venezuela", label: "Cargar modulo", copy: "Saldo, PAGER y cronologia", tone: "primary" },
+          { id: "venezuela-focus", label: "Ver en mapa", copy: "Epicentros y areas afectadas", tone: "accent" },
+          { id: "venezuela-refresh", label: "Actualizar", copy: "Refrescar lectura local", tone: "neutral" },
+          { id: "venezuela-sources", label: "Fuentes", copy: "USGS, PAGER y satelite", tone: "neutral" },
+          { id: "venezuela-clear", label: "Limpiar", copy: "Retirar capa sismica", tone: "neutral" },
+        ],
+        filters: [
+          { id: "all", label: "Sismo" },
+        ],
+      };
+    }
     return {
       kicker: "Copiloto inteligente",
       title: "Abre un frente territorial y el sistema acomoda el tablero",
@@ -9543,7 +9601,15 @@ function getModuleActionHubConfig(route = state.entryRoute || "agronomia") {
 }
 
 function getModuleFilterMatch(cardId = "", filterId = state.moduleFilterId || "all", route = state.entryRoute || "agronomia") {
-  if (!cardId || filterId === "all") {
+  if (!cardId) {
+    return true;
+  }
+
+  if (isVenezuelaEarthquakePlanningFocus(route)) {
+    return cardId === "venezuelaEarthquakeCard";
+  }
+
+  if (filterId === "all") {
     return true;
   }
 
@@ -9660,7 +9726,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
 
   if (isPlanningRoute(route)) {
     return {
-      workflowGuideCard: true,
+      workflowGuideCard: isVenezuelaEarthquakePlanningFocus(route) ? false : true,
       officialDataCard: true,
       planningCommandCard: false,
       territorialOpsCard: false,
@@ -9672,6 +9738,7 @@ function getDefaultCollapsedModules(route = state.entryRoute || "agronomia") {
       riskCard: true,
       urbanClimateCard: true,
       pivaCard: true,
+      venezuelaEarthquakeCard: isVenezuelaEarthquakePlanningFocus(route) ? false : true,
       zoningPatternsCard: true,
       housingPatternsCard: true,
       hydrologyCard: true,
@@ -9991,6 +10058,8 @@ function getWorkflowGuideModel(route = state.entryRoute || "agronomia") {
     ? workflowGuideCatalog.catastro
     : isPivaRoute(route)
     ? workflowGuideCatalog.planificacion
+    : isVenezuelaEarthquakePlanningFocus(route)
+    ? workflowGuideCatalog.venezuelaEarthquake
     : isPlanningRoute(route)
     ? workflowGuideCatalog.planificacion
     : isGpsRoute(route)
@@ -10085,6 +10154,62 @@ function getWorkflowGuideModel(route = state.entryRoute || "agronomia") {
   }
 
   if (isPlanningRoute(route)) {
+    if (isVenezuelaEarthquakePlanningFocus(route)) {
+      const summary = state.venezuelaEarthquakeData;
+      const mainshock = summary?.mainshock || {};
+      const reported = summary?.reported_toll || {};
+      const pager = summary?.pager || {};
+      const groundFailure = summary?.ground_failure || {};
+      const mapReady = Boolean(
+        mapState.venezuelaEarthquakeZoneLayer
+        || mapState.venezuelaEarthquakeCityLayer
+        || mapState.venezuelaEarthquakeEpicenterLayer
+      );
+      return {
+        ...profile,
+        copy: summary
+          ? `Mainshock M${Number(mainshock.magnitude || 0).toFixed(1)}, ${formatEarthquakeCount(reported.deaths || 0)} muertos reportados y PAGER ${formatEarthquakeCount(pager.semi_empirical_fatalities || 0)}-${formatEarthquakeCount(pager.empirical_fatalities || 0)} muertes probables.`
+          : profile.defaultCopy,
+        steps: [
+          {
+            ...profile.steps[0],
+            tone: summary ? "ready" : "pending",
+            stateLabel: summary
+              ? `${formatEarthquakeCount(summary.sequence_seconds || 0)} s entre foreshock y mainshock`
+              : profile.steps[0].pending,
+          },
+          {
+            ...profile.steps[1],
+            tone: summary?.reported_toll ? "ready" : "pending",
+            stateLabel: summary?.reported_toll
+              ? `${formatEarthquakeCount(reported.deaths || 0)} muertos | ${formatEarthquakeCount(reported.injured || 0)} heridos`
+              : profile.steps[1].pending,
+          },
+          {
+            ...profile.steps[2],
+            tone: summary?.pager ? "ready" : "pending",
+            stateLabel: summary?.pager
+              ? `${formatEarthquakePercent(pager.fatality_prob_over_1000_pct || 0)} > 1,000 muertes | licuefaccion ${String(groundFailure.liquefaction_alert || "").toUpperCase()}`
+              : profile.steps[2].pending,
+          },
+          {
+            ...profile.steps[3],
+            tone: mapReady ? "ready" : "pending",
+            stateLabel: mapReady
+              ? "Epicentros, anillos y nodos urbanos ya estan centrados"
+              : profile.steps[3].pending,
+          },
+          {
+            ...profile.steps[4],
+            tone: (summary?.source_links?.length || summary?.satellite_viewers?.length) ? "available" : "pending",
+            stateLabel: (summary?.source_links?.length || summary?.satellite_viewers?.length)
+              ? `${formatEarthquakeCount((summary.source_links || []).length)} fuentes y ${formatEarthquakeCount((summary.satellite_viewers || []).length)} visores listos`
+              : profile.steps[4].pending,
+          },
+        ],
+      };
+    }
+
     const areaProfile = getTerritorialAreaProfile();
     const planningReady = !!state.planningData;
     const mobilityReady = !!state.mobilityData;
@@ -10231,6 +10356,20 @@ function renderWorkflowGuide() {
   }
 }
 
+function syncVenezuelaEarthquakePlanningUi() {
+  if (!isPlanningRoute()) {
+    return;
+  }
+  state.moduleFilterId = "all";
+  renderModuleActionHub("planificacion");
+  renderWorkflowGuide();
+  renderSidebarDock("planificacion");
+  applyModuleSearchFilter({ preserveActive: false });
+  collapseModuleCardsForRoute("planificacion");
+  setModuleCardCollapsed("workflowGuideCard", false);
+  setModuleCardCollapsed("venezuelaEarthquakeCard", false);
+}
+
 function handleWorkflowGuideAction(event) {
   const button = event.target.closest("[data-workflow-action]");
   if (!button || !dom.workflowGuideActions?.contains(button)) {
@@ -10362,6 +10501,18 @@ function getSidebarDockConfig(route = state.entryRoute || "agronomia") {
   }
 
   if (isPlanningRoute(route)) {
+    if (isVenezuelaEarthquakePlanningFocus(route)) {
+      return {
+        title: "Atajos sismicos",
+        subtitle: "Todo el lateral se concentra en el terremoto de Venezuela, su mapa y sus fuentes.",
+        actions: [
+          { id: "planning-venezuela", label: "Modulo" },
+          { id: "venezuela-focus", label: "Mapa" },
+          { id: "venezuela-refresh", label: "Actualizar" },
+          { id: "venezuela-sources", label: "Fuentes" },
+        ],
+      };
+    }
     return {
       title: "Atajos inteligentes",
       subtitle: "Salta a decisiones clave y fuentes oficiales sin recorrer toda la columna.",
@@ -10581,10 +10732,38 @@ function runWorkflowGuideAction(actionId) {
       setStatus("Modulo Quito listo para revisar publicacion tecnica, memoria y faltantes de insumos.");
       return;
     case "planning-venezuela":
+      state.territorialFocus = "venezuelaEarthquake";
       openSidebarWorkingPanel("modulos");
+      syncVenezuelaEarthquakePlanningUi();
       dom.runVenezuelaEarthquakeBtn?.click();
       focusModuleCard(dom.venezuelaEarthquakeCard);
       setStatus("Modulo Venezuela listo para revisar doblete sismico, saldo humano y dano probable sobre el mapa.");
+      return;
+    case "venezuela-focus":
+      state.territorialFocus = "venezuelaEarthquake";
+      openSidebarWorkingPanel("modulos");
+      syncVenezuelaEarthquakePlanningUi();
+      dom.focusVenezuelaEarthquakeBtn?.click();
+      return;
+    case "venezuela-refresh":
+      state.territorialFocus = "venezuelaEarthquake";
+      openSidebarWorkingPanel("modulos");
+      syncVenezuelaEarthquakePlanningUi();
+      dom.refreshVenezuelaEarthquakeBtn?.click();
+      return;
+    case "venezuela-clear":
+      state.territorialFocus = "venezuelaEarthquake";
+      openSidebarWorkingPanel("modulos");
+      syncVenezuelaEarthquakePlanningUi();
+      dom.clearVenezuelaEarthquakeBtn?.click();
+      return;
+    case "venezuela-sources":
+      state.territorialFocus = "venezuelaEarthquake";
+      openSidebarWorkingPanel("modulos");
+      syncVenezuelaEarthquakePlanningUi();
+      focusModuleCard(dom.venezuelaEarthquakeCard);
+      dom.venezuelaEarthquakeSourcesBoard?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      setStatus("Fuentes y visores del terremoto de Venezuela listos para abrirse desde el modulo.");
       return;
     case "planning-official":
       openSidebarWorkingPanel("modulos");
@@ -10659,6 +10838,7 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
   const isCadastre = isCadastreRoute(route);
   const isGps = isGpsRoute(route);
   const isEvidence = isEvidenceRoute(route);
+  const isVenezuelaFocus = isVenezuelaEarthquakePlanningFocus(route);
   const isTerritorial = isPlanning || isPiva || isCadastre || isEvidence;
   if (state.moduleSearchRoute !== route) {
     state.moduleSearchRoute = route;
@@ -10683,6 +10863,8 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
         ? "Buscar predios, contornos, oficiales o catastro"
       : isPiva
         ? "Buscar PIVA, agua, clima, paquetes o cartera"
+      : isVenezuelaFocus
+        ? "Buscar cronologia, PAGER, ShakeMap o fuentes"
       : isPlanning
         ? "Buscar aptitud, agua, riesgo, FODA o 3D"
         : "Buscar GPS, agua, riesgo, FODA, 3D o clima";
@@ -10700,6 +10882,8 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
       ? "Catastro inteligente"
       : isPiva
       ? "PIVA Mejia"
+      : isVenezuelaFocus
+      ? "Modulo sismico"
       : isPlanning
       ? "Modulo inteligente"
       : isEvidence
@@ -10713,6 +10897,8 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
       ? "Modulo catastral inteligente"
       : isPiva
       ? "Plan verde-azul inteligente"
+      : isVenezuelaFocus
+      ? "Lectura sismica de Venezuela"
       : isPlanning
       ? "Modulo territorial inteligente"
       : isEvidence
@@ -10726,6 +10912,8 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
       ? "Predios visibles, contornos, soporte oficial y validacion tecnica en una ruta aparte."
       : isPiva
       ? "Ruta dedicada al PIVA de Mejia: modelo territorial, red verde-azul, paquetes, perfiles, cartera e implementacion."
+      : isVenezuelaFocus
+      ? "Ruta dedicada al terremoto de Venezuela: secuencia sismica, saldo humano, PAGER, cartografia representativa y visores satelitales."
       : isPlanning
       ? "Copiloto, oficiales, aptitud, agua, riesgo, estrategia y 3D en una sola ruta."
       : isEvidence
@@ -10739,6 +10927,8 @@ function syncEntryRouteUi(route = state.entryRoute || "agronomia") {
       ? "Catastro inteligente"
       : isPiva
       ? "PIVA Mejia"
+      : isVenezuelaFocus
+      ? "Sismo Venezuela"
       : isPlanning
       ? "Territorio inteligente"
       : isEvidence
@@ -34988,6 +35178,12 @@ async function loadVenezuelaEarthquakeSummary(force = false) {
     });
     state.venezuelaEarthquakeData = summary;
     renderVenezuelaEarthquakeModule();
+    if (isVenezuelaEarthquakePlanningFocus()) {
+      renderModuleActionHub("planificacion");
+      renderWorkflowGuide();
+      renderSidebarDock("planificacion");
+      applyModuleSearchFilter({ preserveActive: true });
+    }
     return summary;
   } catch (error) {
     renderVenezuelaEarthquakeFallback("No se pudo leer el resumen local del terremoto de Venezuela.");
