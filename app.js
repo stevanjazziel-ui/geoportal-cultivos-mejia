@@ -34761,6 +34761,7 @@ function focusVenezuelaEarthquakeMap(options = {}) {
   if (!state.venezuelaEarthquakeData || !mapState.map) {
     return null;
   }
+  state.territorialFocus = "venezuelaEarthquake";
   setBaseLayer("satellite", false, {
     silent: true,
     skipSceneRender: true,
@@ -47444,7 +47445,7 @@ function renderWorldCupPredictorCard() {
         </article>
         <div class="decision-grid">
           ${signals.slice(0, 6).map((item) => `
-            <article class="decision-card tone-${escapeHtmlAttribute(item.tone || "base")}">
+            <article class="decision-card tone-${escapeHtmlContent(item.tone || "base")}">
               <p class="candidate-rank">senal</p>
               <h5>${escapeHtmlContent(item.title || "Lectura activa")}</h5>
               <p>${escapeHtmlContent(item.summary || "Sin resumen cargado.")}</p>
